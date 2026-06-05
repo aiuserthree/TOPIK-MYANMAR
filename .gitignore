@@ -28,3 +28,9 @@ topik-mm-s3-api_accessKeys.csv
 
 # Personal checklist — never commit
 이것저것체크사항.txt
+
+# API TypeScript build output
+api/dist/
+
+# Local/runtime upload storage (not versioned)
+api/var/uploads/
