@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>내정보 수정 — TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .profile-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  .profile-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .profile-tabs button {
+    flex: 1; padding: 12px;
+    font-size: 14px; color: var(--text-3); font-weight: 500;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .profile-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .photo-section {
+    display: flex; gap: 16px; align-items: center;
+    padding: 20px;
+    background: var(--bg-2);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+  }
+  .photo-section .ph-prev {
+    width: 90px; height: 120px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-4);
+  }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .danger-zone {
+    margin-top: 32px;
+    padding: 20px;
+    border: 1px solid #f5c8ce;
+    border-radius: var(--radius);
+    background: var(--danger-50);
+  }
+  .danger-zone h3 { color: var(--danger); font-size: 16px; margin-bottom: 6px; }
+  .danger-zone p { font-size: 13px; color: #7a0d20; line-height: 1.5; }
+  .danger-zone .btn { margin-top: 12px; }
+</style>
+</head>
+<body data-require-login data-footer-compact>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>마이페이지</span><span>내정보 수정</span></div>
+      <h1>내정보 수정</h1>
+      <p class="lead">가입 정보를 직접 수정하실 수 있습니다. 사진 변경 시 진행 중인 접수 건에도 즉시 반영됩니다.</p>
+    </div>
+  </header>
+
+  <div class="profile-wrap">
+
+    <div class="callout" style="margin-bottom: 20px;">
+      <div class="ico"></div>
+      <div>
+        <strong>비밀번호 변경 안내</strong> — 계정 관리 및 대리접수 방지를 위해 비밀번호는 6개월마다 변경을 권장합니다.
+        마지막 변경일: <strong id="pf-pw-changed">—</strong>
+      </div>
+    </div>
+
+    <div class="profile-tabs">
+      <button class="active" data-tab="basic">기본정보·사진</button>
+      <button data-tab="account">계정·비밀번호</button>
+    </div>
+
+    <!-- ============ 기본정보 + 사진 ============ -->
+    <section class="tab-pane active" data-tab="basic">
+
+      <h2 class="h3" style="margin-bottom: 12px;">증명사진</h2>
+      <div class="photo-section" id="profilePhotoZone">
+        <div class="ph-prev">현재 사진</div>
+        <div style="flex:1;">
+          <p style="font-size: 13.5px; color: var(--text-2);">시험 접수 시 자동 사용됩니다.</p>
+          <p class="body-sm" style="margin-top: 4px;">새 사진 등록 시 <strong>진행 중인 접수 건에도 즉시 반영</strong>되며, <strong>BO 사진 심사가 자동으로 재실행(재심사)</strong>됩니다. (0527 정책)</p>
+          <div style="margin-top: 10px; display:flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" type="button" data-photo-select>파일 선택</button>
+            <button class="btn btn-text btn-sm" type="button" data-photo-spec>규격 안내</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="h3" style="margin: 24px 0 12px;">기본정보</h2>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">한글 성명</label>
+          <input class="input" id="pf-name-ko" value="">
+        </div>
+        <div class="form-row">
+          <label class="label">영문 성명 (여권 표기)</label>
+          <input class="input" id="pf-name-en" value="">
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">생년월일</label>
+          <input class="input" id="pf-birth" value="" maxlength="8" placeholder="YYYYMMDD">
+        </div>
+        <div class="form-row">
+          <label class="label">성별</label>
+          <select class="select" id="pf-gender">
+            <option value="1">남</option>
+            <option value="2">여</option>
+          </select>
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">국적</label>
+          <select class="select" id="pf-nationality">
+            <option value="미얀마">미얀마 (Myanmar)</option>
+            <option value="대한민국">대한민국</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="label">제1언어</label>
+          <select class="select" id="pf-lang1">
+            <option value="미얀마어">미얀마어 (Burmese)</option>
+            <option value="한국어">한국어</option>
+            <option value="영어">영어</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label">연락처</label>
+        <input class="input" id="pf-phone" value="">
+      </div>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">직업</label>
+          <select class="select" id="pf-job"><option value="">선택</option></select>
+        </div>
+        <div class="form-row">
+          <label class="label">응시동기</label>
+          <select class="select" id="pf-motive"><option value="">선택</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label">응시목적</label>
+        <select class="select" id="pf-purpose"><option value="">선택</option></select>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-basic">기본정보 저장</button>
+    </section>
+
+    <!-- ============ 계정·비밀번호 ============ -->
+    <section class="tab-pane" data-tab="account">
+
+      <h2 class="h3" style="margin-bottom: 12px;">이메일 (로그인 ID)</h2>
+      <div class="form-row">
+        <input class="input" id="pf-email" value="" readonly>
+        <span class="hint">이메일 변경 시 변경된 주소로 재인증이 필요합니다.</span>
+      </div>
+
+      <h2 class="h3" style="margin: 24px 0 12px;">비밀번호 변경</h2>
+      <div class="form-row">
+        <label class="label">현재 비밀번호</label>
+        <input class="input" type="password" id="pf-cur-pw" autocomplete="current-password">
+      </div>
+      <div class="form-row">
+        <label class="label">새 비밀번호</label>
+        <input class="input" type="password" id="pf-new-pw" placeholder="영문+숫자+특수문자 8자 이상" autocomplete="new-password">
+      </div>
+      <div class="form-row">
+        <label class="label">새 비밀번호 확인</label>
+        <input class="input" type="password" id="pf-new-pw2" autocomplete="new-password">
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-account">계정정보 저장</button>
+
+      <!-- 탈퇴 -->
+      <div class="danger-zone">
+        <h3>회원 탈퇴</h3>
+        <p>
+          탈퇴 시 진행 중인 접수 내역이 <strong>모두 취소</strong>됩니다.
+          탈퇴 후 동일 이메일로 재가입은 일정 기간 제한될 수 있습니다.
+        </p>
+        <button class="btn btn-danger btn-sm" onclick="TPKM.openModal('modalLeave')">회원 탈퇴</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<div class="modal-backdrop" id="modalLeave">
+  <div class="modal">
+    <div class="modal-head"><h3>회원 탈퇴</h3></div>
+    <div class="modal-body">
+      <p>정말 탈퇴하시겠습니까?<br><br>
+      <strong>탈퇴 시 진행 중인 접수 내역이 모두 취소</strong>됩니다.
+      취소된 접수에 대한 환불은 응시료 규정에 따라 처리됩니다.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalLeave')">취소</button>
+      <button class="btn btn-danger" id="btnLeaveConfirm">탈퇴 진행</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared/api-client.js"></script>
+<script src="shared/roster-codes.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/photo-upload.js"></script>
+<script>
+(function initRosterCodeSelects(){
+  var R=window.TPKM_ROSTER_CODES;
+  if(!R)return;
+  R.fillSelect(document.getElementById('pf-job'),'job');
+  R.fillSelect(document.getElementById('pf-motive'),'motive');
+  R.fillSelect(document.getElementById('pf-purpose'),'purpose');
+})();
+
+  var photoChanged = false;
+  var lastKnownPhotoFileId = null;
+  var profilePhotoCtrl = TPKMPhoto.bind({
+    zone: document.getElementById('profilePhotoZone'),
+    placeholder: '현재 사진',
+    onChange: function () { photoChanged = true; }
+  });
+  function showProfilePhoto(fileId, photoUnavailable) {
+    if (!fileId || !window.TopikApi || !profilePhotoCtrl) return;
+    if (photoUnavailable && TopikApi.markFileUnavailable) {
+      TopikApi.markFileUnavailable(fileId);
+      if (profilePhotoCtrl.reset) profilePhotoCtrl.reset();
+      return;
+    }
+    if (!TopikApi.fileUrl || (TopikApi.isFileUnavailable && TopikApi.isFileUnavailable(fileId))) {
+      if (profilePhotoCtrl.reset) profilePhotoCtrl.reset();
+      return;
+    }
+    var url = TopikApi.fileUrl(fileId);
+    if (!url) { if (profilePhotoCtrl.reset) profilePhotoCtrl.reset(); return; }
+    if (profilePhotoCtrl.setDataUrl) profilePhotoCtrl.setDataUrl(url);
+    var img = document.querySelector('#profilePhotoZone .ph-prev img');
+    if (img && TopikApi.imgFileOnError) {
+      img.onerror = TopikApi.imgFileOnError(fileId, function () {
+        if (profilePhotoCtrl.reset) profilePhotoCtrl.reset();
+      });
+    }
+  }
+
+  document.querySelectorAll('.profile-tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.profile-tabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.dataset.tab === b.dataset.tab));
+    });
+  });
+
+  function setSelectValue(sel, val) {
+    if (!sel || val == null || val === '') return;
+    var v = String(val);
+    var found = Array.prototype.some.call(sel.options, function (o) { return o.value === v; });
+    if (!found) {
+      var opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    }
+    sel.value = v;
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function formatPwChangedAt(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '.' + m + '.' + day;
+  }
+
+  // ---- 회원정보 로드 (GET /me) ----
+  function loadProfile() {
+    if (!window.TopikApi || !TopikApi.canUseApi() || !TopikApi.isLoggedIn()) return;
+    TopikApi.getMe().then(function (res) {
+      if (!res.ok || !res.body || !res.body.user) return;
+      var u = res.body.user;
+      $('pf-name-ko').value = u.name_ko || '';
+      $('pf-name-en').value = u.name_en || '';
+      $('pf-birth').value = u.birth_date || '';
+      setSelectValue($('pf-gender'), u.gender);
+      setSelectValue($('pf-nationality'), u.nationality);
+      setSelectValue($('pf-lang1'), u.first_language);
+      $('pf-phone').value = u.phone || '';
+      setSelectValue($('pf-job'), u.job_code);
+      setSelectValue($('pf-motive'), u.motive_code);
+      setSelectValue($('pf-purpose'), u.purpose_code);
+      $('pf-email').value = u.email || '';
+      var pwEl = $('pf-pw-changed');
+      if (pwEl) pwEl.textContent = formatPwChangedAt(u.password_changed_at);
+      lastKnownPhotoFileId = u.photo_file_id != null ? Number(u.photo_file_id) : null;
+      if (u.photo_file_id) showProfilePhoto(u.photo_file_id, u.photo_unavailable);
+    });
+  }
+  loadProfile();
+
+  // ---- 기본정보 저장 (PATCH /me) ----
+  $('pf-save-basic').addEventListener('click', function () {
+    var btn = this;
+    if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
+    var payload = {
+      name_ko: $('pf-name-ko').value.trim(),
+      name_en: $('pf-name-en').value.trim(),
+      birth_date: $('pf-birth').value.trim(),
+      gender: $('pf-gender').value,
+      nationality: $('pf-nationality').value,
+      first_language: $('pf-lang1').value,
+      phone: $('pf-phone').value.trim(),
+      job_code: Number($('pf-job').value) || undefined,
+      motive_code: Number($('pf-motive').value) || undefined,
+      purpose_code: Number($('pf-purpose').value) || undefined
+    };
+    if (!payload.name_ko || !payload.name_en || !payload.phone) {
+      alert('한글 성명, 영문 성명, 연락처는 필수입니다.');
+      return;
+    }
+    var photoAttempted = false;
+    if (photoChanged && profilePhotoCtrl && profilePhotoCtrl.getState) {
+      var st = profilePhotoCtrl.getState();
+      if (st.dataUrl && st.dataUrl.indexOf('data:image') === 0) {
+        payload.photo_base64 = st.dataUrl.indexOf(',') >= 0 ? st.dataUrl.split(',')[1] : st.dataUrl;
+        photoAttempted = true;
+      }
+    }
+    var photoIdBeforeSave = lastKnownPhotoFileId;
+    btn.disabled = true;
+    var prev = btn.textContent;
+    btn.textContent = '저장 중…';
+    TopikApi.updateMe(payload).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = prev;
+      if (!res.ok) { alert(TopikApi.parseError(res)); return; }
+      var u = res.body && res.body.user;
+      var newPhotoId = u && u.photo_file_id != null ? Number(u.photo_file_id) : null;
+      var photoSaved = photoAttempted && newPhotoId != null &&
+        (photoIdBeforeSave == null || newPhotoId !== photoIdBeforeSave);
+      // photo_error alone is not enough — confirm the server persisted a new file id.
+      var photoFailed = !!(res.body && res.body.photo_error) && !photoSaved;
+      photoChanged = photoFailed;
+      if (photoSaved) lastKnownPhotoFileId = newPhotoId;
+      // GNB 사용자 이름 동기화
+      if (u && TopikApi.syncLegacyUser) {
+        TopikApi.syncLegacyUser(u);
+        if (window.__tpkmRebuildNav) __tpkmRebuildNav();
+      }
+      if (!photoFailed && newPhotoId) {
+        showProfilePhoto(newPhotoId, u.photo_unavailable);
+      }
+      var alertMsg = photoFailed
+        ? ((res.body && res.body.message) ||
+           '기본정보는 저장되었지만 사진 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+        : ((res.body && res.body.message && !res.body.photo_error)
+           ? res.body.message
+           : '회원정보가 수정되었습니다.');
+      alert(alertMsg);
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = prev;
+      alert('네트워크 오류입니다.');
+    });
+  });
+
+  // ---- 비밀번호 변경 (POST /me/change-password) ----
+  $('pf-save-account').addEventListener('click', function () {
+    var btn = this;
+    var cur = $('pf-cur-pw').value;
+    var n1 = $('pf-new-pw').value;
+    var n2 = $('pf-new-pw2').value;
+    if (!cur && !n1 && !n2) { alert('변경할 비밀번호를 입력해 주세요.'); return; }
+    if (!cur) { alert('현재 비밀번호를 입력해 주세요.'); return; }
+    if (n1.length < 8 || !/[A-Za-z]/.test(n1) || !/\d/.test(n1) || !/[^A-Za-z0-9]/.test(n1)) {
+      alert('새 비밀번호는 영문·숫자·특수문자를 포함하여 8자 이상이어야 합니다.');
+      return;
+    }
+    if (n1 !== n2) { alert('새 비밀번호 확인이 일치하지 않습니다.'); return; }
+    if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
+    btn.disabled = true;
+    var prev = btn.textContent;
+    btn.textContent = '변경 중…';
+    TopikApi.changePassword({
+      current_password: cur,
+      new_password: n1,
+      new_password_confirm: n2
+    }).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = prev;
+      if (!res.ok) { alert(TopikApi.parseError(res)); return; }
+      $('pf-cur-pw').value = ''; $('pf-new-pw').value = ''; $('pf-new-pw2').value = '';
+      var pwEl = $('pf-pw-changed');
+      if (pwEl) pwEl.textContent = formatPwChangedAt(new Date().toISOString());
+      alert((res.body && res.body.message) || '비밀번호가 변경되었습니다.');
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = prev;
+      alert('네트워크 오류입니다.');
+    });
+  });
+
+  // ---- 회원 탈퇴 (POST /me/withdraw) ----
+  document.getElementById('btnLeaveConfirm')?.addEventListener('click', function () {
+    if (!window.TopikApi || !TopikApi.canUseApi()) {
+      TPKM.closeModal('modalLeave');
+      if (window.TPKMAuth) TPKMAuth.logout();
+      location.href = 'index.html';
+      return;
+    }
+    var pw = window.prompt('회원 탈퇴를 위해 비밀번호를 입력해 주세요.');
+    if (pw === null) return;
+    var btn = this;
+    btn.disabled = true;
+    TopikApi.apiFetch('/api/v1/me/withdraw', {
+      method: 'POST',
+      body: JSON.stringify({ password: pw })
+    }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) { alert(TopikApi.parseError(res)); return; }
+      TPKM.closeModal('modalLeave');
+      if (window.TPKMAuth) TPKMAuth.logout();
+      alert('회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.');
+      location.href = 'index.html';
+    }).catch(function () {
+      btn.disabled = false;
+      alert('네트워크 오류입니다.');
+    });
+  });
+</script>
+</body>
+</html>

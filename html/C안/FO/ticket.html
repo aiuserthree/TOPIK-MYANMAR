@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>수험표 출력 — TOPIK 접수 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .ticket-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .hero-card {
+    padding: 32px 24px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-700));
+    border-radius: var(--radius-lg);
+    color: #fff;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .hero-card h2 { color: #fff; font-size: 22px; margin-bottom: 8px; }
+  .hero-card p { color: rgba(255,255,255,0.8); font-size: 14px; }
+  .hero-card .btn-ext {
+    margin-top: 18px;
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 48px; padding: 0 24px;
+    background: #fff; color: var(--primary);
+    border-radius: var(--radius-sm);
+    font-weight: 600; font-size: 15px;
+  }
+  .hero-card .btn-ext:hover { background: rgba(255,255,255,0.92); }
+  .hero-card .btn-ext::after { content: " ↗"; font-size: 13px; }
+
+  .info-block { margin-bottom: 28px; }
+  .info-block h3 {
+    font-size: 16px; margin-bottom: 10px;
+    padding-left: 12px; border-left: 3px solid var(--primary);
+  }
+  .info-block .body {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    line-height: 1.7;
+    color: var(--text-2);
+    font-size: 14px;
+  }
+  .info-block .body ol { padding-left: 20px; margin: 6px 0; }
+  .info-block .body ol li { list-style: decimal; padding: 2px 0; }
+  .info-block .body strong { color: var(--text); font-weight: 600; }
+
+  /* API-backed ticket status (0527: 수험번호 노출 후 topik.go.kr CTA) */
+  #ticketStatus { margin-bottom: 24px; }
+  .ticket-status-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    margin-bottom: 14px;
+  }
+  .ticket-status-card h4 {
+    font-size: 15px;
+    margin: 0 0 10px;
+    color: var(--text);
+  }
+  .ticket-status-card .meta {
+    font-size: 13px;
+    color: var(--text-3);
+    margin-bottom: 12px;
+  }
+  .ticket-num-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+  .ticket-num-grid .cell {
+    background: var(--surface-2, #f8fafc);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .ticket-num-grid .cell .lbl {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-bottom: 4px;
+  }
+  .ticket-num-grid .cell .val {
+    font-family: Inter, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+  }
+  .ticket-banner {
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .ticket-banner.info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+  }
+  .ticket-banner.warn {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+  }
+  .ticket-banner.err {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+  .ticket-loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-3);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 접수</span><span>수험표 출력</span></div>
+      <h1>수험표 출력</h1>
+      <p class="lead">수험표 출력은 TOPIK 본부 홈페이지(topik.go.kr)에서 진행됩니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 접수 하위 메뉴">
+        <a href="apply-howto.html">접수 방법</a>
+        <a href="register.html">시험 접수</a>
+        <a href="mypage.html">접수 확인</a>
+        <a href="ticket.html" class="active">수험표 출력</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="ticket-wrap">
+
+      <div id="ticketStatus" aria-live="polite"></div>
+
+      <div class="hero-card" id="heroTopikLink">
+        <h2>TOPIK 본부에서 수험표를 출력하세요</h2>
+        <p>본 사이트는 수험표 직접 출력을 지원하지 않습니다. 아래 버튼을 통해 TOPIK 본부 홈페이지에서 출력해 주세요.</p>
+        <a href="https://www.topik.go.kr" target="_blank" rel="noopener noreferrer" class="btn-ext">
+          TOPIK 본부 홈페이지로 이동
+        </a>
+      </div>
+
+      <div class="info-block">
+        <h3>수험표 출력 안내</h3>
+        <div class="body">
+          시험일로부터 <strong>2주 전, 월요일 오전 10시</strong>부터 TOPIK 홈페이지에서 수험표 출력이 가능합니다.
+          (월요일이 공휴일인 경우에는 다음 날 오전 10시)
+        </div>
+      </div>
+
+      <div class="info-block">
+        <h3>수험표 확인 방법</h3>
+        <div class="body">
+          <ol>
+            <li>TOPIK 홈페이지(<strong>www.topik.go.kr</strong>) 접속</li>
+            <li>회원 로그인 → [마이페이지] → [접수현황] → [수험표 출력]</li>
+            <li>비회원 또는 ID가 기억나지 않거나 탈퇴한 경우, [전체메뉴] → [비회원 시험정보] → [수험표 출력]</li>
+          </ol>
+          <p style="margin-top: 12px; font-size: 12.5px; color: var(--text-3);">
+            ※ 응시불가 처리된 지원자는 수험표 출력 불가
+          </p>
+        </div>
+      </div>
+
+      <div class="info-block">
+        <h3>시험 당일 안내</h3>
+        <div class="body">
+          수험표를 출력하여 시험 당일 <strong>규정 신분증</strong>과 함께 지참하셔서 시험장을 방문하시기 바랍니다.<br><br>
+          부득이 수험표를 출력하지 못하는 경우에는 사진으로 캡쳐해서 가지고 가시면 본인의 시험실 및 자리를 쉽게 찾으실 수 있습니다.
+        </div>
+      </div>
+
+      <div class="info-block">
+        <h3>수험표 출력 시 유의사항</h3>
+        <div class="body">
+          <ol>
+            <li>한국어능력시험 수험표 출력 시 <strong>Chrome 브라우저</strong> 사용을 권장합니다.</li>
+            <li>학교·도서관·센터 내 공용 인터넷 검색용 PC에서는 증명서 출력 프로그램이 설치되지 않거나 정상 작동하지 않을 수 있으니, 개인 PC 또는 출력 가능한 기타 장소에서 진행해 주시기 바랍니다.</li>
+            <li>출력 버튼을 눌러도 화면이 나타나지 않는 경우, 해당 브라우저의 설정에서 <strong>‘팝업 차단’</strong>이 되어 있는지 확인하시고 해제 후 다시 시도해 주시기 바랍니다.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top: 28px;">
+        <a href="https://www.topik.go.kr" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-lg">
+          TOPIK 본부 홈페이지로 이동 ↗
+        </a>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="shared/api-client.js"></script>
+<script src="assets/common.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var TOPIK_URL = 'https://www.topik.go.kr';
+
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function levelLabel(level) {
+    return level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
+  }
+
+  function roundTitle(item) {
+    var r = item.exam_round || {};
+    if (r.title) return r.title;
+    if (r.round_no) return '제' + r.round_no + '회';
+    return 'TOPIK';
+  }
+
+  function hasVisibleExamNumber(item) {
+    return (item.levels || []).some(function (l) {
+      return l.exam_number_visible && l.exam_number;
+    });
+  }
+
+  function buildTicketCard(item, highlight) {
+    var nums = (item.levels || [])
+      .filter(function (l) { return l.exam_number_visible && l.exam_number; })
+      .map(function (l) {
+        return '<div class="cell"><div class="lbl">' + esc(levelLabel(l.exam_level)) +
+          '</div><div class="val">' + esc(l.exam_number) + '</div></div>';
+      })
+      .join('');
+    var meta = '시험일 ' + esc(item.exam_date_formatted || '') +
+      (item.venue && item.venue.name_ko ? ' · ' + esc(item.venue.name_ko) : '');
+    var style = highlight ? ' border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary);' : '';
+    return (
+      '<div class="ticket-status-card" data-submission-id="' + esc(item.submission_id) + '" style="' + style + '">' +
+        '<h4>' + esc(roundTitle(item)) + '</h4>' +
+        '<div class="meta">' + meta + '</div>' +
+        '<div class="ticket-num-grid">' + nums + '</div>' +
+        '<a href="' + TOPIK_URL + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">' +
+          'TOPIK 본부에서 수험표 출력 ↗</a>' +
+      '</div>'
+    );
+  }
+
+  function renderStatus(html) {
+    var el = document.getElementById('ticketStatus');
+    if (el) el.innerHTML = html;
+  }
+
+  function focusSubmissionFromQuery(items) {
+    var params = new URLSearchParams(window.location.search);
+    var sub = params.get('submission');
+    if (!sub) return items;
+    var match = items.filter(function (i) { return String(i.submission_id) === String(sub); });
+    var rest = items.filter(function (i) { return String(i.submission_id) !== String(sub); });
+    return match.concat(rest);
+  }
+
+  function loadTicketStatus() {
+    renderStatus('<div class="ticket-loading">접수 정보를 확인하는 중…</div>');
+
+    if (!window.TopikApi || !TopikApi.canUseApi()) {
+      renderStatus(
+        '<div class="ticket-banner info">' +
+          '로그인하면 수험번호 공개 여부를 이 페이지에서 확인할 수 있습니다. ' +
+          '수험표 출력은 <strong>TOPIK 본부(topik.go.kr)</strong>에서 진행됩니다.' +
+        '</div>'
+      );
+      return;
+    }
+
+    if (!TopikApi.isLoggedIn() || TopikApi.getAccessToken() === 'demo-local') {
+      renderStatus(
+        '<div class="ticket-banner info">' +
+          '<a href="login.html?next=' + encodeURIComponent('ticket.html') + '">로그인</a>하면 ' +
+          '수험번호가 공개된 접수 건을 확인할 수 있습니다. ' +
+          '수험표 인쇄는 본 사이트가 아닌 <strong>topik.go.kr</strong>에서 진행됩니다.' +
+        '</div>'
+      );
+      return;
+    }
+
+    TopikApi.getMyApplications().then(function (res) {
+      if (!res.ok) {
+        renderStatus(
+          '<div class="ticket-banner err">' + esc(TopikApi.parseError(res)) +
+            ' <a href="mypage.html">접수 확인</a></div>'
+        );
+        return;
+      }
+
+      var all = (res.body && res.body.items) ? res.body.items : [];
+      var eligible = all.filter(hasVisibleExamNumber);
+      var pending = all.filter(function (i) {
+        return !hasVisibleExamNumber(i) &&
+          (i.fo_card_status === 'number' || i.fo_card_status === 'approved' ||
+           (i.levels || []).some(function (l) { return l.exam_number && !l.exam_number_visible; }));
+      });
+      var inProgress = all.filter(function (i) {
+        return !hasVisibleExamNumber(i) &&
+          ['applied', 'photo', 'pay', 'approved'].indexOf(i.fo_card_status) >= 0 &&
+          pending.indexOf(i) < 0;
+      });
+
+      if (eligible.length === 0 && all.length === 0) {
+        renderStatus(
+          '<div class="ticket-banner info">' +
+            '진행 중인 접수가 없습니다. ' +
+            '<a href="register.html">시험 접수</a> · ' +
+            '<a href="mypage.html">접수 확인</a>' +
+          '</div>'
+        );
+        return;
+      }
+
+      var html = '';
+      if (eligible.length > 0) {
+        var focused = focusSubmissionFromQuery(eligible);
+        var highlightId = new URLSearchParams(window.location.search).get('submission');
+        html += '<div class="ticket-banner info">' +
+          '아래 수험번호로 <strong>TOPIK 본부 홈페이지(topik.go.kr)</strong>에서 수험표를 출력하세요. ' +
+          '본 사이트는 수험표 직접 출력을 지원하지 않습니다. (정책 0527)' +
+          '</div>';
+        html += focused.map(function (item, idx) {
+          return buildTicketCard(item, highlightId && idx === 0);
+        }).join('');
+      } else if (pending.length > 0) {
+        html += '<div class="ticket-banner warn">' +
+          '수험번호는 부여되었으나 아직 공개일 전입니다. 공개일 이후 이 페이지와 ' +
+          '<a href="mypage.html">접수 확인</a>에서 확인할 수 있습니다.' +
+          '</div>';
+      } else if (inProgress.length > 0) {
+        html += '<div class="ticket-banner warn">' +
+          '접수·심사·수납이 진행 중입니다. 수험번호는 수납 마감 후 일괄 부여되며, ' +
+          '공개일 이후 수험표 출력 안내가 표시됩니다. ' +
+          '<a href="mypage.html">접수 확인</a>' +
+          '</div>';
+      } else {
+        html += '<div class="ticket-banner info">' +
+          '수험표 출력 대상 접수가 없습니다. ' +
+          '<a href="mypage.html">접수 확인</a>' +
+          '</div>';
+      }
+
+      renderStatus(html);
+    }).catch(function () {
+      renderStatus(
+        '<div class="ticket-banner err">네트워크 오류입니다. API 서버 연결을 확인해 주세요.</div>'
+      );
+    });
+  }
+
+  loadTicketStatus();
+})();
+</script>
+</body>
+</html>

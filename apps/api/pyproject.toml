@@ -1,0 +1,26 @@
+[project]
+name = "topik-myanmar-api"
+version = "0.1.0"
+description = "FastAPI backend scaffold for TOPIK Myanmar redevelopment."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "asyncpg",
+    "pydantic-settings",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "bcrypt",
+    "alembic",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[tool.uvicorn]
+factory = false
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

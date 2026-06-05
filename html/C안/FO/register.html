@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시험 접수 — TOPIK 접수 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .reg-wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  /* sticky step indicator on mobile */
+  .step-sticky {
+    position: sticky; top: var(--header-h);
+    z-index: 5;
+    background: var(--bg);
+    padding: 12px 0;
+    margin: -24px -16px 20px;
+    padding-left: 16px; padding-right: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-pane { display: none; }
+  .step-pane.active { display: block; }
+
+  /* STEP 1: 회차 카드 */
+  .round-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .round-card {
+    padding: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    cursor: pointer;
+    transition: all .15s var(--ease);
+    position: relative;
+  }
+  .round-card.disabled { opacity: .5; cursor: not-allowed; }
+  .round-card:hover:not(.disabled):not(.selected) { border-color: var(--border-strong); }
+  .round-card.selected { border-color: var(--primary); background: var(--primary-50); }
+  .round-card.selected::after {
+    content: ""; position: absolute; top: 12px; right: 12px;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--primary);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'><path fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1 5l3.5 3.5L11 1'/></svg>");
+    background-repeat: no-repeat; background-position: center;
+    background-size: 12px;
+  }
+  .round-card .h {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .round-card .round-n {
+    font-family: 'Inter', sans-serif; font-weight: 800; font-size: 20px;
+    letter-spacing: -0.02em; color: var(--text);
+  }
+  .round-card .round-status {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 99px;
+    background: var(--success-50); color: var(--success);
+  }
+  .round-card.upcoming .round-status { background: var(--bg-3); color: var(--text-3); }
+  .round-card.closed .round-status   { background: var(--bg-3); color: var(--text-3); }
+  .round-card .meta-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    font-size: 13px; color: var(--text-3);
+  }
+  .round-card .meta-row strong { color: var(--text-2); font-weight: 600; display:block; font-size: 12px; margin-bottom: 2px; }
+  @media (min-width: 768px) { .round-list { grid-template-columns: 1fr 1fr; } }
+
+  /* Level checkbox cards */
+  .lvl-cards { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .lvl-card {
+    display: flex; gap: 14px; padding: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff; cursor: pointer;
+    transition: all .15s var(--ease);
+  }
+  .lvl-card:has(input:checked) { border-color: var(--primary); background: var(--primary-50); }
+  .lvl-card .ck-box {
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 4px;
+    background: #fff;
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lvl-card:has(input:checked) .ck-box {
+    background: var(--primary); border-color: var(--primary);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'><path fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1 5l3.5 3.5L11 1'/></svg>");
+    background-repeat: no-repeat; background-position: center; background-size: 12px;
+  }
+  .lvl-card input { display: none; }
+  .lvl-card .ttl { font-size: 15px; font-weight: 700; }
+  .lvl-card .sub { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+  .lvl-card .fee { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--primary); font-size: 14px; margin-top: 6px; }
+  @media (min-width: 768px) { .lvl-cards { grid-template-columns: 1fr 1fr; } }
+
+  /* STEP 2: readonly fields */
+  .ro-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .ro-item { padding: 12px 14px; background: var(--bg-2); border-radius: var(--radius-sm); }
+  .ro-item .l { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+  .ro-item .v { font-size: 14.5px; font-weight: 500; color: var(--text); }
+  @media (min-width: 600px) { .ro-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .ro-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  /* STEP 3: photo */
+  .photo-frame {
+    display: flex; gap: 20px; padding: 24px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .photo-frame .pf {
+    width: 120px; height: 160px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-4);
+    flex: 0 0 auto;
+  }
+  .photo-frame .pf-info { flex: 1; }
+  .photo-frame .pf-info h3 { font-size: 15px; margin-bottom: 8px; }
+  .photo-frame .pf-info .small { font-size: 12px; color: var(--text-3); }
+
+  .photo-checks {
+    margin-top: 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 0;
+  }
+  .photo-checks .check { padding: 10px 16px; width: 100%; }
+
+  @media (max-width: 480px) {
+    .photo-frame { flex-direction: column; }
+    .photo-frame .pf { margin: 0 auto; }
+  }
+
+  /* STEP 4 summary */
+  .sum-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0;
+    overflow: hidden;
+  }
+  .sum-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .sum-row:last-child { border-bottom: 0; }
+  .sum-row .l { color: var(--text-3); font-weight: 500; }
+  .sum-row .v { color: var(--text); font-weight: 500; }
+  .sum-row .v strong { font-weight: 700; }
+  @media (max-width: 480px) {
+    .sum-row { grid-template-columns: 100px 1fr; padding: 12px; font-size: 13.5px; }
+  }
+
+  .form-actions { display: flex; gap: 8px; margin-top: 28px; }
+  .form-actions .btn { flex: 1; }
+  .form-actions .btn-secondary { flex: 0 0 auto; min-width: 100px; }
+</style>
+</head>
+<body data-require-login data-footer-compact>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <div class="reg-wrap">
+
+    <header style="text-align:center; margin-bottom: 20px;">
+      <h1 class="h1" data-i18n-content="reg.title">시험 접수</h1>
+      <p class="body-sm" style="margin-top: 6px;">아래 4단계를 차례로 진행해 주세요.</p>
+    </header>
+
+    <div class="step-sticky">
+      <ol class="steps">
+        <li class="step active" data-s="1"><span class="n">1</span><span>회차·급수</span></li>
+        <li class="step" data-s="2"><span class="n">2</span><span>회원정보 확인</span></li>
+        <li class="step" data-s="3"><span class="n">3</span><span>사진 규격 확인</span></li>
+        <li class="step" data-s="4"><span class="n">4</span><span>최종 확인</span></li>
+      </ol>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-bottom: 12px;">
+      <button type="button" class="btn btn-ghost btn-sm" id="btnSaveDraft">저장 후 나가기</button>
+    </div>
+
+    <!-- ============ STEP 1: 회차·급수 ============ -->
+    <section class="step-pane active" data-s="1">
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="reg.s1_title">응시 회차 선택</h2>
+      <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s1_desc">접수 가능한 회차 중 하나를 선택해 주세요.</p>
+
+      <div class="round-list" id="roundList">
+        <p class="body-sm" id="roundListLoading" style="display:none;">회차 정보를 불러오는 중…</p>
+        <p class="body-sm" id="roundListError" style="display:none; color:var(--danger);"></p>
+      </div>
+
+      <h2 class="h3" style="margin: 28px 0 6px;">시험장 선택</h2>
+      <p class="body-sm" style="margin-bottom: 10px;">접수 회차에 배정 가능한 시험장입니다.</p>
+      <select class="input" id="venueSelect" style="width:100%; max-width:480px;">
+        <option value="">시험장을 선택해 주세요</option>
+      </select>
+
+      <h2 class="h3" style="margin: 28px 0 6px;">응시 급수 선택 <span style="font-size: 12px; color:var(--text-3); font-weight:400;">(복수 선택 가능)</span></h2>
+      <p class="body-sm" style="margin-bottom: 16px;">TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.</p>
+
+      <div class="lvl-cards">
+        <label class="lvl-card">
+          <span class="ck-box"></span>
+          <input type="checkbox" id="lvl1">
+          <div style="flex:1;">
+            <div class="ttl">TOPIK Ⅰ <span style="font-size:12px; color:var(--text-3); font-weight:500;">초급 (1·2급)</span></div>
+            <div class="sub">듣기 30 + 읽기 40 · 100분 · 200점</div>
+            <div class="fee">응시료 50,000 MMK</div>
+          </div>
+        </label>
+        <label class="lvl-card">
+          <span class="ck-box"></span>
+          <input type="checkbox" id="lvl2">
+          <div style="flex:1;">
+            <div class="ttl">TOPIK Ⅱ <span style="font-size:12px; color:var(--text-3); font-weight:500;">중·고급 (3~6급)</span></div>
+            <div class="sub">듣기 50 + 쓰기 4 + 읽기 50 · 180분 · 300점</div>
+            <div class="fee">응시료 75,000 MMK</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="callout" style="margin-top: 20px;">
+        <div class="ico"></div>
+        <div>
+          <strong>동시 접수 시 응시료는 각 수준별로 개별 오프라인 수납</strong>합니다 (합산 일괄 납부 아님).
+          동시 접수 시 시험장은 동일 코드로 부여됩니다.
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block btn-lg" data-next>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2: 회원정보 확인 ============ -->
+    <section class="step-pane" data-s="2">
+      <h2 class="h3" style="margin-bottom: 6px;">회원정보 확인</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">회원가입 시 등록한 정보입니다. 본 단계에서 수정할 수 없습니다.</p>
+
+      <div class="callout">
+        <div class="ico"></div>
+        <div>
+          정보 변경이 필요하시면 <a href="mypage-profile.html" class="text-primary" style="text-decoration: underline;">마이페이지 · 내정보 수정</a>에서 수정해 주세요.
+        </div>
+      </div>
+
+      <h3 class="h4" style="margin: 20px 0 10px;">기본정보</h3>
+      <div class="ro-grid" id="profileGrid">
+        <div class="ro-item"><div class="l">한글 성명</div><div class="v" id="profNameKo">—</div></div>
+        <div class="ro-item"><div class="l">영문 성명</div><div class="v" id="profNameEn">—</div></div>
+        <div class="ro-item"><div class="l">생년월일</div><div class="v" id="profBirth">—</div></div>
+        <div class="ro-item"><div class="l">성별</div><div class="v" id="profGender">—</div></div>
+        <div class="ro-item"><div class="l">국적</div><div class="v" id="profNationality">—</div></div>
+        <div class="ro-item"><div class="l">제1언어</div><div class="v" id="profLang">—</div></div>
+        <div class="ro-item"><div class="l">연락처</div><div class="v" id="profPhone">—</div></div>
+        <div class="ro-item"><div class="l">이메일 (아이디)</div><div class="v" id="profEmail">—</div></div>
+        <div class="ro-item"><div class="l">직업</div><div class="v" id="profJob">—</div></div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">응시 정보</h3>
+      <div class="ro-grid">
+        <div class="ro-item"><div class="l">응시동기</div><div class="v" id="profMotive">—</div></div>
+        <div class="ro-item"><div class="l">응시목적</div><div class="v" id="profPurpose">—</div></div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" data-next>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 3: 사진 규격 확인 ============ -->
+    <section class="step-pane" data-s="3">
+      <h2 class="h3" style="margin-bottom: 6px;">사진 규격 확인</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">회원가입 시 등록한 증명사진입니다. 본 단계에서 사진 업로드·교체는 불가합니다.</p>
+
+      <div class="photo-frame">
+        <div class="pf">증명사진<br>미리보기</div>
+        <div class="pf-info">
+          <h3>등록된 증명사진</h3>
+          <p class="body-sm">접수 시 자동 사용됩니다. 사진이 규격에 맞지 않거나 변경이 필요한 경우 회원가입 사진을 먼저 교체해 주세요.</p>
+          <a href="mypage-profile.html" class="btn btn-text btn-sm" style="margin-top: 8px;">마이페이지에서 사진 재등록 →</a>
+        </div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">규격 체크리스트 <span style="font-size: 12px; color: var(--danger); font-weight: 500;">(모두 확인 필수)</span></h3>
+      <div class="photo-checks">
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>여권용 · 정면 촬영 · JPG 형식</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>6개월 이내 촬영한 사진</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>흑백이 아닌 컬러 사진</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>모자·선글라스·앞머리로 얼굴이 가려지지 않음</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>연예인·타인 사진이 아닌 본인 사진</span></label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" data-next id="btnGoStep4" disabled>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 4: 최종 확인 ============ -->
+    <section class="step-pane" data-s="4">
+      <h2 class="h3" style="margin-bottom: 6px;">최종 확인 및 제출</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">아래 내용으로 접수가 진행됩니다. 제출 후에는 수정이 불가합니다.</p>
+
+      <h3 class="h4" style="margin-bottom: 10px;">응시 정보</h3>
+      <div class="sum-card">
+        <div class="sum-row"><div class="l">회차</div><div class="v" id="sumRound">—</div></div>
+        <div class="sum-row"><div class="l">응시 급수</div><div class="v" id="sumLevels"><strong>—</strong></div></div>
+        <div class="sum-row"><div class="l">시험장</div><div class="v" id="sumVenue">—</div></div>
+        <div class="sum-row"><div class="l">한글 성명</div><div class="v" id="sumNameKo">—</div></div>
+        <div class="sum-row"><div class="l">영문 성명</div><div class="v" id="sumNameEn">—</div></div>
+        <div class="sum-row"><div class="l">생년월일</div><div class="v" id="sumBirth">—</div></div>
+        <div class="sum-row"><div class="l">연락처</div><div class="v" id="sumPhone">—</div></div>
+        <div class="sum-row"><div class="l">이메일</div><div class="v" id="sumEmail">—</div></div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">응시료 안내</h3>
+      <div class="callout callout-warning">
+        <div class="ico"></div>
+        <div>
+          응시료는 <strong>오프라인 수납</strong>으로만 가능합니다.
+          접수 완료 후 안내되는 수납처에서 직접 납부해 주세요. 동시 접수 시 각 수준별로 개별 납부합니다.
+        </div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">환불·취소 안내</h3>
+      <div class="callout callout-neutral">
+        <div class="ico"></div>
+        <div>
+          오프라인 수납 전까지 마이페이지에서 직접 취소가 가능합니다. 수납 완료 후에는 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>에 따라 환불 신청해 주세요.
+        </div>
+      </div>
+
+      <div style="margin: 20px 0;">
+        <label class="check"><input type="checkbox" id="agreeTerms"><span class="box"></span><span><span class="req" style="color:var(--danger);">[필수]</span> 서비스 이용약관 및 개인정보 처리 방침에 동의합니다.</span></label>
+      </div>
+
+      <p id="submitError" class="body-sm" style="display:none; color:var(--danger); margin-bottom:12px;"></p>
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" id="btnSubmit">접수하기</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<!-- 접수 완료 모달 -->
+<div class="modal-backdrop" id="modalDone">
+  <div class="modal">
+    <div class="modal-body" style="padding: 32px 24px; text-align: center;">
+      <div style="width:64px; height:64px; background:var(--success-50); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px; height:32px; stroke: var(--success);"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+      </div>
+      <h3 style="font-size: 20px; margin-bottom: 8px;">접수가 완료되었습니다</h3>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7;">
+        사진 심사 및 오프라인 응시료 수납 후 수험번호가 부여됩니다.<br>
+        관련 일정 및 유의사항은 공지사항을 참고하시기 바랍니다.<br>
+        접수 결과는 마이페이지에서 확인하시기 바랍니다.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <a href="notice.html" class="btn btn-secondary">공지사항 보기</a>
+      <a href="mypage.html" class="btn btn-primary">마이페이지</a>
+    </div>
+  </div>
+</div>
+
+<script src="shared/api-client.js"></script>
+<script src="shared/roster-codes.js"></script>
+<script src="assets/common.js"></script>
+<script>
+  // ---- API-backed master data & profile (Phase 1) ----
+  var REG_STATE = {
+    rounds: [],
+    venues: [],
+    profile: null,
+    selectedRoundId: null,
+  };
+
+  function fmtDateYmd(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso).slice(0, 10);
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    var w = ['일','월','화','수','목','금','토'][d.getDay()];
+    return y + '.' + m + '.' + day + ' (' + w + ')';
+  }
+
+  function fmtRegPeriod(start, end) {
+    if (!start || !end) return '—';
+    function short(s) {
+      var d = new Date(s);
+      return String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+    }
+    return short(start) + ' — ' + short(end);
+  }
+
+  function roundStatusLabel(status) {
+    if (status === 'open') return { text: '접수 중', cls: '' };
+    if (status === 'closed') return { text: '접수 마감', cls: 'closed' };
+    return { text: '접수 예정', cls: 'upcoming' };
+  }
+
+  function renderRoundList(rounds) {
+    var list = document.getElementById('roundList');
+    var loading = document.getElementById('roundListLoading');
+    var errEl = document.getElementById('roundListError');
+    if (loading) loading.style.display = 'none';
+    REG_STATE.rounds = rounds || [];
+    list.querySelectorAll('.round-card').forEach(function (n) { n.remove(); });
+    if (!rounds.length) {
+      if (errEl) { errEl.textContent = '접수 가능한 회차가 없습니다.'; errEl.style.display = 'block'; }
+      return;
+    }
+    rounds.forEach(function (r, idx) {
+      var st = roundStatusLabel(r.registration_status);
+      var disabled = r.registration_status !== 'open';
+      var card = document.createElement('label');
+      card.className = 'round-card' + (disabled ? ' disabled ' + st.cls : (idx === 0 && !disabled ? ' selected' : ' ' + st.cls));
+      card.dataset.roundId = String(r.id);
+      card.innerHTML =
+        '<input type="radio" name="round" hidden' + (disabled ? ' disabled' : (idx === 0 ? ' checked' : '')) + '>' +
+        '<div class="h"><div class="round-n">' + (r.title || ('제' + r.round_no + '회')) + '</div>' +
+        '<div class="round-status">' + st.text + '</div></div>' +
+        '<div class="meta-row">' +
+        '<div><strong>시험일</strong>' + fmtDateYmd(r.exam_date) + '</div>' +
+        '<div><strong>접수 기간</strong>' + fmtRegPeriod(r.registration_start_at, r.registration_end_at) + '</div></div>';
+      if (!disabled && idx === 0) REG_STATE.selectedRoundId = r.id;
+      list.appendChild(card);
+    });
+    bindRoundCards();
+  }
+
+  function renderVenueSelect(venues) {
+    var sel = document.getElementById('venueSelect');
+    REG_STATE.venues = venues || [];
+    sel.innerHTML = '<option value="">시험장을 선택해 주세요</option>';
+    venues.forEach(function (v) {
+      var opt = document.createElement('option');
+      opt.value = String(v.id);
+      opt.textContent = v.name_ko + (v.name_en ? ' (' + v.name_en + ')' : '');
+      sel.appendChild(opt);
+    });
+    if (venues.length === 1) sel.value = String(venues[0].id);
+  }
+
+  function applyProfileToDom(u) {
+    REG_STATE.profile = u;
+    if (!u) return;
+    function set(id, val) { var el = document.getElementById(id); if (el) el.textContent = val || '—'; }
+    function codeLabel(kind, code) {
+      if (code == null || code === '') return '—';
+      var R = window.TPKM_ROSTER_CODES;
+      var txt = R ? R.label(kind, code) : '';
+      return txt || '—';
+    }
+    var birth = u.birth_date;
+    if (birth && birth.length === 8) birth = birth.slice(0,4) + '-' + birth.slice(4,6) + '-' + birth.slice(6,8);
+    set('profNameKo', u.name_ko);
+    set('profNameEn', u.name_en);
+    set('profBirth', birth);
+    set('profGender', u.gender === '1' ? '남' : (u.gender === '2' ? '여' : u.gender));
+    set('profNationality', u.nationality);
+    set('profLang', u.first_language);
+    set('profPhone', u.phone);
+    set('profEmail', u.email);
+    set('profJob', codeLabel('job', u.job_code));
+    set('profMotive', codeLabel('motive', u.motive_code));
+    set('profPurpose', codeLabel('purpose', u.purpose_code));
+    if (u.photo_file_id && window.TopikApi) {
+      if (u.photo_unavailable && TopikApi.markFileUnavailable) {
+        TopikApi.markFileUnavailable(u.photo_file_id);
+        if (typeof renderPortrait === 'function') renderPortrait('');
+      } else if (TopikApi.fileUrl) {
+        var purl = TopikApi.fileUrl(u.photo_file_id);
+        if (typeof renderPortrait === 'function') {
+          if (purl) renderPortrait(purl, u.photo_file_id);
+          else renderPortrait('');
+        }
+      }
+    } else if (typeof renderPortrait === 'function') {
+      renderPortrait('');
+    }
+  }
+
+  function loadRegisterMasters() {
+    if (!window.TopikApi || !TopikApi.useApi) return;
+    var loading = document.getElementById('roundListLoading');
+    if (loading) loading.style.display = 'block';
+    TopikApi.getExamRounds({ registration_status: 'open' }).then(function (res) {
+      if (res.ok && res.body.items) renderRoundList(res.body.items);
+      else TopikApi.getExamRounds().then(function (r2) {
+        if (r2.ok && r2.body.items) renderRoundList(r2.body.items);
+      });
+    });
+    TopikApi.getExamVenues().then(function (res) {
+      if (res.ok && res.body.items) renderVenueSelect(res.body.items);
+    });
+    if (TopikApi.isLoggedIn()) {
+      TopikApi.getMe().then(function (res) {
+        if (res.ok && res.body.user) applyProfileToDom(res.body.user);
+      });
+    }
+  }
+  loadRegisterMasters();
+
+  function getSelectedRound() {
+    var card = document.querySelector('.round-card.selected');
+    if (!card) return null;
+    var id = Number(card.dataset.roundId);
+    return REG_STATE.rounds.find(function (r) { return r.id === id; }) || null;
+  }
+
+  function bindRoundCards() {
+    document.querySelectorAll('.round-card').forEach(function (c) {
+      c.addEventListener('click', function () {
+        if (c.classList.contains('disabled')) return;
+        document.querySelectorAll('.round-card').forEach(function (x) { x.classList.remove('selected'); });
+        c.classList.add('selected');
+        REG_STATE.selectedRoundId = Number(c.dataset.roundId);
+      });
+    });
+  }
+
+  // Step navigation
+  const panes = document.querySelectorAll('.step-pane');
+  const indi  = document.querySelectorAll('.steps .step');
+  function go(s) {
+    panes.forEach(p => p.classList.toggle('active', +p.dataset.s === s));
+    indi.forEach(i => {
+      const n = +i.dataset.s;
+      i.classList.toggle('active', n === s);
+      i.classList.toggle('done',   n <  s);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+    const cur = +document.querySelector('.step-pane.active').dataset.s;
+    // STEP1 validation
+    if (cur === 1) {
+      const any = document.getElementById('lvl1').checked || document.getElementById('lvl2').checked;
+      if (!any) { alert('응시 급수를 1개 이상 선택해 주세요.'); return; }
+      if (!document.querySelector('.round-card.selected')) {
+        alert('응시 회차를 선택해 주세요.'); return;
+      }
+      const venue = document.getElementById('venueSelect').value;
+      if (!venue) { alert('시험장을 선택해 주세요.'); return; }
+    }
+    if (cur === 4) return;
+    // Update STEP4 summary on STEP3 → 4
+    if (cur === 3) updateSummary();
+    go(cur + 1);
+  }));
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => {
+    const cur = +document.querySelector('.step-pane.active').dataset.s;
+    go(cur - 1);
+  }));
+
+  // STEP 3 — enable next only when all 5 checks are checked
+  const photoChecks = document.querySelectorAll('.check-photo input');
+  photoChecks.forEach(c => c.addEventListener('change', () => {
+    const all = [...photoChecks].every(x => x.checked);
+    document.getElementById('btnGoStep4').disabled = !all;
+  }));
+
+  var DUMMY_PORTRAIT = 'assets/dummy-portrait.jpg';
+  function renderPortrait(url, fileId) {
+    var src = url || DUMMY_PORTRAIT;
+    document.querySelectorAll('.photo-frame .pf').forEach(function (pf) {
+      pf.classList.add('has-photo');
+      pf.style.padding = '0';
+      pf.style.overflow = 'hidden';
+      var img = document.createElement('img');
+      img.alt = '증명사진';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;';
+      function fallback() { img.onerror = null; img.src = DUMMY_PORTRAIT; }
+      if (fileId && window.TopikApi && TopikApi.imgFileOnError) {
+        img.onerror = TopikApi.imgFileOnError(fileId, fallback);
+      } else {
+        img.onerror = fallback;
+      }
+      img.src = src;
+      pf.innerHTML = '';
+      pf.appendChild(img);
+    });
+  }
+  renderPortrait(DUMMY_PORTRAIT);
+
+  // STEP 4 — summary
+  function updateSummary() {
+    const l1 = document.getElementById('lvl1').checked;
+    const l2 = document.getElementById('lvl2').checked;
+    const lvls = [];
+    if (l1) lvls.push('TOPIK Ⅰ');
+    if (l2) lvls.push('TOPIK Ⅱ');
+    document.getElementById('sumLevels').innerHTML = '<strong>' + lvls.join(' · ') + '</strong>' + (lvls.length === 2 ? ' <span style="font-size:12px; color:var(--text-3);">(동시 접수)</span>' : '');
+
+    const round = getSelectedRound();
+    const sumRound = document.getElementById('sumRound');
+    if (sumRound) {
+      sumRound.innerHTML = round
+        ? '<strong>' + (round.title || ('제' + round.round_no + '회')) + '</strong> · ' + fmtDateYmd(round.exam_date)
+        : '—';
+    }
+    const venueSel = document.getElementById('venueSelect');
+    const sumVenue = document.getElementById('sumVenue');
+    if (sumVenue && venueSel) {
+      const opt = venueSel.options[venueSel.selectedIndex];
+      sumVenue.textContent = opt && opt.value ? opt.textContent : '—';
+    }
+    const u = REG_STATE.profile;
+    if (u) {
+      var birth = u.birth_date;
+      if (birth && birth.length === 8) birth = birth.slice(0,4) + '-' + birth.slice(4,6) + '-' + birth.slice(6,8);
+      document.getElementById('sumNameKo').textContent = u.name_ko || '—';
+      document.getElementById('sumNameEn').textContent = u.name_en || '—';
+      document.getElementById('sumBirth').textContent = birth || '—';
+      document.getElementById('sumPhone').textContent = u.phone || '—';
+      document.getElementById('sumEmail').textContent = u.email || '—';
+    }
+  }
+
+  function buildSubmitPayload() {
+    const round = getSelectedRound();
+    const levels = [];
+    if (document.getElementById('lvl1').checked) levels.push('I');
+    if (document.getElementById('lvl2').checked) levels.push('II');
+    return {
+      exam_round_id: round ? round.id : REG_STATE.selectedRoundId,
+      exam_levels: levels,
+      exam_venue_id: Number(document.getElementById('venueSelect').value) || undefined,
+      photo_checklist_confirmed: true,
+      terms_agreed: [],
+    };
+  }
+
+  function showSubmitError(msg) {
+    const el = document.getElementById('submitError');
+    if (!el) { alert(msg); return; }
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  // Submit — API (Phase 1); demo token falls back to modal only
+  document.getElementById('btnSubmit').addEventListener('click', function () {
+    if (!document.getElementById('agreeTerms').checked) {
+      alert('약관에 동의해 주세요.'); return;
+    }
+    showSubmitError('');
+
+    if (!window.TopikApi || !TopikApi.isLoggedIn()) {
+      alert('로그인이 필요합니다.'); location.href = 'login.html?next=' + encodeURIComponent('register.html'); return;
+    }
+
+    var token = TopikApi.getAccessToken();
+    if (!TopikApi.useApi || !TopikApi.baseUrl || token === 'demo-local') {
+      localStorage.removeItem(DRAFT_KEY);
+      TPKM.openModal('modalDone');
+      return;
+    }
+
+    var btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = '제출 중…';
+
+    TopikApi.submitApplication(buildSubmitPayload()).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = '접수하기';
+      if (res.ok) {
+        localStorage.removeItem(DRAFT_KEY);
+        if (TopikApi.deleteApplicationDraft) {
+          TopikApi.deleteApplicationDraft().catch(function () {});
+        }
+        try {
+          sessionStorage.setItem('topik_last_submission', JSON.stringify(res.body));
+        } catch (e) {}
+        location.href = 'mypage.html?submitted=1';
+        return;
+      }
+      var err = (res.body && res.body.error) || {};
+      var msg = err.message || '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      if (res.status === 401) {
+        alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        location.href = 'login.html?next=' + encodeURIComponent('register.html');
+        return;
+      }
+      showSubmitError(msg);
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = '접수하기';
+      showSubmitError('네트워크 오류가 발생했습니다. API 서버 연결을 확인해 주세요.');
+    });
+  });
+
+  // ===== 저장 후 나가기 (임시저장) / 재진입 시 복원 =====
+  // Policy: 정책_합의_워크시트 §2.13 NO.466 — 임시(TBD) 30일 보관 후 자동 삭제.
+  // API 연동: PUT/GET /api/v1/application-draft (로그인 + USE_API). 미연결 시 localStorage 폴백.
+  const DRAFT_KEY = 'tpkm_reg_draft';
+  const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+  function isDraftExpired(d) {
+    if (!d || !d.savedAt) return false;
+    var t = new Date(d.savedAt).getTime();
+    return !isNaN(t) && (Date.now() - t) > DRAFT_TTL_MS;
+  }
+
+  function applyDraftToForm(d) {
+    if (!d) return;
+    const cards = [...document.querySelectorAll('.round-card')];
+    if (d.roundId) {
+      const match = cards.find(c => Number(c.dataset.roundId) === Number(d.roundId));
+      if (match && !match.classList.contains('disabled')) {
+        cards.forEach(x => x.classList.remove('selected'));
+        match.classList.add('selected');
+        REG_STATE.selectedRoundId = Number(d.roundId);
+      }
+    } else if (typeof d.round === 'number' && d.round >= 0 && cards[d.round] && !cards[d.round].classList.contains('disabled')) {
+      cards.forEach(x => x.classList.remove('selected'));
+      cards[d.round].classList.add('selected');
+      if (cards[d.round].dataset.roundId) REG_STATE.selectedRoundId = Number(cards[d.round].dataset.roundId);
+    }
+    if (d.venueId) document.getElementById('venueSelect').value = String(d.venueId);
+    document.getElementById('lvl1').checked = !!d.lvl1;
+    document.getElementById('lvl2').checked = !!d.lvl2;
+    if (Array.isArray(d.photoChecks)) {
+      const inputs = [...document.querySelectorAll('.check-photo input')];
+      inputs.forEach((c, i) => { c.checked = !!d.photoChecks[i]; });
+      document.getElementById('btnGoStep4').disabled = !inputs.every(x => x.checked);
+    }
+    document.getElementById('agreeTerms').checked = !!d.agree;
+    updateSummary();
+    if (d.step) go(d.step);
+  }
+
+  function collectDraft() {
+    const cards = [...document.querySelectorAll('.round-card')];
+    return {
+      step: +document.querySelector('.step-pane.active').dataset.s,
+      roundId: REG_STATE.selectedRoundId,
+      venueId: document.getElementById('venueSelect').value || null,
+      round: cards.findIndex(c => c.classList.contains('selected')),
+      lvl1: document.getElementById('lvl1').checked,
+      lvl2: document.getElementById('lvl2').checked,
+      photoChecks: [...document.querySelectorAll('.check-photo input')].map(c => c.checked),
+      agree: document.getElementById('agreeTerms').checked,
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  function clearDraftStores() {
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    if (window.TopikApi && TopikApi.deleteApplicationDraft && TopikApi.canUseApi() && TopikApi.isLoggedIn()) {
+      TopikApi.deleteApplicationDraft().catch(function () {});
+    }
+  }
+
+  document.getElementById('btnSaveDraft').addEventListener('click', function () {
+    var draft = collectDraft();
+    var saved = false;
+
+    function done() {
+      alert('작성 중인 접수 정보가 임시 저장되었습니다.\n다음에 시험 접수 화면에 다시 들어오시면 이어서 작성할 수 있습니다.');
+      location.href = 'mypage.html';
+    }
+
+    if (window.TopikApi && TopikApi.saveApplicationDraft && TopikApi.canUseApi() &&
+        TopikApi.isLoggedIn() && TopikApi.getAccessToken() !== 'demo-local') {
+      TopikApi.saveApplicationDraft(draft).then(function (res) {
+        if (res.ok) {
+          try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+          done();
+          return;
+        }
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); saved = true; } catch (e) {}
+        done();
+      }).catch(function () {
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
+        done();
+      });
+      return;
+    }
+
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
+    done();
+  });
+
+  function promptRestoreDraft(d, sourceLabel) {
+    if (isDraftExpired(d)) {
+      clearDraftStores();
+      return;
+    }
+    const when = d.savedAt ? new Date(d.savedAt).toLocaleString('ko-KR') : '';
+    const src = sourceLabel ? ' (' + sourceLabel + ')' : '';
+    if (!confirm('임시 저장된 접수 정보가 있습니다' + src + (when ? ' — ' + when + ' 저장' : '') +
+        '.\n이어서 작성하시겠습니까?\n[취소] 시 임시저장을 삭제하고 새로 시작합니다.')) {
+      clearDraftStores();
+      return;
+    }
+    applyDraftToForm(d);
+  }
+
+  function restoreDraftFromLocal() {
+    let raw = null;
+    try { raw = localStorage.getItem(DRAFT_KEY); } catch (e) {}
+    if (!raw) return false;
+    let d = null;
+    try { d = JSON.parse(raw); } catch (e) { return false; }
+    if (!d) return false;
+    if (isDraftExpired(d)) {
+      clearDraftStores();
+      return false;
+    }
+    promptRestoreDraft(d, '기기 저장');
+    return true;
+  }
+
+  function restoreDraftFromApi() {
+    if (!window.TopikApi || !TopikApi.getApplicationDraft || !TopikApi.canUseApi() ||
+        !TopikApi.isLoggedIn() || TopikApi.getAccessToken() === 'demo-local') {
+      restoreDraftFromLocal();
+      return;
+    }
+    TopikApi.getApplicationDraft().then(function (res) {
+      if (res.ok && res.body && res.body.payload) {
+        promptRestoreDraft(res.body.payload, '서버 저장');
+        return;
+      }
+      if (res.status === 404) {
+        restoreDraftFromLocal();
+        return;
+      }
+      restoreDraftFromLocal();
+    }).catch(function () {
+      restoreDraftFromLocal();
+    });
+  }
+
+  function restoreDraft() {
+    restoreDraftFromApi();
+  }
+  restoreDraft();
+</script>
+</body>
+</html>

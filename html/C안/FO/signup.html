@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>회원가입 — TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .signup-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+  .signup-head { margin-bottom: 22px; }
+  .signup-head h1 { font-size: 24px; text-align: center; }
+  .signup-head p { font-size: 13.5px; color: var(--text-3); text-align: center; margin-top: 6px; }
+
+  .step-pane { display: none; }
+  .step-pane.active { display: block; }
+
+  .otp-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 8px;
+  }
+  .otp-row .input { letter-spacing: 0.3em; text-align: center; font-family: 'Inter', sans-serif; font-weight: 600; }
+  .otp-timer {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-size: 12px; font-weight: 600;
+    font-family: 'Inter', sans-serif;
+  }
+  .otp-wrap { position: relative; }
+
+  .photo-upload {
+    display: flex; gap: 16px;
+    padding: 16px;
+    background: var(--bg-2);
+    border-radius: var(--radius);
+    border: 1px dashed var(--border-strong);
+  }
+  .photo-preview {
+    width: 90px; height: 120px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+    font-size: 11px; color: var(--text-4);
+    background-image: linear-gradient(135deg, #f8fafc 25%, transparent 25%), linear-gradient(225deg, #f8fafc 25%, transparent 25%), linear-gradient(45deg, #f8fafc 25%, transparent 25%), linear-gradient(315deg, #f8fafc 25%, #fff 25%);
+    background-size: 8px 8px;
+    background-position: 4px 0, 4px 0, 0 0, 0 0;
+  }
+  .photo-info { flex: 1; }
+  .photo-info h4 { font-size: 14px; margin-bottom: 4px; }
+  .photo-info p { font-size: 12px; color: var(--text-3); line-height: 1.55; }
+  .photo-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+  .pw-strength {
+    display: flex; gap: 4px; margin-top: 6px;
+  }
+  .pw-strength .seg {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--bg-3);
+  }
+  .pw-strength.weak .seg:nth-child(1) { background: var(--danger); }
+  .pw-strength.mid  .seg:nth-child(-n+2) { background: var(--warning); }
+  .pw-strength.good .seg:nth-child(-n+3) { background: var(--success); }
+  .pw-strength.strong .seg { background: var(--success); }
+  .pw-meta { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+  .terms-list {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .terms-all {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .terms-item {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .terms-item:last-child { border-bottom: 0; }
+  .terms-item .view {
+    font-size: 12px; color: var(--text-3); text-decoration: underline;
+  }
+  .terms-item .req { color: var(--danger); font-weight: 700; }
+  .terms-item .opt { color: var(--text-3); font-size: 12px; }
+
+  .form-actions {
+    display: flex; gap: 8px; margin-top: 24px;
+  }
+  .form-actions .btn { flex: 1; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .field-err {
+    display: block;
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--danger);
+    line-height: 1.45;
+  }
+  .input.input-invalid { border-color: var(--danger); }
+
+  /* Done modal */
+  .done-icon {
+    width: 64px; height: 64px;
+    background: var(--success-50);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .done-icon svg {
+    width: 32px; height: 32px;
+    stroke: var(--success);
+  }
+</style>
+</head>
+<body data-footer-compact>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <div class="signup-wrap">
+    <div class="signup-head">
+      <h1>회원가입</h1>
+      <p>TOPIK 미얀마 시행 공식 접수 서비스에 오신 것을 환영합니다.</p>
+    </div>
+
+    <ol class="steps" style="margin-bottom: 28px;">
+      <li class="step active" data-s="1">
+        <span class="n">1</span>
+        <span>이메일 인증</span>
+      </li>
+      <li class="step" data-s="2">
+        <span class="n">2</span>
+        <span>기본정보 입력</span>
+      </li>
+      <li class="step" data-s="3">
+        <span class="n">3</span>
+        <span>약관 동의</span>
+      </li>
+    </ol>
+
+    <!-- ============ STEP 1: 이메일 인증 + 구글 ============ -->
+    <section class="step-pane active" data-s="1">
+      <h2 class="h3" style="margin-bottom: 6px;">이메일 인증</h2>
+      <p class="body-sm" style="margin-bottom: 20px;">인증된 이메일이 곧 회원 아이디(로그인 ID)가 됩니다.</p>
+
+      <div class="form-row">
+        <label class="label">이메일 <span class="req">*</span></label>
+        <div class="input-group">
+          <input class="input" type="email" id="su-email" placeholder="example@email.com">
+          <button class="btn btn-secondary" id="btnSendCode" type="button">인증코드 발송</button>
+        </div>
+        <span class="hint">미얀마 통신 환경을 고려해 안정적인 이메일 주소를 입력해 주세요.</span>
+      </div>
+
+      <div class="form-row hidden" id="otpRow">
+        <label class="label">인증코드 <span class="req">*</span></label>
+        <div class="otp-row">
+          <div class="otp-wrap">
+            <input class="input" id="su-otp" maxlength="6" placeholder="6자리">
+            <span class="otp-timer" id="otpTimer">05:00</span>
+          </div>
+          <button class="btn btn-secondary" id="btnConfirmCode" type="button">확인</button>
+        </div>
+        <span class="hint" id="otpHint">이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)</span>
+        <div class="callout callout-neutral hidden" id="otpMailPending" style="margin-top:10px;">
+          <div class="ico"></div>
+          <div>인증 메일이 아직 도착하지 않았다면 스팸함을 확인해 주세요. 계속 오지 않으면 <strong>topik.myanmar@mofa.go.kr</strong>로 문의해 주세요.</div>
+        </div>
+      </div>
+
+      <div class="form-row hidden" id="emailOk">
+        <div class="callout callout-neutral" style="background:var(--success-50); border-color:#bce3cf; color:var(--success);">
+          <div class="ico" style="background:var(--success);"></div>
+          <div><strong>이메일 인증이 완료되었습니다.</strong></div>
+        </div>
+      </div>
+
+      <div class="auth-divider" style="display:flex; align-items:center; gap:12px; color:var(--text-3); font-size:12px; margin:24px 0;">
+        <span style="flex:1; height:1px; background:var(--border);"></span>
+        또는
+        <span style="flex:1; height:1px; background:var(--border);"></span>
+      </div>
+
+      <div id="googleArea">
+        <!-- Google Identity Services renders its own button here when OAuth is configured -->
+        <div id="gsiButton" style="display:flex; justify-content:center;"></div>
+        <!-- Fallback shown when OAuth is not configured / GIS unavailable -->
+        <button type="button" class="google-btn" id="googleFallbackBtn" style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; height:48px; background:#fff; border:1px solid var(--border-strong); border-radius:var(--radius-sm); font-size:14.5px; font-weight:500; color:var(--text);">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.99 10.99 0 0 0 1 12c0 1.77.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          <span id="googleBtnLabel">Google 계정으로 계속하기</span>
+        </button>
+        <p class="body-sm" id="googleHint" style="text-align:center; margin-top: 10px;">Google 계정 사용 시 이메일 인증이 자동으로 처리됩니다.</p>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block btn-lg" id="btnGoStep2" disabled>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2: 기본정보 + 사진 ============ -->
+    <section class="step-pane" data-s="2">
+      <h2 class="h3" style="margin-bottom: 6px;">기본정보 + 증명사진</h2>
+      <p class="body-sm" style="margin-bottom: 20px;">시험 접수 시 자동으로 사용됩니다. 정확히 입력해 주세요.</p>
+
+      <div class="form-row">
+        <label class="label">이메일 (아이디)</label>
+        <input class="input" id="su-email-display" readonly value="">
+      </div>
+
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">한글 성명 <span class="req">*</span></label>
+          <input class="input" id="su-name-ko" placeholder="홍길동">
+        </div>
+        <div class="form-row">
+          <label class="label">영문 성명 (여권 표기) <span class="req">*</span></label>
+          <input class="input" id="su-name-en" placeholder="HONG GILDONG">
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">생년월일 <span class="req">*</span></label>
+          <input class="input" id="su-birth" placeholder="YYYYMMDD" maxlength="8" inputmode="numeric" autocomplete="bday">
+          <span class="hint">만 14세 이상만 가입할 수 있습니다. (YYYYMMDD 8자리)</span>
+          <span class="field-err hidden" id="su-birth-err" role="alert"></span>
+        </div>
+        <div class="form-row">
+          <label class="label">성별 <span class="req">*</span></label>
+          <select class="select" id="su-gender">
+            <option value="">선택</option>
+            <option value="1">남</option>
+            <option value="2">여</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">국적 <span class="req">*</span></label>
+          <select class="select" id="su-nationality">
+            <option value="">선택</option>
+            <option>미얀마</option>
+            <option>대한민국</option>
+            <option>기타</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="label">제1언어 <span class="req">*</span></label>
+          <select class="select" id="su-lang1">
+            <option value="">선택</option>
+            <option>미얀마어</option>
+            <option>한국어</option>
+            <option>영어</option>
+            <option>기타</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="label">연락처 <span class="req">*</span></label>
+        <input class="input" id="su-phone" placeholder="+95 9 ...">
+      </div>
+
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">직업 <span class="req">*</span></label>
+          <select class="select" id="su-job"><option value="">선택</option></select>
+        </div>
+        <div class="form-row">
+          <label class="label">응시동기 <span class="req">*</span></label>
+          <select class="select" id="su-motive"><option value="">선택</option></select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="label">응시목적 <span class="req">*</span></label>
+        <select class="select" id="su-purpose"><option value="">선택</option></select>
+      </div>
+
+      <div class="form-row">
+        <label class="label">비밀번호 <span class="req">*</span></label>
+        <input class="input" type="password" id="su-pw" placeholder="영문+숫자+특수문자 8자 이상">
+        <div class="pw-strength" id="pwBar">
+          <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+        </div>
+        <div class="pw-meta" id="pwMeta">8자 이상 / 영문·숫자·특수문자 조합 권장</div>
+      </div>
+
+      <div class="form-row">
+        <label class="label">비밀번호 확인 <span class="req">*</span></label>
+        <input class="input" type="password" id="su-pw2" placeholder="동일한 비밀번호를 다시 입력">
+      </div>
+
+      <div class="form-row">
+        <label class="label">증명사진 <span class="req">*</span></label>
+        <div class="photo-upload" id="signupPhotoZone">
+          <div class="photo-preview">사진<br>미리보기</div>
+          <div class="photo-info">
+            <h4>여권용 정면 증명사진</h4>
+            <p>JPG·PNG, 3:4 비율 (35×45mm 권장), 최대 2MB. 6개월 이내 촬영본을 사용해 주세요.</p>
+            <div class="photo-actions">
+              <button class="btn btn-secondary btn-sm" type="button" data-photo-select>파일 선택</button>
+              <button class="btn btn-text btn-sm" type="button" data-photo-spec>규격 안내</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" data-next>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 3: 약관 동의 ============ -->
+    <section class="step-pane" data-s="3">
+      <h2 class="h3" style="margin-bottom: 6px;">약관 동의</h2>
+      <p class="body-sm" style="margin-bottom: 20px;">서비스 이용을 위해 약관에 동의해 주세요.</p>
+
+      <div class="terms-list">
+        <label class="check terms-all" style="width:100%; font-size: 15px; font-weight: 600;">
+          <input type="checkbox" id="termsAll">
+          <span class="box"></span>
+          <span>전체 약관에 동의합니다</span>
+        </label>
+        <label class="check terms-item" style="width:100%;">
+          <input type="checkbox" class="t-req">
+          <span class="box"></span>
+          <span><span class="req">[필수]</span> 서비스 이용약관 동의</span>
+          <a href="terms.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;">보기</a>
+        </label>
+        <label class="check terms-item" style="width:100%;">
+          <input type="checkbox" class="t-req">
+          <span class="box"></span>
+          <span><span class="req">[필수]</span> 개인정보 수집·이용 동의</span>
+          <a href="privacy.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;">보기</a>
+        </label>
+        <label class="check terms-item" style="width:100%;">
+          <input type="checkbox" class="t-opt">
+          <span class="box"></span>
+          <span><span class="opt">[선택]</span> 마케팅 정보 수신 동의 (이메일)</span>
+          <a href="marketing.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;">보기</a>
+        </label>
+      </div>
+
+      <div class="callout callout-neutral" style="margin-top: 20px;">
+        <div class="ico"></div>
+        <div>가입 시 등록한 증명사진은 시험 접수 시 자동으로 사용됩니다. 접수 단계에서는 사진 업로드·변경이 불가하니, 본 가입 화면에서 신중하게 등록해 주세요.</div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" id="btnFinish">가입 완료</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<!-- ============ 가입 완료 모달 ============ -->
+<div class="modal-backdrop" id="modalDone">
+  <div class="modal">
+    <div class="modal-body" style="padding: 32px 24px; text-align: center;">
+      <div class="done-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+      </div>
+      <h3 style="font-size: 20px; margin-bottom: 8px;">가입이 완료되었습니다</h3>
+      <p style="color: var(--text-3); font-size: 14px;">자동으로 로그인됩니다.<br>이제 TOPIK 시험을 접수하실 수 있습니다.</p>
+    </div>
+    <div class="modal-foot">
+      <a href="index.html" class="btn btn-secondary">홈으로</a>
+      <a href="register.html" class="btn btn-primary">시험 접수하기</a>
+    </div>
+  </div>
+</div>
+
+<script src="shared/api-client.js"></script>
+<script src="shared/roster-codes.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/photo-upload.js"></script>
+<script>
+(function initRosterCodeSelects(){
+  var R=window.TPKM_ROSTER_CODES;
+  if(!R)return;
+  R.fillSelect(document.getElementById('su-job'),'job');
+  R.fillSelect(document.getElementById('su-motive'),'motive');
+  R.fillSelect(document.getElementById('su-purpose'),'purpose');
+})();
+  var signupPhotoCtrl = TPKMPhoto.bind({
+    zone: document.getElementById('signupPhotoZone'),
+    placeholder: '사진<br>미리보기'
+  });
+  var verifiedEmail = '';
+  var verificationToken = '';
+  var signupBusy = false;
+
+  /** Policy: 정책_합의_워크시트 §2.9 — API MIN_SIGNUP_AGE_YEARS 와 동일 */
+  var MIN_SIGNUP_AGE_YEARS = 14;
+  var AGE_RESTRICTED_MSG = '만 ' + MIN_SIGNUP_AGE_YEARS + '세 미만은 회원가입할 수 없습니다.';
+
+  function showSignupErr(msg) {
+    alert(msg);
+  }
+
+  function normalizeBirthYmd(raw) {
+    var d = String(raw || '').replace(/\D/g, '');
+    if (d.length !== 8) return null;
+    var y = Number(d.slice(0, 4));
+    var m = Number(d.slice(4, 6));
+    var day = Number(d.slice(6, 8));
+    if (y < 1900 || y > 2100 || m < 1 || m > 12 || day < 1 || day > 31) return null;
+    return d;
+  }
+
+  function isUnderMinimumAge(birthYmd, minAge, asOf) {
+    minAge = minAge == null ? MIN_SIGNUP_AGE_YEARS : minAge;
+    asOf = asOf || new Date();
+    if (!birthYmd || birthYmd.length !== 8) return false;
+    var y = Number(birthYmd.slice(0, 4));
+    var m = Number(birthYmd.slice(4, 6));
+    var day = Number(birthYmd.slice(6, 8));
+    if (!isFinite(y) || !isFinite(m) || !isFinite(day)) return false;
+    var ref = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+    var birth = new Date(y, m - 1, day);
+    var age = ref.getFullYear() - birth.getFullYear();
+    var md = ref.getMonth() - birth.getMonth();
+    if (md < 0 || (md === 0 && ref.getDate() < birth.getDate())) age -= 1;
+    return age < minAge;
+  }
+
+  function setBirthFieldError(msg) {
+    var el = document.getElementById('su-birth-err');
+    var inp = document.getElementById('su-birth');
+    if (!el || !inp) return;
+    if (msg) {
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      inp.classList.add('input-invalid');
+      inp.setAttribute('aria-invalid', 'true');
+    } else {
+      el.textContent = '';
+      el.classList.add('hidden');
+      inp.classList.remove('input-invalid');
+      inp.removeAttribute('aria-invalid');
+    }
+  }
+
+  function validateSignupBirth(showAlert) {
+    var raw = document.getElementById('su-birth').value.trim();
+    var birth = normalizeBirthYmd(raw);
+    if (!birth) {
+      var fmtMsg = '생년월일을 YYYYMMDD 8자리로 입력해 주세요.';
+      setBirthFieldError(fmtMsg);
+      if (showAlert) showSignupErr(fmtMsg);
+      return false;
+    }
+    if (isUnderMinimumAge(birth)) {
+      setBirthFieldError(AGE_RESTRICTED_MSG);
+      if (showAlert) showSignupErr(AGE_RESTRICTED_MSG);
+      return false;
+    }
+    setBirthFieldError('');
+    return true;
+  }
+
+  document.getElementById('su-birth').addEventListener('input', function () {
+    if (document.getElementById('su-birth-err').classList.contains('hidden')) return;
+    validateSignupBirth(false);
+  });
+
+  function setBusy(btn, busy, label) {
+    if (!btn) return;
+    btn.disabled = busy;
+    if (label) btn.textContent = label;
+  }
+
+  // Step navigation
+  const steps = document.querySelectorAll('.step-pane');
+  const indi  = document.querySelectorAll('.steps .step');
+  function go(s) {
+    steps.forEach(p => p.classList.toggle('active', +p.dataset.s === s));
+    indi.forEach(i => {
+      const n = +i.dataset.s;
+      i.classList.toggle('active', n === s);
+      i.classList.toggle('done',   n <  s);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+    const cur = +document.querySelector('.step-pane.active').dataset.s;
+    if (cur === 2) {
+      var pw = document.getElementById('su-pw').value;
+      var pw2 = document.getElementById('su-pw2').value;
+      if (!document.getElementById('su-name-ko').value.trim()) {
+        showSignupErr('한글 성명을 입력해 주세요.'); return;
+      }
+      if (!document.getElementById('su-name-en').value.trim()) {
+        showSignupErr('영문 성명을 입력해 주세요.'); return;
+      }
+      if (!validateSignupBirth(true)) return;
+      if (!document.getElementById('su-gender').value ||
+          !document.getElementById('su-nationality').value ||
+          !document.getElementById('su-lang1').value) {
+        showSignupErr('성별·국적·제1언어를 선택해 주세요.'); return;
+      }
+      if (!document.getElementById('su-phone').value.trim()) {
+        showSignupErr('연락처를 입력해 주세요.'); return;
+      }
+      if (!document.getElementById('su-job').value ||
+          !document.getElementById('su-motive').value ||
+          !document.getElementById('su-purpose').value) {
+        showSignupErr('직업·응시동기·응시목적을 선택해 주세요.'); return;
+      }
+      if (!pw || pw.length < 8) {
+        showSignupErr('비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.'); return;
+      }
+      if (pw !== pw2) {
+        showSignupErr('비밀번호 확인이 일치하지 않습니다.'); return;
+      }
+      var photoState = signupPhotoCtrl && signupPhotoCtrl.getState ? signupPhotoCtrl.getState() : {};
+      var dataUrl = photoState.dataUrl || '';
+      if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {
+        showSignupErr('증명사진을 등록해 주세요.'); return;
+      }
+    }
+    go(cur + 1);
+  }));
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => {
+    const cur = +document.querySelector('.step-pane.active').dataset.s;
+    go(cur - 1);
+  }));
+
+  var timerId;
+  document.getElementById('btnSendCode').addEventListener('click', function () {
+    var btn = this;
+    var e = document.getElementById('su-email').value.trim();
+    if (!e) { showSignupErr('이메일을 입력해 주세요.'); return; }
+    if (!TopikApi.canUseApi()) {
+      showSignupErr('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    if (signupBusy) return;
+    signupBusy = true;
+    setBusy(btn, true, '발송 중…');
+    TopikApi.sendVerificationCode(e).then(function (res) {
+      signupBusy = false;
+      setBusy(btn, false, '재발송');
+      if (!res.ok) {
+        showSignupErr(TopikApi.parseError(res));
+        return;
+      }
+      document.getElementById('otpRow').classList.remove('hidden');
+      var host = location.hostname;
+      var localDev = host === 'localhost' || host === '127.0.0.1';
+      if (localDev && res.body && res.body.dev_code) {
+        document.getElementById('su-otp').value = res.body.dev_code;
+      }
+      var mailOk = res.body && res.body.mail_delivered !== false;
+      var pending = document.getElementById('otpMailPending');
+      var hint = document.getElementById('otpHint');
+      if (pending) pending.classList.toggle('hidden', mailOk);
+      if (hint && !mailOk) {
+        hint.textContent = '이메일 발송이 지연될 수 있습니다. 메일이 오면 6자리 코드를 입력해 주세요. (유효 5분)';
+      } else if (hint) {
+        hint.textContent = '이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)';
+      }
+      var t = 300;
+      var tm = document.getElementById('otpTimer');
+      clearInterval(timerId);
+      timerId = setInterval(function () {
+        t--;
+        tm.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+        if (t <= 0) clearInterval(timerId);
+      }, 1000);
+    }).catch(function () {
+      signupBusy = false;
+      setBusy(btn, false, '재발송');
+      showSignupErr('네트워크 오류입니다.');
+    });
+  });
+
+  document.getElementById('btnConfirmCode').addEventListener('click', function () {
+    var btn = this;
+    var e = document.getElementById('su-email').value.trim();
+    var code = document.getElementById('su-otp').value.trim();
+    if (!e || code.length !== 6) {
+      showSignupErr('6자리 인증코드를 입력해 주세요.');
+      return;
+    }
+    if (!TopikApi.canUseApi()) {
+      showSignupErr('서버에 연결할 수 없습니다.');
+      return;
+    }
+    setBusy(btn, true, '확인 중…');
+    TopikApi.verifyEmail(e, code).then(function (res) {
+      setBusy(btn, false, '확인');
+      if (!res.ok) {
+        showSignupErr(TopikApi.parseError(res));
+        return;
+      }
+      verifiedEmail = res.body.email || e;
+      verificationToken = res.body.verification_token || '';
+      document.getElementById('emailOk').classList.remove('hidden');
+      document.getElementById('btnGoStep2').disabled = false;
+      document.getElementById('su-email-display').value = verifiedEmail;
+      clearInterval(timerId);
+    }).catch(function () {
+      setBusy(btn, false, '확인');
+      showSignupErr('네트워크 오류입니다.');
+    });
+  });
+
+  document.getElementById('btnGoStep2').addEventListener('click', function () {
+    if (!verificationToken) {
+      showSignupErr('이메일 인증을 완료해 주세요.');
+      return;
+    }
+    go(2);
+  });
+
+  // ---- Google Sign-In (GIS) — gated on backend /auth/google/config ----
+  (function initGoogleSignup() {
+    var GOOGLE_I18N = {
+      KO: {
+        label: 'Google 계정으로 계속하기',
+        helper: 'Google 계정 사용 시 이메일 인증이 자동으로 처리됩니다.',
+        disabled: 'Google 간편가입은 운영 OAuth 설정 후 이용 가능합니다. 이메일 가입을 이용해 주세요.',
+        fail: 'Google 가입에 실패했습니다. 다시 시도해 주세요.',
+        inactive: '이용이 제한된 계정입니다. 고객센터로 문의해 주세요.'
+      },
+      EN: {
+        label: 'Continue with Google',
+        helper: 'Email verification is handled automatically with a Google account.',
+        disabled: 'Google sign-up will be available after OAuth setup. Please use email sign-up.',
+        fail: 'Google sign-up failed. Please try again.',
+        inactive: 'This account is not active. Please contact support.'
+      },
+      MY: {
+        label: 'Google ဖြင့် ဆက်လက်ရန်',
+        helper: 'Google အကောင့်သုံးပါက အီးမေးလ်အတည်ပြုခြင်းကို အလိုအလျောက် ဆောင်ရွက်ပေးပါသည်။',
+        disabled: 'Google ဖြင့် အကောင့်ဖွင့်ခြင်းကို OAuth ပြင်ဆင်ပြီးမှ အသုံးပြုနိုင်ပါမည်။ အီးမေးလ်ဖြင့် ဖွင့်ပါ။',
+        fail: 'Google ဖြင့် အကောင့်ဖွင့်ခြင်း မအောင်မြင်ပါ။ ထပ်စမ်းကြည့်ပါ။',
+        inactive: 'ဤအကောင့်ကို အသုံးပြု၍မရပါ။'
+      }
+    };
+    function lang() {
+      try { return (localStorage.getItem('tpkm_lang') || 'KO').toUpperCase(); }
+      catch (e) { return 'KO'; }
+    }
+    function t() { return GOOGLE_I18N[lang()] || GOOGLE_I18N.KO; }
+    function gisLocale() {
+      var l = lang().toLowerCase();
+      return l === 'en' ? 'en' : (l === 'my' ? 'my' : 'ko');
+    }
+
+    var area = document.getElementById('googleArea');
+    var mount = document.getElementById('gsiButton');
+    var fallback = document.getElementById('googleFallbackBtn');
+    var hint = document.getElementById('googleHint');
+    var label = document.getElementById('googleBtnLabel');
+    var tr = t();
+    if (label) label.textContent = tr.label;
+    if (hint) hint.textContent = tr.helper;
+
+    function showDisabled() {
+      if (mount) mount.style.display = 'none';
+      if (fallback) {
+        fallback.style.display = 'flex';
+        fallback.disabled = true;
+        fallback.style.opacity = '0.55';
+        fallback.style.cursor = 'not-allowed';
+      }
+      if (hint) hint.textContent = tr.disabled;
+    }
+
+    if (fallback) {
+      fallback.addEventListener('click', function () {
+        if (fallback.disabled) showSignupErr(tr.disabled);
+      });
+    }
+
+    if (!window.TopikApi || typeof TopikApi.getGoogleConfig !== 'function' || !TopikApi.canUseApi()) {
+      showDisabled();
+      return;
+    }
+
+    TopikApi.getGoogleConfig().then(function (res) {
+      if (!res.ok || !res.body || !res.body.enabled || !res.body.client_id) {
+        showDisabled();
+        return;
+      }
+      loadGis(res.body.client_id);
+    }).catch(function () { showDisabled(); });
+
+    function loadGis(clientId) {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        renderGis(clientId);
+        return;
+      }
+      var existing = document.getElementById('gis-script');
+      var s = existing || document.createElement('script');
+      s.id = 'gis-script';
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true; s.defer = true;
+      s.onload = function () { renderGis(clientId); };
+      s.onerror = function () { showDisabled(); };
+      if (!existing) document.head.appendChild(s);
+    }
+
+    function renderGis(clientId) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredential,
+          ux_mode: 'popup'
+        });
+        mount.innerHTML = '';
+        var width = Math.min((area && area.offsetWidth) || 360, 400);
+        window.google.accounts.id.renderButton(mount, {
+          theme: 'outline', size: 'large', type: 'standard',
+          text: 'continue_with', shape: 'rectangular', logo_alignment: 'center',
+          width: width, locale: gisLocale()
+        });
+        if (fallback) fallback.style.display = 'none';
+        if (hint) hint.textContent = tr.helper;
+        mount.style.display = 'flex';
+      } catch (e) {
+        showDisabled();
+      }
+    }
+
+    function handleCredential(response) {
+      var idToken = response && response.credential;
+      if (!idToken) { showSignupErr(tr.fail); return; }
+      TopikApi.loginWithGoogle(idToken).then(function (res) {
+        if (!res.ok) {
+          if (res.status === 403) showSignupErr(tr.inactive);
+          else if (res.status === 503) showSignupErr(tr.disabled);
+          else showSignupErr(tr.fail);
+          return;
+        }
+        var u = (res.body && res.body.user) || {};
+        if (window.TPKMAuth) {
+          TPKMAuth.login({
+            name: u.name_ko || u.name || (u.email || '').split('@')[0],
+            email: u.email, id: u.id, role: u.role
+          });
+        }
+        if (window.__tpkmRebuildNav) __tpkmRebuildNav();
+        var params = new URLSearchParams(location.search);
+        location.href = params.get('next') || 'index.html';
+      }).catch(function () { showSignupErr(tr.fail); });
+    }
+  })();
+
+  // 영문 성명 — 입력 시 대문자 변환 (여권 표기)
+  document.getElementById('su-name-en').addEventListener('input', function () {
+    var v = this.value;
+    var upper = v.toUpperCase();
+    if (v !== upper) this.value = upper;
+  });
+
+  // PW strength
+  document.getElementById('su-pw').addEventListener('input', function () {
+    const v = this.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Za-z]/.test(v)) score++;
+    if (/\d/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const bar = document.getElementById('pwBar');
+    bar.className = 'pw-strength' + ['',' weak',' weak',' mid',' good',' strong'][score];
+    document.getElementById('pwMeta').textContent =
+      ['','약함','약함','보통','강함','매우 강함'][score] + ' · 영문+숫자+특수문자 8자 이상 권장';
+  });
+
+  // Terms 'all' toggle
+  const all = document.getElementById('termsAll');
+  const reqs = document.querySelectorAll('.t-req');
+  const opt = document.querySelector('.t-opt');
+  const checks = document.querySelectorAll('.terms-list .check input');
+  all.addEventListener('change', () => {
+    checks.forEach(c => { if (c !== all) c.checked = all.checked; });
+  });
+  document.querySelectorAll('.terms-list .check input').forEach(c => {
+    if (c === all) return;
+    c.addEventListener('change', () => {
+      const allReqs = [...reqs].every(r => r.checked);
+      all.checked = allReqs && opt.checked;
+    });
+  });
+
+  document.getElementById('btnFinish').addEventListener('click', function () {
+    var btn = this;
+    var reqOk = Array.prototype.slice.call(reqs).every(function (r) { return r.checked; });
+    if (!reqOk) { showSignupErr('필수 약관에 동의해 주세요.'); return; }
+    if (!verificationToken) {
+      showSignupErr('이메일 인증을 완료해 주세요.');
+      return;
+    }
+    if (!validateSignupBirth(true)) return;
+    var photoState = signupPhotoCtrl && signupPhotoCtrl.getState ? signupPhotoCtrl.getState() : {};
+    var dataUrl = photoState.dataUrl || '';
+    if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {
+      showSignupErr('증명사진을 등록해 주세요.');
+      return;
+    }
+    var photoB64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
+
+    var payload = {
+      verification_token: verificationToken,
+      password: document.getElementById('su-pw').value,
+      password_confirm: document.getElementById('su-pw2').value,
+      name_ko: document.getElementById('su-name-ko').value.trim(),
+      name_en: document.getElementById('su-name-en').value.trim(),
+      birth_date: document.getElementById('su-birth').value.trim(),
+      gender: document.getElementById('su-gender').value,
+      nationality: document.getElementById('su-nationality').value,
+      first_language: document.getElementById('su-lang1').value,
+      phone: document.getElementById('su-phone').value.trim(),
+      job_code: Number(document.getElementById('su-job').value),
+      motive_code: Number(document.getElementById('su-motive').value),
+      purpose_code: Number(document.getElementById('su-purpose').value),
+      photo_base64: photoB64,
+      marketing_opt_in: opt.checked,
+      preferred_lang: (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase().slice(0, 2) === 'my' ? 'my' : (localStorage.getItem('tpkm_lang') === 'EN' ? 'en' : 'ko')
+    };
+
+    if (!TopikApi.canUseApi()) {
+      showSignupErr('서버에 연결할 수 없습니다.');
+      return;
+    }
+    setBusy(btn, true, '가입 처리 중…');
+    TopikApi.register(payload).then(function (res) {
+      setBusy(btn, false, '가입 완료');
+      if (!res.ok) {
+        var errBody = res.body && res.body.error;
+        if (res.status === 422 && errBody && errBody.code === 'AGE_RESTRICTED') {
+          setBirthFieldError(errBody.message || AGE_RESTRICTED_MSG);
+          go(2);
+        }
+        showSignupErr(TopikApi.parseError(res));
+        return;
+      }
+      if (window.TPKMAuth && res.body && res.body.user) {
+        TPKMAuth.login({
+          name: res.body.user.name_ko || res.body.user.email,
+          email: res.body.user.email,
+          id: res.body.user.id
+        });
+      }
+      if (window.__tpkmRebuildNav) __tpkmRebuildNav();
+      TPKM.openModal('modalDone');
+    }).catch(function () {
+      setBusy(btn, false, '가입 완료');
+      showSignupErr('네트워크 오류입니다.');
+    });
+  });
+</script>
+</body>
+</html>

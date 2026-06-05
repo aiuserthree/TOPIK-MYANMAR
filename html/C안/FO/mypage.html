@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>접수 확인 — 마이페이지 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .my-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .submit-banner {
+    display: none;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: var(--success-bg, #ecfdf5);
+    border: 1px solid var(--success, #059669);
+    border-radius: var(--radius-md);
+    color: var(--success, #059669);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .submit-banner.show { display: block; }
+
+  .me-card {
+    display: flex; gap: 16px; align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-700));
+    border-radius: var(--radius-lg);
+    color: #fff;
+    margin-bottom: 24px;
+  }
+  .me-card .avatar {
+    width: 60px; height: 80px;
+    background: rgba(255,255,255,0.15);
+    border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: rgba(255,255,255,0.7);
+    flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .me-card .info { flex: 1; }
+  .me-card h2 { color: #fff; font-size: 20px; }
+  .me-card .en { font-family: 'Inter', sans-serif; font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  .me-card .meta { font-size: 12.5px; color: rgba(255,255,255,0.75); margin-top: 8px; }
+  .me-card .edit { font-size: 12px; color: rgba(255,255,255,0.9); padding: 6px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 99px; }
+  .me-card .edit:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+  .my-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .my-tabs button {
+    flex: 0 0 auto; padding: 12px 16px;
+    font-size: 14px; color: var(--text-3); font-weight: 500;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .my-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .my-tabs button .ct {
+    display: inline-block; margin-left: 4px;
+    background: var(--bg-3); color: var(--text-3);
+    padding: 1px 7px; border-radius: 99px;
+    font-size: 11px; font-weight: 600;
+  }
+  .my-tabs button.active .ct { background: var(--primary); color: #fff; }
+
+  .app-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .app-head {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .app-head .lt h3 {
+    font-size: 17px; letter-spacing: -0.015em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .app-head .lt .round-n {
+    font-family: 'Inter', sans-serif; font-weight: 800;
+    color: var(--primary);
+  }
+  .app-head .lt .lvls { font-size: 14px; color: var(--text-2); font-weight: 500; }
+  .app-head .lt .meta { font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
+  .app-head .rt { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .app-head .rt .apply-n {
+    font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 599px) {
+    .app-card { position: relative; }
+    .app-head { display: block; position: relative; flex-wrap: nowrap; }
+    .app-head .lt { min-width: 0; padding-right: 112px; }
+    .app-head .lt h3 { display: block; line-height: 1.35; }
+    .app-head .rt { position: static; display: block; margin-top: 6px; }
+    .app-head .rt .status {
+      position: absolute; top: 16px; right: 18px; z-index: 1; white-space: nowrap;
+    }
+    .app-head .rt .apply-n { display: block; text-align: left; }
+  }
+
+  .app-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 16px 18px;
+    gap: 12px;
+  }
+  .app-grid .it .l { font-size: 12px; color: var(--text-3); margin-bottom: 2px; }
+  .app-grid .it .v { font-size: 14px; color: var(--text); font-weight: 600; }
+  .app-grid .it .v.exam-num {
+    font-family: 'Inter', sans-serif; letter-spacing: 0.04em;
+    color: var(--st-number);
+  }
+  .app-grid .it .v.pending {
+    color: var(--text-4); font-style: italic; font-weight: 500;
+  }
+  @media (min-width: 600px) { .app-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .app-actions {
+    padding: 12px 18px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .app-actions .btn { flex: 1; min-width: 110px; }
+  @media (min-width: 600px) {
+    .app-actions { justify-content: flex-end; }
+    .app-actions .btn { flex: 0 0 auto; }
+  }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-2);
+    border-radius: var(--radius-lg);
+    color: var(--text-3);
+  }
+  .empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text-2); }
+  .empty p { font-size: 13.5px; margin-bottom: 16px; }
+
+  @media print {
+    body.printing-confirm > *:not(#modalConfirm) { display: none !important; }
+    body.printing-confirm #modalConfirm {
+      position: static !important; display: block !important;
+      background: #fff !important; padding: 0 !important;
+    }
+    body.printing-confirm #modalConfirm .modal {
+      max-width: 100% !important; max-height: none !important;
+      box-shadow: none !important; border: 0 !important; margin: 0 !important;
+    }
+    body.printing-confirm #modalConfirm .modal-head .btn-text,
+    body.printing-confirm #modalConfirm .modal-foot { display: none !important; }
+  }
+</style>
+</head>
+<body data-require-login data-footer-compact>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <div class="my-wrap">
+
+    <div id="submitBanner" class="submit-banner" role="status">
+      접수가 완료되었습니다. 아래에서 접수 내역을 확인해 주세요.
+    </div>
+
+    <div class="me-card" id="meCard">
+      <div class="avatar">PHOTO</div>
+      <div class="info">
+        <h2 id="meNameKo">—</h2>
+        <div class="en" id="meNameEn">—</div>
+        <div class="meta" id="meMeta">—</div>
+      </div>
+      <a href="mypage-profile.html" class="edit">내정보 수정</a>
+    </div>
+
+    <div class="my-tabs">
+      <button class="active" data-tab="active" type="button">진행 중인 접수 <span class="ct" id="ctActive">0</span></button>
+      <button data-tab="past" type="button">지난 접수 <span class="ct" id="ctPast">0</span></button>
+    </div>
+
+    <section class="tab-pane active" data-tab="active" id="paneActive"></section>
+    <section class="tab-pane" data-tab="past" id="panePast" style="display:none;"></section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<div class="modal-backdrop" id="modalConfirm">
+  <div class="modal" style="max-width: 540px;">
+    <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>접수 확인증</h3>
+      <button type="button" onclick="printConfirm()" class="btn btn-text btn-sm">인쇄</button>
+    </div>
+    <div class="modal-body" id="confirmBody"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalConfirm')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalCancel">
+  <div class="modal">
+    <div class="modal-head"><h3>접수를 취소하시겠습니까?</h3></div>
+    <div class="modal-body">
+      <p>접수를 취소하시면 사진 심사가 중단되며, 다시 접수하시려면 처음부터 진행해야 합니다.</p>
+      <div class="callout callout-warning" style="margin-top: 14px;">
+        <div class="ico"></div>
+        <div>
+          <strong>취소는 오프라인 수납 전까지만 가능합니다.</strong>
+          수납 완료 후에는 <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalCancel')">닫기</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmCancel">접수 취소</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared/api-client.js"></script>
+<script src="assets/common.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var PHOTO_LABELS = {
+    pending: { text: '대기', color: 'var(--text-3)' },
+    approved: { text: '승인 완료', color: 'var(--success)' },
+    rejected: { text: '반려', color: 'var(--st-rejected)' }
+  };
+  var PAY_LABELS = {
+    unpaid: { text: '대기', color: 'var(--st-pay)' },
+    paid: { text: '완료', color: 'var(--success)' },
+    refunded: { text: '환불', color: 'var(--text-3)' }
+  };
+  var REJECT_CODES = {
+    not_frontal: '정면 아님',
+    hat_glasses: '모자·안경',
+    bw_photo: '흑백 사진',
+    blurry: '흐림',
+    not_self: '본인 아님',
+    other: '기타'
+  };
+
+  var currentProfile = null;
+  var currentItems = { active: [], past: [] };
+
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function roundTitle(item) {
+    var r = item.exam_round || {};
+    if (r.title) return esc(r.title);
+    if (r.round_no) return '제' + esc(r.round_no) + '회';
+    return 'TOPIK';
+  }
+
+  function primaryLevel(item) {
+    return (item.levels && item.levels[0]) || {};
+  }
+
+  function photoCell(level) {
+    var pr = PHOTO_LABELS[level.photo_review_status] || PHOTO_LABELS.pending;
+    if (level.photo_review_status === 'rejected') {
+      var note = level.photo_reject_code
+        ? (REJECT_CODES[level.photo_reject_code] || level.photo_reject_code)
+        : '반려';
+      return '<div class="v" style="color: var(--st-rejected);">반려 (' + esc(note) + ')</div>';
+    }
+    if (level.display_status === 'photo_review') {
+      return '<div class="v" style="color: var(--st-photo);">심사 중</div>';
+    }
+    return '<div class="v" style="color:' + pr.color + ';">' + esc(pr.text) + '</div>';
+  }
+
+  function payCell(level) {
+    var p = PAY_LABELS[level.payment_status] || PAY_LABELS.unpaid;
+    return '<div class="v" style="color:' + p.color + ';">' + esc(p.text) + '</div>';
+  }
+
+  function examNumCell(item) {
+    var nums = (item.levels || [])
+      .map(function (l) {
+        if (l.exam_number_visible && l.exam_number) return l.exam_number;
+        return null;
+      })
+      .filter(Boolean);
+    if (nums.length) {
+      return '<div class="v exam-num">' + esc(nums.join(' / ')) + '</div>';
+    }
+    return '<div class="v pending">부여 전</div>';
+  }
+
+  function buildCard(item) {
+    var st = item.fo_card_status || 'applied';
+    var lvl = item.levels_text || '';
+    var pl = primaryLevel(item);
+    var applyNo = pl.application_no || '';
+    var submitted = item.submitted_at_formatted || '';
+    var meta = '시험일 ' + esc(item.exam_date_formatted || '') +
+      (item.venue && item.venue.name_ko ? ' · ' + esc(item.venue.name_ko) : '');
+
+    var actions = '';
+    var beforePay = ['applied', 'photo', 'pay'].indexOf(st) >= 0;
+    var ticketOk = st === 'number';
+    var confirmOk = ['applied', 'photo', 'pay', 'number', 'approved'].indexOf(st) >= 0;
+    var rejected = st === 'rejected';
+
+    if (confirmOk) {
+      actions += '<button type="button" class="btn btn-secondary btn-sm" data-act="confirm" data-sub="' +
+        esc(item.submission_id) + '">접수 확인증</button>';
+    }
+    if (ticketOk) {
+      actions += '<a href="ticket.html?submission=' + encodeURIComponent(item.submission_id) +
+        '" class="btn btn-primary btn-sm" data-act="ticket">수험표 출력</a>';
+    }
+    if (beforePay && !rejected) {
+      actions +=
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="cancel" data-sub="' +
+        esc(item.submission_id) +
+        '">접수 취소</button>';
+    }
+    if (rejected) {
+      actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="rephoto">사진 재등록</a>';
+    }
+
+    var statusClass = 'status status-' + st;
+    var statusLabel = esc(item.card_status_label || '');
+
+    return (
+      '<div class="app-card" data-status="' + esc(st) + '" data-submission-id="' + esc(item.submission_id) + '">' +
+        '<div class="app-head">' +
+          '<div class="lt">' +
+            '<h3><span class="round-n">' + roundTitle(item) + '</span> <span class="lvls">' + esc(lvl) + '</span></h3>' +
+            '<div class="meta">' + meta + '</div>' +
+          '</div>' +
+          '<div class="rt">' +
+            '<span class="' + statusClass + '">' + statusLabel + '</span>' +
+            (applyNo ? '<span class="apply-n">접수번호 ' + esc(applyNo) + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="app-grid">' +
+          '<div class="it"><div class="l">수험번호</div>' + examNumCell(item) + '</div>' +
+          '<div class="it"><div class="l">사진 심사</div>' + photoCell(pl) + '</div>' +
+          '<div class="it"><div class="l">응시료 수납</div>' + payCell(pl) + '</div>' +
+          '<div class="it"><div class="l">접수일</div><div class="v" style="color:var(--text-2); font-weight:500;">' + esc(submitted) + '</div></div>' +
+        '</div>' +
+        (actions ? '<div class="app-actions">' + actions + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  function emptyHtml(tab) {
+    if (tab === 'past') {
+      return '<div class="empty"><h3>지난 접수가 없습니다</h3><p>완료되거나 취소된 회차 접수가 여기에 표시됩니다.</p></div>';
+    }
+    return (
+      '<div class="empty">' +
+        '<h3>진행 중인 접수가 없습니다</h3>' +
+        '<p>시험 접수를 진행해 주세요.</p>' +
+        '<a href="register.html" class="btn btn-primary">시험 접수하기</a>' +
+      '</div>'
+    );
+  }
+
+  function renderLists() {
+    var activeEl = document.getElementById('paneActive');
+    var pastEl = document.getElementById('panePast');
+    var active = currentItems.active || [];
+    var past = currentItems.past || [];
+
+    document.getElementById('ctActive').textContent = String(active.length);
+    document.getElementById('ctPast').textContent = String(past.length);
+
+    activeEl.innerHTML = active.length
+      ? active.map(buildCard).join('')
+      : emptyHtml('active');
+    pastEl.innerHTML = past.length
+      ? past.map(buildCard).join('')
+      : emptyHtml('past');
+
+    gateActions();
+    bindConfirmButtons();
+    bindCancelButtons();
+  }
+
+  function bindCancelButtons() {
+    document.querySelectorAll('[data-act="cancel"][data-sub]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        cancelSubmissionId = btn.getAttribute('data-sub');
+        TPKM.openModal('modalCancel');
+      });
+    });
+  }
+
+  function fillProfile(user) {
+    if (!user) return;
+    currentProfile = user;
+    document.getElementById('meNameKo').textContent = user.name_ko || user.name || '—';
+    document.getElementById('meNameEn').textContent = user.name_en || '—';
+    var meta = [];
+    if (user.phone) meta.push(user.phone);
+    if (user.email) meta.push(user.email);
+    document.getElementById('meMeta').textContent = meta.join(' · ') || '—';
+  }
+
+  function fillProfileFromAuth() {
+    var u = window.TPKMAuth && TPKMAuth.user;
+    if (u) {
+      fillProfile({
+        name_ko: u.name,
+        name_en: '',
+        phone: '',
+        email: u.email
+      });
+    }
+  }
+
+  function openConfirmForItem(item) {
+    var pl = primaryLevel(item);
+    var levels = (item.levels || []).map(function (l) {
+      return l.exam_level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
+    }).join(' · ');
+    var payDone = (item.levels || []).some(function (l) {
+      return l.payment_status === 'paid';
+    });
+    var u = currentProfile || {};
+    var birth = u.birth_date;
+    if (birth && birth.length === 8) {
+      birth = birth.slice(0, 4) + '-' + birth.slice(4, 6) + '-' + birth.slice(6, 8);
+    }
+    document.getElementById('confirmBody').innerHTML =
+      '<table class="table" style="margin: 0;"><tbody style="font-size: 13.5px;">' +
+        '<tr><th style="width:110px;">회차</th><td>' + roundTitle(item) + '</td></tr>' +
+        '<tr><th>접수번호</th><td style="font-family:Inter,sans-serif;">' + esc(pl.application_no) + '</td></tr>' +
+        '<tr><th>수험번호</th><td style="font-family:Inter,sans-serif;">' +
+          (pl.exam_number_visible && pl.exam_number ? esc(pl.exam_number) : '부여 전') + '</td></tr>' +
+        '<tr><th>응시 급수</th><td>' + esc(levels) + '</td></tr>' +
+        '<tr><th>접수일</th><td>' + esc(item.submitted_at_formatted) + '</td></tr>' +
+        '<tr><th>응시자</th><td>' + esc(u.name_ko || '') + ' / ' + esc(u.name_en || '') + '</td></tr>' +
+        '<tr><th>생년월일</th><td>' + esc(birth || '—') + '</td></tr>' +
+        '<tr><th>수납 상태</th><td><span class="status ' +
+          (payDone ? 'status-approved">완료' : 'status-pay">대기') + '</span></td></tr>' +
+      '</tbody></table>';
+    TPKM.openModal('modalConfirm');
+  }
+
+  function bindConfirmButtons() {
+    document.querySelectorAll('[data-act="confirm"][data-sub]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sub = btn.getAttribute('data-sub');
+        var item = (currentItems.active || []).concat(currentItems.past || [])
+          .find(function (i) { return String(i.submission_id) === String(sub); });
+        if (item) openConfirmForItem(item);
+      });
+    });
+  }
+
+  function gateActions() {
+    document.querySelectorAll('.app-card[data-status]').forEach(function (card) {
+      var st = card.dataset.status;
+      var beforePay = ['applied', 'photo', 'pay'].indexOf(st) >= 0;
+      var ticketOk = st === 'number';
+      var confirmOk = ['applied', 'photo', 'pay', 'number', 'approved'].indexOf(st) >= 0;
+      card.querySelectorAll('[data-act="cancel"]').forEach(function (b) {
+        b.style.display = beforePay ? '' : 'none';
+      });
+      card.querySelectorAll('[data-act="ticket"]').forEach(function (b) {
+        b.style.display = ticketOk ? '' : 'none';
+      });
+      card.querySelectorAll('[data-act="confirm"]').forEach(function (b) {
+        b.style.display = confirmOk ? '' : 'none';
+      });
+    });
+  }
+
+  function applyApiPayload(body) {
+    var items = body.items || [];
+    currentItems.active = body.active || items.filter(function (i) { return i.tab === 'active'; });
+    currentItems.past = body.past || items.filter(function (i) { return i.tab === 'past'; });
+    renderLists();
+  }
+
+  var cancelSubmissionId = null;
+
+  function showLoadError(msg) {
+    var html =
+      '<div class="empty"><h3>접수 내역을 불러올 수 없습니다</h3><p>' +
+      esc(msg) +
+      '</p><button type="button" class="btn btn-secondary" onclick="location.reload()">다시 시도</button></div>';
+    document.getElementById('paneActive').innerHTML = html;
+    document.getElementById('panePast').innerHTML = html;
+    document.getElementById('ctActive').textContent = '0';
+    document.getElementById('ctPast').textContent = '0';
+  }
+
+  function loadApplications() {
+    var useApi = window.TopikApi && TopikApi.useApi && TopikApi.baseUrl &&
+      TopikApi.isLoggedIn() && TopikApi.getAccessToken() !== 'demo-local';
+
+    if (!useApi) {
+      if (!window.TPKMAuth || !TPKMAuth.isLoggedIn()) {
+        location.href = 'login.html?next=' + encodeURIComponent('mypage.html');
+        return;
+      }
+      showLoadError('API가 연결되지 않았습니다. 로그인 후 다시 시도해 주세요.');
+      return;
+    }
+
+    document.getElementById('paneActive').innerHTML =
+      '<p style="text-align:center;padding:32px;color:var(--text-3);">접수 내역을 불러오는 중…</p>';
+
+    TopikApi.getMyApplications().then(function (res) {
+      if (res.ok && res.body) {
+        applyApiPayload(res.body);
+        return;
+      }
+      showLoadError(TopikApi.parseError(res));
+    }).catch(function () {
+      showLoadError('네트워크 오류입니다.');
+    });
+  }
+
+  document.getElementById('btnConfirmCancel').addEventListener('click', function () {
+    var btn = this;
+    if (!cancelSubmissionId) {
+      TPKM.closeModal('modalCancel');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '처리 중…';
+    TopikApi.cancelSubmission(cancelSubmissionId).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = '접수 취소';
+      TPKM.closeModal('modalCancel');
+      if (!res.ok) {
+        alert(TopikApi.parseError(res));
+        return;
+      }
+      cancelSubmissionId = null;
+      loadApplications();
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = '접수 취소';
+      TPKM.closeModal('modalCancel');
+      alert('네트워크 오류입니다.');
+    });
+  });
+
+  function loadMe() {
+    if (!window.TopikApi || !TopikApi.useApi || !TopikApi.baseUrl || !TopikApi.isLoggedIn()) {
+      fillProfileFromAuth();
+      return;
+    }
+    if (TopikApi.getAccessToken() === 'demo-local') {
+      fillProfileFromAuth();
+      return;
+    }
+    TopikApi.getMe().then(function (res) {
+      if (res.ok && res.body && res.body.user) fillProfile(res.body.user);
+      else fillProfileFromAuth();
+    }).catch(fillProfileFromAuth);
+  }
+
+  document.querySelectorAll('.my-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.my-tabs button').forEach(function (x) {
+        x.classList.remove('active');
+      });
+      b.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(function (p) {
+        p.style.display = p.dataset.tab === b.dataset.tab ? '' : 'none';
+      });
+    });
+  });
+
+  if (new URLSearchParams(location.search).get('submitted') === '1') {
+    document.getElementById('submitBanner').classList.add('show');
+    if (history.replaceState) {
+      history.replaceState(null, '', location.pathname);
+    }
+  }
+
+  window.printConfirm = function () {
+    document.body.classList.add('printing-confirm');
+    window.print();
+  };
+  window.addEventListener('afterprint', function () {
+    document.body.classList.remove('printing-confirm');
+  });
+
+  loadMe();
+  loadApplications();
+})();
+</script>
+</body>
+</html>

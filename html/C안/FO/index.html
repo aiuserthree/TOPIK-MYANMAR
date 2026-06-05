@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TOPIK Myanmar — 한국어능력시험 미얀마</title>
+<meta name="description" content="한국어능력시험(TOPIK) 미얀마 시행 공식 안내·접수 사이트. 주미얀마 대한민국 대사관 운영.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TOPIK Myanmar — 한국어능력시험 미얀마">
+<meta property="og:description" content="한국어능력시험(TOPIK) 미얀마 시행 공식 안내·접수 사이트. 주미얀마 대한민국 대사관 운영.">
+<meta property="og:url" content="https://topik-myanmar.vercel.app/">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  /* ============ Hero ============ */
+  .hero {
+    background:
+      radial-gradient(1200px 600px at 100% 0%, rgba(10,77,140,0.10), transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, rgba(10,77,140,0.06), transparent 60%),
+      linear-gradient(180deg, #FBFCFE 0%, #F2F6FB 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 0 36px;
+  }
+  .hero-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .hero .round-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 99px;
+    font-size: 12.5px; color: var(--text-2);
+    width: fit-content;
+    box-shadow: var(--shadow-sm);
+  }
+  .hero .round-badge strong { color: var(--primary); font-weight: 700; }
+  .hero .round-badge::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success); animation: pulse 2s infinite;
+  }
+  .hero .round-badge.is-closed::before,
+  .hero .round-badge.is-upcoming::before {
+    background: var(--text-4); animation: none;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(26,127,78,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(26,127,78,0); }
+  }
+  .hero h1 {
+    font-size: 30px; line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--text);
+  }
+  .hero h1 .accent { color: var(--primary); }
+  .hero p.lead {
+    color: var(--text-2);
+    font-size: 15.5px;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+  .hero-ctas { display: flex; flex-direction: column; gap: 8px; }
+  .hero-ctas .btn { width: 100%; }
+
+  /* D-Day card */
+  .dday {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .dday-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .dday-head .ttl { font-size: 13px; color: var(--text-3); font-weight: 500; }
+  .dday-head .ttl strong { color: var(--primary); font-weight: 700; }
+  .dday-head .live {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--accent); font-weight: 600;
+  }
+  .dday-head .live::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); animation: pulse-red 1.5s infinite;
+  }
+  @keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .dday-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .dday-cell {
+    background: var(--bg-2);
+    border-radius: var(--radius-sm);
+    padding: 14px 4px;
+    text-align: center;
+  }
+  .dday-cell .n {
+    font-family: 'Inter', sans-serif;
+    font-size: 28px; font-weight: 700; line-height: 1;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+  }
+  .dday-cell .u {
+    font-size: 11px; color: var(--text-3); margin-top: 4px; font-weight: 500;
+  }
+  .dday-foot {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-size: 12.5px; color: var(--text-3);
+    display: flex; justify-content: space-between;
+  }
+  .dday-foot strong { color: var(--text-2); font-weight: 600; }
+
+  @media (min-width: 768px) {
+    .hero { padding: 56px 0 64px; }
+    .hero h1 { font-size: 42px; }
+    .hero p.lead { font-size: 17px; }
+    .hero-ctas { flex-direction: row; }
+    .hero-ctas .btn { width: auto; min-width: 160px; }
+    .dday-cell .n { font-size: 36px; }
+  }
+  @media (min-width: 1024px) {
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      align-items: center;
+      gap: 64px;
+    }
+    .hero h1 { font-size: 48px; }
+  }
+
+  /* ============ Notice preview ============ */
+  .notice-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .notice-row:hover .ttl { color: var(--primary); }
+  .notice-row:last-child { border-bottom: 0; }
+  .notice-row .ttl {
+    font-size: 14.5px; font-weight: 500; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: color .15s var(--ease);
+  }
+  .notice-row .date { font-size: 12.5px; color: var(--text-3); font-family: 'Inter', sans-serif; }
+  @media (max-width: 600px) {
+    .notice-row { grid-template-columns: auto 1fr; gap: 8px; }
+    .notice-row .date { grid-column: 2; font-size: 11.5px; margin-top: 2px; }
+  }
+
+  /* ============ Schedule timeline ============ */
+  .timeline {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .tl-card {
+    position: relative;
+    padding: 18px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s var(--ease);
+  }
+  .tl-card .step-n {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 700;
+    color: var(--text-3); letter-spacing: 0.06em;
+  }
+  .tl-card .step-t {
+    font-size: 16px; font-weight: 700; margin-top: 4px;
+    color: var(--text);
+  }
+  .tl-card .step-d {
+    font-size: 13px; color: var(--text-3); margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-card.active {
+    border-color: var(--primary);
+    background: var(--primary-50);
+  }
+  .tl-card.active .step-n { color: var(--primary); }
+  .tl-card.active .step-t { color: var(--primary-700); }
+  .tl-badge {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 8px; border-radius: 99px;
+    line-height: 1.2;
+  }
+  .tl-badge--active { background: var(--primary); color: #fff; }
+  .tl-badge[hidden] { display: none; }
+  .tl-badge--ended { background: var(--success-50); color: var(--success); }
+  .tl-card.done { background: var(--bg-2); opacity: 0.85; }
+  .tl-card.done .step-n { color: var(--success); }
+  @media (min-width: 768px) { .timeline { grid-template-columns: repeat(4, 1fr); } }
+
+  /* ============ Quicklinks ============ */
+  .quicklinks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .ql {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    text-align: left;
+    transition: all .15s var(--ease);
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 110px;
+  }
+  .ql:hover { border-color: var(--primary); background: var(--primary-50); }
+  .ql .t { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .ql .d { font-size: 12px; color: var(--text-3); margin-top: 4px; line-height: 1.4; }
+  .ql .arrow {
+    margin-top: 12px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3);
+    transition: all .15s var(--ease);
+    align-self: flex-end;
+  }
+  .ql:hover .arrow { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .ql .arrow::after { content: "→"; font-size: 13px; }
+  @media (min-width: 768px) { .quicklinks { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+
+  /* ============ Section header ============ */
+  .sec-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  .sec-head h2 { font-size: 22px; }
+  .sec-head .more {
+    font-size: 13px; color: var(--text-3); font-weight: 500;
+  }
+  .sec-head .more:hover { color: var(--primary); }
+  .sec-head .more::after { content: " →"; }
+  @media (min-width: 768px) { .sec-head h2 { font-size: 28px; } }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <!-- ============ Hero ============ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div>
+          <div class="round-badge is-upcoming" id="heroRoundBadge"><strong>제107회</strong> 한국어능력시험 (2026.10.18)</div>
+          <h1 style="margin-top:18px;">
+            미얀마 <span class="accent">한국어능력시험</span><br>
+            공식 접수 시스템
+          </h1>
+
+          <div class="hero-ctas" style="margin-top:24px;">
+            <a href="register.html" class="btn btn-primary btn-lg">시험 접수하기</a>
+            <a href="guide-overview.html" class="btn btn-secondary btn-lg">시험 안내 보기</a>
+          </div>
+        </div>
+
+        <!-- D-Day card -->
+        <div class="dday" aria-live="polite">
+          <div class="dday-head">
+            <div class="ttl"><strong>제107회</strong> 접수 마감까지</div>
+            <span class="live">LIVE</span>
+          </div>
+          <div class="dday-grid" id="ddayGrid">
+            <div class="dday-cell"><div class="n" id="dd-d">--</div><div class="u">DAYS</div></div>
+            <div class="dday-cell"><div class="n" id="dd-h">--</div><div class="u">HOURS</div></div>
+            <div class="dday-cell"><div class="n" id="dd-m">--</div><div class="u">MIN</div></div>
+            <div class="dday-cell"><div class="n" id="dd-s">--</div><div class="u">SEC</div></div>
+          </div>
+          <div class="dday-foot">
+            <span>접수 기간 <strong>2026.07.17 ~ 07.21</strong></span>
+            <span>응시료 납부 <strong>2026.07.24 ~ 07.26</strong></span>
+            <span>시험일 <strong>2026.10.18</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Schedule timeline ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Schedule</div>
+          <h2 id="schedTitle" style="margin-top:6px;">제107회 시험 일정</h2>
+        </div>
+        <a href="guide-overview.html" class="more">전체 일정</a>
+      </div>
+      <div class="timeline" id="examTimeline">
+        <div class="tl-card" data-tl-start="2026-07-17" data-tl-end="2026-07-21">
+          <span class="tl-badge" aria-hidden="true" hidden></span>
+          <div class="step-n">STEP 01</div>
+          <div class="step-t">원서 접수</div>
+          <div class="step-d">2026.07.17(금) — 07.21(화)</div>
+        </div>
+        <div class="tl-card" data-tl-start="2026-07-24" data-tl-end="2026-07-26">
+          <span class="tl-badge" aria-hidden="true" hidden></span>
+          <div class="step-n">STEP 02</div>
+          <div class="step-t">응시료 납부 (오프라인)</div>
+          <div class="step-d">2026.07.24(금) — 07.26(일)</div>
+        </div>
+        <div class="tl-card" data-tl-start="2026-10-18" data-tl-end="2026-10-18">
+          <span class="tl-badge" aria-hidden="true" hidden></span>
+          <div class="step-n">STEP 03</div>
+          <div class="step-t">시험 시행</div>
+          <div class="step-d">2026.10.18 (일)</div>
+        </div>
+        <div class="tl-card" data-tl-tbd>
+          <span class="tl-badge" aria-hidden="true" hidden></span>
+          <div class="step-n">STEP 04</div>
+          <div class="step-t">합격 발표</div>
+          <div class="step-d">추후 공지</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider-thick" aria-hidden="true">
+
+  <!-- ============ Notice preview ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Notice</div>
+          <h2 style="margin-top:6px;">공지사항</h2>
+        </div>
+        <a href="notice.html" class="more">더보기</a>
+      </div>
+
+      <div class="card" id="homeNoticeList">
+        <p style="padding:20px;text-align:center;color:var(--text-3);font-size:14px;">공지를 불러오는 중…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Quicklinks ============ -->
+  <section class="section section-bg">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Quick Links</div>
+          <h2 style="margin-top:6px;">바로가기</h2>
+        </div>
+      </div>
+      <div class="quicklinks">
+        <a href="register.html" class="ql">
+          <div>
+            <div class="t">시험 접수</div>
+            <div class="d">회차·급수를 선택해 접수</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+        <a href="mypage.html" class="ql">
+          <div>
+            <div class="t">접수 확인</div>
+            <div class="d">접수 상태 및 수험번호</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+        <a href="ticket.html" class="ql">
+          <div>
+            <div class="t">수험표 출력</div>
+            <div class="d">TOPIK 본부에서 출력</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+        <a href="refund-correction.html" class="ql">
+          <div>
+            <div class="t">환불·정보정정</div>
+            <div class="d">신청 및 진행 상태 확인</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ summary ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">FAQ</div>
+          <h2 style="margin-top:6px;">자주 묻는 질문</h2>
+        </div>
+        <a href="faq.html" class="more">전체 보기</a>
+      </div>
+
+      <div class="card accordion" id="homeFaqAccordion">
+        <p style="padding:20px;text-align:center;color:var(--text-3);font-size:14px;">FAQ를 불러오는 중…</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="shared/api-client.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/fo-notices.js"></script>
+<script>
+  (function () {
+    var faqEl = document.getElementById('homeFaqAccordion');
+    function escFaq(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function currentLang() {
+      var l = (window.TPKMLang && TPKMLang.get && TPKMLang.get()) || 'KO';
+      l = String(l).toLowerCase();
+      return l === 'my' || l === 'en' ? l : 'ko';
+    }
+    function renderHomeFaq(groups) {
+      if (!faqEl) return;
+      var items = [];
+      (groups || []).forEach(function (g) {
+        (g.items || []).forEach(function (it) { items.push(it); });
+      });
+      if (!items.length) {
+        faqEl.innerHTML =
+          '<p style="padding:20px;text-align:center;color:var(--text-3);font-size:14px;">등록된 FAQ가 없습니다.</p>';
+        return;
+      }
+      faqEl.innerHTML = items.slice(0, 3).map(function (it) {
+        return '<details>' +
+          '<summary><span class="q">' + escFaq(it.question) + '</span>' +
+          '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>' +
+          '</summary><div class="a">' + escFaq(it.answer) + '</div></details>';
+      }).join('');
+    }
+    function loadHomeFaq() {
+      if (!faqEl) return;
+      if (!window.TopikApi || !TopikApi.canUseApi()) {
+        faqEl.innerHTML =
+          '<p style="padding:20px;text-align:center;color:var(--text-3);">FAQ를 불러올 수 없습니다.</p>';
+        return;
+      }
+      faqEl.innerHTML =
+        '<p style="padding:20px;text-align:center;color:var(--text-3);font-size:14px;">FAQ를 불러오는 중…</p>';
+      TopikApi.getFaq({ lang: currentLang() }).then(function (res) {
+        if (res.ok && res.body) renderHomeFaq(res.body.groups);
+        else {
+          faqEl.innerHTML =
+            '<p style="padding:20px;text-align:center;color:var(--text-3);">FAQ를 불러올 수 없습니다.</p>';
+        }
+      }).catch(function () {
+        faqEl.innerHTML =
+          '<p style="padding:20px;text-align:center;color:var(--text-3);">FAQ를 불러올 수 없습니다.</p>';
+      });
+    }
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.lang-toggle button');
+      if (btn) setTimeout(loadHomeFaq, 60);
+    });
+    loadHomeFaq();
+
+    var el = document.getElementById('homeNoticeList');
+    if (!el || !window.TPKMNotices) return;
+    TPKMNotices.loadList({
+      homePreview: true,
+      onData: function (items) { TPKMNotices.renderHomeList(el, items); },
+      onFallback: function () {
+        el.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-3);">공지를 불러올 수 없습니다.</p>';
+      },
+    });
+  })();
+
+  // 회차 일정 — BO가 설정한 회차 데이터를 반영(미얀마 +06:30).
+  // API 미가용/실패 시에는 아래 정적 폴백값으로 기존 화면을 그대로 유지한다.
+  (function () {
+    var TZ = '+06:30';
+    var MMT_MS = (6 * 60 + 30) * 60000; // UTC → 미얀마 시간 보정
+    var WD = ['일', '월', '화', '수', '목', '금', '토'];
+
+    // 정적 폴백값(현행 하드코딩과 동일한 시점). 접수시작/마감은 절대 시각 기준.
+    var SCHED = {
+      roundNo: 107,
+      examDate: '2026-10-18T00:00:00+06:30',
+      regStart: '2026-07-17T00:00:00+06:30',
+      regEnd: '2026-07-21T23:59:59+06:30',
+      resultDate: null,
+      payPeriod: '2026.07.24 ~ 07.26', // BO 회차에 납부 기간 미설정 시 사용하는 정적 폴백
+    };
+
+    function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+    function mmt(v) {
+      if (!v) return null;
+      var d = (v instanceof Date) ? v : new Date(v);
+      return isNaN(d.getTime()) ? null : new Date(d.getTime() + MMT_MS);
+    }
+    function ymd(v) { var d = mmt(v); return d ? d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) : ''; }
+    function ymdDot(v) { var d = mmt(v); return d ? d.getUTCFullYear() + '.' + pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--'; }
+    function mdDot(v) { var d = mmt(v); return d ? pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--'; }
+    function wd(v) { var d = mmt(v); return d ? '(' + WD[d.getUTCDay()] + ')' : ''; }
+
+    function roundTag() { return '제' + SCHED.roundNo + '회'; }
+    function examDot() { return ymdDot(SCHED.examDate); }
+    function regPeriod() { return ymdDot(SCHED.regStart) + ' ~ ' + mdDot(SCHED.regEnd); }
+
+    var dday = document.querySelector('.dday');
+    var head = dday ? dday.querySelector('.dday-head') : null;
+    var foot = dday ? dday.querySelector('.dday-foot') : null;
+    var grid = document.getElementById('ddayGrid');
+    var badge = document.getElementById('heroRoundBadge');
+    var schedTitle = document.getElementById('schedTitle');
+    var el = {
+      d: document.getElementById('dd-d'),
+      h: document.getElementById('dd-h'),
+      m: document.getElementById('dd-m'),
+      s: document.getElementById('dd-s')
+    };
+    var timer = null;
+    var closed = false;
+
+    function footHtml(isClosed) {
+      if (isClosed) {
+        return '<span>시험일 <strong>' + examDot() + '</strong></span>' +
+               '<span>응시료 납부 <strong>' + SCHED.payPeriod + '</strong></span>';
+      }
+      return '<span>접수 기간 <strong>' + regPeriod() + '</strong></span>' +
+             '<span>응시료 납부 <strong>' + SCHED.payPeriod + '</strong></span>' +
+             '<span>시험일 <strong>' + examDot() + '</strong></span>';
+    }
+
+    // 접수기간·시험일·회차번호 등 정적 텍스트를 SCHED 기준으로 다시 그린다.
+    function paintStatic() {
+      if (head) {
+        var ttl = head.querySelector('.ttl');
+        if (ttl) ttl.innerHTML = '<strong>' + roundTag() + '</strong> 접수 마감까지';
+      }
+      if (foot) foot.innerHTML = footHtml(false);
+      if (schedTitle) schedTitle.textContent = roundTag() + ' 시험 일정';
+
+      var cards = document.querySelectorAll('#examTimeline .tl-card');
+      if (cards[0]) { // STEP 01 원서 접수
+        cards[0].setAttribute('data-tl-start', ymd(SCHED.regStart));
+        cards[0].setAttribute('data-tl-end', ymd(SCHED.regEnd));
+        var s1 = cards[0].querySelector('.step-d');
+        if (s1) s1.textContent = ymdDot(SCHED.regStart) + wd(SCHED.regStart) + ' — ' + mdDot(SCHED.regEnd) + wd(SCHED.regEnd);
+      }
+      if (cards[2]) { // STEP 03 시험 시행
+        cards[2].setAttribute('data-tl-start', ymd(SCHED.examDate));
+        cards[2].setAttribute('data-tl-end', ymd(SCHED.examDate));
+        var s3 = cards[2].querySelector('.step-d');
+        if (s3) s3.textContent = ymdDot(SCHED.examDate) + ' ' + wd(SCHED.examDate);
+      }
+      if (cards[3]) { // STEP 04 합격 발표
+        var s4 = cards[3].querySelector('.step-d');
+        if (s4) s4.textContent = SCHED.resultDate ? (ymdDot(SCHED.resultDate) + ' ' + wd(SCHED.resultDate)) : '추후 공지';
+      }
+    }
+
+    function paintTimelineBadges() {
+      var now = Date.now();
+      document.querySelectorAll('#examTimeline .tl-card').forEach(function (card) {
+        var b = card.querySelector('.tl-badge');
+        if (!b) return;
+        card.classList.remove('active', 'done');
+        var startYmd = card.getAttribute('data-tl-start');
+        var endYmd = card.getAttribute('data-tl-end');
+        if (!startYmd || !endYmd) {
+          b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
+          b.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        var start = new Date(startYmd + 'T00:00:00' + TZ).getTime();
+        var end = new Date(endYmd + 'T23:59:59' + TZ).getTime();
+        if (now < start) {
+          b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
+          b.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        b.hidden = false;
+        if (now <= end) { b.textContent = '진행중'; b.className = 'tl-badge tl-badge--active'; card.classList.add('active'); }
+        else { b.textContent = '종료'; b.className = 'tl-badge tl-badge--ended'; card.classList.add('done'); }
+        b.setAttribute('aria-hidden', 'true');
+      });
+    }
+
+    // 접수 마감 시각 도달 시 '접수 마감 / 다음 회차 안내' 상태로 자동 전환 (기능정의서 FO 메인)
+    function showClosed() {
+      if (closed) return;
+      closed = true;
+      if (timer) clearInterval(timer);
+      if (badge) {
+        badge.classList.add('is-closed');
+        badge.innerHTML = '<strong>' + roundTag() + '</strong> 한국어능력시험 접수 마감';
+      }
+      if (head) {
+        var live = head.querySelector('.live');
+        if (live) live.remove();
+        var ttl = head.querySelector('.ttl');
+        if (ttl) ttl.innerHTML = '<strong>' + roundTag() + '</strong> 접수 마감';
+      }
+      if (grid) {
+        grid.style.display = 'block';
+        grid.innerHTML =
+          '<div style="text-align:center; padding:14px 8px;">' +
+            '<div style="font-size:16px; font-weight:700; color:var(--text);">접수가 마감되었습니다</div>' +
+            '<div style="font-size:13px; color:var(--text-3); margin-top:6px; line-height:1.55;">' +
+              '다음 회차 일정은 <strong>공지사항</strong>에서 안내드립니다.' +
+            '</div>' +
+            '<a href="guide-overview.html" class="btn btn-secondary btn-sm" style="margin-top:14px;">다음 회차 일정 보기</a>' +
+          '</div>';
+      }
+      if (foot) foot.innerHTML = footHtml(true);
+    }
+
+    function tick() {
+      var now = Date.now();
+      var regStartMs = new Date(SCHED.regStart).getTime();
+      var target = new Date(SCHED.regEnd).getTime();
+      if (badge && now < regStartMs) {
+        badge.classList.add('is-upcoming');
+        if (!badge.classList.contains('is-closed')) {
+          badge.innerHTML = '<strong>' + roundTag() + '</strong> 한국어능력시험 (' + examDot() + ')';
+        }
+      } else if (badge && now >= regStartMs && now <= target && !closed) {
+        badge.classList.remove('is-upcoming');
+        badge.innerHTML = '<strong>' + roundTag() + '</strong> 한국어능력시험 (' + examDot() + ') 접수 진행 중';
+      }
+      var diff = target - now;
+      if (diff <= 0) { showClosed(); return; }
+      var rest = diff;
+      var day = Math.floor(rest / 86400000); rest -= day * 86400000;
+      var hr  = Math.floor(rest / 3600000);  rest -= hr  * 3600000;
+      var min = Math.floor(rest / 60000);    rest -= min * 60000;
+      var sec = Math.floor(rest / 1000);
+      if (el.d) el.d.textContent = pad(day);
+      if (el.h) el.h.textContent = pad(hr);
+      if (el.m) el.m.textContent = pad(min);
+      if (el.s) el.s.textContent = pad(sec);
+    }
+
+    function render() {
+      closed = false; // 회차 갱신 시 마감 상태 재평가
+      paintStatic();
+      paintTimelineBadges();
+      if (timer) clearInterval(timer);
+      tick();
+      timer = setInterval(tick, 1000);
+    }
+
+    render(); // 정적 폴백으로 즉시 렌더
+
+    function pickRound(items) {
+      var open = items.filter(function (r) { return r.registration_status === 'open'; });
+      if (open.length) return open[0];
+      var scheduled = items.filter(function (r) { return r.registration_status === 'scheduled'; })
+        .sort(function (a, b) { return new Date(a.registration_start_at) - new Date(b.registration_start_at); });
+      if (scheduled.length) return scheduled[0];
+      return items[0];
+    }
+
+    // BO가 설정한 실제 회차로 덮어쓰기 (공개 엔드포인트는 접수기간을 그대로 반환)
+    if (window.TopikApi && TopikApi.useApi) {
+      TopikApi.getExamRounds().then(function (res) {
+        if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) return;
+        var r = pickRound(res.body.items);
+        if (!r || !r.registration_start_at || !r.registration_end_at) return;
+        if (r.round_no != null) SCHED.roundNo = r.round_no;
+        SCHED.examDate = r.exam_date || SCHED.examDate;
+        SCHED.regStart = r.registration_start_at;
+        SCHED.regEnd = r.registration_end_at;
+        SCHED.resultDate = r.result_announcement_date || null;
+        if (r.payment_start_at && r.payment_end_at) {
+          SCHED.payPeriod = ymdDot(r.payment_start_at) + ' ~ ' + mdDot(r.payment_end_at);
+        }
+        render();
+      }).catch(function () { /* 정적 폴백 유지 */ });
+    }
+  })();
+</script>
+</body>
+</html>
