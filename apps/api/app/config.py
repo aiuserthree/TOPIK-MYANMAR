@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     mail_provider: str = Field(default="console", validation_alias="MAIL_PROVIDER")
     mail_from: str = Field(default="noreply@topik-myanmar.com", validation_alias="MAIL_FROM")
     resend_api_key: str = Field(default="", validation_alias="RESEND_API_KEY")
-    smtp_host: str = Field(default="smtp.iwinv.kr", validation_alias="SMTP_HOST")
+    smtp_host: str = Field(default="mail.topik-myanmar.com", validation_alias="SMTP_HOST")
     smtp_port: int = Field(default=587, validation_alias="SMTP_PORT")
     smtp_secure: bool = Field(default=False, validation_alias="SMTP_SECURE")
     smtp_user: str = Field(default="", validation_alias="SMTP_USER")

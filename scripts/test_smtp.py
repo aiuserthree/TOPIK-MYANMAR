@@ -17,7 +17,7 @@ from app.lib.email_render import render_signup_verify_code  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="IwinV SMTP smoke test")
+    parser = argparse.ArgumentParser(description="SMTP smoke test for the configured mail provider")
     parser.add_argument("--to", required=True, help="수신 테스트 이메일")
     parser.add_argument("--dry-run", action="store_true", help="설정만 출력하고 발송하지 않음")
     args = parser.parse_args()

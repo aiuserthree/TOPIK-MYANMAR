@@ -662,9 +662,11 @@ echo "iwinv-test" | aws s3 cp - s3://topik-myanmar-photos/photos/_connectivity_t
 - 버킷은 Private 유지, 필요한 읽기는 API와 IAM 수준의 Access Key로만 수행합니다.
 - `.env.example`에는 placeholder만 두고 실제 키는 IwinV 콘솔에서만 관리합니다.
 
-## 6. 메일 발송 (IwinV SMTP)
+## 6. 메일 발송 (IwinV 테라웹메일 SMTP)
 
-회원가입 인증 코드·비밀번호 재설정 등 **트랜잭션 메일**은 API의 `email_outbox` 워커가 발송합니다. 이 배포는 **IwinV 마이메일러 SMTP**를 운영 기본으로 사용합니다 (`MAIL_PROVIDER=smtp`). `console`(개발)·`resend`(대안)도 지원합니다 (`apps/api/.env.example` 참고).
+회원가입 인증 코드·비밀번호 재설정 등 **트랜잭션 메일**은 API의 `email_outbox` 워커가 발송합니다. 이 배포는 **IwinV 테라웹메일 SMTP**를 운영 기본으로 사용합니다 (`MAIL_PROVIDER=smtp`). 실제 구현은 일반 SMTP 설정(`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`)만 사용하므로 특정 벤더 전용 코드에 묶이지 않습니다. `console`(개발)·`resend`(대안)도 지원합니다 (`apps/api/.env.example` 참고).
+
+메일 HTML 본문은 기존 **C안 에디토리얼** (`시안/email/templates/`, `apps/api/app/lib/email_render.py`)을 그대로 사용합니다.
 
 ### 6.1 운영 확정 값
 
@@ -672,44 +674,100 @@ echo "iwinv-test" | aws s3 cp - s3://topik-myanmar-photos/photos/_connectivity_t
 | --- | --- | --- |
 | FO | `https://www.topik-myanmar.com` | DNS `A` → Web VPS |
 | BO | `https://admin.topik-myanmar.com` | DNS `A` → Web VPS (또는 별도 호스팅) |
-| `MAIL_FROM` | `noreply@topik-myanmar.com` | IwinV 마이메일러 발신 주소와 일치 |
+| 기본 자동 발신 계정 | `noreply@topik-myanmar.com` | API `SMTP_USER` 및 `MAIL_FROM` 권장 |
+| SMTP host | `mail.topik-myanmar.com` | 테라웹메일에서 도메인 연결 후 사용하는 일반적인 도메인 메일 호스트 |
+| SMTP port | `587` | STARTTLS, `SMTP_SECURE=false` |
 | Google OAuth origin | `https://www.topik-myanmar.com` | [고객사_DNS_요청_템플릿.md](고객사_DNS_요청_템플릿.md) §7 |
 
-> **도메인 구매·DNS 위임 대기:** `topik-myanmar.com` 등록 및 IT DNS 접근 전까지는 `MAIL_PROVIDER=console`로 개발·스테이징을 진행합니다. **운영 오픈 직전** IwinV 마이메일러 SMTP 계정 발급·아래 환경 변수를 적용합니다.
+> **주의:** 테라웹메일 콘솔 또는 IwinV 안내 메일에 `mail.topik-myanmar.com`이 아닌 별도 SMTP 서버명이 표시되면 콘솔 값을 우선합니다. MX/SPF/DKIM 값도 IwinV가 발급한 정확한 값을 DNS에 등록해야 합니다.
 
-### 6.2 IwinV SMTP 권장 (이 배포)
+### 6.2 계정 전략 (약 5개)
 
-| 방식 | 평가 | 이유 |
+테라웹메일에서 도메인 `topik-myanmar.com`을 연결한 뒤 아래처럼 역할별 계정을 만드는 것을 권장합니다.
+
+| 계정 | 용도 | API 사용 여부 |
 | --- | --- | --- |
-| IwinV **마이메일러** (SMTP) | **운영 권장** | 웹·DB·계정이 모두 IwinV에 있어 동일 인프라로 트랜잭션 메일 발송 |
-| **Resend** + DNS SPF/DKIM | 대안 | API 키만으로 연동, 발송·바운스 추적 용이. `MAIL_PROVIDER=resend` |
-| VPS **Postfix** 자체 발송 | 비권장 | IP 평판·스팸 분류·역방향 DNS·유지보수 부담 |
+| `noreply@topik-myanmar.com` | 회원가입 인증, 비밀번호 재설정, 접수 알림 등 자동 발송 | **사용** (`SMTP_USER`, `MAIL_FROM`) |
+| `support@topik-myanmar.com` | 사용자 문의 응대, 반송·수신 확인 | API 직접 사용 안 함 |
+| `admin@topik-myanmar.com` | 운영자/관리자 대표 메일 | API 직접 사용 안 함 |
+| `privacy@topik-myanmar.com` | 개인정보 문의·삭제 요청 | API 직접 사용 안 함 |
+| `test@topik-myanmar.com` | SMTP·수신 테스트, 운영 전 검증 | 테스트 시에만 임시 사용 가능 |
 
-가입 인증·비밀번호 재설정 메일은 **수신함 도달률**이 중요하므로 발신 도메인 SPF/DKIM 설정을 권장합니다.
+API는 여러 계정을 모두 쓰지 않습니다. 운영 기본은 `noreply@topik-myanmar.com` 한 계정으로 SMTP 인증과 발신 주소를 맞추는 방식입니다. 사람에게 답변이 필요한 메일은 `support@`나 `admin@` 수신함으로 관리하고, 자동 발신 메일 footer에는 문의처를 별도로 안내합니다.
 
-### 6.3 API 환경 변수
+### 6.3 테라웹메일 신청·도메인 연결
 
-레거시 Fastify `api/.env`와 Web VPS `apps/api/.env`에 동일하게 설정합니다. (마이그레이션 기간 동안 둘 다 사용할 수 있음)
+1. [IwinV 콘솔](https://www.iwinv.kr)에서 **테라웹메일** 서비스를 신청합니다.
+2. 사용할 도메인으로 `topik-myanmar.com`을 등록하거나 연결합니다.
+3. 콘솔에서 위 계정 5개를 생성하고 각 계정의 초기 비밀번호를 강하게 설정합니다.
+4. `noreply@topik-myanmar.com` 계정으로 웹메일 로그인이 되는지 확인합니다.
+5. 콘솔이 안내하는 **MX**, **SPF**, 제공 시 **DKIM** 값을 확인해 DNS에 등록합니다.
 
-**운영 예** — `apps/api/.env`:
+### 6.4 DNS — MX / SPF / DKIM / DMARC
+
+DNS는 `topik-myanmar.com` 도메인을 관리하는 곳에서 등록합니다. IwinV에서 도메인 DNS를 관리하면 IwinV DNS 콘솔에, 다른 등록기관/Cloudflare를 쓰면 해당 DNS 콘솔에 입력합니다.
+
+| 종류 | 이름/호스트 | 값 | 목적 |
+| --- | --- | --- | --- |
+| `MX` | `@` 또는 빈 값 | `IwinV 테라웹메일 콘솔에서 안내하는 MX 서버` | `@topik-myanmar.com`으로 들어오는 메일을 테라웹메일로 수신 |
+| `TXT` | `@` 또는 빈 값 | `v=spf1 ... ~all` 형식의 IwinV 테라웹메일 SPF 값 | 테라웹메일이 `topik-myanmar.com` 발신자로 메일을 보낼 권한 증명 |
+| `TXT`/`CNAME` | 콘솔 안내 selector | `IwinV 테라웹메일 DKIM 값` | 제공되는 경우 권장. 메일 위변조 방지 서명 |
+| `TXT` | `_dmarc` | `v=DMARC1; p=none; rua=mailto:admin@topik-myanmar.com` | 초기 모니터링 권장. 안정화 후 정책 강화 검토 |
+
+**MX 등록 순서:**
+
+1. DNS 콘솔에서 레코드 추가를 선택합니다.
+2. 유형을 `MX`로 선택합니다.
+3. 이름/호스트는 루트 도메인을 뜻하는 `@`를 입력합니다. 콘솔이 빈 값을 요구하면 비워 둡니다.
+4. 값/대상에는 IwinV 테라웹메일 콘솔이 안내한 MX 서버명을 그대로 입력합니다. 이 문서에는 확정 MX 호스트가 없으므로 임의 호스트를 추정하지 않습니다.
+5. 우선순위(priority)는 숫자가 낮을수록 먼저 시도됩니다. IwinV가 `10`, `20`처럼 여러 MX와 priority를 안내하면 안내된 값 그대로 모두 추가합니다.
+6. 기존에 다른 메일 서비스의 MX가 있으면 충돌을 피하기 위해 제거 또는 비활성화합니다.
+
+**SPF 등록 순서:**
+
+1. DNS 콘솔에서 `TXT` 레코드를 추가합니다.
+2. 이름/호스트는 `@`를 입력합니다.
+3. 값에는 IwinV 테라웹메일 콘솔이 안내한 SPF TXT 값을 그대로 입력합니다. 보통 `v=spf1 include:... ~all` 또는 `v=spf1 ip4:... ~all` 형태이며, 정확한 `include:`/IP 값은 IwinV 화면 값을 사용합니다.
+4. 이미 SPF 레코드(`v=spf1 ...`)가 있으면 SPF TXT를 여러 개 만들지 말고 하나로 병합해야 합니다. 예: 기존 Google/다른 서비스가 있으면 IwinV 안내 `include:` 또는 `ip4:`/`ip6:` 값을 같은 `v=spf1` 안에 추가합니다.
+5. 마지막 정책은 초기에는 `~all` 권장, IwinV 안내가 다르면 콘솔 값을 우선합니다.
+
+**DKIM/DMARC:**
+
+- DKIM은 테라웹메일 콘솔이 selector와 TXT/CNAME 값을 제공하는 경우 등록합니다. 제공되지 않으면 생략할 수 있지만, 제공된다면 수신함 도달률을 위해 등록을 권장합니다.
+- DMARC는 IwinV가 필수로 요구하지 않아도 `_dmarc.topik-myanmar.com`에 `p=none`으로 먼저 등록해 모니터링하고, 발송 안정화 후 `quarantine` 또는 `reject`로 강화합니다.
+
+**전파·검증 순서:**
+
+1. DNS 레코드를 저장한 뒤 최소 10~30분 기다립니다. DNS 업체 TTL과 캐시에 따라 최대 24~48시간까지 지연될 수 있습니다.
+2. `dig MX topik-myanmar.com`으로 MX 서버와 priority가 IwinV 안내값과 일치하는지 확인합니다.
+3. `dig TXT topik-myanmar.com`으로 SPF가 한 줄만 존재하고, 그 안에 IwinV가 안내한 `include:` 또는 IP 값이 포함되어 있는지 확인합니다.
+4. DKIM을 등록했다면 `dig TXT <selector>._domainkey.topik-myanmar.com` 또는 IwinV가 안내한 CNAME 조회로 값이 보이는지 확인합니다.
+5. `dig TXT _dmarc.topik-myanmar.com`으로 DMARC가 조회되는지 확인합니다.
+6. DNS 조회가 정상화된 뒤 `python3 scripts/test_smtp.py --to <본인메일> --dry-run`으로 앱 설정을 확인하고, 실제 발송 테스트에서 수신 메일 원문의 SPF/DKIM/DMARC 결과를 확인합니다.
+
+### 6.5 API 환경 변수
+
+Web VPS `apps/api/.env`에 아래 값을 설정합니다. 레거시 Fastify API를 동시에 운영한다면 `api/.env`에도 같은 메일 블록을 맞춥니다.
 
 ```env
 MAIL_PROVIDER=smtp
 MAIL_FROM=TOPIK Myanmar <noreply@topik-myanmar.com>
-SMTP_HOST=smtp.iwinv.kr
+SMTP_HOST=mail.topik-myanmar.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=발급_계정
-SMTP_PASS=발급_비밀번호
+SMTP_USER=noreply@topik-myanmar.com
+SMTP_PASS=테라웹메일_noreply_계정_비밀번호
 ENABLE_EMAIL_WORKER=true
 PUBLIC_FO_BASE=https://www.topik-myanmar.com
 ```
 
 | 변수 | 설명 |
 | --- | --- |
-| `MAIL_PROVIDER` | `console`(개발·로그만), `smtp`(운영·IwinV), `resend`(대안) |
-| `MAIL_FROM` | 확정 발신 주소 `noreply@topik-myanmar.com` — 마이메일러 발신 주소와 일치 |
-| `SMTP_*` | IwinV 마이메일러에서 발급한 SMTP 호스트·포트·계정 |
+| `MAIL_PROVIDER` | `console`(개발·로그만), `smtp`(운영·IwinV 테라웹메일), `resend`(대안) |
+| `MAIL_FROM` | 사용자에게 보이는 발신자. 운영 기본 `TOPIK Myanmar <noreply@topik-myanmar.com>` |
+| `SMTP_HOST` | 일반적으로 `mail.topik-myanmar.com`; 콘솔 안내값이 다르면 그 값을 사용 |
+| `SMTP_PORT` / `SMTP_SECURE` | `587` + `false`는 STARTTLS. 콘솔이 `465` SSL을 안내하면 `SMTP_PORT=465`, `SMTP_SECURE=true` |
+| `SMTP_USER` / `SMTP_PASS` | 테라웹메일에서 만든 실제 메일 계정과 비밀번호 |
 | `ENABLE_EMAIL_WORKER` | `email_outbox` drain 워커 (운영 `true`) |
 | `PUBLIC_FO_BASE` | 메일·딥링크용 FO URL |
 
@@ -719,11 +777,11 @@ Web 서버에 반영하는 예:
 cat >> /opt/myanmar-v2/apps/api/.env <<'EOF'
 MAIL_PROVIDER=smtp
 MAIL_FROM=TOPIK Myanmar <noreply@topik-myanmar.com>
-SMTP_HOST=smtp.iwinv.kr
+SMTP_HOST=mail.topik-myanmar.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=발급_계정
-SMTP_PASS=발급_비밀번호
+SMTP_USER=noreply@topik-myanmar.com
+SMTP_PASS=테라웹메일_noreply_계정_비밀번호
 ENABLE_EMAIL_WORKER=true
 PUBLIC_FO_BASE=https://www.topik-myanmar.com
 EOF
@@ -733,17 +791,21 @@ sudo systemctl restart myanmar-api
 
 개발 기본값은 `MAIL_PROVIDER=console`이며, 인증 코드·재설정 토큰은 API 응답의 `dev_code` / `dev_reset_token`으로 확인합니다.
 
-### 6.4 DNS — SPF · DKIM · DMARC
+### 6.6 단계별 연동 절차 (체크리스트)
 
-IwinV 마이메일러 또는 도메인 관리 콘솔에서 안내하는 SPF/DKIM 레코드를 DNS에 등록합니다. 고객사 IT 요청용 상세 표·검증 절차는 [고객사_DNS_요청_템플릿.md §6](고객사_DNS_요청_템플릿.md#6-이메일-발신--spf--dkim--dmarc)을 따릅니다.
+1. **테라웹메일 신청** — IwinV 콘솔에서 테라웹메일 신청 후 `topik-myanmar.com` 연결
+2. **메일 계정 생성** — `noreply@`, `support@`, `admin@`, `privacy@`, `test@` 생성
+3. **DNS MX 등록** — 콘솔이 안내한 MX 서버·우선순위를 DNS에 등록
+4. **DNS SPF 등록** — 콘솔이 안내한 SPF TXT를 루트 도메인 `@`에 등록
+5. **DKIM/DMARC 등록** — DKIM 제공 시 등록, DMARC는 초기 `p=none` 권장
+6. **웹메일 로그인 확인** — `noreply@topik-myanmar.com`으로 로그인·수신 테스트
+7. **`.env` 반영** — `apps/api/.env`에 §6.5 값 입력
+8. **API 재시작** — `sudo systemctl restart myanmar-api` (로컬: uvicorn 재기동)
+9. **SMTP 스모크** — `python3 scripts/test_smtp.py --to your@email.com` (설정만 확인: `--dry-run`)
+10. **FO 회원가입** — `POST /api/v1/auth/send-verification-code` 후 수신함·스팸함 확인
+11. **outbox 확인** — `SELECT id, template_key, status, last_error FROM email_outbox ORDER BY id DESC LIMIT 10;` (`failed` 없어야 함)
 
-요약:
-
-- **SPF** — TXT `@`: IwinV/마이메일러가 안내하는 `include:…` 값
-- **DKIM** — 마이메일러에서 발급한 CNAME/TXT 레코드
-- **DMARC** — TXT `_dmarc`: 초기 `p=none` 권장
-
-### 6.5 대안 — Resend
+### 6.7 대안 — Resend
 
 Resend를 사용하는 경우:
 
@@ -753,26 +815,13 @@ MAIL_FROM=TOPIK Myanmar <noreply@topik-myanmar.com>
 RESEND_API_KEY=re_xxxxxxxx
 ```
 
-Resend 대시보드 → **Domains** → `topik-myanmar.com` 검증 후 SPF/DKIM을 등록합니다.
+Resend 대시보드 → **Domains** → `topik-myanmar.com` 검증 후 SPF/DKIM을 등록합니다. 운영 기본은 IwinV 테라웹메일이며, Resend는 수신함 도달률·바운스 추적이 더 필요할 때의 대안입니다.
 
-### 6.6 단계별 연동 절차 (체크리스트)
+### 6.8 동작 확인
 
-1. **IwinV 마이메일러 계정** — [IwinV 콘솔](https://www.iwinv.kr) → 마이메일러에서 서비스 신청·도메인 `topik-myanmar.com` 연결
-2. **발신 주소 등록** — `noreply@topik-myanmar.com` (또는 운영 확정 주소)를 마이메일러 발신 주소로 등록·인증
-3. **SMTP 자격 증명 발급** — 호스트 `smtp.iwinv.kr`, 포트 `587` (STARTTLS) 또는 `465` (SSL, `SMTP_SECURE=true`)
-4. **DNS** — 마이메일러 안내에 따라 SPF TXT·DKIM CNAME/TXT·(선택) DMARC `_dmarc` 등록 → [고객사_DNS_요청_템플릿.md §6](고객사_DNS_요청_템플릿.md#6-이메일-발신--spf--dkim--dmarc)
-5. **`.env` 반영** — `apps/api/.env`에 §6.3 값 입력 (`SMTP_USER`/`SMTP_PASS`는 콘솔 발급값)
-6. **API 재시작** — `sudo systemctl restart myanmar-api` (로컬: uvicorn 재기동)
-7. **SMTP 스모크** — `python3 scripts/test_smtp.py --to your@email.com` (설정만 확인: `--dry-run`)
-8. **FO 회원가입** — `POST /api/v1/auth/send-verification-code` 후 수신함·스팸함 확인
-9. **outbox 확인** — `SELECT id, template_key, status, last_error FROM email_outbox ORDER BY id DESC LIMIT 10;` (`failed` 없어야 함)
-
-메일 HTML 본문은 **C안 에디토리얼** (`시안/email/templates/`, `apps/api/app/lib/email_render.py`)을 사용합니다.
-
-### 6.7 동작 확인
-
-1. IwinV 마이메일러 SMTP 계정·발신 주소 확인
-2. `python3 scripts/test_smtp.py --to <본인메일>` 성공
-3. API 재시작 후 FO 회원가입 → 인증 메일 수신 (C형 레이아웃·인증코드 박스)
-4. 비밀번호 재설정 메일 발송
-5. `email_outbox`에 `failed` 누적이 없는지 확인 (`ENABLE_EMAIL_WORKER=true` 시)
+1. IwinV 테라웹메일 계정·도메인 연결·DNS MX/SPF 등록 확인
+2. `python3 scripts/test_smtp.py --to <본인메일> --dry-run`으로 설정 확인
+3. `python3 scripts/test_smtp.py --to <본인메일>` 성공
+4. API 재시작 후 FO 회원가입 → 인증 메일 수신 (C형 레이아웃·인증코드 박스)
+5. 비밀번호 재설정 메일 발송
+6. `email_outbox`에 `failed` 누적이 없는지 확인 (`ENABLE_EMAIL_WORKER=true` 시)

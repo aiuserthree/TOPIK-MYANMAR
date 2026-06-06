@@ -10,24 +10,26 @@
 | BO 화면 | **C안** | `html/C안/BO(admin)/` |
 | 트랜잭션 이메일 | **C안 에디토리얼** | `시안/email/` (`THEMES.C`, 14종) |
 
-A안·B안 HTML은 참고·비교용으로 유지합니다. **신규 기능·Vercel FO 배포 산출물은 C안 FO**가 기준입니다.
+A안·B안 HTML은 참고·비교용으로 유지합니다. **신규 기능·FO 배포 산출물은 C안 FO**가 기준입니다.
 
-## Vercel FO 배포
+## FO 배포
 
 | 단계 | 경로 |
 |------|------|
 | 소스 | `html/C안/FO/` |
 | 빌드 | `python3 build.py` |
 | 산출 | `public/` (루트 `index.html` 등) |
-| 공통 JS | `html/shared/` → `public/shared/` |
+| 공통 JS | `html/shared/` + FO `shared/` merge → `public/shared/` |
+| **운영 (목표)** | IwinV Web VPS nginx — `https://www.topik-myanmar.com` |
+| **부록 (과거)** | Vercel `vercel.json` — 임시 dev/UAT만 |
 
-상세: `배포_아키텍처.md`, 루트 `vercel.json` (`buildCommand`, `outputDirectory: public`).
+상세: [`IWINV_SETUP.md`](../IWINV_SETUP.md), `배포_아키텍처.md`.
 
 ## 이메일
 
 - 미리보기: `시안/email/README.md`
-- 11종 기존 + 갭 3종(정지·탈퇴 / 회원정보 수정 / 6개월 비번) = **14종** `template_key` 등록
-- SMTP·큐·실발송: 미구현 (체크리스트 171–176, 191–194)
+- 11종 기존 + 갭 3종 = **14종** `template_key` 등록
+- API: `apps/api/app/lib/mail.py` + `email_render.py` — **SMTP(IwinV 테라웹메일) 운영**, `email_outbox` 워커 구현 (템플릿 렌더는 2종 우선 구현)
 
 ## 관련 체크리스트
 

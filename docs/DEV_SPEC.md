@@ -1,6 +1,6 @@
 # TOPIK Myanmar 개발 스펙
 
-> **기준일:** 2026-06-05  
+> **기준일:** 2026-06-06  
 > 이 문서는 저장소 실제 파일을 기준으로 작성했습니다. 재개발 방향은 [`MIGRATION.md`](../MIGRATION.md), IwinV 운영 절차는 [`IWINV_SETUP.md`](IWINV_SETUP.md)를 참고하세요.
 
 ---
@@ -14,12 +14,13 @@
 | 구분 | 역할 | 상태 |
 | --- | --- | --- |
 | 신규 FO/BO | `apps/web` | 스캐폴드(홈 placeholder) |
-| 신규 API | `apps/api` | 스캐폴드(health + auth placeholder) |
+| 신규 API | `apps/api` | FastAPI FO/BO API 대부분 구현 (auth·me·접수·콘텐츠·게시판·admin·파일·메일) |
 | 레거시 FO/BO | `html/C안/` | FO HTML 일부; BO UI는 `BO(admin)/project/`, API stub은 `BO/`(assets만) |
 | 레거시 API | `api/` | README·일부 소스만 존재(전체 구현 미동봉) |
-| DB 스키마 | `db/migrations/` | V005만 저장소에 포함 |
+| DB 스키마 | `db/migrations/` | V001~V005 SQL migration 포함 |
+| 이메일 시안 | `시안/email/` | C안 에디토리얼 14종 미리보기; API 렌더 `apps/api/app/lib/email_render.py` |
 
-임시 dev/UAT는 Vercel(FO) + Railway(API) 구성이 [`DEPLOY.md`](DEPLOY.md)에 기술되어 있으나, **목표 운영**은 IwinV VPS입니다.
+과거 임시 dev/UAT(Vercel FO + Railway API + Resend)는 [`DEPLOY.md`](DEPLOY.md) **부록**에만 유지합니다. **목표 운영**은 IwinV VPS 2대 + 테라웹메일 SMTP입니다.
 
 ---
 
@@ -107,12 +108,21 @@ VITE_API_URL=/api
 ```text
 apps/api/
 ├── app/
-│   ├── main.py          # FastAPI 앱, CORS, 라우터 등록
-│   ├── config.py        # DATABASE_URL, JWT_SECRET, CORS_ORIGINS
-│   ├── database.py      # SQLAlchemy async engine/session (ORM Base 준비)
+│   ├── main.py          # FastAPI 앱, CORS, lifespan(email worker)
+│   ├── config.py        # DB·JWT·CORS·S3·MAIL_* 설정
+│   ├── database.py      # SQLAlchemy async engine/session
+│   ├── models/          # User, Application, Exam, Content, Board, Admin, EmailOutbox 등
+│   ├── lib/             # mail, email_render, storage, security, audit, email_worker
 │   └── routers/
-│       ├── health.py    # GET /health
-│       └── auth.py      # GET /api/v1/auth/status (placeholder)
+│       ├── health.py    # /health, /health/db
+│       ├── auth.py      # FO/BO 로그인, 가입, 인증메일, 비번재설정
+│       ├── me.py        # /me, change-password, withdraw
+│       ├── exam.py      # exam-rounds, exam-venues
+│       ├── applications.py
+│       ├── content.py   # notices, faq, terms
+│       ├── board.py     # FO 게시판
+│       ├── files.py     # 파일 프록시
+│       └── admin_api.py # BO /admin/*
 ├── alembic/             # ORM migration용 (설정만, revision 없음)
 ├── alembic.ini
 ├── pyproject.toml
@@ -120,23 +130,49 @@ apps/api/
 └── .env.example
 ```
 
-**현재 엔드포인트:**
+**구현된 엔드포인트 (요약):**
 
-| Method | Path | 설명 |
+| 영역 | Path prefix | 상태 |
 | --- | --- | --- |
-| GET | `/health` | `{"status":"ok"}` |
-| GET | `/api/v1/auth/status` | 인증 마이그레이션 placeholder |
+| Health | `/health`, `/health/db` | 구현 |
+| Auth | `/api/v1/auth/*` (login, refresh, register, verify, forgot/reset) | 구현 (Google OAuth `enabled: false`) |
+| Me | `/api/v1/me/*` | 구현 |
+| Exam | `/api/v1/exam-rounds`, `/exam-venues` | 구현 |
+| Application | `/api/v1/application-draft`, `application-submissions`, `applications` | 구현 |
+| Content | `/api/v1/notices`, `/faq`, `/terms` | 구현 |
+| Board | `/api/v1/board/*` | 구현 |
+| Files | `/api/v1/files/:id`, `/admin/files/:id` | 구현 (local/S3) |
+| Admin | `/api/v1/admin/*` (접수·회차·시험장·콘텐츠·게시판·회원·관리자·감사) | 구현 |
+| Export | `roster.xlsx`, `photos.zip` 등 | **미구현** |
+| Internal | `/internal/notifications/*` | **미구현** |
 
 **환경 변수** (`.env.example`):
 
 ```env
 DATABASE_URL=postgresql+asyncpg://topik_app:change_me@127.0.0.1:5432/topik_myanmar
 JWT_SECRET=change-this-to-a-long-random-secret
-CORS_ORIGINS=http://localhost:5173
-# STORAGE_PROVIDER, S3_* — IWINV_SETUP.md §5 참고 (주석 처리됨)
+JWT_REFRESH_SECRET=change-this-to-another-long-random-secret
+CORS_ORIGINS=http://localhost:5173,...
+MAIL_PROVIDER=console          # 운영: smtp (IwinV 테라웹메일)
+MAIL_FROM=TOPIK Myanmar <noreply@topik-myanmar.com>
+PUBLIC_FO_BASE=https://www.topik-myanmar.com
+# STORAGE_PROVIDER, S3_* — IWINV_SETUP.md §5
+# SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS — IWINV_SETUP.md §6
 ```
 
 FastAPI/SQLAlchemy async 연결은 `postgresql+asyncpg://` 형식을 사용합니다.
+
+### 4.3 이메일 (시안 + API)
+
+| 경로 | 역할 |
+| --- | --- |
+| `시안/email/` | C안 에디토리얼 HTML 미리보기 (`templates/data.js`, `render.js`, `index.html`) — **14종** `template_key` 정의 |
+| `apps/api/app/lib/email_render.py` | 프로덕션 HTML 렌더 (현재 `signup_verify_code`, `password_reset` 구현) |
+| `apps/api/app/lib/mail.py` | `email_outbox` enqueue·SMTP/Resend/console 발송·재시도 |
+| `apps/api/app/lib/email_worker.py` | `ENABLE_EMAIL_WORKER=true` 시 백그라운드 drain |
+| `scripts/test_smtp.py` | SMTP 설정·발송 스모크 (`apps/api/.env` 사용) |
+
+**운영 발송:** IwinV 테라웹메일 SMTP (`MAIL_PROVIDER=smtp`, `noreply@topik-myanmar.com`). 개발 기본은 `console` — 인증 코드는 API 응답 `dev_code`로 확인. 상세: [`IWINV_SETUP.md`](IWINV_SETUP.md) §6, 시안: [`시안/email/README.md`](../시안/email/README.md).
 
 ---
 
@@ -233,7 +269,7 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 
 **갭:** `build-bo.py`는 `html/C안/BO/`(assets만, HTML 없음)를 복사합니다. 실제 BO UI는 `html/C안/BO(admin)/project/`에 있으므로, 스크립트를 수정하거나 handoff 경로를 `BO/`로 옮기기 전까지 **BO 정적 배포는 사실상 동작하지 않습니다.**
 
-환경 변수 `TOPIK_API_BASE`로 API base URL을 HTML `<meta name="topik-api-base">`에 주입합니다. 미설정 시 기본값은 `https://topikmyanmar-production.up.railway.app`입니다.
+환경 변수 `TOPIK_API_BASE`로 API base URL을 HTML `<meta name="topik-api-base">`에 주입합니다. **미설정 시 meta 미주입** — IwinV nginx 동일 origin `/api` 사용. 레거시 Railway URL은 `TOPIK_API_BASE=https://topikmyanmar-production.up.railway.app`로 명시 시에만 사용합니다.
 
 ---
 
@@ -241,20 +277,17 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 
 ### 6.1 Migration 파일
 
-**저장소에 실제 존재하는 파일:**
+**저장소에 포함된 파일 (V001~V005):**
 
 | 파일 | 내용 |
 | --- | --- |
-| `db/migrations/V005__application_drafts.sql` | `application_drafts` 테이블 (user당 1건, JSONB payload, 30일 TTL) |
+| `V001__initial_schema.sql` | users, exam_rounds, exam_venues, applications, admin_users, notices, faq, terms 등 |
+| `V002__email_outbox_retry.sql` | `email_outbox` 재시도 컬럼 |
+| `V003__bo_integration.sql` | BO 연동 스키마 |
+| `V004__user_last_login.sql` | `users.last_login_at` |
+| `V005__application_drafts.sql` | `application_drafts` (user당 1건, JSONB, 30일 TTL) |
 
-**문서에서 참조하지만 저장소에 없는 파일:**
-
-- `V001__initial_schema.sql` — users, exam_rounds, exam_venues, applications 등 핵심 스키마
-- `V002__email_outbox_retry.sql`
-- `V003__bo_integration.sql`
-- `V004__user_last_login.sql`
-
-[`MIGRATION.md`](../MIGRATION.md), [`IWINV_SETUP.md`](IWINV_SETUP.md), [`apps/api/README.md`](../apps/api/README.md)는 V001~V005 순서 적용을 안내하지만, **2026-06-05 기준 git 추적 파일은 V005뿐**입니다. V001~V004는 별도 브랜치·아카이브에서 복원하거나 재작성이 필요합니다.
+운영·로컬 모두 **V001 → V005 순서**로 `psql -f` 적용 ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.8).
 
 ### 6.2 스키마 개요 (문서·V005 기준)
 
@@ -320,16 +353,25 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 | 변수 | 필수 | 설명 |
 | --- | --- | --- |
 | `DATABASE_URL` | ○ | `postgresql+asyncpg://…` |
-| `JWT_SECRET` | ○ | JWT 서명 키 |
-| `CORS_ORIGINS` | ○ | 쉼표 구분 origin (예: `http://localhost:5173`) |
+| `JWT_SECRET` | ○ | access JWT 서명 키 |
+| `JWT_REFRESH_SECRET` | ○ | refresh JWT 서명 키 |
+| `CORS_ORIGINS` | ○ | 쉼표 구분 origin (운영: `https://www.topik-myanmar.com,https://admin.topik-myanmar.com`) |
 | `STORAGE_PROVIDER` | — | `local`(기본) \| `s3` |
 | `UPLOAD_DIR` | — | local 저장 경로 (기본 `var/uploads`) |
+| `UPLOAD_MAX_BYTES` | — | 최대 업로드 (기본 5MB) |
 | `S3_BUCKET` | s3 시 | IwinV 버킷명 |
 | `S3_REGION` | s3 시 | `kr-standard` |
 | `S3_ACCESS_KEY` | s3 시 | IwinV Access Key |
 | `S3_SECRET` | s3 시 | IwinV Secret Key |
 | `S3_ENDPOINT` | s3 시 | `https://kr.object.iwinv.kr` |
 | `S3_PREFIX` | — | 객체 키 prefix (예: `photos`) |
+| `MAIL_PROVIDER` | — | `console`(개발) \| **`smtp`(운영·IwinV 테라웹메일)** \| `resend`(대안) |
+| `MAIL_FROM` | — | 발신 주소 — 운영 `TOPIK Myanmar <noreply@topik-myanmar.com>` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | smtp 시 | 테라웹메일 SMTP ([IWINV_SETUP.md](IWINV_SETUP.md) §6) |
+| `RESEND_API_KEY` | resend 시 | Resend API 키 (대안) |
+| `ENABLE_EMAIL_WORKER` | — | `true` 시 백그라운드 `email_outbox` drain |
+| `PUBLIC_FO_BASE` | — | 메일·딥링크용 FO URL |
+| `MIN_SIGNUP_AGE_YEARS` | — | 가입 최소 연령 (기본 14) |
 
 ### 8.2 신규 Web (`apps/web/.env.example` → `.env.local`)
 
@@ -357,9 +399,9 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 | `S3_*` | s3 시 | 버킷·리전·키·엔드포인트 |
 | `GOOGLE_CLIENT_ID` | — | 비우면 Google 로그인 OFF |
 | `GOOGLE_CLIENT_SECRET` | — | 선택 |
-| `MAIL_PROVIDER` | — | `console` \| `smtp` \| `resend` — **운영 권장:** `smtp` (IwinV 마이메일러, [IWINV_SETUP.md](IWINV_SETUP.md) §6) |
-| `MAIL_FROM` | — | 발신 주소 — **운영 확정:** `noreply@topik-myanmar.com` |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | smtp 시 | IwinV SMTP 접속 정보 (기본 호스트 `smtp.iwinv.kr:587`) |
+| `MAIL_PROVIDER` | — | `console` \| `smtp` \| `resend` — **운영 권장:** `smtp` (IwinV 테라웹메일, [IWINV_SETUP.md](IWINV_SETUP.md) §6) |
+| `MAIL_FROM` | — | 발신 주소 — **운영 확정:** `TOPIK Myanmar <noreply@topik-myanmar.com>` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | smtp 시 | IwinV 테라웹메일 SMTP 접속 정보 (예: `mail.topik-myanmar.com:587`, `SMTP_USER=noreply@topik-myanmar.com`) |
 | `RESEND_API_KEY` | resend 시 | Resend API 키 (대안) |
 | `MAIL_SUPPORT` | — | 템플릿 footer 지원 메일 |
 | `MAIL_ADMIN_TO` | — | 운영자 알림 수신 |
@@ -373,11 +415,13 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 
 ### 9.1 신규 스택 (권장 개발 경로)
 
-**PostgreSQL 준비** — DB가 없으면 생성 후 migration 적용(V001~V004는 별도 확보 필요):
+**PostgreSQL 준비** — DB가 없으면 생성 후 V001~V005 순서 적용:
 
 ```bash
 createdb topik_myanmar
-psql postgresql://localhost:5432/topik_myanmar -f db/migrations/V005__application_drafts.sql
+for f in db/migrations/V00{1,2,3,4,5}__*.sql; do
+  psql postgresql://localhost:5432/topik_myanmar -f "$f"
+done
 ```
 
 **API:**
@@ -412,7 +456,7 @@ Vite dev server는 `/api`를 FastAPI(`127.0.0.1:8000`)로 프록시합니다.
 
 레거시 API 전체 소스·`package.json`이 저장소에 없어 현재 워크스페이스에서는 실행 불가입니다. [`api/README.md`](../api/README.md) 및 [`api/로컬실행_가이드.md`](../api/로컬실행_가이드.md)는 전체 트리 기준 가이드입니다.
 
-레거시 FO HTML은 Live Server 등 정적 서버(`http://localhost:8080` 등)로 열고, Railway/Vercel에 배포된 API와 연동할 수 있습니다.
+레거시 FO HTML은 Live Server 등 정적 서버(`http://localhost:8080` 등)로 열고, 로컬 FastAPI(`http://localhost:8000`) 또는 IwinV 운영 API와 연동합니다 (`TOPIK_API_BASE` 또는 `html/shared/api-client.js` base).
 
 ---
 
@@ -420,12 +464,13 @@ Vite dev server는 `/api`를 FastAPI(`127.0.0.1:8000`)로 프록시합니다.
 
 ### 10.1 신규 FastAPI (`apps/api`)
 
-| 상태 | 엔드포인트 |
+| 상태 | 범위 |
 | --- | --- |
-| 구현됨 | `GET /health`, `GET /api/v1/auth/status` |
-| 미구현 | 레거시 `api/README.md`의 전체 `/api/v1/*`, `/internal/*` |
+| **구현됨** | Health, FO auth(일반 가입·로그인·이메일 인증·비번재설정), me, exam-rounds/venues, application-draft/submissions, notices/faq/terms, board, files, admin 접수·회차·시험장·콘텐츠·게시판·회원·관리자·감사 |
+| **부분** | Google OAuth (`/auth/google/config` → `enabled: false`), 이메일 템플릿 14종 중 API 렌더 **2종** (`signup_verify_code`, `password_reset`) |
+| **미구현** | `find-email`, Google login/register, BO export (`roster.xlsx`, `photos.zip`), `/internal/notifications/*`, 일부 admin export·마케팅 메일 템플릿 |
 
-DB session factory(`database.py`)와 Settings는 준비되어 있으나, ORM model·repository·실제 auth/CRUD router는 없습니다.
+ORM model·repository·JWT·S3/local storage·`email_outbox` 워커는 구현되어 있습니다 (`app/lib/mail.py`, `email_worker.py`).
 
 ### 10.2 레거시 Fastify (`api/`)
 
@@ -492,16 +537,16 @@ sudo nginx -t && sudo systemctl reload nginx
 - API: systemd + uvicorn `:8000`
 - SSL: certbot `--nginx`
 
-### 12.2 레거시 — Vercel + Railway (임시 dev/UAT)
-
-[`DEPLOY.md`](DEPLOY.md):
+### 12.2 FO 정적 빌드 (IwinV 단기·레거시 Vercel)
 
 | 구성요소 | 명령/URL |
 | --- | --- |
-| FO 빌드 | `python3 build.py` (선택: `TOPIK_API_BASE=…`) |
-| BO 빌드 | `python3 build-bo.py` |
-| FO URL | https://topik-myanmar.vercel.app |
-| API URL | https://topikmyanmar-production.up.railway.app |
+| FO 빌드 | `python3 build.py` — IwinV: `TOPIK_API_BASE` 생략(동일 origin `/api`) 또는 `/api` |
+| BO 빌드 | `python3 build-bo.py` (현재 `BO/` stub만 복사 — **handoff 미반영**) |
+| IwinV FO | `https://www.topik-myanmar.com` (DNS·SSL 확정 후) |
+| IwinV API | `https://www.topik-myanmar.com/api/` (nginx → FastAPI) |
+
+**부록 — 과거 임시 dev/UAT** ([`DEPLOY.md`](DEPLOY.md)): Vercel FO `topik-myanmar.vercel.app`, Railway API `topikmyanmar-production.up.railway.app`
 
 ### 12.3 레거시 — Docker 셀프호스트 (선택)
 
@@ -534,26 +579,27 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ## 14. 미구현/다음 단계
 
-### 14.1 저장소·인프라 갭 (우선)
+### 14.1 저장소·배포 갭 (우선)
 
-1. **`db/migrations` V001~V004 복원** — 문서·운영 절차와 실제 파일 불일치 해소
-2. **레거시 `api/` 전체 소스** — `package.json`, routes, lib, scripts, seed SQL 등
-3. **레거시 BO 정리** — 운영용 HTML은 `html/C안/BO/`에 없음(디자인은 `BO(admin)/project/`). `build-bo.py` 입력 경로 불일치 수정, `html/shared/bo-api-client.js` 등 API 연동 layer 보완
+1. **레거시 BO 정리** — `build-bo.py` → `BO(admin)/project/` 반영, `html/shared/bo-api-client.js` BO API 연동 layer
+2. **`build.py` i18n merge** — `html/shared` 덮어쓰기 시 `topik-i18n-content.js` 유실 방지 ([`PROJECT_REVIEW.md`](PROJECT_REVIEW.md) §D.2)
+3. **`roster-codes.js`** — FO 3페이지 참조, 저장소 누락
+4. **레거시 `api/` Fastify** — 참조용 잔존; 신규 개발은 `apps/api` 기준
 
-### 14.2 신규 스택 마이그레이션
+### 14.2 FastAPI·운영 완성
 
-1. IwinV Web/DB 서버 [`IWINV_SETUP.md`](IWINV_SETUP.md) 절차대로 설정
-2. `html/C안/FO` 화면을 `apps/web` 페이지 단위로 이전 (우선순위: signup → register → mypage)
-3. Fastify `api/src/routes` 계약을 FastAPI router로 이전 (auth → me → application → admin)
-4. SQL schema 기준 SQLAlchemy model / repository 레이어 결정
-5. IwinV PostgreSQL 접속 정책·백업 주기·운영 계정 확정
-6. 운영 사진 저장: `STORAGE_PROVIDER=s3` + IwinV 오브젝트 스토리지
+1. IwinV Web/DB [`IWINV_SETUP.md`](IWINV_SETUP.md) — nginx, systemd, PostgreSQL, **테라웹메일 SMTP** DNS(MX/SPF/DKIM)
+2. BO export API — `roster.xlsx`, `photos.zip` ([`api/README.md`](../api/README.md) 계약)
+3. Google OAuth, `find-email`, 나머지 이메일 템플릿 12종 (`시안/email/` → `email_render.py`)
+4. `STORAGE_PROVIDER=s3` + IwinV 오브젝트 스토리지 (운영 사진)
+5. `html/C안/FO` → `apps/web` 페이지 이전 (중기)
 
 ### 14.3 운영 전환
 
-- Vercel/Railway 임시 URL → IwinV 커스텀 도메인
-- DNS·Google OAuth Authorized origins·CORS·`VITE_API_URL` 일괄 갱신
-- 운영 DB: dev 시드 금지, `create-admin`으로 첫 관리자 생성 ([`DEPLOY.md`](DEPLOY.md) §2.1)
+- DNS `www.topik-myanmar.com`, `admin.topik-myanmar.com` → IwinV Web VPS
+- `CORS_ORIGINS`, `PUBLIC_FO_BASE`, Google OAuth origins, `VITE_API_URL=/api` 일괄 갱신
+- 운영 DB: dev 시드 금지, 첫 BO 관리자 시드/스크립트로 생성
+- SMTP 스모크: `python3 scripts/test_smtp.py --to <메일>`
 
 ---
 
@@ -583,7 +629,15 @@ docker compose -f docker-compose.prod.yml up -d --build
 | `https://YOUR_DOMAIN/api/*` | FastAPI `127.0.0.1:8000` |
 | DB | `115.68.227.1:5432` (Web 서버에서만 접근) |
 
-### 임시 dev/UAT
+### IwinV 운영 (확정 도메인)
+
+| 서비스 | URL |
+| --- | --- |
+| FO | https://www.topik-myanmar.com |
+| BO | https://admin.topik-myanmar.com |
+| API | https://www.topik-myanmar.com/api/ (동일 origin 프록시) |
+
+### 부록 — 과거 임시 dev/UAT
 
 | 서비스 | URL |
 | --- | --- |

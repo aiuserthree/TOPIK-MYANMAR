@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOPIK Myanmar — 이메일 템플릿</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
+:root{
+  --navy:#1a4fa0; --navy-d:#143b78; --ink:#14213d; --body:#42495a; --sub:#79818f;
+  --bg:#f4f6f9; --panel:#ffffff; --line:#e4e8f0; --line-soft:#eef1f6; --tint:#eaf1fb;
+  --font:'Pretendard','Pretendard JP',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+
+/* ---- top bar ---- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;}
+.brand .mk{width:38px;height:38px;border-radius:10px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;letter-spacing:.02em;}
+.brand h1{font-size:16px;font-weight:800;margin:0;letter-spacing:-.01em;}
+.brand p{font-size:12px;color:var(--sub);margin:2px 0 0;font-weight:500;}
+
+.concepts{display:flex;flex-direction:column;align-items:flex-end;gap:7px;}
+.seg{display:flex;background:var(--line-soft);border-radius:11px;padding:4px;gap:2px;}
+.seg button{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;color:var(--sub);transition:.18s;}
+.seg button .lab{font-size:11px;font-weight:600;opacity:.7;margin-left:6px;}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(20,33,61,.12);}
+.tagline{font-size:12px;color:var(--sub);font-weight:500;max-width:560px;text-align:right;}
+
+/* ---- layout ---- */
+.shell{display:grid;grid-template-columns:264px minmax(0,1fr) 300px;height:calc(100vh - 71px);}
+.rail{border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:14px 0 40px;}
+.railgroup{padding:16px 18px 4px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);}
+.railitem{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:11px 18px;border-left:3px solid transparent;transition:.15s;}
+.railitem:hover{background:var(--line-soft);}
+.railitem[aria-current="true"]{background:var(--tint);border-left-color:var(--navy);}
+.railitem .no{font-size:11px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums;width:18px;flex:none;}
+.railitem[aria-current="true"] .no{color:var(--navy);}
+.railitem .nm{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.35;}
+
+/* ---- main stage ---- */
+.main{display:flex;flex-direction:column;overflow:hidden;}
+.toolbar{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:#fff;}
+.toolbar .subj{font-size:14px;font-weight:700;color:var(--ink);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-toggle{display:flex;background:var(--line-soft);border-radius:9px;padding:3px;gap:2px;}
+.tb-toggle button{padding:7px 13px;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--sub);display:flex;align-items:center;gap:6px;}
+.tb-toggle button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 2px rgba(20,33,61,.1);}
+.btn{padding:9px 15px;border-radius:9px;font-size:13px;font-weight:700;background:var(--navy);color:#fff;transition:.15s;display:flex;align-items:center;gap:7px;}
+.btn:hover{background:var(--navy-d);}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line);}
+.btn.ghost:hover{background:var(--line-soft);}
+
+.stage{flex:1;overflow:auto;background:#e7ebf2;background-image:radial-gradient(circle at 1px 1px,rgba(20,33,61,.06) 1px,transparent 0);background-size:22px 22px;display:flex;justify-content:center;align-items:flex-start;padding:34px 20px 60px;}
+.device{transition:width .28s cubic-bezier(.32,.72,0,1);background:#fff;border-radius:14px;box-shadow:0 18px 50px -20px rgba(20,33,61,.4),0 2px 8px rgba(20,33,61,.08);overflow:hidden;}
+.device.is-mobile{border-radius:28px;box-shadow:0 24px 60px -24px rgba(20,33,61,.45),0 0 0 8px #1a1f2e,0 0 0 10px #2a3142;}
+.device iframe{display:block;width:100%;border:0;background:#fff;}
+.devlabel{text-align:center;font-size:11px;font-weight:600;color:var(--sub);margin-bottom:10px;letter-spacing:.04em;}
+
+/* ---- meta panel ---- */
+.meta{border-left:1px solid var(--line);background:#fff;overflow-y:auto;padding:22px 20px 40px;}
+.meta h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin:0 0 10px;}
+.meta section{margin-bottom:24px;}
+.meta .kv{font-size:13px;line-height:1.6;color:var(--body);}
+.meta .kv b{color:var(--ink);font-weight:600;}
+.pre{background:var(--line-soft);border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:var(--body);}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{font-size:11.5px;font-weight:600;font-family:'SFMono-Regular',Consolas,monospace;color:var(--navy);background:var(--tint);border-radius:7px;padding:5px 9px;}
+.note{font-size:12px;color:var(--sub);line-height:1.55;background:#fff;border:1px dashed var(--line);border-radius:10px;padding:12px 13px;}
+
+/* ---- source overlay ---- */
+.overlay{position:fixed;inset:0;background:rgba(14,28,51,.5);z-index:50;display:none;align-items:center;justify-content:center;padding:30px;}
+.overlay.on{display:flex;}
+.srcbox{background:#0e1c33;border-radius:16px;width:min(860px,92vw);max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);}
+.srchead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.12);}
+.srchead .t{color:#fff;font-size:14px;font-weight:700;}
+.srchead .t span{color:rgba(255,255,255,.5);font-weight:500;margin-left:8px;font-size:12px;}
+.srchead .x{display:flex;gap:8px;}
+.srccode{overflow:auto;padding:18px 20px;margin:0;color:#cdd6e4;font-family:'SFMono-Regular',Consolas,monospace;font-size:12px;line-height:1.6;white-space:pre;tab-size:2;}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:.25s;z-index:60;pointer-events:none;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media (max-width:1180px){.shell{grid-template-columns:230px minmax(0,1fr);}.meta{display:none;}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">
+    <div class="mk">TK</div>
+    <div>
+      <h1>TOPIK Myanmar · 트랜잭션 이메일 템플릿</h1>
+      <p>트랜잭션 14종 (C안 에디토리얼 확정) + 레이아웃 미리보기 · 기능정의서 v1.3 정합</p>
+    </div>
+  </div>
+  <div class="concepts">
+    <div class="seg" id="seg"></div>
+    <div class="tagline" id="tagline"></div>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <div class="main">
+    <div class="toolbar">
+      <div class="subj" id="subj"></div>
+      <div class="tb-toggle" id="sampleToggle">
+        <button data-s="1" aria-pressed="true">샘플 값</button>
+        <button data-s="0" aria-pressed="false">변수 표기</button>
+      </div>
+      <div class="tb-toggle" id="localeToggle">
+        <button data-l="ko" aria-pressed="true">KO</button>
+        <button data-l="my" aria-pressed="false">MY</button>
+        <button data-l="en" aria-pressed="false">EN</button>
+      </div>
+      <div class="tb-toggle" id="vpToggle">
+        <button data-v="mobile" aria-pressed="false">모바일</button>
+        <button data-v="desktop" aria-pressed="true">데스크톱</button>
+      </div>
+      <button class="btn ghost" id="srcBtn">소스 보기</button>
+      <button class="btn" id="copyBtn">HTML 복사</button>
+    </div>
+    <div class="stage">
+      <div>
+        <div class="devlabel" id="devlabel"></div>
+        <div class="device" id="device"><iframe id="frame" title="email preview"></iframe></div>
+      </div>
+    </div>
+  </div>
+  <aside class="meta" id="meta"></aside>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="srcbox">
+    <div class="srchead">
+      <div class="t">이메일 HTML 소스 <span id="srcName"></span></div>
+      <div class="x">
+        <button class="btn" id="srcCopy">복사</button>
+        <button class="btn ghost" id="srcClose" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2);">닫기</button>
+      </div>
+    </div>
+    <pre class="srccode" id="srcCode"></pre>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="templates/data.js"></script>
+<script src="templates/render.js"></script>
+<script>
+const { THEMES, TEMPLATES, SAMPLE, FOOTER, render, TEMPLATE_BY_KEY, DEFAULT_THEME } = window.TOPIK;
+const state = { theme: DEFAULT_THEME || "C", key: TEMPLATES[1] ? TEMPLATES[1].key : TEMPLATES[0].key, sample: true, vp: "desktop", locale: "ko" };
+
+// ---- concept tabs ----
+const seg = document.getElementById("seg");
+Object.values(THEMES).forEach(t => {
+  const b = document.createElement("button");
+  b.innerHTML = `${t.id}<span class="lab">${t.label}</span>`;
+  b.setAttribute("aria-pressed", t.id === state.theme);
+  b.onclick = () => { state.theme = t.id; renderAll(); };
+  b.dataset.t = t.id;
+  seg.appendChild(b);
+});
+
+// ---- rail ----
+const rail = document.getElementById("rail");
+function buildRail(){
+  rail.innerHTML = "";
+  let lastGroup = null;
+  TEMPLATES.forEach(tpl => {
+    if (tpl.group !== lastGroup){
+      const g = document.createElement("div");
+      g.className = "railgroup"; g.textContent = tpl.group;
+      rail.appendChild(g); lastGroup = tpl.group;
+    }
+    const it = document.createElement("button");
+    it.className = "railitem";
+    it.setAttribute("aria-current", tpl.key === state.key);
+    const tag = tpl.previewOnly ? '<span style="font-size:10px;color:var(--sub);margin-left:4px">미리보기</span>' : '';
+    it.innerHTML = `<span class="no">${tpl.navNo}</span><span class="nm">${tpl.nav}${tag}</span>`;
+    it.onclick = () => { state.key = tpl.key; renderAll(); };
+    rail.appendChild(it);
+  });
+}
+
+function curTpl(){ return TEMPLATES.find(t => t.key === state.key); }
+function curTplRaw(){ return TEMPLATE_BY_KEY[state.key] || curTpl(); }
+
+// ---- preview ----
+const frame = document.getElementById("frame");
+const device = document.getElementById("device");
+function renderPreview(){
+  const tpl = curTpl();
+  const html = render(state.theme, curTplRaw(), { sample: state.sample, vp: state.vp, locale: state.locale });
+  frame.srcdoc = html;
+  const w = state.vp === "mobile" ? 375 : 680;
+  device.style.width = w + "px";
+  device.classList.toggle("is-mobile", state.vp === "mobile");
+  document.getElementById("devlabel").textContent =
+    state.vp === "mobile" ? "모바일 · 375px (320px 대응)" : "데스크톱 · 본문 600px";
+  frame.onload = () => {
+    try {
+      const h = frame.contentDocument.body.scrollHeight;
+      frame.style.height = (h + 4) + "px";
+    } catch(e){ frame.style.height = "900px"; }
+  };
+}
+
+// ---- meta ----
+function renderMeta(){
+  const tpl = curTpl();
+  const meta = document.getElementById("meta");
+  const common = ["siteUrl","supportEmail","year"];
+  const vars = [...new Set([...(tpl.variables||[]), ...common])];
+  const subjPreview = tpl.subject.replace(/\{(\w+)\}/g, (m,k)=> SAMPLE[k]!=null?SAMPLE[k]:m);
+  const spec = tpl.specRef ? `<section><h2>기능정의서</h2><div class="kv">${tpl.specRef}</div></section>` : '';
+  const tk = tpl.templateKey ? `<section><h2>template_key</h2><div class="kv"><code>${tpl.templateKey}</code> · locale <b>${state.locale.toUpperCase()}</b></div></section>` : '';
+  const locNote = tpl.i18n ? '<section><h2>다국어</h2><div class="note">갭 3종 — KO/MY/EN 본문. 발송 시 <code>email_outbox.locale</code> 과 일치.</div></section>' : '';
+  meta.innerHTML = `
+    ${spec}
+    ${tk}
+    ${locNote}
+    <section><h2>트리거</h2><div class="kv">${tpl.trigger}</div></section>
+    <section><h2>제목</h2><div class="kv"><b>${subjPreview}</b></div></section>
+    <section><h2>프리헤더</h2><div class="pre">${tpl.preheader.replace(/\{(\w+)\}/g,(m,k)=>SAMPLE[k]!=null?SAMPLE[k]:m)}</div></section>
+    <section><h2>치환 변수</h2><div class="chips">${vars.map(v=>`<span class="chip">{${v}}</span>`).join("")}${tpl.marketing?'<span class="chip">{unsubscribeUrl}</span>':''}</div></section>
+    ${tpl.marketing?'<section><h2>마케팅</h2><div class="note">광고성 정보 수신 동의 회원 전용. 수신거부 링크가 푸터에 포함됩니다.</div></section>':''}
+    <section><h2>공통 푸터</h2><div class="note">발신 전용 안내 · 문의(사이트·이메일) · 운영기관 표기. 모든 메일에 자동 포함됩니다.</div></section>
+  `;
+}
+
+// ---- toolbar ----
+function renderToolbar(){
+  const tpl = curTpl();
+  document.getElementById("subj").textContent =
+    tpl.subject.replace(/\{(\w+)\}/g,(m,k)=>SAMPLE[k]!=null?SAMPLE[k]:m);
+}
+
+function syncToggles(){
+  document.querySelectorAll("#seg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.t===state.theme));
+  document.querySelectorAll("#sampleToggle button").forEach(b=>b.setAttribute("aria-pressed", (b.dataset.s==="1")===state.sample));
+  document.querySelectorAll("#vpToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===state.vp));
+  document.querySelectorAll("#localeToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.l===state.locale));
+  document.getElementById("tagline").textContent = THEMES[state.theme].tagline;
+}
+
+function renderAll(){
+  buildRail(); renderToolbar(); renderPreview(); renderMeta(); syncToggles();
+}
+
+// ---- events ----
+document.querySelectorAll("#sampleToggle button").forEach(b=>{
+  b.onclick=()=>{ state.sample = b.dataset.s==="1"; renderAll(); };
+});
+document.querySelectorAll("#vpToggle button").forEach(b=>{
+  b.onclick=()=>{ state.vp = b.dataset.v; renderPreview(); syncToggles(); };
+});
+document.querySelectorAll("#localeToggle button").forEach(b=>{
+  b.onclick=()=>{ state.locale = b.dataset.l; renderAll(); };
+});
+
+function toast(msg){
+  const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("on");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),1800);
+}
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }
+  catch(e){
+    const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand("copy");}catch(_){} ta.remove(); return true;
+  }
+}
+document.getElementById("copyBtn").onclick=async()=>{
+  const html=render(state.theme,curTplRaw(),{sample:false,locale:state.locale});
+  await copyText(html); toast("이메일 HTML을 복사했습니다 (치환 변수 유지)");
+};
+
+// ---- source overlay ----
+const overlay=document.getElementById("overlay");
+document.getElementById("srcBtn").onclick=()=>{
+  const tpl=curTplRaw();
+  const html=render(state.theme,tpl,{sample:false,locale:state.locale});
+  document.getElementById("srcCode").textContent=html;
+  document.getElementById("srcName").textContent=`· ${state.theme}안 · ${tpl.nav}`;
+  overlay.classList.add("on");
+};
+document.getElementById("srcClose").onclick=()=>overlay.classList.remove("on");
+overlay.onclick=(e)=>{ if(e.target===overlay) overlay.classList.remove("on"); };
+document.getElementById("srcCopy").onclick=async()=>{
+  await copyText(document.getElementById("srcCode").textContent); toast("소스를 복사했습니다");
+};
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") overlay.classList.remove("on"); });
+
+renderAll();
+</script>
+</body>
+</html>

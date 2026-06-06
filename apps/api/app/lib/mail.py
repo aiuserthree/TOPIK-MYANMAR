@@ -8,6 +8,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -87,6 +88,7 @@ def _send_console(to_email: str, rendered: RenderedEmail, settings: Settings) ->
 
 
 def _send_smtp(to_email: str, rendered: RenderedEmail, settings: Settings) -> None:
+    envelope_from = parseaddr(settings.mail_from)[1] or settings.mail_from
     msg = MIMEMultipart("alternative")
     msg["Subject"] = rendered.subject
     msg["From"] = settings.mail_from
@@ -98,14 +100,14 @@ def _send_smtp(to_email: str, rendered: RenderedEmail, settings: Settings) -> No
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, context=context) as smtp:
             smtp.login(settings.smtp_user, settings.smtp_pass)
-            smtp.sendmail(settings.mail_from, [to_email], msg.as_string())
+            smtp.sendmail(envelope_from, [to_email], msg.as_string())
         return
 
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as smtp:
         smtp.ehlo()
         smtp.starttls(context=ssl.create_default_context())
         smtp.login(settings.smtp_user, settings.smtp_pass)
-        smtp.sendmail(settings.mail_from, [to_email], msg.as_string())
+        smtp.sendmail(envelope_from, [to_email], msg.as_string())
 
 
 def _send_resend(to_email: str, rendered: RenderedEmail, settings: Settings) -> None:
