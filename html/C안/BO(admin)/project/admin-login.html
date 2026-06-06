@@ -145,7 +145,7 @@
           <div class="name">TOPIK Myanmar<small>관리자 콘솔 · ADMIN CONSOLE</small></div>
         </div>
         <h1><small>BACKOFFICE</small>주미얀마대사관 한국어능력시험<br>운영 관리 시스템</h1>
-        <div class="desc">접수자 관리·사진 심사·회차 운영·콘텐츠 발행을 한 곳에서. 모든 처리 이력은 자동 기록됩니다.</div>
+        <div class="desc">접수자 관리·회차 운영·콘텐츠 발행을 한 곳에서. 모든 처리 이력은 자동 기록됩니다.</div>
         <div class="features">
           <div class="f">다중 관리자 동시 접속 지원</div>
           <div class="f">아이디별 처리 이력 자동 기록</div>
@@ -166,13 +166,13 @@
 
       <form id="loginForm" autocomplete="on" novalidate>
         <div class="form-row">
-          <label class="label" for="adminId">아이디 <span class="req">*</span></label>
-          <input class="input" id="adminId" name="id" type="text" placeholder="예: admin01" autocomplete="username" value="admin01">
+          <label class="label" for="adminEmail">이메일 <span class="req">*</span></label>
+          <input class="input" id="adminEmail" name="email" type="email" placeholder="예: admin-dev@topik-mm.local" autocomplete="username">
         </div>
         <div class="form-row">
           <label class="label" for="adminPw">비밀번호 <span class="req">*</span></label>
           <div class="pw-wrap">
-            <input class="input" id="adminPw" name="pw" type="password" placeholder="비밀번호" autocomplete="current-password" value="topik2026!">
+            <input class="input" id="adminPw" name="pw" type="password" placeholder="비밀번호" autocomplete="current-password">
             <button type="button" class="pw-toggle" id="pwToggle">표시</button>
           </div>
         </div>
@@ -186,14 +186,14 @@
       </form>
 
       <div class="auth-hint demo-only">
-        <strong style="color:var(--text-2);">데모 안내</strong> · 아무 아이디/비밀번호로 로그인할 수 있습니다. 5회 연속 실패 시 계정 잠금. <br>
-        예시 계정: <code>admin01 / topik2026!</code> (최고관리자)
+        <strong style="color:var(--text-2);">개발 안내</strong> · API(<code>/api/v1/auth/login</code>) 관리자 계정으로 로그인합니다. <br>
+        dev 시드: <code>admin-dev@topik-mm.local / DevOnly!2026</code>
       </div>
     </div>
   </div>
 
+<script src="shared/bo-api-client.js"></script>
 <script>
-  // password toggle
   const pwToggle = document.getElementById('pwToggle');
   const pw = document.getElementById('adminPw');
   pwToggle.addEventListener('click', () => {
@@ -201,37 +201,64 @@
     else { pw.type = 'password'; pwToggle.textContent = '표시'; }
   });
 
-  // 5회 실패 잠금 로직(데모: localStorage 카운트)
-  let fails = parseInt(localStorage.getItem('bo_login_fails') || '0', 10);
-
   const form = document.getElementById('loginForm');
   const err = document.getElementById('errBanner');
-  const attempts = document.getElementById('attempts');
+  const errText = err.querySelector('div');
+  const btn = form.querySelector('button[type="submit"]');
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const id = document.getElementById('adminId').value.trim();
-    const pwv = pw.value;
-    if (!id || !pwv) {
-      err.classList.add('show');
-      err.querySelector('strong').textContent = '입력 누락';
-      err.querySelector('div').innerHTML = '<strong>입력 누락</strong> · 아이디와 비밀번호를 모두 입력해주세요.';
-      return;
-    }
+  function showError(title, message) {
+    err.classList.add('show');
+    errText.innerHTML = '<strong>' + title + '</strong> · ' + message;
+  }
 
-    // 데모: 무조건 성공 → 세션 저장 후 admin.html 이동
-    sessionStorage.setItem('bo_session', JSON.stringify({
-      id: id,
-      name: id === 'admin01' ? '김관리' : (id === 'editor01' ? '박편집' : '관리자'),
-      role: id === 'admin01' ? 'super' : (id === 'editor01' ? 'general' : 'viewer'),
-      loginAt: new Date().toISOString(),
-      ip: '203.0.113.42'
-    }));
-    localStorage.setItem('bo_login_fails', '0');
-    // ?next= 파라미터 보존
+  function goAdmin() {
     const params = new URLSearchParams(location.search);
     const next = params.get('next');
     location.replace(next && next.startsWith('admin') ? next : 'admin.html');
+  }
+
+  if (window.TopikBoApi && TopikBoApi.isAuthenticated()) {
+    goAdmin();
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('adminEmail').value.trim();
+    const pwv = pw.value;
+    if (!email || !pwv) {
+      showError('입력 누락', '이메일과 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+    if (!window.TopikBoApi || typeof TopikBoApi.login !== 'function') {
+      showError('설정 오류', 'API 클라이언트를 불러오지 못했습니다.');
+      return;
+    }
+
+    err.classList.remove('show');
+    if (btn) { btn.disabled = true; btn.textContent = '로그인 중…'; }
+    const remember = document.getElementById('remember').checked;
+
+    TopikBoApi.login(email, pwv, { persist: remember })
+      .then(function (res) {
+        if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
+        if (res.ok && TopikBoApi.isAuthenticated()) {
+          goAdmin();
+          return;
+        }
+        if (res.status === 401) {
+          showError('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');
+        } else if (res.status === 403) {
+          showError('접근 거부', TopikBoApi.parseError(res));
+        } else if (res.status === 0) {
+          showError('연결 실패', 'API에 연결할 수 없습니다. 서버(localhost:8000) 실행 여부를 확인해 주세요.');
+        } else {
+          showError('로그인 실패', TopikBoApi.parseError(res));
+        }
+      })
+      .catch(function () {
+        if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
+        showError('로그인 실패', '요청 중 오류가 발생했습니다.');
+      });
   });
 </script>
 </body>

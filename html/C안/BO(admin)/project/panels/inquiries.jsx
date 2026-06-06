@@ -24,7 +24,12 @@ function InquiriesPanel() {
     return r.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
   }, [state.inquiries, tab, catF, stF, q]);
 
-  const remove = () => {
+  const remove = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiDeleteBoardPost(delId, 'inquiry');
+      if (ok) { setDelId(null); toastOk('삭제되었습니다.'); }
+      return;
+    }
     const i = state.inquiries.find(x => x.id === delId);
     state.inquiries.splice(state.inquiries.indexOf(i), 1);
     DataStore.addAudit({ type: '문의', targetId: i.id, action: '삭제', before: { ...i }, memo: '' });
@@ -118,6 +123,7 @@ function InquiryDetailLP({ id, onClose }) {
   const [commentPublic, setCommentPublic] = useState(!q.secret);
 
   useEffect(() => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) return;
     if (q.secret) {
       DataStore.addAudit({ type: '문의', targetId: id, action: '수정', memo: '비밀글 본문 열람' });
       DataStore.notify();
@@ -126,8 +132,13 @@ function InquiryDetailLP({ id, onClose }) {
 
   if (!q) return null;
 
-  const submit = () => {
+  const submit = async () => {
     if (!reply.trim()) { toastErr('답변을 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiBoardReply(id, reply, 'inquiry', { markDone: done, public: !q.secret });
+      if (ok) { setReply(''); toastOk('답변이 등록되었습니다. 작성자에게 이메일이 발송됩니다.'); }
+      return;
+    }
     const before = { status: q.status };
     q.comments.push({ author: state.me?.id, body: reply, public: !q.secret, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
     q.assignee = state.me?.id;

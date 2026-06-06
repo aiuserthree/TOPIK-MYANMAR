@@ -241,7 +241,7 @@
   const MATRIX = [
     { menu: '대시보드',                    super: 'rw', general: 'rw', viewer: 'r' },
     { menu: '접수 관리 · 접수자 목록',     super: 'rw', general: 'rw', viewer: 'r' },
-    { menu: '접수 관리 · 사진 심사',       super: 'rw', general: 'rw', viewer: 'r' },
+    { menu: '접수 관리 · 접수 처리',       super: 'rw', general: 'rw', viewer: 'r' },
     { menu: '접수 관리 · 수험번호 일괄부여', super: 'rw', general: 'no', viewer: 'no' },
     { menu: '시험 관리 · 회차',            super: 'rw', general: 'r',  viewer: 'r' },
     { menu: '시험 관리 · 시험장',          super: 'rw', general: 'r',  viewer: 'r' },
@@ -385,6 +385,8 @@
     consents: CONSENTS,
     activeSessionId: 's106', // 현재 회차
     me: null, // 로그인 사용자 - set on boot
+    apiError: null,
+    apiLoading: false,
   };
 
   function addAudit(entry) {

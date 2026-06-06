@@ -2,7 +2,7 @@
    panels/dashboard.jsx — 대시보드
    per docs/01_dashboard.md:
    - 회차 컨텍스트 카드
-   - KPI 카드 (전체/접수완료/수납대기/승인완료/반려/취소/사진심사대기/수험번호부여완료)
+   - KPI 카드 (전체/접수완료/수납대기/승인완료/반려/취소/수험번호부여완료)
    - 최근 접수자 위젯
    - 처리 이력 위젯 (최근 활동)
    ============================================================ */
@@ -16,13 +16,12 @@ function DashboardPanel() {
 
   // KPI 카운트
   const cnt = useMemo(() => {
-    const c = { total: apps.length, applied: 0, photo: 0, pay: 0, approved: 0, rejected: 0, cancel: 0, refund: 0, exam: 0 };
+    const c = { total: apps.length, applied: 0, pay: 0, approved: 0, rejected: 0, cancel: 0, refund: 0, exam: 0 };
     apps.forEach(a => {
       if (a.exam) c.exam++;
       const s = a.status;
       if (c[s] !== undefined) c[s]++;
     });
-    c.photo = apps.filter(a => a.photoStatus === 'pending' && a.status !== 'cancel').length;
     return c;
   }, [apps]);
 
@@ -69,8 +68,7 @@ function DashboardPanel() {
           </div>
         </div>
         <div className="actions">
-          <a className="btn btn-secondary" href="#applicants"><I.Users style={{ width:14, height:14 }}/> 접수자 목록</a>
-          <a className="btn btn-primary" href="#applicants"><I.Image style={{ width:14, height:14 }}/> 사진 심사</a>
+          <a className="btn btn-primary" href="#applicants"><I.Users style={{ width:14, height:14 }}/> 접수자 목록</a>
         </div>
       </div>
 
@@ -78,7 +76,6 @@ function DashboardPanel() {
       <div className="kpi-grid">
         <Kpi color="#0F1B2D"        label="전체 접수자"   val={cnt.total}     hint={`회차 ${session?.no}`}/>
         <Kpi color="var(--st-applied)"   label="접수완료"     val={cnt.applied}   hint="미처리"/>
-        <Kpi color="var(--st-photo)"     label="사진심사 대기" val={cnt.photo}    hint="검토 필요"/>
         <Kpi color="var(--st-pay)"       label="수납대기"     val={cnt.pay}      hint="오프라인 수납"/>
         <Kpi color="var(--st-approved)"  label="승인완료"     val={cnt.approved} hint=""/>
         <Kpi color="var(--st-rejected)"  label="반려"         val={cnt.rejected} hint=""/>

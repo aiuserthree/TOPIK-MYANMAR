@@ -32,7 +32,12 @@ function RefundsPanel() {
     none: state.refunds.filter(r => !r.hasAnswer).length,
   }), [state.refunds]);
 
-  const remove = () => {
+  const remove = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiDeleteBoardPost(delId, 'refund');
+      if (ok) { setDelId(null); toastOk('삭제되었습니다.'); }
+      return;
+    }
     const r = state.refunds.find(x => x.id === delId);
     state.refunds.splice(state.refunds.indexOf(r), 1);
     DataStore.addAudit({ type: '환불·정정', targetId: r.id, action: '삭제', before: { ...r }, memo: '' });
@@ -136,14 +141,21 @@ function RefundDetailLP({ id, onClose }) {
 
   // 열람 이력 기록 (비밀글)
   useEffect(() => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) return;
     DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', memo: '비밀글 열람' });
     DataStore.notify();
   }, [id]);
 
   if (!r) return null;
 
-  const submitReply = () => {
+  const submitReply = async () => {
     if (!reply.trim()) { toastErr('답변 내용을 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      if (status !== r.status) await DataStore.apiBoardWorkflow(id, status, 'refund');
+      const ok = await DataStore.apiBoardReply(id, reply, 'refund', { public: replyPublic, status: status });
+      if (ok) { setReply(''); toastOk('답변이 등록되었습니다. 작성자에게 이메일이 발송됩니다.'); }
+      return;
+    }
     const before = { hasAnswer: r.hasAnswer, status: r.status };
     r.hasAnswer = true;
     r.assignee = state.me?.id || 'admin01';

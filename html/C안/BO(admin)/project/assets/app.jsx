@@ -8,7 +8,6 @@ const NAV = [
 
   { section: '접수' },
   { id: 'applicants',  label: '접수자 목록',     icon: 'Users',  badge: 'unreviewed' },
-  { id: 'photos',      label: '사진 심사',       icon: 'Image',  badge: 'photoWait' },
 
   { section: '시험 운영' },
   { id: 'sessions',    label: '회차 관리',       icon: 'Calendar' },
@@ -34,7 +33,6 @@ const PANEL_TITLE = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n.l
 const CRUMB = {
   dashboard:  ['메인', '대시보드'],
   applicants: ['접수 관리', '접수자 목록'],
-  photos:     ['접수 관리', '사진 심사'],
   sessions:   ['시험 관리', '회차 관리'],
   venues:     ['시험 관리', '시험장 관리'],
   notices:    ['콘텐츠 관리', '공지사항'],
@@ -55,15 +53,26 @@ function App() {
   const [sbOpen, setSbOpen] = useState(false);
   const state = useStore();
 
-  // Boot: session check + load me into store
+  // Boot: token + session check + load me into store + API data
   useEffect(() => {
-    const raw = sessionStorage.getItem('bo_session');
-    if (!raw) { location.replace('admin-login.html?next=' + encodeURIComponent('admin.html')); return; }
-    const me = JSON.parse(raw);
+    if (!window.TopikBoApi || !TopikBoApi.isAuthenticated()) {
+      location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+      return;
+    }
+    const raw = TopikBoApi.getSessionRaw();
+    let me;
+    try {
+      me = JSON.parse(raw);
+    } catch (e) {
+      TopikBoApi.logout();
+      location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+      return;
+    }
     DataStore.state.me = me;
     DataStore.notify();
     try { sessionStorage.setItem('tpkm_bo_admin', JSON.stringify({ role: me.role || 'super', name: me.name || me.id })); } catch (e) {}
     if (window.TOPIKBoCore) TOPIKBoCore.startSessionHeartbeat(me.id || me.name, me.name);
+    if (DataStore.initFromApi) DataStore.initFromApi();
   }, []);
 
   useEffect(() => {
@@ -78,7 +87,7 @@ function App() {
   const logout = useCallback(() => {
     if (!confirm('로그아웃 하시겠습니까?')) return;
     DataStore.addAudit({ type: '관리자계정', targetId: state.me?.id || '', action: '로그아웃', memo: '' });
-    sessionStorage.removeItem('bo_session');
+    if (window.TopikBoApi) TopikBoApi.logout();
     location.replace('admin-login.html');
   }, [state.me]);
 
@@ -92,7 +101,6 @@ function App() {
   const PanelByRoute = {
     dashboard:  window.DashboardPanel,
     applicants: window.ApplicantsPanel,
-    photos:     window.PhotosPanel,
     sessions:   window.SessionsPanel,
     venues:     window.VenuesPanel,
     notices:    window.NoticesPanel,
@@ -109,6 +117,17 @@ function App() {
 
   return (
     <>
+      {(state.apiError || state.apiLoading) && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          padding: '10px 16px', fontSize: 13, textAlign: 'center',
+          background: state.apiError ? '#fde8e8' : '#eef4ff',
+          color: state.apiError ? '#b42318' : '#1d4ed8',
+          borderBottom: '1px solid rgba(0,0,0,.08)',
+        }}>
+          {state.apiLoading ? 'API 데이터 로딩 중…' : `API 오류: ${state.apiError}`}
+        </div>
+      )}
       <div className="app">
         {/* Sidebar */}
         <aside className={`sb ${sbOpen ? 'open' : ''}`}>
@@ -162,7 +181,7 @@ function App() {
           <div className="tb-spacer"></div>
           <div className="tb-actions">
             {/* Session switcher — context for applicant/exam panels */}
-            {['dashboard','applicants','photos'].includes(route) && (
+            {['dashboard','applicants'].includes(route) && (
               <select
                 className="select"
                 style={{ height: 36, fontSize: 13, minWidth: 200 }}
@@ -178,10 +197,6 @@ function App() {
             <a className="tb-iconbtn" href="../../FO/index.html" target="_blank" rel="noopener" title="사이트 보기(새 창)">
               <I.ExternalLink/>
             </a>
-            <button className="tb-iconbtn" title="알림">
-              <I.Bell/>
-              {(badges.unreviewed + badges.photoWait + badges.refundNew + badges.inquiryWait) > 0 && <span className="dot"></span>}
-            </button>
             <div className="tb-user" title={me?.id}>
               <div className="avatar">{me?.name?.slice(0,1) || 'A'}</div>
               <div className="meta">

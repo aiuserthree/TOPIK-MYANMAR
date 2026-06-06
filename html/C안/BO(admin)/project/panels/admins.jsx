@@ -36,7 +36,15 @@ function AdminAccounts({ canManage }) {
 
   const list = state.admins.slice().sort((a,b) => a.id.localeCompare(b.id));
 
-  const save = (data) => {
+  const save = async (data) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveAdmin(data);
+      if (ok) {
+        toastOk(data._isNew ? '관리자 계정이 등록되었습니다.' : '관리자 계정이 수정되었습니다.');
+        setEdit(null);
+      }
+      return;
+    }
     if (data.id && state.admins.find(a => a.id === data.id && a !== state.admins.find(x => x.id === data.id) && data._isNew)) {
       toastErr('이미 사용 중인 아이디입니다.'); return;
     }
@@ -58,7 +66,15 @@ function AdminAccounts({ canManage }) {
     setEdit(null);
   };
 
-  const doReset = () => {
+  const doReset = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const temp = await DataStore.apiResetAdminPassword(resetId);
+      if (temp) {
+        setResetId(null);
+        toast(`임시 비밀번호 ${temp} · 발급 완료`, { type: 'success', title: '비밀번호 초기화', duration: 5000 });
+      }
+      return;
+    }
     const a = state.admins.find(x => x.id === resetId);
     const temp = 'tpkm' + Math.random().toString(36).slice(2,8);
     DataStore.addAudit({ type: '관리자계정', targetId: a.id, action: '비밀번호초기화', memo: `임시 비밀번호 발급 · 이메일 ${a.email} · 첫 로그인 시 변경 강제` });
@@ -67,11 +83,22 @@ function AdminAccounts({ canManage }) {
     toast(`임시 비밀번호 ${temp} · 이메일 전송 완료`, { type: 'success', title: '비밀번호 초기화', duration: 5000 });
   };
 
-  const doToggle = (reason) => {
+  const doToggle = async (reason) => {
     const a = state.admins.find(x => x.id === toggleId);
-    if (a.id === state.me?.id) { toastErr('본인 계정은 비활성화할 수 없습니다.'); setToggleId(null); return; }
+    if (a.email === state.me?.id || a.email === state.me?.email || a.id === state.me?.id) {
+      toastErr('본인 계정은 비활성화할 수 없습니다.'); setToggleId(null); return;
+    }
+    const nextStatus = a.status === 'active' ? 'inactive' : 'active';
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiToggleAdmin(toggleId, nextStatus, reason);
+      if (ok) {
+        setToggleId(null);
+        toastOk(`계정이 ${nextStatus === 'active' ? '활성화' : '비활성화'}되었습니다.`);
+      }
+      return;
+    }
     const before = { status: a.status };
-    a.status = a.status === 'active' ? 'inactive' : 'active';
+    a.status = nextStatus;
     DataStore.addAudit({ type: '관리자계정', targetId: a.id, action: '수정', before, after: { status: a.status }, memo: `${a.status === 'inactive' ? '비활성화' : '활성화'} · 사유: ${reason}` });
     DataStore.notify();
     setToggleId(null);
@@ -107,7 +134,7 @@ function AdminAccounts({ canManage }) {
                     <div className="row-actions">
                       <button className="ibtn" disabled={!canManage} onClick={() => setEdit({ id: a.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>
                       <button className="ibtn" disabled={!canManage} onClick={() => setResetId(a.id)}>PW 초기화</button>
-                      <button className="ibtn danger" disabled={!canManage || a.id === state.me?.id} onClick={() => setToggleId(a.id)}>
+                      <button className="ibtn danger" disabled={!canManage || a.email === state.me?.id || a.email === state.me?.email || a.id === state.me?.id} onClick={() => setToggleId(a.id)}>
                         {a.status === 'active' ? '비활성' : '활성화'}
                       </button>
                     </div>
@@ -154,7 +181,10 @@ function AdminEditLP({ edit, onClose, onSave }) {
     _isNew: true,
   });
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
-  const valid = /^[A-Za-z0-9]{4,30}$/.test(f.id) && f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || (f.pw && f.pw.length >= 8));
+  const isApi = DataStore.isApiMode && DataStore.isApiMode();
+  const valid = isApi
+    ? (f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || (f.pw && f.pw.length >= 8)))
+    : (/^[A-Za-z0-9]{4,30}$/.test(f.id) && f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || (f.pw && f.pw.length >= 8)));
   return (
     <LP open size="sm" title={a0 ? `계정 수정 — ${a0.name}` : '관리자 계정 등록'} onClose={onClose}
       footer={<>
@@ -162,9 +192,16 @@ function AdminEditLP({ edit, onClose, onSave }) {
         <button className="btn btn-primary" disabled={!valid} onClick={() => onSave(f)}>{a0 ? '저장' : '등록'}</button>
       </>}>
       <FieldSet legend="계정" cols={2}>
-        <FormRow label="아이디" required hint="4~30자 영숫자, unique">
-          <input className="input" value={f.id} disabled={!!a0} onChange={e => set('id', e.target.value)} maxLength={30}/>
-        </FormRow>
+        {!isApi && (
+          <FormRow label="아이디" required hint="4~30자 영숫자, unique">
+            <input className="input" value={f.id} disabled={!!a0} onChange={e => set('id', e.target.value)} maxLength={30}/>
+          </FormRow>
+        )}
+        {isApi && a0 && (
+          <FormRow label="계정 ID">
+            <input className="input" value={f.id} disabled/>
+          </FormRow>
+        )}
         <FormRow label="이름" required>
           <input className="input" value={f.name} onChange={e => set('name', e.target.value)}/>
         </FormRow>

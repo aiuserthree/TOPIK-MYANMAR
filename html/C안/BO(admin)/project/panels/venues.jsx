@@ -8,7 +8,15 @@ function VenuesPanel() {
 
   const list = state.venues.slice().sort((a,b) => a.regionCode.localeCompare(b.regionCode) || a.code.localeCompare(b.code));
 
-  const save = (data) => {
+  const save = async (data) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveVenue({ ...data, _isNew: !data.id });
+      if (ok) {
+        toastOk(data.id ? `${data.nameKo} 정보가 수정되었습니다.` : `${data.nameKo}가 등록되었습니다.`);
+        setEdit(null);
+      }
+      return;
+    }
     if (data.id) {
       const v = state.venues.find(x => x.id === data.id);
       const before = { ...v };
@@ -30,7 +38,12 @@ function VenuesPanel() {
     setEdit(null);
   };
 
-  const toggleActive = (v) => {
+  const toggleActive = async (v) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveVenue({ ...v, active: !v.active });
+      if (ok) toastOk(`시험장이 ${!v.active ? '활성화' : '비활성화'}되었습니다.`);
+      return;
+    }
     const before = { active: v.active };
     v.active = !v.active;
     DataStore.addAudit({ type: '시험장', targetId: v.id, action: '수정', before, after: { active: v.active }, memo: v.active ? '활성화' : '비활성화' });

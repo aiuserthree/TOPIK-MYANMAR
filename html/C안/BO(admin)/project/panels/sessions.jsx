@@ -7,7 +7,15 @@ function SessionsPanel() {
 
   const sessions = state.sessions.slice().sort((a,b) => (b.examDate || '').localeCompare(a.examDate || ''));
 
-  const save = (data) => {
+  const save = async (data) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveSession({ ...data, _isNew: !data.id });
+      if (ok) {
+        toastOk(data.id ? `${data.name} 정보가 수정되었습니다.` : `${data.name} 회차가 등록되었습니다.`);
+        setEdit(null);
+      }
+      return;
+    }
     const session = data.id ? state.sessions.find(s => s.id === data.id) : null;
     if (session) {
       const before = { ...session };

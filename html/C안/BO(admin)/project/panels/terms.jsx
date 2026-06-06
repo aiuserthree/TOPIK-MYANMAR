@@ -19,7 +19,15 @@ function TermsPanel() {
     return r.sort((a,b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''));
   }, [state.terms, kindF]);
 
-  const save = (data) => {
+  const save = async (data) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveTerm({ ...data, _isNew: !data.id });
+      if (ok) {
+        toastOk(data.id ? '약관 초안이 수정되었습니다.' : '약관 초안이 등록되었습니다.');
+        setEdit(null);
+      }
+      return;
+    }
     if (data.id) {
       const t = state.terms.find(x => x.id === data.id);
       if (t.status !== 'draft') { toastErr('게시된 약관은 수정할 수 없습니다. 신규 버전을 등록해주세요.'); return; }
@@ -38,7 +46,16 @@ function TermsPanel() {
     setEdit(null);
   };
 
-  const doPublish = () => {
+  const doPublish = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiPublishTerm(publish);
+      if (ok) {
+        const t = state.terms.find(x => x.id === publish);
+        setPublish(null);
+        toastOk(`${t?.kind} ${t?.version}가 게시되었습니다.`);
+      }
+      return;
+    }
     const t = state.terms.find(x => x.id === publish);
     // 동종 기존 게시 버전 폐지
     state.terms.forEach(x => {
@@ -57,7 +74,12 @@ function TermsPanel() {
     toastOk(`${t.kind} ${t.version}가 게시되었습니다.`);
   };
 
-  const doRetire = () => {
+  const doRetire = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiRetireTerm(retire);
+      if (ok) { setRetire(null); toastOk('약관이 폐지되었습니다.'); }
+      return;
+    }
     const t = state.terms.find(x => x.id === retire);
     const before = { status: t.status };
     t.status = 'retired';

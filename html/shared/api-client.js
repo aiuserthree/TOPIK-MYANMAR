@@ -26,19 +26,21 @@
       }
     }
     var loc = global.location;
-    if (!loc || !loc.hostname) return "http://localhost:3000";
+    if (!loc || !loc.hostname) return "http://localhost:8000";
     var host = loc.hostname;
     if (host === "localhost" || host === "127.0.0.1") {
-      return "http://localhost:3000";
-    }
-    if (host === "topik-myanmar.vercel.app" || host.endsWith(".vercel.app")) {
-      return "";
+      return "http://localhost:8000";
     }
     return "";
   }
 
   var USE_API = global.USE_API !== false;
   var API_BASE_URL = resolveBaseUrl();
+  var API_SAME_ORIGIN = API_BASE_URL === "";
+
+  function apiConfigured() {
+    return USE_API && (API_SAME_ORIGIN || !!API_BASE_URL);
+  }
 
   function storageFor(persist) {
     return persist ? global.localStorage : global.sessionStorage;
@@ -109,7 +111,7 @@
   function refreshSession() {
     if (refreshInFlight) return refreshInFlight;
     var rt = getRefreshToken();
-    if (!rt || !USE_API || !API_BASE_URL || rt === "demo-local-refresh") {
+    if (!rt || !apiConfigured() || rt === "demo-local-refresh") {
       return Promise.resolve(false);
     }
     refreshInFlight = fetch(apiUrl("/api/v1/auth/refresh"), {
@@ -193,7 +195,7 @@
   }
 
   function fileUrl(fileId) {
-    if (!fileId || !USE_API || !API_BASE_URL) return "";
+    if (!fileId || !apiConfigured()) return "";
     if (isFileUnavailable(fileId)) return "";
     var token = getAccessToken();
     return apiUrl("/api/v1/files/" + encodeURIComponent(fileId)) +
@@ -205,7 +207,7 @@
    * Prefer fileUrl() + <img src> for profile photos (S3 presigned redirects break CORS).
    */
   function fetchFileBlob(fileId, isRetry) {
-    if (!fileId || !USE_API || !API_BASE_URL || isFileUnavailable(fileId)) {
+    if (!fileId || !apiConfigured() || isFileUnavailable(fileId)) {
       return Promise.resolve(null);
     }
     var headers = { Accept: "image/*,*/*" };
@@ -269,7 +271,7 @@
     options = options || {};
     var persist = !!options.persist;
 
-    if (!USE_API || !API_BASE_URL) {
+    if (!apiConfigured()) {
       return legacyLogin(email, password, persist);
     }
 
@@ -367,7 +369,7 @@
     if (options.body && !headers["Content-Type"]) {
       headers["Content-Type"] = "application/json";
     }
-    if (!USE_API || !API_BASE_URL) {
+    if (!apiConfigured()) {
       return Promise.resolve({
         ok: false,
         status: 0,
@@ -649,7 +651,7 @@
   }
 
   function canUseApi() {
-    return USE_API && !!API_BASE_URL;
+    return apiConfigured();
   }
 
   global.TopikApi = {
@@ -657,8 +659,8 @@
     useApi: USE_API,
 
     health: function () {
-      if (!API_BASE_URL) {
-        return Promise.reject(new Error("API_BASE_URL not configured"));
+      if (!apiConfigured()) {
+        return Promise.reject(new Error("API not configured"));
       }
       return fetch(apiUrl("/health")).then(function (r) {
         return r.json();

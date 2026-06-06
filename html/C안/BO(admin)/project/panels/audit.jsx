@@ -5,6 +5,9 @@ const AUDIT_ACTIONS_F = ['생성','수정','삭제','승인','반려','수납','
 
 function AuditPanel() {
   const state = useStore();
+  useEffect(() => {
+    if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.reloadAudit) DataStore.reloadAudit();
+  }, []);
   const me = state.me;
   const myRole = me?.role || 'super';
   const canSeeAll = myRole === 'super';
@@ -125,7 +128,7 @@ function AuditDetailLP({ id, onClose }) {
   const l = state.audit.find(x => x.id === id);
   if (!l) return null;
   const linkHash = ({
-    접수자: 'applicants', 사진: 'photos', 회차: 'sessions', 시험장: 'venues',
+    접수자: 'applicants', 사진: 'applicants', 회차: 'sessions', 시험장: 'venues',
     공지: 'notices', FAQ: 'faq', '환불·정정': 'refunds', 문의: 'inquiries',
     회원: 'members', 약관: 'terms', 관리자계정: 'admins',
   })[l.type];

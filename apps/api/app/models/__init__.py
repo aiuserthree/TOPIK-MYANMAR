@@ -1,6 +1,8 @@
 """SQLAlchemy ORM models for TOPIK Myanmar."""
 
 from app.models.admin import AdminAuditLog, AdminUser
+from app.models.auth_tokens import EmailVerificationCode, PasswordResetToken
+from app.models.board import BoardComment, BoardPost
 from app.models.application import (
     Application,
     ApplicationDraft,
@@ -15,6 +17,10 @@ from app.models.user import User
 __all__ = [
     "AdminAuditLog",
     "AdminUser",
+    "BoardComment",
+    "BoardPost",
+    "EmailVerificationCode",
+    "PasswordResetToken",
     "Application",
     "ApplicationDraft",
     "ApplicationMemo",

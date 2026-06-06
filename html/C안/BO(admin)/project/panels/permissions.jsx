@@ -87,6 +87,10 @@ function PermissionsPanel() {
   const resetDraft = () => setDraft(JSON.parse(JSON.stringify(state.perms)));
   const save = () => {
     if (!canManage) return;
+    if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.staticPermissions) {
+      toastErr('API 모드에서는 정적 권한만 지원합니다. 변경 사항을 저장할 수 없습니다.');
+      return;
+    }
     // diff summary
     const before = JSON.parse(JSON.stringify(state.perms));
     state.perms = JSON.parse(JSON.stringify(draft));
@@ -115,6 +119,12 @@ function PermissionsPanel() {
           <button className="btn btn-secondary" onClick={exportMatrix}><I.Download style={{ width: 14, height: 14 }}/> 내보내기</button>
         </div>
       </div>
+
+      {DataStore.isApiMode && DataStore.isApiMode() && DataStore.staticPermissions && (
+        <div style={{ padding: 14, background: '#eef4ff', color: '#1d4ed8', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
+          ⓘ API 모드: 권한 매트릭스는 <b>1차 고정(정적)</b>입니다. 역할별 권한 API는 추후 제공 예정이며, 현재 화면은 클라이언트 기본값을 표시합니다.
+        </div>
+      )}
 
       {!canManage && (
         <div style={{ padding: 14, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>

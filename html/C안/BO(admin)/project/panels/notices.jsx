@@ -18,7 +18,15 @@ function NoticesPanel() {
     return r.sort((a,b) => (b.pin?1:0) - (a.pin?1:0) || b.createdAt.localeCompare(a.createdAt));
   }, [state.notices, q, catF]);
 
-  const save = (data) => {
+  const save = async (data) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveNotice({ ...data, _isNew: !data.id });
+      if (ok) {
+        toastOk(data.id ? '공지가 수정되었습니다.' : (data.public ? '공지 등록 완료' : '공지가 등록되었습니다.'));
+        setEdit(null);
+      }
+      return;
+    }
     if (data.id) {
       const n = state.notices.find(x => x.id === data.id);
       const before = { ...n };
@@ -43,7 +51,12 @@ function NoticesPanel() {
     setEdit(null);
   };
 
-  const remove = () => {
+  const remove = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiDeleteNotice(delId);
+      if (ok) { setDelId(null); toastOk('공지가 삭제되었습니다.'); }
+      return;
+    }
     const n = state.notices.find(x => x.id === delId);
     if (!n) return;
     state.notices.splice(state.notices.indexOf(n), 1);

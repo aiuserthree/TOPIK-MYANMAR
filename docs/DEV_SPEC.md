@@ -357,10 +357,10 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 | `S3_*` | s3 시 | 버킷·리전·키·엔드포인트 |
 | `GOOGLE_CLIENT_ID` | — | 비우면 Google 로그인 OFF |
 | `GOOGLE_CLIENT_SECRET` | — | 선택 |
-| `MAIL_PROVIDER` | — | `console` \| `resend` \| `smtp` — **운영 권장:** `resend` ([IWINV_SETUP.md](IWINV_SETUP.md) §6) |
-| `MAIL_FROM` | — | 발신 주소 — **운영 확정:** `noreply@topik-myanmar.com` (도메인·DNS 대기) |
-| `RESEND_API_KEY` | resend 시 | Resend API 키 |
-| `SMTP_*` | smtp 시 | SMTP 접속 정보 |
+| `MAIL_PROVIDER` | — | `console` \| `smtp` \| `resend` — **운영 권장:** `smtp` (IwinV 마이메일러, [IWINV_SETUP.md](IWINV_SETUP.md) §6) |
+| `MAIL_FROM` | — | 발신 주소 — **운영 확정:** `noreply@topik-myanmar.com` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` | smtp 시 | IwinV SMTP 접속 정보 (기본 호스트 `smtp.iwinv.kr:587`) |
+| `RESEND_API_KEY` | resend 시 | Resend API 키 (대안) |
 | `MAIL_SUPPORT` | — | 템플릿 footer 지원 메일 |
 | `MAIL_ADMIN_TO` | — | 운영자 알림 수신 |
 | `INTERNAL_API_KEY` | — | internal notification 보호 |

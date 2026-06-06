@@ -108,7 +108,11 @@ function ApplicantsPanel() {
   useEffect(() => { window.openApplicantDetail = (id) => setDetailId(id); }, []);
 
   // ---- 사진 심사 (인라인) handlers — TPKM_BO_2_1_3 ----
-  const doPhotoApprove = (id) => {
+  const doPhotoApprove = async (id) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      if (await DataStore.apiPhotoApprove(id)) toastOk('사진이 승인되었습니다.', { title: '사진 심사', type: 'success' });
+      return;
+    }
     const a = state.applicants.find(x => x.id === id);
     if (!a) return;
     const before = { photoStatus: a.photoStatus, status: a.status };
@@ -120,10 +124,14 @@ function ApplicantsPanel() {
     DataStore.notify();
     toastOk('사진이 승인되었습니다.', { title: '사진 심사', type: 'success' });
   };
-  const doPhotoReject = (id, reason) => {
+  const doPhotoReject = async (id, reason) => {
+    if (!reason || !reason.trim()) { toastErr('반려 사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      if (await DataStore.apiPhotoReject(id, reason)) toastOk('사진이 반려되었습니다. 응시자에게 이메일이 발송됩니다.', { title: '사진 심사', type: 'success' });
+      return;
+    }
     const a = state.applicants.find(x => x.id === id);
     if (!a) return;
-    if (!reason || !reason.trim()) { toastErr('반려 사유를 입력해주세요.'); return; }
     const before = { photoStatus: a.photoStatus, status: a.status, rejectReason: a.rejectReason };
     a.photoStatus = 'rejected';
     a.photoOk = false;
@@ -133,7 +141,17 @@ function ApplicantsPanel() {
     DataStore.notify();
     toastOk('사진이 반려되었습니다. 응시자에게 이메일이 발송됩니다.', { title: '사진 심사', type: 'success' });
   };
-  const doBulkPhotoApprove = (ids) => {
+  const doBulkPhotoApprove = async (ids) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      let n = 0;
+      for (const id of ids) {
+        if (await DataStore.apiPhotoApprove(id)) n++;
+      }
+      if (n) toastOk(`${n}건의 사진을 일괄 승인했습니다.`, { title: '사진 심사', type: 'success' });
+      else toastErr('이미 모두 승인된 상태입니다.');
+      setSelected(new Set());
+      return;
+    }
     let n = 0;
     ids.forEach(id => {
       const a = state.applicants.find(x => x.id === id);
@@ -150,14 +168,21 @@ function ApplicantsPanel() {
     else toastErr('이미 모두 승인된 상태입니다.');
     setSelected(new Set());
   };
-  const doApprove = (ids) => {
+  const doApprove = async (ids) => {
     // 사진 미심사 행 가드 — 사진 승인 완료 건만 승인 가능
     const blocked = ids.filter(id => {
       const a = state.applicants.find(x => x.id === id);
       return a && a.photoStatus !== 'approved';
     });
     if (blocked.length) {
-      toastErr(`사진 미심사 ${blocked.length}건이 포함되어 있습니다. 행의 ‘사진심사’ 버튼으로 먼저 심사해주세요.`, { title: '승인 불가' });
+      toastErr(`사진 미심사 ${blocked.length}건이 포함되어 있습니다. 상세보기에서 먼저 심사해주세요.`, { title: '승인 불가' });
+      return;
+    }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const n = await DataStore.apiApprove(ids);
+      if (n) toastOk(`${n}건이 승인되었습니다. (이메일 통지 전송)`, { title: '승인 완료', type: 'success' });
+      setApproveModal(null);
+      setSelected(new Set());
       return;
     }
     let n = 0;
@@ -175,8 +200,15 @@ function ApplicantsPanel() {
     setSelected(new Set());
   };
 
-  const doReject = (ids, reason) => {
+  const doReject = async (ids, reason) => {
     if (!reason || !reason.trim()) { toastErr('반려 사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const n = await DataStore.apiReject(ids, reason);
+      if (n) toastOk(`${n}건이 반려되었습니다. (이메일 통지)`, { title: '반려 완료', type: 'success' });
+      setRejectModal(null);
+      setSelected(new Set());
+      return;
+    }
     let n = 0;
     ids.forEach(id => {
       const a = state.applicants.find(x => x.id === id);
@@ -193,7 +225,14 @@ function ApplicantsPanel() {
     setSelected(new Set());
   };
 
-  const doPay = (ids, info) => {
+  const doPay = async (ids, info) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const n = await DataStore.apiPay(ids, info);
+      if (n) toastOk(`${n}건 수납 처리되었습니다.`, { title: '수납 완료', type: 'success' });
+      setPayModal(null);
+      setSelected(new Set());
+      return;
+    }
     let n = 0;
     ids.forEach(id => {
       const a = state.applicants.find(x => x.id === id);
@@ -215,8 +254,15 @@ function ApplicantsPanel() {
     setSelected(new Set());
   };
 
-  const doCancelPay = (ids, reason) => {
+  const doCancelPay = async (ids, reason) => {
     if (!reason || !reason.trim()) { toastErr('수납 취소(환불) 사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const n = await DataStore.apiCancelPay(ids);
+      if (n) toastOk(`${n}건 수납 취소(환불자 분류) 처리되었습니다.`, { title: '수납 취소', type: 'success' });
+      setPayModal(null);
+      setSelected(new Set());
+      return;
+    }
     let n = 0;
     ids.forEach(id => {
       const a = state.applicants.find(x => x.id === id);
@@ -235,7 +281,20 @@ function ApplicantsPanel() {
   };
 
   // 수험번호 13자리 일괄 부여
-  const doAssignExam = (preview = false) => {
+  const doAssignExam = async (preview = false) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const body = await DataStore.apiAssignExamNumbers(sessionId, preview);
+      if (!body) return null;
+      if (preview) {
+        return {
+          result: (body.preview || []).map(function (exam, i) { return { id: '', name: '', nameKo: '', exam: exam, level: '' }; }),
+          targets: body.assigned || (body.preview || []).length,
+          skipped: 0,
+        };
+      }
+      toastOk(`${body.assigned || 0}건에 수험번호가 일괄 부여되었습니다.`, { title: '수험번호 부여 완료' });
+      return { result: [], targets: body.assigned || 0 };
+    }
     const session = state.sessions.find(s => s.id === sessionId);
     // 대상: paid && photoOk && status NOT IN (cancel, rejected) && exam 비어있음
     const targets = state.applicants
@@ -361,20 +420,11 @@ function ApplicantsPanel() {
                 <th>사진</th>
                 <th className="sortable" onClick={() => sortBy('nameKo')}>한글성명</th>
                 <th className="sortable" onClick={() => sortBy('nameEn')}>영문성명</th>
-                <th>생년월일</th>
-                <th>성별</th>
-                <th>국적</th>
-                <th>제1언어</th>
-                <th>직업</th>
-                <th>응시동기</th>
-                <th>응시목적</th>
                 <th>급수</th>
-                <th>시험장</th>
                 <th className="sortable" onClick={() => sortBy('appliedAt')}>접수일</th>
                 <th>사진심사</th>
                 <th>수납</th>
                 <th>수험번호</th>
-                <th>상태</th>
                 <th className="no-print">관리</th>
               </tr>
             </thead>
@@ -388,33 +438,20 @@ function ApplicantsPanel() {
                   </td>
                   <td><a style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }} onClick={() => setDetailId(a.id)}>{a.nameKo}</a></td>
                   <td>{a.nameEn}</td>
-                  <td className="code">{a.dob}</td>
-                  <td className="num">{a.sx}</td>
-                  <td>{a.nation}</td>
-                  <td>{a.l1}</td>
-                  <td>{a.job}</td>
-                  <td>{a.motive}</td>
-                  <td>{a.purpose}</td>
                   <td><span className="code-id">{a.level}</span></td>
-                  <td>{DataStore.venueName(a.venueId)}</td>
                   <td className="code muted">{a.appliedAt}</td>
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
                   <td>{a.paid ? <Pill kind="approved">수납완료</Pill> : <Pill kind="pay">미수납</Pill>}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
-                  <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
                   <td className="no-print">
                     <div className="row-actions">
-                      <button className="ibtn" title="사진 심사" onClick={() => setPhotoLP(a.id)}><I.Image style={{ width: 13, height: 13 }}/> 사진심사</button>
-                      <button className="ibtn" title="수납" onClick={() => setPayModal({ ids: [a.id], mode: a.paid ? 'cancel' : 'pay' })}>{a.paid ? '취소' : '수납'}</button>
-                      <button className="ibtn primary" title="승인" disabled={a.status === 'approved'} onClick={() => setApproveModal({ ids: [a.id] })}>승인</button>
-                      <button className="ibtn danger" title="반려" disabled={a.status === 'rejected'} onClick={() => setRejectModal({ ids: [a.id] })}>반려</button>
-                      <button className="ibtn ghost" title="상세 보기" onClick={() => setDetailId(a.id)}><I.Eye style={{ width: 14, height: 14 }}/></button>
+                      <button className="ibtn" title="상세 보기" onClick={() => setDetailId(a.id)}><I.Eye style={{ width: 14, height: 14 }}/> 상세보기</button>
                     </div>
                   </td>
                 </tr>
               ))}
               {!pageRows.length && (
-                <tr><td colSpan="20">
+                <tr><td colSpan="11">
                   <div className="empty">
                     <div className="icon"><I.Search/></div>
                     <div className="ttl">조건에 맞는 접수자가 없습니다</div>
@@ -431,20 +468,19 @@ function ApplicantsPanel() {
         </div>
       </div>
 
-      {/* 노출시점 설정 — 고객사 수정 0527 */}
+      {/* 노출시점 설정 */}
       <div className="acard no-print" style={{ marginTop: 16 }}>
         <div className="acard-head">
           <h3>수험번호 / 수험표 노출 시점 설정 (FO 접수확인)</h3>
-          <div className="meta">고객사 수정 0527 — 부여 즉시 노출 안 함, 정해진 날짜에 FO에서 노출</div>
         </div>
-        <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <FormRow label="노출 시작일" hint="이 날짜 이전에는 FO에서 수험번호 미노출">
             <input type="date" className="input" style={{ height: 38, width: 200 }} defaultValue="2026-08-15"/>
           </FormRow>
           <FormRow label="노출 시작 시각">
             <input type="time" className="input" style={{ height: 38, width: 140 }} defaultValue="09:00"/>
           </FormRow>
-          <button className="btn btn-primary" onClick={() => { DataStore.addAudit({ type: '회차', targetId: sessionId, action: '수정', memo: '수험번호 노출 시점 변경' }); toastOk('노출 시점이 저장되었습니다.'); }}>
+          <button className="btn btn-primary" style={{ marginTop: 23 }} onClick={() => { DataStore.addAudit({ type: '회차', targetId: sessionId, action: '수정', memo: '수험번호 노출 시점 변경' }); toastOk('노출 시점이 저장되었습니다.'); }}>
             노출 시점 저장
           </button>
         </div>
@@ -455,6 +491,8 @@ function ApplicantsPanel() {
         onApprove={() => { setApproveModal({ ids: [detailId] }); }}
         onReject={() => { setRejectModal({ ids: [detailId] }); }}
         onPay={() => { const a = state.applicants.find(x => x.id === detailId); setPayModal({ ids: [detailId], mode: a?.paid ? 'cancel' : 'pay' }); }}
+        onPhotoApprove={() => doPhotoApprove(detailId)}
+        onPhotoReject={(reason) => doPhotoReject(detailId, reason)}
       />}
 
       {/* Modals */}
@@ -527,7 +565,7 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
           </>
         : <>
             <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-            <button className="btn btn-secondary" onClick={() => setMode('reject')}>반려</button>
+            <button className="btn btn-danger" onClick={() => setMode('reject')}>반려</button>
             <button className="btn btn-primary" onClick={approve}>승인</button>
           </>}>
       <div style={{ display: 'flex', gap: 16 }}>
@@ -580,14 +618,18 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
 }
 
 // ===== Detail LP =====
-function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay }) {
+function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject }) {
   const state = useStore();
   const a = state.applicants.find(x => x.id === id);
   const [tab, setTab] = useState('profile');
   const [memo, setMemo] = useState('');
+  const [photoMode, setPhotoMode] = useState(null);
+  const [photoReason, setPhotoReason] = useState(PHOTO_REJECT_REASONS[0]);
+  const [photoOther, setPhotoOther] = useState('');
   if (!a) return null;
   const venue = state.venues.find(v => v.id === a.venueId);
   const log = state.audit.filter(l => l.targetId === id);
+  const photoRejectReason = photoReason === '기타' ? photoOther : (photoOther ? `${photoReason} — ${photoOther}` : photoReason);
 
   const addMemo = () => {
     if (!memo.trim()) return;
@@ -596,6 +638,15 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay }) {
     DataStore.notify();
     setMemo('');
     toastOk('메모가 추가되었습니다.');
+  };
+  const approvePhoto = () => {
+    onPhotoApprove();
+    setPhotoMode(null);
+  };
+  const rejectPhoto = () => {
+    if (photoReason === '기타' && !photoOther.trim()) { toastErr('상세 사유를 입력해주세요.'); return; }
+    onPhotoReject(photoRejectReason);
+    setPhotoMode(null);
   };
 
   return (
@@ -622,10 +673,34 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay }) {
               <button className="ibtn" style={{ flex: 1 }}><I.Download style={{ width: 12, height: 12 }}/> 원본 받기</button>
               <button className="ibtn" style={{ flex: 1 }}>회전 보정</button>
             </div>
-            {a.photoStatus !== 'approved' && <div style={{ marginTop: 8, padding: 8, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12 }}>사진 {a.photoStatus === 'rejected' ? '반려' : '미심사'} 상태입니다. ‘사진심사’ 버튼으로 처리하세요.</div>}
+            <div style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>사진 심사</div>
+                <PhotoStatusPill status={a.photoStatus}/>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="ibtn" style={{ flex: 1 }} onClick={() => setPhotoMode(photoMode === 'reject' ? null : 'reject')}>사진 반려</button>
+                <button className="ibtn" style={{ flex: 1 }} onClick={approvePhoto} disabled={a.photoStatus === 'approved'}>사진 승인</button>
+              </div>
+              {photoMode === 'reject' && (
+                <div style={{ marginTop: 10 }}>
+                  <FormRow label="사진 반려 사유" required>
+                    <select className="select" value={photoReason} onChange={e => setPhotoReason(e.target.value)}>
+                      {PHOTO_REJECT_REASONS.map(r => <option key={r}>{r}</option>)}
+                    </select>
+                  </FormRow>
+                  <FormRow label={photoReason === '기타' ? '상세 사유' : '추가 안내(선택)'} required={photoReason === '기타'}>
+                    <textarea className="textarea" rows="2" value={photoOther} onChange={e => setPhotoOther(e.target.value)} placeholder="예) 정면 사진이 아닙니다. 사진을 다시 등록해주세요."></textarea>
+                  </FormRow>
+                  <button className="btn btn-secondary btn-block" onClick={rejectPhoto} disabled={photoReason === '기타' && !photoOther.trim()}>사진 반려 처리</button>
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <FieldSet legend="응시자 정보" cols={2}>
+              <KV k="접수 번호" v={a.no}/>
+              <KV k="접수 ID" v={<code className="code-id">{a.id}</code>}/>
               <KV k="한글 성명" v={a.nameKo}/>
               <KV k="영문 성명" v={a.nameEn}/>
               <KV k="생년월일" v={<code className="code-id">{a.dob}</code>}/>
@@ -639,9 +714,13 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay }) {
             </FieldSet>
 
             <FieldSet legend="시험 정보" cols={2}>
+              <KV k="회차 ID" v={<code className="code-id">{a.sessionId}</code>}/>
+              <KV k="처리 상태" v={<Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill>}/>
               <KV k="급수" v={`TOPIK ${a.level}`}/>
               <KV k="시험장" v={venue?.nameKo}/>
+              <KV k="시험장 ID" v={<code className="code-id">{a.venueId}</code>}/>
               <KV k="사진 심사" v={<PhotoStatusPill status={a.photoStatus}/>}/>
+              <KV k="사진 승인 여부" v={a.photoOk ? '승인' : '미승인'}/>
               <KV k="응시동기" v={a.motive}/>
               <KV k="응시목적" v={a.purpose}/>
               <KV k="수납 상태" v={a.paid ? <Pill kind="approved">수납완료</Pill> : <Pill kind="pay">미수납</Pill>}/>
@@ -818,7 +897,7 @@ function ApproveModal({ modal, onClose, onConfirm }) {
       </div>
       {blocked.length > 0 && (
         <div style={{ marginTop: 12, padding: 10, background: 'var(--danger-50)', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5 }}>
-          ⚠ 사진 미심사 <b>{blocked.length}</b>건이 포함되어 있습니다. 사진 심사 메뉴에서 먼저 심사해 주세요.
+          ⚠ 사진 미심사 <b>{blocked.length}</b>건이 포함되어 있습니다. 접수자 목록에서 먼저 심사해 주세요.
           <ul style={{ marginTop: 6, paddingLeft: 16 }}>
             {blocked.slice(0, 5).map(a => <li key={a.id}>{a.nameKo} ({a.nameEn})</li>)}
           </ul>
@@ -873,7 +952,7 @@ function ExamAssignModal({ onClose, doAssign }) {
         <p>① 국가코드(3) <b>025</b> + ② 지역코드(3) + ③ 수준코드(1) <b>7=Ⅰ / 8=Ⅱ</b> + ④ 시험장코드(2) + ⑤ 응시자코드(4) — 영문 성명 알파벳 오름차순.</p>
         <p style={{ marginTop: 4, color: 'var(--text-3)', fontSize: 12 }}>
           대상: 수납 완료 + 사진 승인 + 비반려/비취소 · 환불자는 수험번호 유지<br/>
-          이메일 발송: <b style={{ color: 'var(--danger)' }}>안 함</b> (고객사 수정 0527) · 노출 시점: 별도 설정한 날짜에 FO 접수확인 페이지에서 공개
+          이메일 발송: <b style={{ color: 'var(--danger)' }}>안 함</b> · 노출 시점: 별도 설정한 날짜에 FO 접수확인 페이지에서 공개
         </p>
       </div>
       <div className="kpi-grid" style={{ margin: '14px 0' }}>
@@ -1014,7 +1093,7 @@ function ZipExportModal({ onClose, rows }) {
 I.Hash = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>;
 
 window.ApplicantsPanel = ApplicantsPanel;
-// 사진 심사 패널(photos.jsx)에서 재사용할 수 있도록 노출
+// 접수자 목록 내부 상세/일괄 처리에서 공유
 window.PhotoReviewLP = PhotoReviewLP;
 window.PhotoLarge = PhotoLarge;
 window.PhotoStatusPill = PhotoStatusPill;

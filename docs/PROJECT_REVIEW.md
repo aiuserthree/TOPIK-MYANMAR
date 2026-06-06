@@ -295,7 +295,7 @@ html/C안/BO(admin)/project/
 - [ ] `CORS_ORIGINS` — FO origin (+ BO 별도 subdomain 시 추가)
 - [ ] `PUBLIC_FO_BASE`, `PUBLIC_BO_BASE` — 실제 도메인
 - [ ] Google OAuth Authorized JavaScript origins — FO URL
-- [ ] Resend/SMTP — `MAIL_FROM` 검증 도메인
+- [ ] IwinV SMTP — `SMTP_USER`/`SMTP_PASS`·`MAIL_FROM` 발신 주소 일치
 - [ ] `JWT_SECRET` / refresh secret (FastAPI 또는 Fastify)
 - [ ] FO `<meta name="topik-api-base">` 또는 `TOPIK_API_BASE` — IwinV API URL
 

@@ -16,7 +16,15 @@ function FaqPanel() {
     return r.sort((a,b) => a.cat.localeCompare(b.cat) || a.order - b.order);
   }, [state.faqs, catF, q]);
 
-  const save = (data) => {
+  const save = async (data) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveFaq({ ...data, _isNew: !data.id });
+      if (ok) {
+        toastOk(data.id ? 'FAQ가 수정되었습니다.' : 'FAQ가 등록되었습니다.');
+        setEdit(null);
+      }
+      return;
+    }
     if (data.id) {
       const f = state.faqs.find(x => x.id === data.id);
       const before = { ...f };
@@ -34,7 +42,12 @@ function FaqPanel() {
     setEdit(null);
   };
 
-  const remove = () => {
+  const remove = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiDeleteFaq(delId);
+      if (ok) { setDelId(null); toastOk('FAQ가 삭제되었습니다.'); }
+      return;
+    }
     const f = state.faqs.find(x => x.id === delId);
     if (!f) return;
     state.faqs.splice(state.faqs.indexOf(f), 1);

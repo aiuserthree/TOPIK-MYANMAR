@@ -103,7 +103,11 @@ function MembersPanel() {
                       <button className="ibtn" onClick={() => setEditId(m.id)} disabled={m.status === 'withdrawn'}>수정</button>
                       <button className="ibtn" onClick={() => setResetId(m.id)} disabled={m.status === 'withdrawn'}>PW</button>
                       {m.status === 'active' && <button className="ibtn danger" onClick={() => setSuspendId(m.id)}>정지</button>}
-                      {m.status === 'inactive' && <button className="ibtn" onClick={() => {
+                      {m.status === 'inactive' && <button className="ibtn" onClick={async () => {
+                        if (DataStore.isApiMode && DataStore.isApiMode()) {
+                          if (await DataStore.apiMemberStatus(m.id, 'active', '정지 해제')) toastOk('정지가 해제되었습니다.');
+                          return;
+                        }
                         const x = state.members.find(y => y.id === m.id);
                         x.status = 'active';
                         DataStore.addAudit({ type: '회원', targetId: m.id, action: '수정', before: { status: 'inactive' }, after: { status: 'active' }, memo: '정지 해제' });
@@ -203,8 +207,13 @@ function MemberEditLP({ id, onClose }) {
   const [f, setF] = useState({ ...m });
   const [reason, setReason] = useState('');
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
-  const save = () => {
+  const save = async () => {
     if (!reason.trim()) { toastErr('수정 사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveMember(id, f);
+      if (ok) { toastOk('회원 정보가 수정되었습니다. 회원에게 이메일 통지가 발송됩니다.'); onClose(); }
+      return;
+    }
     const before = { ...m };
     Object.assign(m, f);
     DataStore.addAudit({ type: '회원', targetId: id, action: '수정', before, after: { ...m }, memo: reason });
@@ -246,8 +255,13 @@ function SuspendModal({ id, onClose }) {
   const [reason, setReason] = useState('이용 약관 위반');
   const [other, setOther] = useState('');
   const final = reason === '기타' ? other : reason;
-  const submit = () => {
+  const submit = async () => {
     if (!final.trim()) { toastErr('사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiMemberStatus(id, 'inactive', final);
+      if (ok) { toastOk('회원이 정지되었습니다. 활성 세션은 즉시 무효화됩니다.'); onClose(); }
+      return;
+    }
     const before = { status: m.status };
     m.status = 'inactive';
     m.reason = final;
@@ -281,12 +295,19 @@ function WithdrawModal({ id, onClose }) {
   const m = state.members.find(x => x.id === id);
   const [reason, setReason] = useState('본인 요청');
   const myApplies = state.applicants.filter(a => a.email === m.email && !['cancel','rejected'].includes(a.status));
-  const submit = () => {
+  const submit = async () => {
     if (!reason.trim()) { toastErr('사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiMemberStatus(id, 'withdrawn', reason);
+      if (ok) {
+        toastOk(`회원이 탈퇴 처리되었습니다.${myApplies.length ? ` (진행 중 접수 ${myApplies.length}건 — 서버 정책 적용)` : ''}`);
+        onClose();
+      }
+      return;
+    }
     const before = { status: m.status };
     m.status = 'withdrawn';
     m.reason = reason;
-    // 진행 중 접수 자동 취소 (고객사 수정 0526)
     myApplies.forEach(a => {
       const ab = { status: a.status };
       a.status = 'cancel';
@@ -330,8 +351,18 @@ function PwResetLP({ id, onClose }) {
   const state = useStore();
   const m = state.members.find(x => x.id === id);
   const [issued, setIssued] = useState(false);
+  const [issuedPw, setIssuedPw] = useState('');
   const tempPw = useMemo(() => 'tpkm' + Math.random().toString(36).slice(2, 8), [id]);
-  const issue = () => {
+  const issue = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const temp = await DataStore.apiResetMemberPassword(id);
+      if (temp) {
+        setIssuedPw(temp);
+        setIssued(true);
+        toastOk('임시 비밀번호가 발급되었습니다.');
+      }
+      return;
+    }
     DataStore.addAudit({ type: '회원', targetId: id, action: '비밀번호초기화', memo: `임시 비밀번호 발급 · 이메일 전송(${m.email}) · 첫 로그인 시 변경 강제` });
     DataStore.notify();
     setIssued(true);
@@ -349,7 +380,7 @@ function PwResetLP({ id, onClose }) {
       {issued && (
         <div className="kv" style={{ background: 'var(--st-approved-bg)', borderColor: '#c8e5cd' }}>
           <span className="k">발급된 임시 비밀번호 (1회 노출)</span>
-          <span className="v" style={{ fontFamily: 'Inter, monospace', color: 'var(--success)', letterSpacing: '0.04em' }}>{tempPw}</span>
+          <span className="v" style={{ fontFamily: 'Inter, monospace', color: 'var(--success)', letterSpacing: '0.04em' }}>{issuedPw || tempPw}</span>
         </div>
       )}
     </LP>
