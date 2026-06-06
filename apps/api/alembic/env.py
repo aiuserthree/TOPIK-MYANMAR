@@ -8,6 +8,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from app import models  # noqa: F401 — register ORM metadata with Alembic
 from app.config import get_settings
 from app.database import Base
 
