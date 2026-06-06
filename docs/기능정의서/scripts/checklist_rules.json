@@ -1,0 +1,139 @@
+{
+  "version": "2026-06-02",
+  "memo_tags": {
+    "schema_draft": "(스키마 초안)",
+    "api_draft": "(API 명세 초안)",
+    "worksheet": "(워크시트)",
+    "migration_seed": "(마이그레이션·시드 v0.1)",
+    "c_editorial_14": "(C안 에디토리얼, 14종)",
+    "deploy_arch": "(배포 아키텍처)",
+    "backend_stack": "(백엔드 스택 결정)"
+  },
+  "sections": [
+    { "id": "fo", "label": "FO 화면 (1–83)", "start": 1, "end": 83 },
+    { "id": "bo", "label": "BO 화면 (84–142)", "start": 84, "end": 142 },
+    { "id": "db_email", "label": "DB·이메일 (143–195)", "start": 143, "end": 195 },
+    { "id": "infra", "label": "인프라·배포 (196–221)", "start": 196, "end": 221 },
+    { "id": "devprod", "label": "dev-prod (222–268)", "start": 222, "end": 268 },
+    { "id": "security", "label": "보안 (269–293)", "start": 269, "end": 293 },
+    { "id": "perf_test", "label": "성능·테스트 (294–335)", "start": 294, "end": 335 },
+    { "id": "myanmar", "label": "미얀마 (336–360)", "start": 336, "end": 360 },
+    { "id": "open_prep", "label": "오픈 준비 (361–444)", "start": 361, "end": 444 },
+    { "id": "incident_legal", "label": "장애·법적 (445–462)", "start": 445, "end": 462 },
+    { "id": "policy", "label": "정책 합의 (463–484)", "start": 463, "end": 484 }
+  ],
+  "artifact_rules": [
+    {
+      "id": "db_schema_draft",
+      "description": "DB schema draft document",
+      "paths": ["docs/기능정의서/DB스키마_초안.md"],
+      "nos": [143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 162, 163, 164, 168, 169],
+      "hint_status": "[p]",
+      "memo_tag": "schema_draft",
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "db_migrations",
+      "description": "Flyway migration SQL",
+      "paths": [],
+      "globs": ["db/migrations/V001*.sql"],
+      "nos": [158, 159, 160, 161],
+      "hint_status": "[p]",
+      "memo_tag": "migration_seed",
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "db_seed",
+      "description": "Dev seed SQL",
+      "paths": ["db/seed/dev_seed.sql", "docs/기능정의서/마이그레이션_및_시드.md"],
+      "nos": [158, 159],
+      "hint_status": "[p]",
+      "memo_tag": "migration_seed",
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "api_spec",
+      "description": "REST API draft spec",
+      "paths": ["docs/기능정의서/REST_API_명세_초안.md"],
+      "nos": [162, 216, 217, 218, 219],
+      "hint_status": "[p]",
+      "memo_tag": "api_draft",
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "deploy_architecture",
+      "description": "Deploy architecture doc",
+      "paths": ["docs/기능정의서/배포_아키텍처.md"],
+      "nos": [196, 197, 199, 200, 201, 202, 203, 204, 233, 248],
+      "hint_status": "[p]",
+      "memo_tag": "deploy_arch",
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "backend_stack_decision",
+      "description": "Backend stack decision memo",
+      "paths": ["docs/기능정의서/백엔드_스택_결정.md"],
+      "nos": [158, 196, 197, 198, 217],
+      "hint_status": "[p]",
+      "memo_tag": "backend_stack",
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "build_c_deploy",
+      "description": "C안 FO build script and public output",
+      "paths": ["build.py"],
+      "globs": ["html/*/FO/index.html"],
+      "nos": [206],
+      "hint_status": "[p]",
+      "memo_tag": null,
+      "confidence": "medium",
+      "only_if_blank": true
+    },
+    {
+      "id": "policy_worksheet",
+      "description": "Policy agreement worksheet",
+      "paths": ["docs/기능정의서/정책_합의_워크시트.md"],
+      "nos": [463, 464, 466, 467, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477, 478, 479, 480, 481, 482, 483, 484],
+      "hint_status": "[p]",
+      "memo_tag": "worksheet",
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "email_templates_14",
+      "description": "C안 editorial email templates (14 types)",
+      "paths": ["시안/email/templates/data.js", "시안/email/index.html"],
+      "nos": [185, 186, 189, 190],
+      "hint_status": "[p]",
+      "memo_tag": "c_editorial_14",
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "email_verified_exclusions",
+      "description": "Code-verified email exclusion rules",
+      "paths": ["docs/기능정의서/FO/04_TOPIK접수_기능정의서.md"],
+      "nos": [187, 188],
+      "hint_status": "[x]",
+      "memo_tag": null,
+      "confidence": "high",
+      "only_if_blank": true
+    },
+    {
+      "id": "gitignore_env",
+      "description": "Env gitignore pattern",
+      "paths": [".gitignore"],
+      "nos": [205, 226],
+      "hint_status": "[p]",
+      "memo_tag": null,
+      "confidence": "medium",
+      "only_if_blank": true
+    }
+  ]
+}
