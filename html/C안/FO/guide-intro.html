@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시험 소개 — TOPIK 안내 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .level-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .level-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #fff;
+  }
+  .level-card .hd {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #f7faff, #fff);
+    position: relative;
+  }
+  .level-card.lvl-2 .hd { background: linear-gradient(135deg, #fff7f8, #fff); }
+  .level-card .badge-lvl {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .level-card.lvl-2 .badge-lvl { color: var(--accent); }
+  .level-card h3 {
+    font-size: 26px; margin-top: 6px;
+    letter-spacing: -0.03em;
+  }
+  .level-card h3 .roman {
+    font-family: 'Inter', sans-serif; font-weight: 800;
+    color: var(--primary); margin-left: 6px;
+  }
+  .level-card.lvl-2 h3 .roman { color: var(--accent); }
+  .level-card .sub { color: var(--text-3); font-size: 14px; margin-top: 6px; }
+  .level-card .bd { padding: 20px 24px 24px; }
+  .level-card .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 16px;
+    padding: 14px;
+    background: var(--bg-2); border-radius: var(--radius);
+  }
+  .level-card .stats .it { text-align: center; }
+  .level-card .stats .it .n {
+    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 18px;
+    color: var(--text);
+  }
+  .level-card .stats .it .l {
+    font-size: 11px; color: var(--text-3); margin-top: 2px; font-weight: 500;
+  }
+  .level-card ul { padding-left: 18px; }
+  .level-card ul li { margin-bottom: 6px; font-size: 14px; color: var(--text-2); list-style: disc; }
+  @media (min-width: 768px) { .level-grid { grid-template-columns: 1fr 1fr; } }
+
+  .use-cases {
+    margin-top: 32px;
+  }
+  .use-grid {
+    display: grid; grid-template-columns: 1fr; gap: 12px;
+  }
+  .use-card {
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .use-card .ttl { font-size: 15px; font-weight: 700; color: var(--text); }
+  .use-card .lvls {
+    font-family: 'Inter', sans-serif; font-size: 12px;
+    color: var(--primary); font-weight: 600;
+    margin-top: 4px;
+  }
+  .use-card .d { font-size: 13px; color: var(--text-3); margin-top: 8px; line-height: 1.55; }
+  @media (min-width: 768px) { .use-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 안내</span><span>시험 소개</span></div>
+      <h1 data-i18n-content="guide.intro">시험 소개</h1>
+      <p class="lead" data-i18n-content="gi.lead">TOPIK Ⅰ과 TOPIK Ⅱ의 구분 및 등급별 활용처를 안내합니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 안내 하위 메뉴">
+        <a href="guide-overview.html">시험 개요</a>
+        <a href="guide-intro.html" class="active">시험 소개</a>
+        <a href="guide-questions.html">문항 구성</a>
+        <a href="guide-evaluation.html">평가 기준</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 980px;">
+
+      <div class="level-grid">
+        <div class="level-card lvl-1">
+          <div class="hd">
+            <div class="badge-lvl">초급 / Beginner</div>
+            <h3>TOPIK <span class="roman">Ⅰ</span></h3>
+            <p class="sub">1급 · 2급 — 기초 한국어 의사소통 능력</p>
+          </div>
+          <div class="bd">
+            <div class="stats">
+              <div class="it"><div class="n">2개</div><div class="l">영역</div></div>
+              <div class="it"><div class="n">100분</div><div class="l">시험 시간</div></div>
+              <div class="it"><div class="n">200점</div><div class="l">총점</div></div>
+            </div>
+            <ul>
+              <li>듣기 30문항 + 읽기 40문항 (객관식)</li>
+              <li>1급: 자기소개 · 일상생활 · 기본 어휘 800개</li>
+              <li>2급: 공공시설 · 전화·우편 · 어휘 1,500~2,000개</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="level-card lvl-2">
+          <div class="hd">
+            <div class="badge-lvl">중·고급 / Intermediate–Advanced</div>
+            <h3>TOPIK <span class="roman">Ⅱ</span></h3>
+            <p class="sub">3급 · 4급 · 5급 · 6급 — 전문적·학술적 의사소통</p>
+          </div>
+          <div class="bd">
+            <div class="stats">
+              <div class="it"><div class="n">3개</div><div class="l">영역</div></div>
+              <div class="it"><div class="n">180분</div><div class="l">시험 시간</div></div>
+              <div class="it"><div class="n">300점</div><div class="l">총점</div></div>
+            </div>
+            <ul>
+              <li>듣기 50 + 쓰기 4 + 읽기 50문항</li>
+              <li>3–4급: 사회생활 한국어, 직장·공공 분야 어휘</li>
+              <li>5–6급: 전문 분야·학술 텍스트 이해와 표현</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="ico"></div>
+        <div>
+          <strong>TOPIK Ⅰ과 Ⅱ는 동시 접수가 가능합니다.</strong>
+          동일 회차에서 두 시험에 모두 응시할 수 있으며, 동일한 시험장 코드가 부여됩니다.
+          응시료는 각 수준별로 개별 오프라인 수납됩니다.
+        </div>
+      </div>
+
+      <!-- 활용처 -->
+      <div class="use-cases">
+        <h2 class="h2" style="margin-bottom: 16px;" data-i18n-content="gi.h_uses">미얀마 응시자의 주요 활용처</h2>
+        <div class="use-grid">
+          <div class="use-card">
+            <div class="ttl">한국 유학</div>
+            <div class="lvls">권장 3급 이상</div>
+            <p class="d">대학교 · 대학원 입학 시 한국어 능력 증명. 학부 일반 전공 3급, 어학연수 후 입학 4급 이상 권장.</p>
+          </div>
+          <div class="use-card">
+            <div class="ttl">EPS · 한국 취업</div>
+            <div class="lvls">권장 2급 이상</div>
+            <p class="d">고용허가제(EPS) 한국어능력시험은 별도이나, 한국 기업 취업·이직 시 TOPIK 등급 활용.</p>
+          </div>
+          <div class="use-card">
+            <div class="ttl">국내 거주·이민</div>
+            <div class="lvls">권장 3급 이상</div>
+            <p class="d">결혼이민·영주권·국적 취득 등 한국 내 장기 체류 시 한국어 능력 입증 자료로 활용.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

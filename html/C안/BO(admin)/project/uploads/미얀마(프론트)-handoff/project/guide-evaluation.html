@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>평가 기준 — TOPIK 안내 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .grade-table th {
+    text-align: center; white-space: nowrap;
+  }
+  .grade-table td { text-align: center; vertical-align: middle; }
+  .grade-table td.lvl { font-weight: 700; color: var(--primary); font-family: 'Inter', sans-serif; font-size: 16px; }
+  .grade-table.l2 td.lvl { color: var(--accent); }
+  .grade-table .min {
+    font-family: 'Inter', sans-serif; font-weight: 700; color: var(--text);
+    font-size: 15px;
+  }
+  .grade-table .desc { text-align: left; font-size: 13px; color: var(--text-3); line-height: 1.55; }
+
+  .grade-bar-wrap {
+    background: var(--bg-2);
+    border-radius: var(--radius);
+    padding: 6px;
+    display: inline-block;
+    width: 100%; max-width: 240px;
+  }
+  .grade-bar {
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-700));
+  }
+  .grade-table.l2 .grade-bar {
+    background: linear-gradient(90deg, var(--accent), #8c0a20);
+  }
+
+  .info-list {
+    display: grid; grid-template-columns: 1fr; gap: 12px;
+    margin-top: 24px;
+  }
+  .info-list .it {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .info-list .it h3 { font-size: 15px; margin-bottom: 6px; }
+  .info-list .it p { font-size: 13.5px; color: var(--text-3); line-height: 1.6; }
+  @media (min-width: 768px) { .info-list { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 안내</span><span>평가 기준</span></div>
+      <h1>평가 기준</h1>
+      <p class="lead">등급별 합격 점수, 채점 방식, 성적 인정 기간을 안내합니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 안내 하위 메뉴">
+        <a href="guide-overview.html">시험 개요</a>
+        <a href="guide-intro.html">시험 소개</a>
+        <a href="guide-questions.html">문항 구성</a>
+        <a href="guide-evaluation.html" class="active">평가 기준</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 880px;">
+
+      <h2 class="h2" style="margin-bottom: 14px;">TOPIK Ⅰ 등급별 합격 점수</h2>
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="table grade-table">
+          <thead>
+            <tr>
+              <th style="width:90px;">등급</th>
+              <th style="width:130px;">최저 점수</th>
+              <th>등급 기준 (총점 200점)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="lvl">1급</td>
+              <td><div class="min">80점 이상</div></td>
+              <td class="desc">자기소개, 물건 구매, 음식 주문 등 일상 회화. 기본 어휘 약 800개.</td>
+            </tr>
+            <tr>
+              <td class="lvl">2급</td>
+              <td><div class="min">140점 이상</div></td>
+              <td class="desc">공공시설 이용, 전화·우편 등 사회적 상황. 어휘 1,500~2,000개.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="h2" style="margin: 32px 0 14px;">TOPIK Ⅱ 등급별 합격 점수</h2>
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="table grade-table l2">
+          <thead>
+            <tr>
+              <th style="width:90px;">등급</th>
+              <th style="width:130px;">최저 점수</th>
+              <th>등급 기준 (총점 300점)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="lvl">3급</td>
+              <td><div class="min">120점 이상</div></td>
+              <td class="desc">일상생활 및 친숙한 사회적 소재. 공공·문화 시설 이용.</td>
+            </tr>
+            <tr>
+              <td class="lvl">4급</td>
+              <td><div class="min">150점 이상</div></td>
+              <td class="desc">뉴스·신문 기사 등 일반적 사회 이슈 이해. 직장에서 한국어 사용.</td>
+            </tr>
+            <tr>
+              <td class="lvl">5급</td>
+              <td><div class="min">190점 이상</div></td>
+              <td class="desc">전문 분야에서의 연구·업무 수행. 정치·경제·사회·문화 이해.</td>
+            </tr>
+            <tr>
+              <td class="lvl">6급</td>
+              <td><div class="min">230점 이상</div></td>
+              <td class="desc">원어민 수준의 한국어 사용. 전문 분야 학술 활동 가능.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 추가 정보 -->
+      <div class="info-list">
+        <div class="it">
+          <h3>채점 방식</h3>
+          <p>객관식은 OMR 자동 채점, 쓰기(주관식)는 평가위원의 채점을 거칩니다. 영역별 점수가 모두 산정되어 등급이 결정됩니다.</p>
+        </div>
+        <div class="it">
+          <h3>성적 인정 기간</h3>
+          <p>TOPIK 성적은 발표일로부터 <strong>2년간</strong> 유효합니다. 유학·취업·이민 등 활용 시 만료일을 확인해 주세요.</p>
+        </div>
+        <div class="it">
+          <h3>등급 부여 방식</h3>
+          <p>TOPIK Ⅰ·Ⅱ 모두 총점 기준으로 자동 등급이 부여됩니다. 별도 합격·불합격 구분은 없으며, 등급 미달 시 ‘불합격’으로 표기됩니다.</p>
+        </div>
+        <div class="it">
+          <h3>성적표 발급</h3>
+          <p>합격 발표 후 약 1주일 뒤부터 TOPIK 본부 홈페이지(topik.go.kr)에서 PDF 성적표를 발급받으실 수 있습니다.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 로그인 — TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/fo-styles.css">
+<link rel="stylesheet" href="assets/admin.css">
+<style>
+  body {
+    background:
+      radial-gradient(1000px 600px at 100% 0%, rgba(10,77,140,0.10), transparent 60%),
+      radial-gradient(800px 500px at 0% 100%, rgba(10,77,140,0.06), transparent 60%),
+      linear-gradient(180deg, #F6F8FB 0%, #EDF1F7 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+  .auth-card {
+    width: 100%;
+    max-width: 880px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,27,45,0.10);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 760px) {
+    .auth-card { grid-template-columns: 1fr 1fr; }
+  }
+  .auth-left {
+    background: linear-gradient(160deg, #0A4D8C 0%, #073864 100%);
+    color: #fff;
+    padding: 36px 32px;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+  }
+  .auth-left .mark {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-bottom: 24px;
+  }
+  .auth-left .mark .logo {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; color: #fff;
+    letter-spacing: -0.02em;
+  }
+  .auth-left .mark .name { font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .auth-left .mark .name small {
+    display: block; font-size: 10.5px; opacity: 0.7; font-weight: 400; margin-top: 2px;
+  }
+  .auth-left h1 {
+    font-size: 22px; line-height: 1.35; letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .auth-left h1 small {
+    display: block;
+    font-size: 12px; color: rgba(255,255,255,0.6);
+    font-weight: 500; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .auth-left .desc {
+    font-size: 13px; color: rgba(255,255,255,0.72); line-height: 1.6;
+    margin-top: 14px;
+    max-width: 320px;
+  }
+  .auth-left .features {
+    margin-top: 24px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .auth-left .features .f {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: rgba(255,255,255,0.86);
+  }
+  .auth-left .features .f::before {
+    content: ""; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'><path fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M2 6.5l2.5 2.5L10 3'/></svg>");
+    background-repeat: no-repeat; background-position: center;
+    flex: 0 0 auto;
+  }
+  .auth-left .foot {
+    font-size: 11px; color: rgba(255,255,255,0.4);
+    margin-top: 32px;
+  }
+
+  .auth-right { padding: 36px 32px; display: flex; flex-direction: column; justify-content: center; }
+  .auth-right h2 { font-size: 20px; }
+  .auth-right .lead { font-size: 13px; color: var(--text-3); margin-top: 6px; margin-bottom: 24px; }
+
+  .pw-wrap { position: relative; }
+  .pw-toggle {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    height: 30px; padding: 0 10px; font-size: 12px; color: var(--text-3); border-radius: 4px;
+  }
+  .pw-toggle:hover { color: var(--primary); background: var(--bg-2); }
+
+  .err-banner {
+    display: none;
+    align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    background: var(--danger-50); border: 1px solid #f5c8ce;
+    border-radius: 6px; color: var(--danger);
+    font-size: 12.5px; margin-bottom: 12px;
+  }
+  .err-banner.show { display: flex; }
+  .err-banner svg { width: 14px; height: 14px; stroke: currentColor; flex: 0 0 auto; margin-top: 1px; }
+
+  .auth-options {
+    margin-top: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12.5px; color: var(--text-3);
+  }
+  .auth-options label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .auth-options label input { width: 14px; height: 14px; }
+
+  .auth-hint {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-3); line-height: 1.6;
+  }
+  .auth-hint code {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--text-2);
+    font-size: 11.5px;
+  }
+</style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-left">
+      <div>
+        <div class="mark">
+          <div class="logo">T</div>
+          <div class="name">TOPIK Myanmar<small>관리자 콘솔 · ADMIN CONSOLE</small></div>
+        </div>
+        <h1><small>BACKOFFICE</small>주미얀마대사관 한국어능력시험<br>운영 관리 시스템</h1>
+        <div class="desc">접수자 관리·사진 심사·회차 운영·콘텐츠 발행을 한 곳에서. 모든 처리 이력은 자동 기록됩니다.</div>
+        <div class="features">
+          <div class="f">다중 관리자 동시 접속 지원</div>
+          <div class="f">아이디별 처리 이력 자동 기록</div>
+          <div class="f">권한 등급(최고/일반/조회)별 접근 제어</div>
+        </div>
+      </div>
+      <div class="foot">© 2026 주미얀마 대한민국 대사관. NIIED.</div>
+    </div>
+
+    <div class="auth-right">
+      <h2>관리자 로그인</h2>
+      <p class="lead">발급받은 관리자 아이디로 로그인하세요.</p>
+
+      <div class="err-banner" id="errBanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div><strong>로그인 실패</strong> · 아이디 또는 비밀번호가 올바르지 않습니다. <span id="attempts" style="font-family:'Inter',sans-serif;"></span></div>
+      </div>
+
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="form-row">
+          <label class="label" for="adminId">아이디 <span class="req">*</span></label>
+          <input class="input" id="adminId" name="id" type="text" placeholder="예: admin01" autocomplete="username" value="admin01">
+        </div>
+        <div class="form-row">
+          <label class="label" for="adminPw">비밀번호 <span class="req">*</span></label>
+          <div class="pw-wrap">
+            <input class="input" id="adminPw" name="pw" type="password" placeholder="비밀번호" autocomplete="current-password" value="topik2026!">
+            <button type="button" class="pw-toggle" id="pwToggle">표시</button>
+          </div>
+        </div>
+
+        <div class="auth-options">
+          <label><input type="checkbox" id="remember"> 로그인 유지</label>
+          <a href="#" style="color:var(--primary);font-weight:500;">비밀번호 찾기</a>
+        </div>
+
+        <button class="btn btn-primary btn-block" style="margin-top:20px;height:46px;" type="submit">로그인</button>
+      </form>
+
+      <div class="auth-hint demo-only">
+        <strong style="color:var(--text-2);">데모 안내</strong> · 아무 아이디/비밀번호로 로그인할 수 있습니다. 5회 연속 실패 시 계정 잠금. <br>
+        예시 계정: <code>admin01 / topik2026!</code> (최고관리자)
+      </div>
+    </div>
+  </div>
+
+<script>
+  // password toggle
+  const pwToggle = document.getElementById('pwToggle');
+  const pw = document.getElementById('adminPw');
+  pwToggle.addEventListener('click', () => {
+    if (pw.type === 'password') { pw.type = 'text'; pwToggle.textContent = '숨기기'; }
+    else { pw.type = 'password'; pwToggle.textContent = '표시'; }
+  });
+
+  // 5회 실패 잠금 로직(데모: localStorage 카운트)
+  let fails = parseInt(localStorage.getItem('bo_login_fails') || '0', 10);
+
+  const form = document.getElementById('loginForm');
+  const err = document.getElementById('errBanner');
+  const attempts = document.getElementById('attempts');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('adminId').value.trim();
+    const pwv = pw.value;
+    if (!id || !pwv) {
+      err.classList.add('show');
+      err.querySelector('strong').textContent = '입력 누락';
+      err.querySelector('div').innerHTML = '<strong>입력 누락</strong> · 아이디와 비밀번호를 모두 입력해주세요.';
+      return;
+    }
+
+    // 데모: 무조건 성공 → 세션 저장 후 admin.html 이동
+    sessionStorage.setItem('bo_session', JSON.stringify({
+      id: id,
+      name: id === 'admin01' ? '김관리' : (id === 'editor01' ? '박편집' : '관리자'),
+      role: id === 'admin01' ? 'super' : (id === 'editor01' ? 'general' : 'viewer'),
+      loginAt: new Date().toISOString(),
+      ip: '203.0.113.42'
+    }));
+    localStorage.setItem('bo_login_fails', '0');
+    // ?next= 파라미터 보존
+    const params = new URLSearchParams(location.search);
+    const next = params.get('next');
+    location.replace(next && next.startsWith('admin') ? next : 'admin.html');
+  });
+</script>
+</body>
+</html>

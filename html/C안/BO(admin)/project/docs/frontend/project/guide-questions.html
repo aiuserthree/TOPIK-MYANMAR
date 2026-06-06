@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>문항 구성 — TOPIK 안내 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .q-section { margin-bottom: 36px; }
+  .q-section .q-hd {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-700));
+    color: #fff;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .q-section.lvl-2 .q-hd {
+    background: linear-gradient(135deg, var(--accent), #8c0a20);
+  }
+  .q-section .q-hd .ttl { font-size: 18px; font-weight: 700; }
+  .q-section .q-hd .ttl .ro {
+    font-family: 'Inter', sans-serif; font-weight: 800; margin-left: 4px;
+    color: rgba(255,255,255,0.85);
+  }
+  .q-section .q-hd .meta {
+    font-size: 12px; color: rgba(255,255,255,0.85);
+    font-family: 'Inter', sans-serif;
+    text-align: right;
+  }
+  .q-section .q-hd .meta strong { font-size: 14px; color: #fff; font-weight: 700; }
+
+  .q-table {
+    width: 100%; border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-top: 0;
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: #fff;
+    overflow: hidden;
+  }
+  .q-table th, .q-table td {
+    padding: 14px;
+    text-align: center;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .q-table th {
+    background: var(--bg-2);
+    color: var(--text-2);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: -0.01em;
+  }
+  .q-table td.col-area {
+    font-weight: 600; color: var(--text);
+    background: var(--bg-2);
+    text-align: left;
+  }
+  .q-table tr.total td {
+    font-weight: 700; color: var(--text);
+    background: #fafbfd;
+    border-top: 2px solid var(--border-strong);
+  }
+  .q-table .num { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 600px) {
+    .q-table th, .q-table td { padding: 10px 6px; font-size: 12.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 안내</span><span>문항 구성</span></div>
+      <h1>문항 구성</h1>
+      <p class="lead">영역별 문항 수와 점수 배분, 시험 시간을 안내합니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 안내 하위 메뉴">
+        <a href="guide-overview.html">시험 개요</a>
+        <a href="guide-intro.html">시험 소개</a>
+        <a href="guide-questions.html" class="active">문항 구성</a>
+        <a href="guide-evaluation.html">평가 기준</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 880px;">
+
+      <!-- TOPIK Ⅰ -->
+      <div class="q-section">
+        <div class="q-hd">
+          <div class="ttl">TOPIK <span class="ro">Ⅰ</span></div>
+          <div class="meta">
+            <strong>100분</strong> · 200점<br>
+            총 70문항
+          </div>
+        </div>
+        <table class="q-table">
+          <thead>
+            <tr>
+              <th>영역</th>
+              <th>유형</th>
+              <th>문항 수</th>
+              <th>배점</th>
+              <th>시간</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-area">듣기</td>
+              <td>선택형 (객관식)</td>
+              <td class="num">30</td>
+              <td class="num">100</td>
+              <td class="num">40분</td>
+            </tr>
+            <tr>
+              <td class="col-area">읽기</td>
+              <td>선택형 (객관식)</td>
+              <td class="num">40</td>
+              <td class="num">100</td>
+              <td class="num">60분</td>
+            </tr>
+            <tr class="total">
+              <td colspan="2">총계</td>
+              <td class="num">70</td>
+              <td class="num">200</td>
+              <td class="num">100분</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TOPIK Ⅱ -->
+      <div class="q-section lvl-2">
+        <div class="q-hd">
+          <div class="ttl">TOPIK <span class="ro">Ⅱ</span></div>
+          <div class="meta">
+            <strong>180분</strong> · 300점<br>
+            총 104문항
+          </div>
+        </div>
+        <table class="q-table">
+          <thead>
+            <tr>
+              <th>영역</th>
+              <th>유형</th>
+              <th>문항 수</th>
+              <th>배점</th>
+              <th>시간</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-area">듣기</td>
+              <td>선택형 (객관식)</td>
+              <td class="num">50</td>
+              <td class="num">100</td>
+              <td rowspan="2" class="num">110분</td>
+            </tr>
+            <tr>
+              <td class="col-area">쓰기</td>
+              <td>서답형 (주관식)</td>
+              <td class="num">4</td>
+              <td class="num">100</td>
+            </tr>
+            <tr>
+              <td class="col-area">읽기</td>
+              <td>선택형 (객관식)</td>
+              <td class="num">50</td>
+              <td class="num">100</td>
+              <td class="num">70분</td>
+            </tr>
+            <tr class="total">
+              <td colspan="2">총계</td>
+              <td class="num">104</td>
+              <td class="num">300</td>
+              <td class="num">180분</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-neutral">
+        <div class="ico"></div>
+        <div>
+          <strong>쓰기 영역 안내</strong><br>
+          TOPIK Ⅱ 쓰기는 단문 완성형(2문항) + 작문형(2문항)으로 구성되며, 응시자 본인 손으로 답안지에 직접 작성합니다.
+          모범 답안 및 채점 기준 예시는 TOPIK 본부(topik.go.kr)에서 확인하실 수 있습니다.
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

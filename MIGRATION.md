@@ -1,11 +1,15 @@
 # TOPIK Myanmar 재개발 스캐폴드
 
+> 전체 개발 스펙: [`docs/DEV_SPEC.md`](docs/DEV_SPEC.md) · FO/BO handoff 리뷰: [`docs/PROJECT_REVIEW.md`](docs/PROJECT_REVIEW.md)
+
 ## 확정 스택
 
 - Frontend: Vite + React + TypeScript (`apps/web`)
 - Backend: Python FastAPI 3.11+ (`apps/api`)
 - Database: PostgreSQL on Iwinv VPS
+- Object Storage: IwinV S3 호환 오브젝트 스토리지 (회원 사진·파일 업로드, `docs/IWINV_SETUP.md` §5)
 - 운영 원칙: 신규 스택에는 Docker를 사용하지 않고, 기존 `api/`, `html/`, `build.py`, `build-bo.py`는 보존합니다.
+- BO 화면 디자인 handoff: `html/C안/BO(admin)/project/` (운영 API stub은 `html/C안/BO/`)
 
 ## 폴더 구조
 
@@ -101,7 +105,7 @@ pg_restore -d topik_myanmar_restore topik_myanmar_YYYYMMDD.dump
 ## 다음 단계
 
 1. Iwinv Web/DB 서버 생성 후 [`docs/IWINV_SETUP.md`](docs/IWINV_SETUP.md)에 따라 운영 환경을 설정합니다.
-2. 기존 `html/C안/FO` 화면을 페이지 단위로 `apps/web`에 옮길 우선순위를 정합니다.
+2. 기존 `html/C안/FO` 화면을 페이지 단위로 `apps/web`에 옮길 우선순위를 정합니다. BO UI 참조는 `html/C안/BO(admin)/project/`를 사용합니다.
 3. 기존 Fastify `api/src/routes`를 기준으로 FastAPI router 계약을 설계합니다.
 4. 기존 SQL schema에 맞춘 SQLAlchemy model 또는 repository 레이어 작성 방식을 결정합니다.
 5. Iwinv VPS PostgreSQL 접속 정책, 백업 주기, 운영 계정을 확정합니다.

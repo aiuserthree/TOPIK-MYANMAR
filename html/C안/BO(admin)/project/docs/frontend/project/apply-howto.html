@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>접수 방법 — TOPIK 접수 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .flow-list {
+    position: relative;
+    display: grid; gap: 12px;
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 16px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    position: relative;
+  }
+  .flow-step .n {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--primary-50);
+    color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif; font-weight: 800; font-size: 22px;
+    letter-spacing: -0.04em;
+    flex-shrink: 0;
+  }
+  .flow-step h3 { font-size: 16px; margin-bottom: 6px; }
+  .flow-step p { font-size: 13.5px; color: var(--text-3); line-height: 1.6; }
+  .flow-step .tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: var(--bg-3); color: var(--text-2);
+  }
+  .flow-step .tag.online  { background: var(--info-50);    color: var(--info); }
+  .flow-step .tag.offline { background: var(--warning-50); color: var(--warning); }
+
+  .checklist {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .checklist h3 { font-size: 16px; margin-bottom: 12px; }
+  .checklist li {
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 13.5px; color: var(--text-2);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist li::before {
+    content: "□"; color: var(--text-3); font-size: 16px; line-height: 1; margin-top: 2px;
+  }
+  .checklist li strong { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 접수</span><span>접수 방법</span></div>
+      <h1>접수 방법</h1>
+      <p class="lead">회원가입부터 수험표 출력까지, TOPIK 시험 접수의 전체 흐름을 안내합니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 접수 하위 메뉴">
+        <a href="apply-howto.html" class="active">접수 방법</a>
+        <a href="register.html">시험 접수</a>
+        <a href="mypage.html">접수 확인</a>
+        <a href="ticket.html">수험표 출력</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 880px;">
+
+      <h2 class="h2" style="margin-bottom: 16px;">접수 절차</h2>
+
+      <div class="flow-list">
+        <div class="flow-step">
+          <div class="n">1</div>
+          <div>
+            <h3>회원가입</h3>
+            <p>이메일 인증 후 기본정보·증명사진을 등록합니다. 등록된 사진은 시험 접수 시 자동으로 사용됩니다.</p>
+            <span class="tag online">온라인</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="n">2</div>
+          <div>
+            <h3>로그인</h3>
+            <p>회원가입 시 인증한 이메일과 비밀번호로 로그인합니다. Google 계정으로도 가능합니다.</p>
+            <span class="tag online">온라인</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="n">3</div>
+          <div>
+            <h3>시험 접수 (4단계)</h3>
+            <p>회차·급수 선택 → 회원정보 확인 → 사진 규격 확인 → 최종 제출. TOPIK Ⅰ과 Ⅱ는 동시 접수 가능합니다.</p>
+            <span class="tag online">온라인</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="n">4</div>
+          <div>
+            <h3>사진 심사 + 오프라인 응시료 수납</h3>
+            <p>제출된 사진은 운영진의 사진 심사를 거치며, 응시료는 지정된 수납처에서 직접 납부합니다. 동시 접수 시 각 수준별로 개별 납부합니다.</p>
+            <span class="tag offline">오프라인</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="n">5</div>
+          <div>
+            <h3>수험번호 부여</h3>
+            <p>사진 승인과 수납 완료가 모두 확인되면 일괄적으로 수험번호가 부여됩니다. 마이페이지 · 접수 확인에서 확인할 수 있습니다.</p>
+            <span class="tag online">온라인</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="n">6</div>
+          <div>
+            <h3>수험표 출력</h3>
+            <p>시험일 2주 전부터 <strong>TOPIK 본부(topik.go.kr)</strong>에서 수험표를 출력합니다. 시험 당일 신분증과 함께 지참해 주세요.</p>
+            <span class="tag online">외부 사이트</span>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="h2" style="margin: 40px 0 16px;">준비물 체크리스트</h2>
+      <div class="checklist">
+        <ul>
+          <li><span>유효한 <strong>이메일 주소</strong> (인증코드 수신용)</span></li>
+          <li><span>본인 명의 <strong>연락처</strong> (미얀마 휴대전화 권장)</span></li>
+          <li><span>여권용 <strong>증명사진</strong> (JPG·PNG, 3:4 비율, 200KB~2MB, 6개월 이내)</span></li>
+          <li><span>여권 또는 NRC 등 <strong>신분증 정보</strong> (영문 성명·생년월일 확인용)</span></li>
+          <li><span>응시료 (오프라인 수납 시 필요)</span></li>
+        </ul>
+      </div>
+
+      <div class="callout callout-warning" style="margin-top: 24px;">
+        <div class="ico"></div>
+        <div>
+          <strong>본 사이트에서는 응시료를 온라인으로 결제할 수 없습니다.</strong>
+          접수 완료 후 지정된 오프라인 수납처에서 직접 납부해 주세요. 수납 완료 후 수험번호가 부여됩니다.
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; display:flex; gap: 8px;">
+        <a href="register.html" class="btn btn-primary btn-lg" style="flex:1;">시험 접수하러 가기</a>
+        <a href="faq.html" class="btn btn-secondary btn-lg" style="flex:0 0 auto;">자주 묻는 질문</a>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

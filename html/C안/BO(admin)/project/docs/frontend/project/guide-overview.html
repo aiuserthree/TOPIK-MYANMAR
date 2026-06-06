@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시험 개요 — TOPIK 안내 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .ext-links {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .ext-link {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s var(--ease);
+  }
+  .ext-link:hover { border-color: var(--primary); }
+  .ext-link .lbl { font-size: 14px; font-weight: 600; color: var(--text); }
+  .ext-link .sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .ext-link .go { font-size: 12px; color: var(--primary); font-weight: 600; flex: 0 0 auto; }
+  .ext-link .go::after { content: " ↗"; font-size: 11px; }
+  @media (min-width: 768px) { .ext-links { grid-template-columns: repeat(3, 1fr); } }
+
+  .summary-grid {
+    display: grid; grid-template-columns: 1fr; gap: 12px;
+  }
+  .sm-card {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .sm-card .lbl { font-size: 12px; color: var(--text-3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .sm-card .v { font-size: 17px; font-weight: 700; margin-top: 8px; color: var(--text); letter-spacing: -0.01em; }
+  .sm-card .d { font-size: 13px; color: var(--text-3); margin-top: 6px; line-height: 1.5; }
+  @media (min-width: 768px) { .summary-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .content-block { margin-top: 32px; }
+  .content-block h2 { font-size: 20px; margin-bottom: 12px; }
+  .content-block p, .content-block li { font-size: 14.5px; color: var(--text-2); line-height: 1.75; }
+  .content-block ul { padding-left: 18px; list-style: disc; margin-top: 8px; }
+  .content-block ul li { margin-bottom: 4px; list-style: disc; }
+  @media (min-width: 768px) { .content-block h2 { font-size: 22px; } }
+
+  .schedule-table th { white-space: nowrap; }
+  .schedule-table .row-active { background: var(--primary-50); }
+  .schedule-table .row-active td { font-weight: 600; color: var(--primary-700); }
+  .schedule-table .col-num { font-family: 'Inter', sans-serif; font-weight: 600; color: var(--text); }
+
+  .cta-row {
+    margin-top: 40px; padding: 28px 24px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-700));
+    border-radius: var(--radius-lg);
+    color: #fff;
+    text-align: center;
+  }
+  .cta-row h3 { color: #fff; font-size: 20px; margin-bottom: 8px; }
+  .cta-row p { color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 18px; }
+  .cta-row .btn-row {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .cta-row .btn-row .btn { background: #fff; color: var(--primary); }
+  .cta-row .btn-row .btn-outline { background: transparent; color: #fff; border-color: rgba(255,255,255,0.6); }
+  .cta-row .btn-row .btn-outline:hover { background: rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 안내</span><span>시험 개요</span></div>
+      <h1>시험 개요</h1>
+      <p class="lead">한국어능력시험(TOPIK)의 정의·목적과 시행 기관, 응시 자격을 안내합니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 안내 하위 메뉴">
+        <a href="guide-overview.html" class="active">시험 개요</a>
+        <a href="guide-intro.html">시험 소개</a>
+        <a href="guide-questions.html">문항 구성</a>
+        <a href="guide-evaluation.html">평가 기준</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 880px;">
+
+      <!-- 외부 링크 버튼 -->
+      <div class="ext-links">
+        <a href="https://overseas.mofa.go.kr/mm-ko/index.do" class="ext-link" target="_blank" rel="noopener noreferrer">
+          <div>
+            <div class="lbl">주미얀마 대한민국 대사관</div>
+            <div class="sub">공식 웹사이트 바로가기</div>
+          </div>
+          <span class="go">방문</span>
+        </a>
+        <a href="https://www.facebook.com/share/18VtSUtzTh/?mibextid=wwXIfr" class="ext-link" target="_blank" rel="noopener noreferrer">
+          <div>
+            <div class="lbl">Facebook</div>
+            <div class="sub">대사관 공식 페이스북</div>
+          </div>
+          <span class="go">방문</span>
+        </a>
+        <a href="https://www.youtube.com/" class="ext-link" target="_blank" rel="noopener noreferrer">
+          <div>
+            <div class="lbl">YouTube</div>
+            <div class="sub">Korean Embassy in Myanmar</div>
+          </div>
+          <span class="go">방문</span>
+        </a>
+      </div>
+
+      <!-- 핵심 요약 카드 -->
+      <div class="summary-grid">
+        <div class="sm-card">
+          <div class="lbl">주관</div>
+          <div class="v">국립국제교육원 (NIIED)</div>
+          <div class="d">대한민국 교육부 산하 한국어능력시험 주관 기관</div>
+        </div>
+        <div class="sm-card">
+          <div class="lbl">시행 기관</div>
+          <div class="v">주미얀마 대한민국 대사관</div>
+          <div class="d">미얀마 시행 공식 운영 기관</div>
+        </div>
+        <div class="sm-card">
+          <div class="lbl">응시 자격</div>
+          <div class="v">한국어 학습 희망자</div>
+          <div class="d">재외동포 및 외국인 (국적 제한 없음)</div>
+        </div>
+      </div>
+
+      <!-- 본문 -->
+      <div class="content-block">
+        <h2>TOPIK이란?</h2>
+        <p>
+          한국어능력시험(TOPIK, Test of Proficiency in Korean)은 한국어를 모국어로 하지 않는 재외동포·외국인을 대상으로 한국어 학습 방향을 제시하고, 한국어 사용 능력을 측정·평가하는 시험입니다.
+          그 결과를 유학·취업·이민 등에 활용할 수 있도록 1997년부터 시행되어 왔습니다.
+        </p>
+      </div>
+
+      <div class="content-block">
+        <h2>응시 목적</h2>
+        <ul>
+          <li>한국어 학습 방향 제시 및 한국어 보급 확대</li>
+          <li>국내·외 대학(원) 입학 및 학사관리 기준 활용</li>
+          <li>한국 기업 취업·EPS(고용허가제) 활용</li>
+          <li>외국인의 국내 거주 및 영주권·시민권 취득에 활용</li>
+        </ul>
+      </div>
+
+      <div class="content-block">
+        <h2>연간 시험 일정 (2026)</h2>
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <table class="table schedule-table">
+            <thead>
+              <tr>
+                <th>회차</th>
+                <th>접수 기간</th>
+                <th>시험일</th>
+                <th>합격 발표</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="row-active">
+                <td class="col-num">제98회</td>
+                <td>2026.02.01 — 02.15</td>
+                <td>2026.04.12 (일)</td>
+                <td>2026.05.28</td>
+              </tr>
+              <tr>
+                <td class="col-num">제99회</td>
+                <td>2026.05.01 — 05.15</td>
+                <td>2026.07.05 (일)</td>
+                <td>2026.08.20</td>
+              </tr>
+              <tr>
+                <td class="col-num">제100회</td>
+                <td>2026.08.01 — 08.15</td>
+                <td>2026.10.18 (일)</td>
+                <td>2026.12.04</td>
+              </tr>
+              <tr>
+                <td class="col-num">제101회</td>
+                <td>2026.10.01 — 10.15</td>
+                <td>2026.11.22 (일)</td>
+                <td>2027.01.08</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="body-sm" style="margin-top: 8px;">※ 회차별 시험장·응시료는 공지사항을 참고해 주세요. 일정은 변경될 수 있습니다.</p>
+      </div>
+
+      <div class="cta-row">
+        <h3>지금 바로 TOPIK을 접수하세요</h3>
+        <p>회원가입 후 회차·급수를 선택하면 접수가 완료됩니다.</p>
+        <div class="btn-row">
+          <a href="register.html" class="btn">시험 접수하기</a>
+          <a href="rules-notice.html" class="btn btn-outline">시험 규정 보기</a>
+          <a href="faq.html" class="btn btn-outline">자주 묻는 질문</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

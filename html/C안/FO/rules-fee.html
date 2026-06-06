@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>응시료 규정 — TOPIK 규정 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .rule-block { margin-bottom: 32px; }
+  .rule-block h2 { font-size: 18px; margin-bottom: 12px; padding-left: 12px; border-left: 3px solid var(--primary); }
+
+  .fee-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .fee-card {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: #fff;
+  }
+  .fee-card .lbl {
+    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 12px;
+    color: var(--primary); letter-spacing: 0.08em;
+  }
+  .fee-card.l2 .lbl { color: var(--accent); }
+  .fee-card .ttl { font-size: 18px; font-weight: 700; margin-top: 4px; }
+  .fee-card .amt {
+    font-family: 'Inter', sans-serif; font-weight: 800; font-size: 32px;
+    color: var(--text); margin-top: 12px;
+    letter-spacing: -0.03em;
+  }
+  .fee-card .amt small { font-size: 16px; font-weight: 600; color: var(--text-3); margin-left: 4px; }
+  .fee-card .alt {
+    font-size: 13px; color: var(--text-3); margin-top: 4px;
+    font-family: 'Inter', sans-serif;
+  }
+  @media (min-width: 768px) { .fee-cards { grid-template-columns: 1fr 1fr; } }
+
+  .refund-table th, .refund-table td { text-align: center; }
+  .refund-table .pct {
+    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 16px;
+    color: var(--text);
+  }
+  .refund-table .pct.zero { color: var(--danger); }
+  .refund-table .pct.full { color: var(--success); }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 규정</span><span>응시료 규정</span></div>
+      <h1 data-i18n-content="rules.fee">응시료 규정</h1>
+      <p class="lead" data-i18n-content="rf.lead">응시료 금액, 결제 방법, 환불 정책을 안내합니다. (2026 기준)</p>
+
+      <nav class="subnav" aria-label="TOPIK 규정 하위 메뉴">
+        <a href="rules-notice.html">유의 사항</a>
+        <a href="rules-answer.html">답안 작성 요령</a>
+        <a href="rules-fee.html" class="active">응시료 규정</a>
+        <a href="rules-id.html">신분증 규정</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 880px;">
+
+      <!-- 응시료 -->
+      <div class="rule-block">
+        <h2 data-i18n-content="rf.h_fee">응시료</h2>
+        <div class="fee-cards">
+          <div class="fee-card l1">
+            <div class="lbl">초급</div>
+            <div class="ttl">TOPIK Ⅰ</div>
+            <div class="amt">50,000<small>MMK</small></div>
+            <div class="alt">≈ USD 24 (참고용 환율)</div>
+          </div>
+          <div class="fee-card l2">
+            <div class="lbl">중·고급</div>
+            <div class="ttl">TOPIK Ⅱ</div>
+            <div class="amt">75,000<small>MMK</small></div>
+            <div class="alt">≈ USD 36 (참고용 환율)</div>
+          </div>
+        </div>
+        <p class="body-sm" style="margin-top: 8px;">※ 응시료는 회차별로 변경될 수 있으며, 정확한 금액은 회차별 공지사항을 참고해 주세요.</p>
+      </div>
+
+      <!-- 결제 방법 -->
+      <div class="rule-block">
+        <h2 data-i18n-content="rf.h_payment">결제 방법</h2>
+        <div class="callout callout-warning">
+          <div class="ico"></div>
+          <div>
+            응시료는 <strong>오프라인 수납</strong>으로만 가능합니다. 온라인 카드·계좌이체 결제는 지원하지 않습니다.
+          </div>
+        </div>
+        <div class="rule-list" style="margin-top:12px; background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 시행 기관(주미얀마 대사관) 안내 계좌 또는 지정 수납처에서 직접 납부</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 수납 시 <strong>접수번호</strong>를 반드시 확인해 주세요. 접수번호는 마이페이지 · 접수 확인에서 확인 가능합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 수납 영수증은 환불·정정 신청 시 필요할 수 있으니 보관해 주세요.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· <strong>TOPIK Ⅰ·Ⅱ 동시 접수 시 응시료는 각 수준별로 개별 납부</strong>합니다. (합산 일괄 납부 불가)</div>
+          <div style="padding:14px 16px; font-size:14px;">· <strong>제107회</strong> 오프라인 수납 기간: <strong>2026.07.24(금) ~ 07.26(일)</strong> (접수 기간: 2026.07.17 ~ 07.21)</div>
+        </div>
+      </div>
+
+      <!-- 환불 정책 -->
+      <div class="rule-block">
+        <h2 data-i18n-content="rf.h_refund">환불 정책</h2>
+        <div class="card" style="padding: 0; overflow: hidden;">
+          <table class="table refund-table">
+            <thead>
+              <tr>
+                <th>시점</th>
+                <th>환불률</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>접수 기간 중</td>
+                <td><span class="pct full">100%</span></td>
+                <td>오프라인 수납 전 — 마이페이지에서 직접 취소</td>
+              </tr>
+              <tr>
+                <td>접수 마감 후 ~ 시험 7일 전</td>
+                <td><span class="pct">60%</span></td>
+                <td>환불·정보정정신청 게시판으로 신청</td>
+              </tr>
+              <tr>
+                <td>시험 7일 전 ~ 시험 1일 전</td>
+                <td><span class="pct">30%</span></td>
+                <td>환불·정보정정신청 게시판으로 신청</td>
+              </tr>
+              <tr>
+                <td>시험 당일 이후</td>
+                <td><span class="pct zero">0%</span></td>
+                <td>환불 불가</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-danger" style="margin-top: 12px;">
+          <div class="ico"></div>
+          <div>
+            <strong>취소 가능 시점: 오프라인 수납 전까지.</strong>
+            오프라인 수납이 완료된 후에는 마이페이지에서 직접 취소가 불가하며,
+            <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 통해 환불 신청해 주세요.
+          </div>
+        </div>
+      </div>
+
+      <!-- 영수증 -->
+      <div class="rule-block">
+        <h2 data-i18n-content="rf.h_receipt">영수증 발급</h2>
+        <p class="body" style="font-size: 14.5px;">
+          수납 시 발급된 종이 영수증은 환불·정정 신청 시 필요할 수 있습니다.
+          전자 영수증이 필요한 경우 시행 기관(주미얀마 대사관)으로 문의해 주세요.
+        </p>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

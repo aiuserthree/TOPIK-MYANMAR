@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FAQ — 게시판 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .faq-wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .faq-tools { display: flex; gap: 12px; flex-direction: column; margin-bottom: 20px; }
+  .faq-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .faq-search {
+    position: relative;
+  }
+  .faq-search input {
+    width: 100%; height: 44px;
+    padding: 0 16px 0 44px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); background: #fff;
+    font-size: 14.5px;
+  }
+  .faq-search input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); }
+  .faq-search::before {
+    content: ""; position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7588' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+    background-repeat: no-repeat;
+  }
+
+  .faq-group {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .faq-group .group-head {
+    padding: 14px 18px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .faq-group .group-head .ct {
+    margin-left: 6px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-3);
+    background: #fff; padding: 2px 8px; border-radius: 99px;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  .accordion details summary { padding: 18px 20px; }
+  .accordion .a { padding: 0 20px 20px 44px; white-space: pre-line; }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>게시판</span><span>FAQ</span></div>
+      <h1>자주 묻는 질문</h1>
+      <p class="lead">접수·시험·결과 관련 자주 묻는 질문을 분류별로 모아두었습니다.</p>
+    </div>
+  </header>
+
+  <div class="faq-wrap">
+
+    <div class="faq-tools">
+      <div class="faq-search"><input type="search" id="faqSearch" placeholder="질문 검색 (예: 응시료, 수험번호, 환불…)"></div>
+      <div class="faq-tabs">
+        <button class="chip active" data-cat="all">전체</button>
+        <button class="chip" data-cat="account">계정</button>
+        <button class="chip" data-cat="apply">접수</button>
+        <button class="chip" data-cat="exam">시험</button>
+        <button class="chip" data-cat="result">결과</button>
+        <button class="chip" data-cat="other">기타</button>
+      </div>
+    </div>
+
+    <div id="faqGroups">
+      <p style="text-align:center; padding:40px 16px; color:var(--text-3); font-size:14px;">FAQ를 불러오는 중…</p>
+    </div>
+
+    <p id="faqEmpty" style="display:none; text-align:center; padding:40px 16px; color:var(--text-3); font-size:14px;">검색 조건에 맞는 질문이 없습니다.</p>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="shared/api-client.js"></script>
+<script src="assets/common.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var groupsEl = document.getElementById('faqGroups');
+  var emptyEl = document.getElementById('faqEmpty');
+  var searchEl = document.getElementById('faqSearch');
+  var activeCat = 'all';
+  var allGroups = [];
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function currentLang() {
+    var l = (window.TPKMLang && TPKMLang.get && TPKMLang.get()) || 'KO';
+    l = String(l).toLowerCase();
+    return l === 'my' || l === 'en' ? l : 'ko';
+  }
+
+  function render() {
+    var q = (searchEl.value || '').trim().toLowerCase();
+    var visibleGroups = 0;
+    var html = '';
+    allGroups.forEach(function (g) {
+      if (activeCat !== 'all' && g.category !== activeCat) return;
+      var items = g.items.filter(function (it) {
+        if (!q) return true;
+        return (it.question || '').toLowerCase().indexOf(q) >= 0 ||
+               (it.answer || '').toLowerCase().indexOf(q) >= 0;
+      });
+      if (!items.length) return;
+      visibleGroups++;
+      html +=
+        '<div class="faq-group">' +
+          '<div class="group-head">' + esc(g.category_label) +
+            ' <span class="ct">' + items.length + '</span></div>' +
+          '<div class="accordion">' +
+            items.map(function (it) {
+              return '<details' + (q ? ' open' : '') + '>' +
+                '<summary><span class="q">' + esc(it.question) + '</span>' +
+                '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>' +
+                '</summary>' +
+                '<div class="a">' + esc(it.answer) + '</div>' +
+                '</details>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+    });
+    groupsEl.innerHTML = html;
+    emptyEl.style.display = visibleGroups ? 'none' : '';
+  }
+
+  function load() {
+    if (!window.TopikApi || !TopikApi.canUseApi()) {
+      groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--text-3);">FAQ를 불러올 수 없습니다.</p>';
+      return;
+    }
+    groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--text-3);">FAQ를 불러오는 중…</p>';
+    TopikApi.getFaq({ lang: currentLang() }).then(function (res) {
+      if (!res.ok) {
+        groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--danger);">' +
+          esc(TopikApi.parseError(res)) + '</p>';
+        return;
+      }
+      allGroups = (res.body && res.body.groups) || [];
+      render();
+    }).catch(function () {
+      groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--danger);">네트워크 오류입니다.</p>';
+    });
+  }
+
+  document.querySelectorAll('.faq-tabs .chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.querySelectorAll('.faq-tabs .chip').forEach(function (x) { x.classList.remove('active'); });
+      c.classList.add('active');
+      activeCat = c.dataset.cat || 'all';
+      render();
+    });
+  });
+  searchEl.addEventListener('input', render);
+
+  // Re-fetch localized FAQ when the language toggle changes.
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.lang-toggle button');
+    if (btn) setTimeout(load, 60);
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

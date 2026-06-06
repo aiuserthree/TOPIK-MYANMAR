@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시험 접수 — TOPIK 접수 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .reg-wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  /* sticky step indicator on mobile */
+  .step-sticky {
+    position: sticky; top: var(--header-h);
+    z-index: 5;
+    background: var(--bg);
+    padding: 12px 0;
+    margin: -24px -16px 20px;
+    padding-left: 16px; padding-right: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-pane { display: none; }
+  .step-pane.active { display: block; }
+
+  /* STEP 1: 회차 카드 */
+  .round-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .round-card {
+    padding: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    cursor: pointer;
+    transition: all .15s var(--ease);
+    position: relative;
+  }
+  .round-card.disabled { opacity: .5; cursor: not-allowed; }
+  .round-card:hover:not(.disabled):not(.selected) { border-color: var(--border-strong); }
+  .round-card.selected { border-color: var(--primary); background: var(--primary-50); }
+  .round-card.selected::after {
+    content: ""; position: absolute; top: 12px; right: 12px;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--primary);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'><path fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1 5l3.5 3.5L11 1'/></svg>");
+    background-repeat: no-repeat; background-position: center;
+    background-size: 12px;
+  }
+  .round-card .h {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .round-card .round-n {
+    font-family: 'Inter', sans-serif; font-weight: 800; font-size: 20px;
+    letter-spacing: -0.02em; color: var(--text);
+  }
+  .round-card .round-status {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 99px;
+    background: var(--success-50); color: var(--success);
+  }
+  .round-card.upcoming .round-status { background: var(--bg-3); color: var(--text-3); }
+  .round-card.closed .round-status   { background: var(--bg-3); color: var(--text-3); }
+  .round-card .meta-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    font-size: 13px; color: var(--text-3);
+  }
+  .round-card .meta-row strong { color: var(--text-2); font-weight: 600; display:block; font-size: 12px; margin-bottom: 2px; }
+  @media (min-width: 768px) { .round-list { grid-template-columns: 1fr 1fr; } }
+
+  /* Level checkbox cards */
+  .lvl-cards { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .lvl-card {
+    display: flex; gap: 14px; padding: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff; cursor: pointer;
+    transition: all .15s var(--ease);
+  }
+  .lvl-card:has(input:checked) { border-color: var(--primary); background: var(--primary-50); }
+  .lvl-card .ck-box {
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 4px;
+    background: #fff;
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lvl-card:has(input:checked) .ck-box {
+    background: var(--primary); border-color: var(--primary);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'><path fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1 5l3.5 3.5L11 1'/></svg>");
+    background-repeat: no-repeat; background-position: center; background-size: 12px;
+  }
+  .lvl-card input { display: none; }
+  .lvl-card .ttl { font-size: 15px; font-weight: 700; }
+  .lvl-card .sub { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+  .lvl-card .fee { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--primary); font-size: 14px; margin-top: 6px; }
+  @media (min-width: 768px) { .lvl-cards { grid-template-columns: 1fr 1fr; } }
+
+  /* STEP 2: readonly fields */
+  .ro-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .ro-item { padding: 12px 14px; background: var(--bg-2); border-radius: var(--radius-sm); }
+  .ro-item .l { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+  .ro-item .v { font-size: 14.5px; font-weight: 500; color: var(--text); }
+  @media (min-width: 600px) { .ro-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .ro-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  /* STEP 3: photo */
+  .photo-frame {
+    display: flex; gap: 20px; padding: 24px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .photo-frame .pf {
+    width: 120px; height: 160px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-4);
+    flex: 0 0 auto;
+  }
+  .photo-frame .pf-info { flex: 1; }
+  .photo-frame .pf-info h3 { font-size: 15px; margin-bottom: 8px; }
+  .photo-frame .pf-info .small { font-size: 12px; color: var(--text-3); }
+
+  .photo-checks {
+    margin-top: 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 0;
+  }
+  .photo-checks .check { padding: 10px 16px; width: 100%; }
+
+  @media (max-width: 480px) {
+    .photo-frame { flex-direction: column; }
+    .photo-frame .pf { margin: 0 auto; }
+  }
+
+  /* STEP 4 summary */
+  .sum-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0;
+    overflow: hidden;
+  }
+  .sum-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .sum-row:last-child { border-bottom: 0; }
+  .sum-row .l { color: var(--text-3); font-weight: 500; }
+  .sum-row .v { color: var(--text); font-weight: 500; }
+  .sum-row .v strong { font-weight: 700; }
+  @media (max-width: 480px) {
+    .sum-row { grid-template-columns: 100px 1fr; padding: 12px; font-size: 13.5px; }
+  }
+
+  .form-actions { display: flex; gap: 8px; margin-top: 28px; }
+  .form-actions .btn { flex: 1; }
+  .form-actions .btn-secondary { flex: 0 0 auto; min-width: 100px; }
+</style>
+</head>
+<body data-require-login>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <div class="reg-wrap">
+
+    <header style="text-align:center; margin-bottom: 20px;">
+      <h1 class="h1">시험 접수</h1>
+      <p class="body-sm" style="margin-top: 6px;">아래 4단계를 차례로 진행해 주세요.</p>
+    </header>
+
+    <div class="step-sticky">
+      <ol class="steps">
+        <li class="step active" data-s="1"><span class="n">1</span><span>회차·급수</span></li>
+        <li class="step" data-s="2"><span class="n">2</span><span>회원정보 확인</span></li>
+        <li class="step" data-s="3"><span class="n">3</span><span>사진 규격 확인</span></li>
+        <li class="step" data-s="4"><span class="n">4</span><span>최종 확인</span></li>
+      </ol>
+    </div>
+
+    <!-- ============ STEP 1: 회차·급수 ============ -->
+    <section class="step-pane active" data-s="1">
+      <h2 class="h3" style="margin-bottom: 6px;">응시 회차 선택</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">접수 가능한 회차 중 하나를 선택해 주세요.</p>
+
+      <div class="round-list" id="roundList">
+        <label class="round-card selected">
+          <input type="radio" name="round" hidden checked>
+          <div class="h">
+            <div class="round-n">제98회</div>
+            <div class="round-status">접수 중</div>
+          </div>
+          <div class="meta-row">
+            <div><strong>시험일</strong>2026.04.12 (일)</div>
+            <div><strong>접수 기간</strong>02.01 — 02.15</div>
+          </div>
+        </label>
+        <label class="round-card upcoming disabled">
+          <input type="radio" name="round" hidden disabled>
+          <div class="h">
+            <div class="round-n">제99회</div>
+            <div class="round-status">접수 예정</div>
+          </div>
+          <div class="meta-row">
+            <div><strong>시험일</strong>2026.07.05 (일)</div>
+            <div><strong>접수 기간</strong>05.01 — 05.15</div>
+          </div>
+        </label>
+      </div>
+
+      <h2 class="h3" style="margin: 28px 0 6px;">응시 급수 선택 <span style="font-size: 12px; color:var(--text-3); font-weight:400;">(복수 선택 가능)</span></h2>
+      <p class="body-sm" style="margin-bottom: 16px;">TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.</p>
+
+      <div class="lvl-cards">
+        <label class="lvl-card">
+          <span class="ck-box"></span>
+          <input type="checkbox" id="lvl1">
+          <div style="flex:1;">
+            <div class="ttl">TOPIK Ⅰ <span style="font-size:12px; color:var(--text-3); font-weight:500;">초급 (1·2급)</span></div>
+            <div class="sub">듣기 30 + 읽기 40 · 100분 · 200점</div>
+            <div class="fee">응시료 50,000 MMK</div>
+          </div>
+        </label>
+        <label class="lvl-card">
+          <span class="ck-box"></span>
+          <input type="checkbox" id="lvl2">
+          <div style="flex:1;">
+            <div class="ttl">TOPIK Ⅱ <span style="font-size:12px; color:var(--text-3); font-weight:500;">중·고급 (3~6급)</span></div>
+            <div class="sub">듣기 50 + 쓰기 4 + 읽기 50 · 180분 · 300점</div>
+            <div class="fee">응시료 75,000 MMK</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="callout" style="margin-top: 20px;">
+        <div class="ico"></div>
+        <div>
+          <strong>동시 접수 시 응시료는 각 수준별로 개별 오프라인 수납</strong>합니다 (합산 일괄 납부 아님).
+          동시 접수 시 시험장은 동일 코드로 부여됩니다.
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block btn-lg" data-next>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2: 회원정보 확인 ============ -->
+    <section class="step-pane" data-s="2">
+      <h2 class="h3" style="margin-bottom: 6px;">회원정보 확인</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">회원가입 시 등록한 정보입니다. 본 단계에서 수정할 수 없습니다.</p>
+
+      <div class="callout">
+        <div class="ico"></div>
+        <div>
+          정보 변경이 필요하시면 <a href="mypage-profile.html" class="text-primary" style="text-decoration: underline;">마이페이지 · 내정보 수정</a>에서 수정해 주세요.
+        </div>
+      </div>
+
+      <h3 class="h4" style="margin: 20px 0 10px;">기본정보</h3>
+      <div class="ro-grid">
+        <div class="ro-item"><div class="l">한글 성명</div><div class="v">홍길동</div></div>
+        <div class="ro-item"><div class="l">영문 성명</div><div class="v">HONG GILDONG</div></div>
+        <div class="ro-item"><div class="l">생년월일</div><div class="v">1996-01-15</div></div>
+        <div class="ro-item"><div class="l">성별</div><div class="v">남</div></div>
+        <div class="ro-item"><div class="l">국적</div><div class="v">미얀마 (Myanmar)</div></div>
+        <div class="ro-item"><div class="l">제1언어</div><div class="v">버마어</div></div>
+        <div class="ro-item"><div class="l">연락처</div><div class="v">+95 9 1234 5678</div></div>
+        <div class="ro-item"><div class="l">이메일 (아이디)</div><div class="v">user@example.com</div></div>
+        <div class="ro-item"><div class="l">직업</div><div class="v">학생</div></div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">응시 정보</h3>
+      <div class="ro-grid">
+        <div class="ro-item"><div class="l">응시동기</div><div class="v">한국 유학</div></div>
+        <div class="ro-item"><div class="l">응시목적</div><div class="v">대학(원) 입학</div></div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" data-next>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 3: 사진 규격 확인 ============ -->
+    <section class="step-pane" data-s="3">
+      <h2 class="h3" style="margin-bottom: 6px;">사진 규격 확인</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">회원가입 시 등록한 증명사진입니다. 본 단계에서 사진 업로드·교체는 불가합니다.</p>
+
+      <div class="photo-frame">
+        <div class="pf">증명사진<br>미리보기</div>
+        <div class="pf-info">
+          <h3>등록된 증명사진</h3>
+          <p class="body-sm">접수 시 자동 사용됩니다. 사진이 규격에 맞지 않거나 변경이 필요한 경우 회원가입 사진을 먼저 교체해 주세요.</p>
+          <a href="mypage-profile.html" class="btn btn-text btn-sm" style="margin-top: 8px;">마이페이지에서 사진 재등록 →</a>
+        </div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">규격 체크리스트 <span style="font-size: 12px; color: var(--danger); font-weight: 500;">(모두 확인 필수)</span></h3>
+      <div class="photo-checks">
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>여권용 · 정면 촬영 · JPG 형식</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>6개월 이내 촬영한 사진</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>흑백이 아닌 컬러 사진</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>모자·선글라스·앞머리로 얼굴이 가려지지 않음</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>연예인·타인 사진이 아닌 본인 사진</span></label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" data-next id="btnGoStep4" disabled>다음</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 4: 최종 확인 ============ -->
+    <section class="step-pane" data-s="4">
+      <h2 class="h3" style="margin-bottom: 6px;">최종 확인 및 제출</h2>
+      <p class="body-sm" style="margin-bottom: 16px;">아래 내용으로 접수가 진행됩니다. 제출 후에는 수정이 불가합니다.</p>
+
+      <h3 class="h4" style="margin-bottom: 10px;">응시 정보</h3>
+      <div class="sum-card">
+        <div class="sum-row"><div class="l">회차</div><div class="v"><strong>제98회</strong> · 2026.04.12 (일)</div></div>
+        <div class="sum-row"><div class="l">응시 급수</div><div class="v" id="sumLevels"><strong>TOPIK Ⅰ</strong></div></div>
+        <div class="sum-row"><div class="l">시험장</div><div class="v">양곤 시험장 (배정 예정)</div></div>
+        <div class="sum-row"><div class="l">한글 성명</div><div class="v">홍길동</div></div>
+        <div class="sum-row"><div class="l">영문 성명</div><div class="v">HONG GILDONG</div></div>
+        <div class="sum-row"><div class="l">생년월일</div><div class="v">1996-01-15</div></div>
+        <div class="sum-row"><div class="l">연락처</div><div class="v">+95 9 1234 5678</div></div>
+        <div class="sum-row"><div class="l">이메일</div><div class="v">user@example.com</div></div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">응시료 안내</h3>
+      <div class="callout callout-warning">
+        <div class="ico"></div>
+        <div>
+          응시료는 <strong>오프라인 수납</strong>으로만 가능합니다.
+          접수 완료 후 안내되는 수납처에서 직접 납부해 주세요. 동시 접수 시 각 수준별로 개별 납부합니다.
+        </div>
+      </div>
+
+      <h3 class="h4" style="margin: 24px 0 10px;">환불·취소 안내</h3>
+      <div class="callout callout-neutral">
+        <div class="ico"></div>
+        <div>
+          오프라인 수납 전까지 마이페이지에서 직접 취소가 가능합니다. 수납 완료 후에는 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>에 따라 환불 신청해 주세요.
+        </div>
+      </div>
+
+      <div style="margin: 20px 0;">
+        <label class="check"><input type="checkbox" id="agreeTerms"><span class="box"></span><span><span class="req" style="color:var(--danger);">[필수]</span> 서비스 이용약관 및 개인정보 처리 방침에 동의합니다.</span></label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" data-back>이전</button>
+        <button class="btn btn-primary" id="btnSubmit">접수하기</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<!-- 접수 완료 모달 -->
+<div class="modal-backdrop" id="modalDone">
+  <div class="modal">
+    <div class="modal-body" style="padding: 32px 24px; text-align: center;">
+      <div style="width:64px; height:64px; background:var(--success-50); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px; height:32px; stroke: var(--success);"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+      </div>
+      <h3 style="font-size: 20px; margin-bottom: 8px;">접수가 완료되었습니다</h3>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7;">
+        사진 심사 및 오프라인 응시료 수납 후 수험번호가 부여됩니다.<br>
+        관련 일정 및 유의사항은 공지사항을 참고하시기 바랍니다.<br>
+        접수 결과는 마이페이지에서 확인하시기 바랍니다.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <a href="notice.html" class="btn btn-secondary">공지사항 보기</a>
+      <a href="mypage.html" class="btn btn-primary">마이페이지</a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+  // Step navigation
+  const panes = document.querySelectorAll('.step-pane');
+  const indi  = document.querySelectorAll('.steps .step');
+  function go(s) {
+    panes.forEach(p => p.classList.toggle('active', +p.dataset.s === s));
+    indi.forEach(i => {
+      const n = +i.dataset.s;
+      i.classList.toggle('active', n === s);
+      i.classList.toggle('done',   n <  s);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
+    const cur = +document.querySelector('.step-pane.active').dataset.s;
+    // STEP1 validation
+    if (cur === 1) {
+      const any = document.getElementById('lvl1').checked || document.getElementById('lvl2').checked;
+      if (!any) { alert('응시 급수를 1개 이상 선택해 주세요.'); return; }
+    }
+    if (cur === 4) return;
+    // Update STEP4 summary on STEP3 → 4
+    if (cur === 3) updateSummary();
+    go(cur + 1);
+  }));
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => {
+    const cur = +document.querySelector('.step-pane.active').dataset.s;
+    go(cur - 1);
+  }));
+
+  // Round card selection
+  document.querySelectorAll('.round-card').forEach(c => {
+    c.addEventListener('click', () => {
+      if (c.classList.contains('disabled')) return;
+      document.querySelectorAll('.round-card').forEach(x => x.classList.remove('selected'));
+      c.classList.add('selected');
+    });
+  });
+
+  // STEP 3 — enable next only when all 5 checks are checked
+  const photoChecks = document.querySelectorAll('.check-photo input');
+  photoChecks.forEach(c => c.addEventListener('change', () => {
+    const all = [...photoChecks].every(x => x.checked);
+    document.getElementById('btnGoStep4').disabled = !all;
+  }));
+
+  // STEP 4 — summary
+  function updateSummary() {
+    const l1 = document.getElementById('lvl1').checked;
+    const l2 = document.getElementById('lvl2').checked;
+    const lvls = [];
+    if (l1) lvls.push('TOPIK Ⅰ');
+    if (l2) lvls.push('TOPIK Ⅱ');
+    document.getElementById('sumLevels').innerHTML = '<strong>' + lvls.join(' · ') + '</strong>' + (lvls.length === 2 ? ' <span style="font-size:12px; color:var(--text-3);">(동시 접수)</span>' : '');
+  }
+
+  // Submit
+  document.getElementById('btnSubmit').addEventListener('click', () => {
+    if (!document.getElementById('agreeTerms').checked) {
+      alert('약관에 동의해 주세요.'); return;
+    }
+    TPKM.openModal('modalDone');
+  });
+</script>
+</body>
+</html>

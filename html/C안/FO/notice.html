@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>공지사항 — 게시판 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<!-- DOMPurify 3.4.8 — sanitize admin-authored HTML before rendering (XSS 방지) -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.8/dist/purify.min.js"></script>
+<style>
+  .board-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .board-tools {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .board-tools .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .board-tools .search {
+    flex: 1; min-width: 200px;
+    position: relative;
+  }
+  .board-tools .search input {
+    width: 100%; height: 38px;
+    padding: 0 14px 0 38px;
+    border: 1px solid var(--border);
+    border-radius: 99px; background: #fff;
+    font-size: 13.5px;
+  }
+  .board-tools .search input:focus { outline: none; border-color: var(--primary); }
+  .board-tools .search::before {
+    content: ""; position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7588' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+    background-repeat: no-repeat;
+  }
+
+  /* List view */
+  .list-view .table tr { cursor: pointer; }
+  .list-view .col-num   { width: 50px; text-align: center; color: var(--text-3); }
+  .list-view .col-cat   { width: 80px; }
+  .list-view .col-date  { width: 100px; text-align: right; white-space: nowrap; }
+  .list-view .col-title { font-weight: 500; }
+  .list-view .col-title.imp { font-weight: 600; }
+
+  /* 모바일 가로 스크롤 테이블 */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .list-view .table th,
+  .list-view .table td { white-space: nowrap; }
+  .list-view .col-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  /* Detail view */
+  .detail-view { display: none; }
+  .detail-view.active { display: block; }
+  .list-view.hidden { display: none; }
+
+  .detail-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .detail-head {
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-head h2 { font-size: 20px; line-height: 1.4; }
+  .detail-head .meta {
+    display: flex; gap: 12px; align-items: center; margin-top: 10px;
+    font-size: 12.5px; color: var(--text-3);
+  }
+  .detail-body {
+    padding: 24px;
+    font-size: 14.5px;
+    line-height: 1.8;
+    color: var(--text-2);
+  }
+  .detail-body p { margin-bottom: 14px; }
+  .detail-body ul, .detail-body ol { padding-left: 22px; margin: 8px 0; }
+  .detail-body ul li { list-style: disc; padding: 2px 0; }
+  .detail-body ol li { list-style: decimal; padding: 2px 0; }
+  .detail-body h1 { font-size: 20px; margin: 20px 0 10px; color: var(--text); }
+  .detail-body h2 { font-size: 18px; margin: 18px 0 8px; color: var(--text); }
+  .detail-body h3 { font-size: 16px; margin: 18px 0 8px; color: var(--text); }
+  .detail-body img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
+  .detail-body a { color: var(--primary); text-decoration: underline; word-break: break-all; }
+  .detail-body blockquote {
+    margin: 12px 0; padding: 8px 14px;
+    border-left: 3px solid var(--border); color: var(--text-3); background: var(--bg-2);
+    border-radius: 0 6px 6px 0;
+  }
+  .detail-body pre {
+    background: #1e2330; color: #e6e9ef; padding: 12px 14px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; margin: 12px 0;
+  }
+  .detail-body table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13.5px; }
+  .detail-body th, .detail-body td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; }
+  .detail-body th { background: var(--bg-2); font-weight: 600; }
+  .detail-body .ql-align-center { text-align: center; }
+  .detail-body .ql-align-right { text-align: right; }
+  .detail-body .ql-align-justify { text-align: justify; }
+
+  .attach {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .attach .l { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+  .attach a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text);
+  }
+  .attach a:hover { border-color: var(--primary); color: var(--primary); }
+  .attach a::before { content: "📎"; }
+
+  .nav-prev-next {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .nav-pn {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 60px 1fr;
+    gap: 14px; align-items: center;
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+  .nav-pn:last-child { border-bottom: 0; }
+  .nav-pn:hover { background: var(--bg-2); }
+  .nav-pn .l { color: var(--text-3); font-size: 12px; font-weight: 500; }
+  .nav-pn .t { color: var(--text); }
+  .nav-pn.disabled { opacity: 0.5; pointer-events: none; }
+
+  .detail-actions { display: flex; gap: 8px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>게시판</span><span>공지사항</span></div>
+      <h1>공지사항</h1>
+      <p class="lead">TOPIK 미얀마 시행 관련 공식 공지 게시판입니다.</p>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+
+    <!-- ============ List view ============ -->
+    <section class="list-view" id="listView">
+      <div class="board-tools">
+        <div class="filters">
+          <button class="chip active" data-cat="all">전체</button>
+          <button class="chip" data-cat="imp">중요</button>
+          <button class="chip" data-cat="apply">접수</button>
+          <button class="chip" data-cat="exam">시험</button>
+          <button class="chip" data-cat="result">결과</button>
+        </div>
+        <div class="search">
+          <input type="search" placeholder="제목·내용 검색">
+        </div>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-num">번호</th>
+              <th class="col-cat">분류</th>
+              <th>제목</th>
+              <th class="col-date">작성일</th>
+            </tr>
+          </thead>
+          <tbody id="noticeTbody">
+            <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">공지를 불러오는 중…</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <p id="noticeEmpty" style="display:none; text-align:center; padding:32px 16px; color:var(--text-3); font-size:13.5px;">검색 조건에 맞는 공지가 없습니다.</p>
+
+      <nav class="pager" aria-label="페이지">
+        <span class="disabled">‹</span>
+        <span class="current">1</span>
+        <a href="#">2</a>
+        <a href="#">3</a>
+        <a href="#">›</a>
+      </nav>
+    </section>
+
+    <!-- ============ Detail view ============ -->
+    <section class="detail-view" id="detailView">
+      <a href="javascript:void(0)" onclick="closeDetail()" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+
+      <article class="detail-card">
+        <div class="detail-head">
+          <div class="meta" id="noticeDetailMeta" style="margin-bottom:10px;"></div>
+          <h2 id="noticeDetailTitle">공지</h2>
+        </div>
+        <div class="detail-body" id="noticeDetailBody"></div>
+        <div class="attach" id="noticeDetailAttach" style="display:none;"></div>
+      </article>
+
+      <nav class="nav-prev-next" aria-label="이전·다음 글">
+        <a href="#" class="nav-pn"><span class="l">이전</span><span class="t">2026년 TOPIK 시험 일정 안내 (제107회)</span></a>
+        <a href="#" class="nav-pn disabled"><span class="l">다음</span><span class="t">— 다음 글이 없습니다 —</span></a>
+      </nav>
+
+      <div class="detail-actions">
+        <button class="btn btn-secondary btn-block" onclick="closeDetail()">목록으로</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="shared/api-client.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/fo-notices.js"></script>
+<script>
+  var activeCat = 'all';
+  var searchQ = '';
+  var searchInput = document.querySelector('.board-tools .search input');
+  var tbody = document.getElementById('noticeTbody');
+
+  function closeDetail() {
+    document.getElementById('listView').classList.remove('hidden');
+    document.getElementById('detailView').classList.remove('active');
+    if (history.replaceState) history.replaceState(null, '', 'notice.html');
+  }
+  window.closeDetail = closeDetail;
+
+  // ----- 상세 렌더 오버라이드: HTML 본문 sanitize(DOMPurify) + 첨부파일 다운로드 -----
+  function ntEsc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function ntFmtSize(bytes) {
+    var b = Number(bytes) || 0;
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+  function ntBadgeClass(cat) {
+    var map = { important: 'badge-important', registration: 'badge-info', exam: 'badge-outline', result: 'badge-outline' };
+    return map[cat] || 'badge-outline';
+  }
+  function ntRenderBody(el, rawHtml) {
+    if (!el) return;
+    if (window.DOMPurify) {
+      el.innerHTML = window.DOMPurify.sanitize(rawHtml || '', {
+        ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#)/i,
+        FORBID_TAGS: ['style'],
+        FORBID_ATTR: ['style'],
+      });
+      // 외부 링크는 새 탭 + noopener
+      el.querySelectorAll('a[href]').forEach(function (a) {
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+      });
+    } else {
+      // DOMPurify 미로딩 시: 태그를 노출하지 않고 텍스트로 안전 표시
+      var tmp = document.createElement('div');
+      tmp.innerHTML = rawHtml || '';
+      el.textContent = tmp.textContent || '';
+    }
+  }
+  function ntRenderAttachments(el, attachments) {
+    if (!el) return;
+    if (!attachments || !attachments.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var html = '<div class="l">첨부파일 (' + attachments.length + ')</div>';
+    attachments.forEach(function (a) {
+      html += '<a href="' + ntEsc(a.download_url) + '" target="_blank" rel="noopener" download>' +
+        ntEsc(a.filename) +
+        ' <span style="color:var(--text-3);font-size:12px;">(' + ntFmtSize(a.size) + ')</span></a> ';
+    });
+    el.innerHTML = html;
+    el.style.display = '';
+  }
+  function openNoticeDetail(id) {
+    var listView = document.getElementById('listView');
+    var detailView = document.getElementById('detailView');
+    if (!listView || !detailView) return;
+    listView.classList.add('hidden');
+    detailView.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    var titleEl = document.getElementById('noticeDetailTitle');
+    var metaEl = document.getElementById('noticeDetailMeta');
+    var bodyEl = document.getElementById('noticeDetailBody');
+    var attachEl = document.getElementById('noticeDetailAttach');
+
+    if (titleEl) titleEl.textContent = '불러오는 중…';
+    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">로딩 중입니다.</p>';
+    if (attachEl) { attachEl.style.display = 'none'; attachEl.innerHTML = ''; }
+    if (history.replaceState) history.replaceState(null, '', 'notice.html?id=' + encodeURIComponent(id));
+
+    var sk = (window.TPKMNotices && TPKMNotices.sessionKey) ? TPKMNotices.sessionKey() : 'anon';
+    TopikApi.getNotice(id, sk).then(function (res) {
+      if (!res.ok) {
+        if (titleEl) titleEl.textContent = '공지를 불러올 수 없습니다';
+        if (bodyEl) bodyEl.innerHTML = '<p>' + ntEsc(TopikApi.parseError(res)) + '</p>';
+        return;
+      }
+      var nDoc = res.body;
+      if (titleEl) titleEl.textContent = nDoc.title;
+      if (metaEl) {
+        metaEl.innerHTML =
+          '<span class="badge ' + ntBadgeClass(nDoc.category) + '">' + ntEsc(nDoc.category_label) + '</span>' +
+          '<span>' + ntEsc(nDoc.date_formatted) + '</span>' +
+          '<span>조회 ' + ntEsc(nDoc.view_count) + '</span>';
+      }
+      ntRenderBody(bodyEl, nDoc.body_html || '');
+      ntRenderAttachments(attachEl, nDoc.attachments || []);
+    });
+  }
+  // fo-notices.js 의 기본 상세 렌더를 안전한 버전으로 교체 (목록 클릭·딥링크 모두 사용)
+  if (window.TPKMNotices) TPKMNotices.openDetail = openNoticeDetail;
+
+  function reloadNotices() {
+    var empty = document.getElementById('noticeEmpty');
+    if (empty) empty.style.display = 'none';
+    TPKMNotices.loadList({
+      category: activeCat,
+      q: searchQ,
+      onData: function (items) {
+        TPKMNotices.renderTableRows(tbody, items);
+        if (empty) empty.style.display = items.length ? 'none' : '';
+      },
+      onError: function (msg) {
+        tbody.innerHTML =
+          '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--danger);">' +
+          msg + '</td></tr>';
+      },
+      onFallback: function () {
+        tbody.innerHTML =
+          '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">공지를 불러올 수 없습니다.</td></tr>';
+      },
+    });
+  }
+
+  document.querySelectorAll('.filters .chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.querySelectorAll('.filters .chip').forEach(function (x) {
+        x.classList.remove('active');
+      });
+      c.classList.add('active');
+      activeCat = c.dataset.cat || 'all';
+      reloadNotices();
+    });
+  });
+
+  var searchTimer;
+  searchInput.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      searchQ = (searchInput.value || '').trim();
+      reloadNotices();
+    }, 300);
+  });
+
+  reloadNotices();
+
+  var openId = new URLSearchParams(location.search).get('id');
+  if (openId) TPKMNotices.openDetail(openId);
+</script>
+</body>
+</html>

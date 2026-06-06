@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>문의게시판 — 게시판 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .board-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .qna-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .qna-tabs button {
+    flex: 1; max-width: 120px;
+    padding: 10px 12px;
+    font-size: 14px; color: var(--text-3); font-weight: 500;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .qna-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  .board-tools {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .board-tools .left { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .board-tools .search { flex: 1; min-width: 160px; position: relative; }
+  .board-tools .search input {
+    width: 100%; height: 38px; padding: 0 14px 0 38px;
+    border: 1px solid var(--border); border-radius: 99px;
+    background: #fff; font-size: 13.5px;
+  }
+  .board-tools .search::before {
+    content: ""; position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7588' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+    background-repeat: no-repeat;
+  }
+  .board-tools .cat-select {
+    height: 38px; padding: 0 32px 0 12px; font-size: 13.5px;
+    background-color: #fff; border: 1px solid var(--border); border-radius: 99px;
+    min-width: 110px; width: auto;
+  }
+
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .list-view .col-num { width: 50px; text-align: center; color: var(--text-3); }
+  .list-view .col-cat { width: 70px; }
+  .list-view .col-author { width: 90px; color: var(--text-3); }
+  .list-view .col-date { width: 100px; text-align: right; color: var(--text-3); white-space: nowrap; }
+  .list-view .col-status { width: 100px; text-align: center; }
+  .list-view .lock { font-size: 12px; color: var(--text-4); margin-right: 4px; }
+  .list-view tr { cursor: pointer; }
+  @media (max-width: 768px) {
+    .list-view .col-num, .list-view .col-author, .list-view .col-date { display: none; }
+    .list-view .col-num-th, .list-view .col-author-th, .list-view .col-date-th { display: none; }
+  }
+
+  /* Secret password modal */
+  .secret-lock {
+    text-align: center; padding: 16px 0;
+  }
+  .secret-lock .ico-lock {
+    width: 56px; height: 56px;
+    background: var(--bg-3); color: var(--text-3);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin: 0 auto 12px;
+  }
+
+  /* Detail */
+  .write-form { max-width: 760px; margin: 0 auto; }
+  .detail-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .detail-head { padding: 22px 24px; border-bottom: 1px solid var(--border); }
+  .detail-head h2 { font-size: 20px; line-height: 1.4; }
+  .detail-head .meta { display: flex; gap: 12px; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--text-3); flex-wrap: wrap; }
+  .detail-body { padding: 24px; font-size: 14.5px; line-height: 1.8; color: var(--text-2); }
+  .detail-body p { margin-bottom: 14px; }
+
+  .reply-block {
+    margin: 0 24px 24px;
+    border: 1px solid #cfe0f1; border-radius: var(--radius);
+    background: var(--info-50); padding: 18px 20px;
+  }
+  .reply-block .who {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 600; color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .reply-block .who::before {
+    content: "답변"; padding: 2px 8px;
+    background: var(--primary); color: #fff;
+    font-size: 11px; font-weight: 700;
+    border-radius: 99px;
+  }
+  .reply-block .when { font-size: 12px; color: var(--text-3); margin-left: auto; font-weight: 400; }
+  .reply-block .body-r { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+</style>
+</head>
+<body data-require-login>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>게시판</span><span>문의게시판</span></div>
+      <h1>문의게시판</h1>
+      <p class="lead">접수·시험·기타 운영 관련 문의를 작성해 주세요. 일반/비밀 글로 작성 가능합니다.</p>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+
+    <!-- ============ List ============ -->
+    <section class="pane list-view active" id="listPane">
+      <div class="qna-tabs">
+        <button class="active">전체</button>
+        <button>일반</button>
+        <button>비밀</button>
+      </div>
+
+      <div class="board-tools">
+        <div class="left">
+          <select class="select cat-select">
+            <option>전체 카테고리</option>
+            <option>접수</option>
+            <option>시험</option>
+            <option>기타</option>
+          </select>
+          <div class="search"><input type="search" placeholder="제목·작성자 검색"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="show('writePane')">문의하기</button>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-num-th">번호</th>
+              <th>분류</th>
+              <th>제목</th>
+              <th class="col-author-th">작성자</th>
+              <th class="col-date-th">작성일</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="show('detailPane')">
+              <td class="col-num">78</td>
+              <td><span class="badge badge-outline">접수</span></td>
+              <td>응시료 수납처에서 영수증 발급이 안됩니다</td>
+              <td class="col-author">홍길동</td>
+              <td class="col-date">2026.01.20</td>
+              <td class="col-status"><span class="status status-approved">답변 완료</span></td>
+            </tr>
+            <tr onclick="TPKM.openModal('modalSecretLock')">
+              <td class="col-num">77</td>
+              <td><span class="badge badge-outline">기타</span></td>
+              <td><span class="lock">🔒</span> 비밀글 — 개인정보 변경 관련 문의</td>
+              <td class="col-author">L***</td>
+              <td class="col-date">2026.01.18</td>
+              <td class="col-status"><span class="status status-photo">답변 대기</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">76</td>
+              <td><span class="badge badge-outline">시험</span></td>
+              <td>시험 당일 비가 올 경우 입실 방법이 궁금합니다</td>
+              <td class="col-author">M***</td>
+              <td class="col-date">2026.01.17</td>
+              <td class="col-status"><span class="status status-approved">답변 완료</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">75</td>
+              <td><span class="badge badge-outline">접수</span></td>
+              <td>접수 후 회원정보 변경 가능 시점 문의</td>
+              <td class="col-author">N***</td>
+              <td class="col-date">2026.01.15</td>
+              <td class="col-status"><span class="status status-approved">답변 완료</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">74</td>
+              <td><span class="badge badge-outline">시험</span></td>
+              <td>쓰기 영역 답안지 작성 시 연필 사용 가능한가요?</td>
+              <td class="col-author">P***</td>
+              <td class="col-date">2026.01.10</td>
+              <td class="col-status"><span class="status status-approved">답변 완료</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="pager"><span class="disabled">‹</span><span class="current">1</span><a href="#">2</a><a href="#">3</a><a href="#">›</a></nav>
+    </section>
+
+    <!-- ============ Write ============ -->
+    <section class="pane write-form" id="writePane">
+      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+      <h2 class="h2" style="margin-bottom: 18px;">문의 작성</h2>
+
+      <div class="form-row">
+        <label class="label">카테고리 <span class="req">*</span></label>
+        <select class="select">
+          <option value="">선택</option>
+          <option>접수</option><option>시험</option><option>기타</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="label">공개 범위 <span class="req">*</span></label>
+        <div style="display: flex; gap: 16px;">
+          <label class="radio"><input type="radio" name="vis" checked><span class="box"></span><span>일반 (누구나 열람)</span></label>
+          <label class="radio"><input type="radio" name="vis" id="visSecret"><span class="box"></span><span>비밀 (작성자·관리자만)</span></label>
+        </div>
+      </div>
+
+      <div class="form-row hidden" id="secretPwRow">
+        <label class="label">비밀번호 <span class="req">*</span></label>
+        <input class="input" type="password" placeholder="4자리 이상" minlength="4">
+      </div>
+
+      <div class="form-row">
+        <label class="label">제목 <span class="req">*</span></label>
+        <input class="input" placeholder="제목 (100자 이내)" maxlength="100">
+      </div>
+
+      <div class="form-row">
+        <label class="label">내용 <span class="req">*</span></label>
+        <textarea class="textarea" rows="8" placeholder="문의 내용을 자세히 작성해 주세요."></textarea>
+      </div>
+
+      <div class="form-row">
+        <label class="label">첨부파일</label>
+        <div style="padding: 12px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-2); font-size: 12.5px; color: var(--text-3); text-align: center;">
+          jpg, png, pdf · 5MB 이하 · 최대 3개
+          <div style="margin-top: 8px;"><button type="button" class="btn btn-secondary btn-sm">파일 선택</button></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="show('listPane')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="alert('문의가 접수되었습니다.'); show('listPane');">제출</button>
+      </div>
+    </section>
+
+    <!-- ============ Detail ============ -->
+    <section class="pane" id="detailPane">
+      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+
+      <article class="detail-card">
+        <div class="detail-head">
+          <div style="display:flex; gap: 8px; margin-bottom: 10px;">
+            <span class="badge badge-outline">접수</span>
+            <span class="status status-approved">답변 완료</span>
+          </div>
+          <h2>응시료 수납처에서 영수증 발급이 안됩니다</h2>
+          <div class="meta">
+            <span>홍길동</span><span>·</span><span>2026.01.20</span><span>·</span><span>조회 56</span>
+          </div>
+        </div>
+        <div class="detail-body">
+          <p>안녕하세요. 어제 응시료 수납을 위해 안내된 양곤 XYZ 은행을 방문했습니다.</p>
+          <p>접수번호를 제시했으나 시스템에서 조회되지 않아 영수증 발급이 되지 않았습니다. 어떻게 해야 할까요?</p>
+        </div>
+
+        <div class="reply-block">
+          <div class="who"><span class="when">2026.01.20</span></div>
+          <div class="body-r">
+            안녕하세요. 운영자입니다.<br>
+            확인 결과, 접수 후 BO 시스템 동기화에 약 30분이 소요됩니다. 접수 직후 방문하신 경우 발생할 수 있는 현상입니다. 1시간 후 재방문하시면 정상적으로 영수증 발급이 가능합니다. 양해 부탁드립니다.
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<!-- 비밀글 잠금 해제 -->
+<div class="modal-backdrop" id="modalSecretLock">
+  <div class="modal">
+    <div class="modal-head"><h3>비밀글</h3></div>
+    <div class="modal-body">
+      <div class="secret-lock">
+        <div class="ico-lock">🔒</div>
+        <p>비밀글입니다. 작성자만 열람할 수 있습니다.</p>
+        <p class="body-sm" style="margin-top: 6px;">비밀번호를 입력해 주세요.</p>
+      </div>
+      <div class="form-row" style="margin-top: 12px;">
+        <input class="input" type="password" placeholder="비밀번호">
+      </div>
+      <p class="body-sm" style="text-align: center; font-size: 11.5px;">최대 5회 실패 시 30분간 잠깁니다.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalSecretLock')">닫기</button>
+      <button class="btn btn-primary">확인</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+  function show(id) {
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.getElementById('visSecret')?.addEventListener('change', function () {
+    document.getElementById('secretPwRow').classList.toggle('hidden', !this.checked);
+  });
+  document.querySelectorAll('input[name="vis"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const secret = document.getElementById('visSecret').checked;
+      document.getElementById('secretPwRow').classList.toggle('hidden', !secret);
+    });
+  });
+  document.querySelectorAll('.qna-tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.qna-tabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

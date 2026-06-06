@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TOPIK Myanmar — 한국어능력시험 미얀마</title>
+<meta name="description" content="한국어능력시험(TOPIK) 미얀마 시행 공식 안내·접수 사이트. 주미얀마 대한민국 대사관 운영.">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  /* ============ Hero ============ */
+  .hero {
+    background:
+      radial-gradient(1200px 600px at 100% 0%, rgba(10,77,140,0.10), transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, rgba(10,77,140,0.06), transparent 60%),
+      linear-gradient(180deg, #FBFCFE 0%, #F2F6FB 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 0 36px;
+  }
+  .hero-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .hero .round-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 99px;
+    font-size: 12.5px; color: var(--text-2);
+    width: fit-content;
+    box-shadow: var(--shadow-sm);
+  }
+  .hero .round-badge strong { color: var(--primary); font-weight: 700; }
+  .hero .round-badge::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success); animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(26,127,78,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(26,127,78,0); }
+  }
+  .hero h1 {
+    font-size: 30px; line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--text);
+  }
+  .hero h1 .accent { color: var(--primary); }
+  .hero p.lead {
+    color: var(--text-2);
+    font-size: 15.5px;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+  .hero-ctas { display: flex; flex-direction: column; gap: 8px; }
+  .hero-ctas .btn { width: 100%; }
+
+  /* D-Day card */
+  .dday {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .dday-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .dday-head .ttl { font-size: 13px; color: var(--text-3); font-weight: 500; }
+  .dday-head .ttl strong { color: var(--primary); font-weight: 700; }
+  .dday-head .live {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--accent); font-weight: 600;
+  }
+  .dday-head .live::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); animation: pulse-red 1.5s infinite;
+  }
+  @keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .dday-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .dday-cell {
+    background: var(--bg-2);
+    border-radius: var(--radius-sm);
+    padding: 14px 4px;
+    text-align: center;
+  }
+  .dday-cell .n {
+    font-family: 'Inter', sans-serif;
+    font-size: 28px; font-weight: 700; line-height: 1;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+  }
+  .dday-cell .u {
+    font-size: 11px; color: var(--text-3); margin-top: 4px; font-weight: 500;
+  }
+  .dday-foot {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-size: 12.5px; color: var(--text-3);
+    display: flex; justify-content: space-between;
+  }
+  .dday-foot strong { color: var(--text-2); font-weight: 600; }
+
+  @media (min-width: 768px) {
+    .hero { padding: 56px 0 64px; }
+    .hero h1 { font-size: 42px; }
+    .hero p.lead { font-size: 17px; }
+    .hero-ctas { flex-direction: row; }
+    .hero-ctas .btn { width: auto; min-width: 160px; }
+    .dday-cell .n { font-size: 36px; }
+  }
+  @media (min-width: 1024px) {
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      align-items: center;
+      gap: 64px;
+    }
+    .hero h1 { font-size: 48px; }
+  }
+
+  /* ============ Notice preview ============ */
+  .notice-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .notice-row:hover .ttl { color: var(--primary); }
+  .notice-row:last-child { border-bottom: 0; }
+  .notice-row .ttl {
+    font-size: 14.5px; font-weight: 500; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: color .15s var(--ease);
+  }
+  .notice-row .date { font-size: 12.5px; color: var(--text-3); font-family: 'Inter', sans-serif; }
+  @media (max-width: 600px) {
+    .notice-row { grid-template-columns: auto 1fr; gap: 8px; }
+    .notice-row .date { grid-column: 2; font-size: 11.5px; margin-top: 2px; }
+  }
+
+  /* ============ Schedule timeline ============ */
+  .timeline {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .tl-card {
+    position: relative;
+    padding: 18px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s var(--ease);
+  }
+  .tl-card .step-n {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 700;
+    color: var(--text-3); letter-spacing: 0.06em;
+  }
+  .tl-card .step-t {
+    font-size: 16px; font-weight: 700; margin-top: 4px;
+    color: var(--text);
+  }
+  .tl-card .step-d {
+    font-size: 13px; color: var(--text-3); margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .tl-card.active {
+    border-color: var(--primary);
+    background: var(--primary-50);
+  }
+  .tl-card.active .step-n { color: var(--primary); }
+  .tl-card.active .step-t { color: var(--primary-700); }
+  .tl-card.active::after {
+    content: "진행 중";
+    position: absolute; top: 12px; right: 12px;
+    font-size: 11px; font-weight: 700;
+    background: var(--primary); color: #fff;
+    padding: 3px 8px; border-radius: 99px;
+  }
+  .tl-card.done { background: var(--bg-2); opacity: 0.85; }
+  .tl-card.done .step-n { color: var(--success); }
+  .tl-card.done::after {
+    content: "완료";
+    position: absolute; top: 12px; right: 12px;
+    font-size: 11px; font-weight: 700;
+    background: var(--success-50); color: var(--success);
+    padding: 3px 8px; border-radius: 99px;
+  }
+  @media (min-width: 768px) { .timeline { grid-template-columns: repeat(4, 1fr); } }
+
+  /* ============ Quicklinks ============ */
+  .quicklinks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .ql {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    text-align: left;
+    transition: all .15s var(--ease);
+    display: flex; flex-direction: column; justify-content: space-between;
+    min-height: 110px;
+  }
+  .ql:hover { border-color: var(--primary); background: var(--primary-50); }
+  .ql .t { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .ql .d { font-size: 12px; color: var(--text-3); margin-top: 4px; line-height: 1.4; }
+  .ql .arrow {
+    margin-top: 12px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3);
+    transition: all .15s var(--ease);
+    align-self: flex-end;
+  }
+  .ql:hover .arrow { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .ql .arrow::after { content: "→"; font-size: 13px; }
+  @media (min-width: 768px) { .quicklinks { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+
+  /* ============ Section header ============ */
+  .sec-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  .sec-head h2 { font-size: 22px; }
+  .sec-head .more {
+    font-size: 13px; color: var(--text-3); font-weight: 500;
+  }
+  .sec-head .more:hover { color: var(--primary); }
+  .sec-head .more::after { content: " →"; }
+  @media (min-width: 768px) { .sec-head h2 { font-size: 28px; } }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <!-- ============ Hero ============ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div>
+          <div class="round-badge"><strong>제98회</strong> 한국어능력시험 (2026.04.12) 접수 진행 중</div>
+          <h1 style="margin-top:18px;">
+            미얀마에서 응시하는<br>
+            <span class="accent">한국어능력시험</span><br>
+            TOPIK 공식 접수
+          </h1>
+          <p class="lead" style="margin-top:14px;">
+            주미얀마 대한민국 대사관이 운영하는 TOPIK 공식 안내·접수 사이트입니다.
+            회원가입 후 온라인으로 접수하고, 오프라인 응시료 수납을 거쳐 수험번호를 받으세요.
+          </p>
+          <div class="hero-ctas" style="margin-top:24px;">
+            <a href="register.html" class="btn btn-primary btn-lg">시험 접수하기</a>
+            <a href="guide-overview.html" class="btn btn-secondary btn-lg">시험 안내 보기</a>
+          </div>
+        </div>
+
+        <!-- D-Day card -->
+        <div class="dday" aria-live="polite">
+          <div class="dday-head">
+            <div class="ttl"><strong>제98회</strong> 접수 마감까지</div>
+            <span class="live">LIVE</span>
+          </div>
+          <div class="dday-grid" id="ddayGrid">
+            <div class="dday-cell"><div class="n" id="dd-d">--</div><div class="u">DAYS</div></div>
+            <div class="dday-cell"><div class="n" id="dd-h">--</div><div class="u">HOURS</div></div>
+            <div class="dday-cell"><div class="n" id="dd-m">--</div><div class="u">MIN</div></div>
+            <div class="dday-cell"><div class="n" id="dd-s">--</div><div class="u">SEC</div></div>
+          </div>
+          <div class="dday-foot">
+            <span>접수 기간 <strong>2026.02.01 ~ 02.15</strong></span>
+            <span>시험일 <strong>2026.04.12</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Schedule timeline ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Schedule</div>
+          <h2 style="margin-top:6px;">제98회 시험 일정</h2>
+        </div>
+        <a href="guide-overview.html" class="more">전체 일정</a>
+      </div>
+      <div class="timeline">
+        <div class="tl-card active">
+          <div class="step-n">STEP 01</div>
+          <div class="step-t">원서 접수</div>
+          <div class="step-d">2026.02.01 — 02.15</div>
+        </div>
+        <div class="tl-card">
+          <div class="step-n">STEP 02</div>
+          <div class="step-t">시험 시행</div>
+          <div class="step-d">2026.04.12 (일)</div>
+        </div>
+        <div class="tl-card">
+          <div class="step-n">STEP 03</div>
+          <div class="step-t">합격 발표</div>
+          <div class="step-d">2026.05.28 (목)</div>
+        </div>
+        <div class="tl-card">
+          <div class="step-n">STEP 04</div>
+          <div class="step-t">성적표 발급</div>
+          <div class="step-d">2026.06.05 부터</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider-thick" aria-hidden="true">
+
+  <!-- ============ Notice preview ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Notice</div>
+          <h2 style="margin-top:6px;">공지사항</h2>
+        </div>
+        <a href="notice.html" class="more">더보기</a>
+      </div>
+
+      <div class="card">
+        <a href="notice.html" class="notice-row">
+          <span class="badge badge-important">중요</span>
+          <span class="ttl">제98회 TOPIK 미얀마 시행 접수 안내 — 응시료 수납처 변경 공지</span>
+          <span class="date">2026.01.20</span>
+        </a>
+        <a href="notice.html" class="notice-row">
+          <span class="badge badge-new">NEW</span>
+          <span class="ttl">2026년 TOPIK 시험 일정 안내 (제98회 ~ 제101회)</span>
+          <span class="date">2026.01.15</span>
+        </a>
+        <a href="notice.html" class="notice-row">
+          <span class="badge badge-outline">접수</span>
+          <span class="ttl">TOPIK Ⅰ·Ⅱ 동시 접수 시 응시료 안내</span>
+          <span class="date">2026.01.10</span>
+        </a>
+        <a href="notice.html" class="notice-row">
+          <span class="badge badge-outline">시험</span>
+          <span class="ttl">시험 당일 신분증 지참 및 입실 시간 안내</span>
+          <span class="date">2025.12.28</span>
+        </a>
+        <a href="notice.html" class="notice-row">
+          <span class="badge badge-outline">결과</span>
+          <span class="ttl">제97회 합격자 발표 및 성적표 발급 안내</span>
+          <span class="date">2025.12.15</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Quicklinks ============ -->
+  <section class="section section-bg">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Quick Links</div>
+          <h2 style="margin-top:6px;">바로가기</h2>
+        </div>
+      </div>
+      <div class="quicklinks">
+        <a href="register.html" class="ql">
+          <div>
+            <div class="t">시험 접수</div>
+            <div class="d">회차·급수를 선택해 접수</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+        <a href="mypage.html" class="ql">
+          <div>
+            <div class="t">접수 확인</div>
+            <div class="d">접수 상태 및 수험번호</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+        <a href="ticket.html" class="ql">
+          <div>
+            <div class="t">수험표 출력</div>
+            <div class="d">TOPIK 본부에서 출력</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+        <a href="refund-correction.html" class="ql">
+          <div>
+            <div class="t">환불·정보정정</div>
+            <div class="d">신청 및 진행 상태 확인</div>
+          </div>
+          <div class="arrow"></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ summary ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">FAQ</div>
+          <h2 style="margin-top:6px;">자주 묻는 질문</h2>
+        </div>
+        <a href="faq.html" class="more">전체 보기</a>
+      </div>
+
+      <div class="card accordion">
+        <details>
+          <summary>
+            <span class="q">TOPIK Ⅰ과 Ⅱ를 동시에 접수할 수 있나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">
+            네, 동일 회차 내에서 TOPIK Ⅰ과 TOPIK Ⅱ를 동시에 접수하실 수 있습니다. 두 시험은 동일한 시험장 코드로 부여되며, 응시료는 수준별로 각각 오프라인 수납됩니다.
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">응시료는 어떻게 납부하나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">
+            응시료는 온라인 결제가 아닌 <strong>오프라인 수납</strong>으로만 가능합니다. 공지사항에 안내된 수납처에서 직접 납부해 주시기 바랍니다. 수납이 확인된 후 수험번호가 부여됩니다.
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">접수 후 정보(이름·생년월일 등)를 잘못 입력했습니다.</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">
+            연락처·이메일·비밀번호·사진은 마이페이지에서 직접 수정하실 수 있습니다. 성명·생년월일·국적 등 본인 식별 정보 정정은 <a href="refund-correction.html" class="text-primary">환불·정보정정신청 게시판</a>을 통해 신청해 주세요.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+<script>
+  // D-Day countdown (target: 2026-02-15 23:59:59 GMT+6:30)
+  (function () {
+    const target = new Date('2026-02-15T23:59:59+06:30').getTime();
+    const el = {
+      d: document.getElementById('dd-d'),
+      h: document.getElementById('dd-h'),
+      m: document.getElementById('dd-m'),
+      s: document.getElementById('dd-s')
+    };
+    function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+    function tick() {
+      const now = Date.now();
+      let diff = Math.max(0, target - now);
+      const day = Math.floor(diff / 86400000); diff -= day * 86400000;
+      const hr  = Math.floor(diff / 3600000);  diff -= hr  * 3600000;
+      const min = Math.floor(diff / 60000);    diff -= min * 60000;
+      const sec = Math.floor(diff / 1000);
+      el.d.textContent = pad(day);
+      el.h.textContent = pad(hr);
+      el.m.textContent = pad(min);
+      el.s.textContent = pad(sec);
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+</body>
+</html>

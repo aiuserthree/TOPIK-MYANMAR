@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>답안 작성 요령 — TOPIK 규정 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .rule-block { margin-bottom: 32px; }
+  .rule-block h2 {
+    font-size: 18px; margin-bottom: 12px;
+    padding-left: 12px;
+    border-left: 3px solid var(--primary);
+    line-height: 1.3;
+  }
+  .dos-donts { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .dd-col {
+    padding: 18px;
+    border-radius: var(--radius);
+    background: #fff; border: 1px solid var(--border);
+  }
+  .dd-col.do  { border-color: #bce3cf; background: #f6fbf8; }
+  .dd-col.dont{ border-color: #f5c8ce; background: #fdf6f7; }
+  .dd-col h3 {
+    font-size: 14px; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px dashed var(--border);
+  }
+  .dd-col.do h3   { color: var(--success); }
+  .dd-col.dont h3 { color: var(--danger); }
+  .dd-col li { font-size: 13.5px; color: var(--text-2); line-height: 1.7; padding-left: 16px; position: relative; }
+  .dd-col.do li::before   { content: "✓"; position: absolute; left: 0; color: var(--success); font-weight: 700; }
+  .dd-col.dont li::before { content: "✕"; position: absolute; left: 0; color: var(--danger);  font-weight: 700; }
+  @media (min-width: 768px) { .dos-donts { grid-template-columns: 1fr 1fr; } }
+
+  /* OMR illustration */
+  .omr-illust {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .omr-row {
+    display: inline-flex; align-items: center; gap: 14px;
+    padding: 12px 18px;
+    background: var(--bg-2);
+    border-radius: var(--radius-sm);
+  }
+  .omr-row .num {
+    font-family: 'Inter', sans-serif; font-weight: 700;
+    color: var(--text); font-size: 14px;
+  }
+  .omr-row .bubble {
+    width: 24px; height: 24px;
+    border: 1.5px solid var(--text-3);
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif; font-size: 12px;
+    color: var(--text-3);
+  }
+  .omr-row .bubble.fill { background: var(--text); color: #fff; border-color: var(--text); }
+  .omr-row .bubble.bad  { background: linear-gradient(45deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%); color: var(--danger); border-color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>TOPIK 규정</span><span>답안 작성 요령</span></div>
+      <h1>답안 작성 요령</h1>
+      <p class="lead">OMR 마킹·쓰기 답안지 작성법 및 사용 가능한 필기구 안내입니다.</p>
+
+      <nav class="subnav" aria-label="TOPIK 규정 하위 메뉴">
+        <a href="rules-notice.html">유의 사항</a>
+        <a href="rules-answer.html" class="active">답안 작성 요령</a>
+        <a href="rules-fee.html">응시료 규정</a>
+        <a href="rules-id.html">신분증 규정</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container" style="max-width: 880px;">
+
+      <!-- 필기구 -->
+      <div class="rule-block">
+        <h2>사용 가능한 필기구</h2>
+        <div class="callout">
+          <div class="ico"></div>
+          <div>
+            <strong>검정색 컴퓨터용 사인펜</strong>만 사용 가능합니다. 시험장에서 제공되며, 응시자 본인 휴대도 가능합니다.
+            <strong>수정테이프·수정액·연필·볼펜은 사용 금지</strong>입니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- OMR -->
+      <div class="rule-block">
+        <h2>OMR 카드 마킹 방법</h2>
+
+        <div class="omr-illust">
+          <div class="omr-row" style="margin-bottom: 12px;">
+            <span class="num">1.</span>
+            <span class="bubble">①</span>
+            <span class="bubble fill">②</span>
+            <span class="bubble">③</span>
+            <span class="bubble">④</span>
+          </div>
+          <p class="body-sm" style="font-size: 12.5px; margin-bottom: 12px;">올바른 예 — 원 안을 완전히 채워 진하게 마킹</p>
+
+          <div class="omr-row" style="margin-bottom: 12px;">
+            <span class="num">2.</span>
+            <span class="bubble">①</span>
+            <span class="bubble bad">②</span>
+            <span class="bubble">③</span>
+            <span class="bubble">④</span>
+          </div>
+          <p class="body-sm" style="font-size: 12.5px; color: var(--danger);">잘못된 예 — 빗금·점·체크 표시는 인식되지 않습니다</p>
+        </div>
+
+        <div class="dos-donts">
+          <div class="dd-col do">
+            <h3>해야 하는 것</h3>
+            <ul>
+              <li>원의 안쪽을 완전히 채워 진하게 마킹</li>
+              <li>검정색 컴퓨터용 사인펜 사용</li>
+              <li>한 문항당 한 개의 답만 마킹</li>
+              <li>응시자 코드·수험번호 정확히 마킹</li>
+            </ul>
+          </div>
+          <div class="dd-col dont">
+            <h3>하지 말아야 할 것</h3>
+            <ul>
+              <li>빗금(/), 점(.), 체크(✓) 표시 사용</li>
+              <li>수정테이프·수정액 사용</li>
+              <li>한 문항에 두 개 이상 마킹 (오답 처리)</li>
+              <li>OMR 카드 접거나 구기기</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 쓰기 답안 -->
+      <div class="rule-block">
+        <h2>쓰기 답안지 작성 (TOPIK Ⅱ)</h2>
+        <div class="callout callout-neutral">
+          <div class="ico"></div>
+          <div>
+            쓰기 영역은 별도 답안지에 직접 손글씨로 작성합니다. 200~300자 단문(2문항)과 600~700자 작문(2문항)으로 구성되며,
+            <strong>한 칸에 한 글자</strong>씩 원고지 규칙에 따라 작성해 주세요.
+          </div>
+        </div>
+        <div class="rule-list" style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); margin-top: 12px; overflow:hidden;">
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 문장 부호(., ?, !)는 한 칸을 차지합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 문단을 바꿀 때 첫 칸은 비우고 두 번째 칸부터 작성합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 알파벳·숫자는 한 칸에 두 글자씩 작성합니다.</div>
+          <div style="padding:14px 16px; font-size:14px;">· 글자 수가 부족하거나 초과해도 채점됩니다. 다만 권장 분량 유지를 권합니다.</div>
+        </div>
+      </div>
+
+      <!-- 응시자 코드 -->
+      <div class="rule-block">
+        <h2>응시자 코드·수험번호 기재</h2>
+        <div class="rule-list" style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 수험표에 기재된 <strong>수험번호 8자리</strong>를 OMR 상단 해당 칸에 정확히 마킹합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 응시자 코드는 시험장에서 별도 안내되는 코드를 마킹합니다.</div>
+          <div style="padding:14px 16px; font-size:14px;">· 잘못 마킹된 코드·번호로 인한 채점 오류는 응시자 본인 책임입니다.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

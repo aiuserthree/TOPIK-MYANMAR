@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>환불·정보정정신청 — 게시판 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .board-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  .board-tools {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .board-tools .filters { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .board-tools .search { flex: 1; min-width: 180px; position: relative; }
+  .board-tools .search input {
+    width: 100%; height: 38px; padding: 0 14px 0 38px;
+    border: 1px solid var(--border); border-radius: 99px;
+    background: #fff; font-size: 13.5px;
+  }
+  .board-tools .search::before {
+    content: ""; position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7588' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+    background-repeat: no-repeat;
+  }
+  .board-tools .write { flex: 0 0 auto; }
+
+  /* List */
+  .pane { display: none; }
+  .pane.active { display: block; }
+  .list-view .col-num { width: 50px; text-align: center; color: var(--text-3); }
+  .list-view .col-type { width: 80px; }
+  .list-view .col-author { width: 90px; color: var(--text-3); }
+  .list-view .col-date { width: 100px; text-align: right; color: var(--text-3); white-space: nowrap; }
+  .list-view .col-status { width: 90px; text-align: center; }
+  .list-view .lock { font-size: 12px; color: var(--text-4); margin-right: 4px; }
+  .list-view tr { cursor: pointer; }
+  @media (max-width: 768px) {
+    .list-view .col-num, .list-view .col-author, .list-view .col-date { display: none; }
+    .list-view .col-num-th, .list-view .col-author-th, .list-view .col-date-th { display: none; }
+  }
+  .badge-type-rfd { background: #fff4e3; color: #b86e00; border: 1px solid #f1d9aa; }
+  .badge-type-cor { background: #eaf2fb; color: var(--primary); border: 1px solid #cfe0f1; }
+
+  /* Write form */
+  .write-form { max-width: 760px; margin: 0 auto; }
+  .file-list {
+    padding: 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-2);
+    font-size: 12.5px;
+    color: var(--text-3);
+    text-align: center;
+  }
+
+  /* Detail */
+  .detail-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .detail-head { padding: 22px 24px; border-bottom: 1px solid var(--border); }
+  .detail-head h2 { font-size: 20px; line-height: 1.4; }
+  .detail-head .meta {
+    display: flex; gap: 12px; align-items: center; margin-top: 10px;
+    font-size: 12.5px; color: var(--text-3); flex-wrap: wrap;
+  }
+  .detail-body { padding: 24px; font-size: 14.5px; line-height: 1.8; color: var(--text-2); }
+  .detail-body p { margin-bottom: 14px; }
+
+  .reply-block {
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--info-50);
+    padding: 18px 20px;
+  }
+  .reply-block .who {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 600; color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .reply-block .who::before {
+    content: "관리자 답변"; padding: 2px 8px;
+    background: var(--primary); color: #fff;
+    font-size: 11px; font-weight: 700;
+    border-radius: 99px;
+  }
+  .reply-block .when { font-size: 12px; color: var(--text-3); margin-left: auto; font-weight: 400; }
+  .reply-block .body-r { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+
+  /* Comments */
+  .comments {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding: 20px 0;
+  }
+  .comments h4 { font-size: 14px; margin-bottom: 12px; }
+  .comment {
+    padding: 14px 16px;
+    background: var(--bg-2);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+  .comment.reply { margin-left: 24px; background: #fff; border: 1px solid var(--border); }
+  .comment .c-head {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 12.5px; color: var(--text-3); margin-bottom: 6px;
+  }
+  .comment .c-head .author { color: var(--text); font-weight: 600; }
+  .comment .c-head .lock { font-size: 11px; }
+  .comment .c-body { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+  .comment .c-actions {
+    margin-top: 6px; display: flex; gap: 8px;
+    font-size: 12px; color: var(--text-3);
+  }
+  .comment .c-actions a:hover { color: var(--primary); }
+
+  .comment-write {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .comment-write textarea {
+    flex: 1; min-height: 60px;
+    padding: 10px 12px; font-size: 13.5px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); resize: vertical;
+    background: #fff;
+  }
+
+  .status-step {
+    background: var(--bg-2);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .status-step .l { font-size: 12px; color: var(--text-3); margin-bottom: 8px; }
+  .status-bar {
+    display: flex; gap: 4px;
+  }
+  .status-bar .seg {
+    flex: 1; height: 4px; border-radius: 2px; background: var(--border);
+  }
+  .status-bar .seg.done { background: var(--primary); }
+  .status-step .steps-row {
+    display: flex; justify-content: space-between; margin-top: 10px;
+    font-size: 11.5px; color: var(--text-3);
+  }
+  .status-step .steps-row .cur { color: var(--primary); font-weight: 700; }
+</style>
+</head>
+<body data-require-login>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>게시판</span><span>환불·정보정정신청</span></div>
+      <h1>환불·정보정정신청</h1>
+      <p class="lead">응시료 환불 또는 회원 본인 정보 정정을 신청하는 게시판입니다.</p>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+
+    <!-- ============ List ============ -->
+    <section class="pane list-view active" id="listPane">
+      <div class="board-tools">
+        <div class="filters">
+          <button class="chip active">전체</button>
+          <button class="chip">환불</button>
+          <button class="chip">정보정정</button>
+        </div>
+        <div class="search"><input type="search" placeholder="제목·작성자 검색"></div>
+        <button class="btn btn-primary btn-sm write" onclick="show('writePane')">글쓰기</button>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-num-th">번호</th>
+              <th>유형</th>
+              <th>제목</th>
+              <th class="col-author-th">작성자</th>
+              <th class="col-date-th">작성일</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr onclick="show('detailPane')">
+              <td class="col-num">42</td>
+              <td><span class="badge badge-type-rfd">환불</span></td>
+              <td>제97회 TOPIK Ⅱ 응시료 환불 요청드립니다</td>
+              <td class="col-author">홍길동</td>
+              <td class="col-date">2026.01.18</td>
+              <td class="col-status"><span class="status status-photo">검토 중</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">41</td>
+              <td><span class="badge badge-type-cor">정보정정</span></td>
+              <td><span class="lock">🔒</span> 영문 성명 표기 정정 신청 (여권 기준)</td>
+              <td class="col-author">A***</td>
+              <td class="col-date">2026.01.15</td>
+              <td class="col-status"><span class="status status-approved">처리완료</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">40</td>
+              <td><span class="badge badge-type-rfd">환불</span></td>
+              <td>제96회 응시료 환불 안내 받았습니다</td>
+              <td class="col-author">B***</td>
+              <td class="col-date">2026.01.10</td>
+              <td class="col-status"><span class="status status-approved">처리완료</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">39</td>
+              <td><span class="badge badge-type-cor">정보정정</span></td>
+              <td><span class="lock">🔒</span> 생년월일 정정 요청합니다</td>
+              <td class="col-author">C***</td>
+              <td class="col-date">2026.01.08</td>
+              <td class="col-status"><span class="status status-applied">접수</span></td>
+            </tr>
+            <tr>
+              <td class="col-num">38</td>
+              <td><span class="badge badge-type-rfd">환불</span></td>
+              <td>접수 취소 후 환불 진행 상황 문의</td>
+              <td class="col-author">D***</td>
+              <td class="col-date">2026.01.05</td>
+              <td class="col-status"><span class="status status-rejected">반려</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="pager"><span class="disabled">‹</span><span class="current">1</span><a href="#">2</a><a href="#">3</a><a href="#">›</a></nav>
+    </section>
+
+    <!-- ============ Write ============ -->
+    <section class="pane write-form" id="writePane">
+      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+
+      <h2 class="h2" style="margin-bottom: 18px;">새 글 작성</h2>
+
+      <div class="form-row">
+        <label class="label">유형 <span class="req">*</span></label>
+        <div style="display: flex; gap: 16px;">
+          <label class="radio"><input type="radio" name="type" checked><span class="box"></span><span>환불</span></label>
+          <label class="radio"><input type="radio" name="type"><span class="box"></span><span>정보정정</span></label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="label">제목 <span class="req">*</span></label>
+        <input class="input" placeholder="제목 (100자 이내)" maxlength="100">
+      </div>
+
+      <div class="form-row">
+        <label class="label">내용 <span class="req">*</span></label>
+        <textarea class="textarea" rows="8" placeholder="환불·정정 사유, 접수번호, 회차 등을 자세히 작성해 주세요."></textarea>
+      </div>
+
+      <div class="form-row">
+        <label class="label">첨부파일</label>
+        <div class="file-list">
+          영수증·신분증 사본 등 (jpg, png, pdf · 5MB 이하 · 최대 5개)
+          <div style="margin-top: 8px;"><button type="button" class="btn btn-secondary btn-sm">파일 선택</button></div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="check"><input type="checkbox" id="secretCb"><span class="box"></span><span>비밀글로 작성</span></label>
+        <span class="hint">비밀글 게시물의 댓글·대댓글은 자동으로 비밀글로 처리됩니다.</span>
+      </div>
+
+      <div class="form-row hidden" id="secretPwRow">
+        <label class="label">비밀번호 <span class="req">*</span></label>
+        <input class="input" type="password" placeholder="4자리 이상" minlength="4">
+      </div>
+
+      <div class="form-row">
+        <label class="check"><input type="checkbox"><span class="box"></span><span><span class="req">[필수]</span> 개인정보 처리에 동의합니다 (정정 신청 시 신원 식별 정보 처리 동의)</span></label>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="show('listPane')">취소</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="alert('신청이 접수되었습니다.'); show('listPane');">제출</button>
+      </div>
+    </section>
+
+    <!-- ============ Detail ============ -->
+    <section class="pane" id="detailPane">
+      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+
+      <article class="detail-card">
+        <div class="detail-head">
+          <div style="display:flex; gap: 8px; margin-bottom: 10px;">
+            <span class="badge badge-type-rfd">환불</span>
+            <span class="status status-photo">검토 중</span>
+          </div>
+          <h2>제97회 TOPIK Ⅱ 응시료 환불 요청드립니다</h2>
+          <div class="meta">
+            <span>홍길동</span><span>·</span><span>2026.01.18</span><span>·</span><span>접수번호 TPKM-RFD-042</span>
+          </div>
+        </div>
+
+        <div style="padding: 18px 24px 0;">
+          <div class="status-step">
+            <div class="l">처리 단계</div>
+            <div class="status-bar">
+              <div class="seg done"></div>
+              <div class="seg done"></div>
+              <div class="seg"></div>
+              <div class="seg"></div>
+            </div>
+            <div class="steps-row">
+              <span class="cur">접수</span>
+              <span class="cur">검토 중</span>
+              <span>승인</span>
+              <span>처리 완료</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-body">
+          <p>안녕하세요. 제97회 TOPIK Ⅱ 응시자 홍길동입니다.</p>
+          <p>업무 일정상 시험 응시가 어려워져 환불을 신청드립니다. 응시료 수납 영수증과 신분증 사본을 첨부합니다. 검토 부탁드립니다.</p>
+        </div>
+
+        <div style="padding: 0 24px 20px;">
+          <div class="reply-block">
+            <div class="who"><span class="when">2026.01.19</span></div>
+            <div class="body-r">
+              안녕하세요. 환불 신청 접수되었습니다. 첨부해주신 영수증을 확인하였으며, 환불률 60% 기준으로 검토 중입니다. 검토 완료 시 별도 안내드리겠습니다.
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 0 24px 24px;">
+          <div class="comments">
+            <h4>댓글 <span style="color: var(--text-3); font-weight: 500;">2</span></h4>
+
+            <div class="comment">
+              <div class="c-head"><span class="author">홍길동</span><span>·</span><span>2026.01.19</span></div>
+              <div class="c-body">검토해 주셔서 감사합니다. 환불은 어떤 계좌로 입금되나요?</div>
+              <div class="c-actions"><a href="javascript:void(0)">답글</a></div>
+            </div>
+
+            <div class="comment reply">
+              <div class="c-head"><span class="author">운영자</span> <span class="badge badge-info" style="height:18px; padding:0 6px; font-size:10px;">관리자</span><span>·</span><span>2026.01.19</span></div>
+              <div class="c-body">수납 시 입력하신 계좌로 환불됩니다. 변경이 필요하시면 추가 댓글로 알려주세요.</div>
+            </div>
+
+            <div class="comment-write">
+              <textarea placeholder="댓글을 입력하세요"></textarea>
+              <button class="btn btn-primary">등록</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+<script>
+  function show(id) {
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.getElementById('secretCb')?.addEventListener('change', function () {
+    document.getElementById('secretPwRow').classList.toggle('hidden', !this.checked);
+  });
+  document.querySelectorAll('.filters .chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.filters .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

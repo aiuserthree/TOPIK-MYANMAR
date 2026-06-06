@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>접수 확인 — 마이페이지 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .my-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .me-card {
+    display: flex; gap: 16px; align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-700));
+    border-radius: var(--radius-lg);
+    color: #fff;
+    margin-bottom: 24px;
+  }
+  .me-card .avatar {
+    width: 60px; height: 80px;
+    background: rgba(255,255,255,0.15);
+    border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: rgba(255,255,255,0.7);
+    flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .me-card .info { flex: 1; }
+  .me-card h2 { color: #fff; font-size: 20px; }
+  .me-card .en { font-family: 'Inter', sans-serif; font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  .me-card .meta { font-size: 12.5px; color: rgba(255,255,255,0.75); margin-top: 8px; }
+  .me-card .edit { font-size: 12px; color: rgba(255,255,255,0.9); padding: 6px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 99px; }
+  .me-card .edit:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+  .my-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .my-tabs button {
+    flex: 0 0 auto; padding: 12px 16px;
+    font-size: 14px; color: var(--text-3); font-weight: 500;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .my-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .my-tabs button .ct {
+    display: inline-block; margin-left: 4px;
+    background: var(--bg-3); color: var(--text-3);
+    padding: 1px 7px; border-radius: 99px;
+    font-size: 11px; font-weight: 600;
+  }
+  .my-tabs button.active .ct { background: var(--primary); color: #fff; }
+
+  /* Application card */
+  .app-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .app-head {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .app-head .lt h3 {
+    font-size: 17px; letter-spacing: -0.015em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .app-head .lt .round-n {
+    font-family: 'Inter', sans-serif; font-weight: 800;
+    color: var(--primary);
+  }
+  .app-head .lt .lvls { font-size: 14px; color: var(--text-2); font-weight: 500; }
+  .app-head .lt .meta { font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
+  .app-head .rt { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .app-head .rt .apply-n {
+    font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .app-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 16px 18px;
+    gap: 12px;
+  }
+  .app-grid .it .l { font-size: 12px; color: var(--text-3); margin-bottom: 2px; }
+  .app-grid .it .v {
+    font-size: 14px; color: var(--text); font-weight: 600;
+  }
+  .app-grid .it .v.exam-num {
+    font-family: 'Inter', sans-serif; letter-spacing: 0.04em;
+    color: var(--st-number);
+  }
+  .app-grid .it .v.pending {
+    color: var(--text-4); font-style: italic; font-weight: 500;
+  }
+  @media (min-width: 600px) { .app-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .app-actions {
+    padding: 12px 18px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .app-actions .btn { flex: 1; min-width: 110px; }
+  @media (min-width: 600px) {
+    .app-actions { justify-content: flex-end; }
+    .app-actions .btn { flex: 0 0 auto; }
+  }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-2);
+    border-radius: var(--radius-lg);
+    color: var(--text-3);
+  }
+  .empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text-2); }
+  .empty p { font-size: 13.5px; margin-bottom: 16px; }
+</style>
+</head>
+<body data-require-login>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <div class="my-wrap">
+
+    <!-- 회원 카드 -->
+    <div class="me-card">
+      <div class="avatar">PHOTO</div>
+      <div class="info">
+        <h2>홍길동</h2>
+        <div class="en">HONG GILDONG</div>
+        <div class="meta">+95 9 1234 5678 · user@example.com</div>
+      </div>
+      <a href="mypage-profile.html" class="edit">내정보 수정</a>
+    </div>
+
+    <div class="my-tabs">
+      <button class="active" data-tab="active">진행 중인 접수 <span class="ct">2</span></button>
+      <button data-tab="past">지난 접수 <span class="ct">3</span></button>
+    </div>
+
+    <section class="tab-pane active" data-tab="active">
+
+      <!-- 카드 1: 수험번호 부여됨 -->
+      <div class="app-card">
+        <div class="app-head">
+          <div class="lt">
+            <h3><span class="round-n">제98회</span> <span class="lvls">TOPIK Ⅰ · TOPIK Ⅱ (동시 접수)</span></h3>
+            <div class="meta">시험일 2026.04.12 (일) · 양곤 시험장</div>
+          </div>
+          <div class="rt">
+            <span class="status status-number">수험번호 부여</span>
+            <span class="apply-n">접수번호 TPKM-98-001234</span>
+          </div>
+        </div>
+        <div class="app-grid">
+          <div class="it"><div class="l">수험번호</div><div class="v exam-num">98011234</div></div>
+          <div class="it"><div class="l">사진 심사</div><div class="v" style="color: var(--success);">승인 완료</div></div>
+          <div class="it"><div class="l">응시료 수납</div><div class="v" style="color: var(--success);">완료</div></div>
+          <div class="it"><div class="l">접수일</div><div class="v" style="color:var(--text-2); font-weight:500;">2026.02.03</div></div>
+        </div>
+        <div class="app-actions">
+          <button class="btn btn-secondary btn-sm" onclick="TPKM.openModal('modalConfirm')">접수 확인증</button>
+          <a href="ticket.html" class="btn btn-primary btn-sm">수험표 출력</a>
+        </div>
+      </div>
+
+      <!-- 카드 2: 사진 심사 중 -->
+      <div class="app-card">
+        <div class="app-head">
+          <div class="lt">
+            <h3><span class="round-n">제99회</span> <span class="lvls">TOPIK Ⅱ</span></h3>
+            <div class="meta">시험일 2026.07.05 (일) · 양곤 시험장</div>
+          </div>
+          <div class="rt">
+            <span class="status status-photo">사진 심사 중</span>
+            <span class="apply-n">접수번호 TPKM-99-000128</span>
+          </div>
+        </div>
+        <div class="app-grid">
+          <div class="it"><div class="l">수험번호</div><div class="v pending">부여 전</div></div>
+          <div class="it"><div class="l">사진 심사</div><div class="v" style="color: var(--st-photo);">심사 중</div></div>
+          <div class="it"><div class="l">응시료 수납</div><div class="v" style="color: var(--st-pay);">대기</div></div>
+          <div class="it"><div class="l">접수일</div><div class="v" style="color:var(--text-2); font-weight:500;">2026.05.04</div></div>
+        </div>
+        <div class="app-actions">
+          <button class="btn btn-secondary btn-sm" onclick="TPKM.openModal('modalConfirm')">접수 확인증</button>
+          <button class="btn btn-ghost btn-sm" onclick="TPKM.openModal('modalCancel')">접수 취소</button>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="tab-pane" data-tab="past" style="display:none;">
+      <!-- 지난 접수 -->
+      <div class="app-card">
+        <div class="app-head">
+          <div class="lt">
+            <h3><span class="round-n">제97회</span> <span class="lvls">TOPIK Ⅰ</span></h3>
+            <div class="meta">시험일 2025.10.19 · 양곤 시험장</div>
+          </div>
+          <div class="rt">
+            <span class="status status-approved">응시 완료</span>
+            <span class="apply-n">접수번호 TPKM-97-008842</span>
+          </div>
+        </div>
+        <div class="app-grid">
+          <div class="it"><div class="l">수험번호</div><div class="v exam-num">97018842</div></div>
+          <div class="it"><div class="l">합격 등급</div><div class="v" style="color:var(--primary);">2급</div></div>
+          <div class="it"><div class="l">총점</div><div class="v">156 / 200</div></div>
+          <div class="it"><div class="l">발표일</div><div class="v" style="color:var(--text-2); font-weight:500;">2025.12.04</div></div>
+        </div>
+      </div>
+
+      <div class="app-card">
+        <div class="app-head">
+          <div class="lt">
+            <h3><span class="round-n">제96회</span> <span class="lvls">TOPIK Ⅰ</span></h3>
+            <div class="meta">시험일 2025.07.13 · 양곤 시험장</div>
+          </div>
+          <div class="rt">
+            <span class="status status-cancel">취소됨</span>
+          </div>
+        </div>
+        <div class="app-grid">
+          <div class="it"><div class="l">취소 사유</div><div class="v" style="font-weight:500; color:var(--text-2);">본인 취소 (수납 전)</div></div>
+          <div class="it"><div class="l">취소일</div><div class="v" style="color:var(--text-2); font-weight:500;">2025.05.10</div></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<!-- 접수 확인증 모달 -->
+<div class="modal-backdrop" id="modalConfirm">
+  <div class="modal" style="max-width: 540px;">
+    <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>접수 확인증</h3>
+      <button onclick="window.print()" class="btn btn-text btn-sm">인쇄</button>
+    </div>
+    <div class="modal-body">
+      <table class="table" style="margin: 0;">
+        <tbody style="font-size: 13.5px;">
+          <tr><th style="width: 110px;">회차</th><td>제98회 TOPIK</td></tr>
+          <tr><th>접수번호</th><td style="font-family:'Inter',sans-serif;">TPKM-98-001234</td></tr>
+          <tr><th>수험번호</th><td style="font-family:'Inter',sans-serif; color: var(--st-number); font-weight:700;">98011234</td></tr>
+          <tr><th>응시 급수</th><td>TOPIK Ⅰ · TOPIK Ⅱ</td></tr>
+          <tr><th>접수일</th><td>2026.02.03</td></tr>
+          <tr><th>응시자</th><td>홍길동 / HONG GILDONG</td></tr>
+          <tr><th>생년월일</th><td>1996-01-15</td></tr>
+          <tr><th>수납 상태</th><td><span class="status status-approved">완료</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalConfirm')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 취소 confirm 모달 -->
+<div class="modal-backdrop" id="modalCancel">
+  <div class="modal">
+    <div class="modal-head"><h3>접수를 취소하시겠습니까?</h3></div>
+    <div class="modal-body">
+      <p>접수를 취소하시면 사진 심사가 중단되며, 다시 접수하시려면 처음부터 진행해야 합니다.</p>
+      <div class="callout callout-warning" style="margin-top: 14px;">
+        <div class="ico"></div>
+        <div>
+          <strong>취소는 오프라인 수납 전까지만 가능합니다.</strong>
+          수납 완료 후에는 <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.
+          환불 정책은 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>을 참고해 주세요.
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalCancel')">닫기</button>
+      <button class="btn btn-danger" onclick="TPKM.closeModal('modalCancel'); alert('접수가 취소되었습니다.');">접수 취소</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+  document.querySelectorAll('.my-tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.my-tabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(p => p.style.display = (p.dataset.tab === b.dataset.tab ? '' : 'none'));
+    });
+  });
+</script>
+</body>
+</html>

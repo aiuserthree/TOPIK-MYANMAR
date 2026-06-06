@@ -286,18 +286,20 @@
         <select class="select" id="su-purpose"><option value="">선택</option></select>
       </div>
 
-      <div class="form-row">
-        <label class="label">비밀번호 <span class="req">*</span></label>
-        <input class="input" type="password" id="su-pw" placeholder="영문+숫자+특수문자 8자 이상">
-        <div class="pw-strength" id="pwBar">
-          <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+      <div id="pw-section">
+        <div class="form-row">
+          <label class="label">비밀번호 <span class="req">*</span></label>
+          <input class="input" type="password" id="su-pw" placeholder="영문+숫자+특수문자 8자 이상">
+          <div class="pw-strength" id="pwBar">
+            <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
+          </div>
+          <div class="pw-meta" id="pwMeta">8자 이상 / 영문·숫자·특수문자 조합 권장</div>
         </div>
-        <div class="pw-meta" id="pwMeta">8자 이상 / 영문·숫자·특수문자 조합 권장</div>
-      </div>
 
-      <div class="form-row">
-        <label class="label">비밀번호 확인 <span class="req">*</span></label>
-        <input class="input" type="password" id="su-pw2" placeholder="동일한 비밀번호를 다시 입력">
+        <div class="form-row">
+          <label class="label">비밀번호 확인 <span class="req">*</span></label>
+          <input class="input" type="password" id="su-pw2" placeholder="동일한 비밀번호를 다시 입력">
+        </div>
       </div>
 
       <div class="form-row">
@@ -404,6 +406,13 @@
   var verifiedEmail = '';
   var verificationToken = '';
   var signupBusy = false;
+  var isGoogleSignup = false;
+
+  function setGoogleSignupMode(on) {
+    isGoogleSignup = !!on;
+    var pw = document.getElementById('pw-section');
+    if (pw) pw.style.display = isGoogleSignup ? 'none' : '';
+  }
 
   /** Policy: 정책_합의_워크시트 §2.9 — API MIN_SIGNUP_AGE_YEARS 와 동일 */
   var MIN_SIGNUP_AGE_YEARS = 14;
@@ -522,11 +531,13 @@
           !document.getElementById('su-purpose').value) {
         showSignupErr('직업·응시동기·응시목적을 선택해 주세요.'); return;
       }
-      if (!pw || pw.length < 8) {
-        showSignupErr('비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.'); return;
-      }
-      if (pw !== pw2) {
-        showSignupErr('비밀번호 확인이 일치하지 않습니다.'); return;
+      if (!isGoogleSignup) {
+        if (!pw || pw.length < 8) {
+          showSignupErr('비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.'); return;
+        }
+        if (pw !== pw2) {
+          showSignupErr('비밀번호 확인이 일치하지 않습니다.'); return;
+        }
       }
       var photoState = signupPhotoCtrl && signupPhotoCtrl.getState ? signupPhotoCtrl.getState() : {};
       var dataUrl = photoState.dataUrl || '';
@@ -611,6 +622,7 @@
       }
       verifiedEmail = res.body.email || e;
       verificationToken = res.body.verification_token || '';
+      setGoogleSignupMode(false);
       document.getElementById('emailOk').classList.remove('hidden');
       document.getElementById('btnGoStep2').disabled = false;
       document.getElementById('su-email-display').value = verifiedEmail;
@@ -747,10 +759,11 @@
         if (!res.ok) {
           if (res.status === 403) showSignupErr(tr.inactive);
           else if (res.status === 503) showSignupErr(tr.disabled);
-          else showSignupErr(tr.fail);
+          else showSignupErr(TopikApi.parseError(res) || tr.fail);
           return;
         }
-        var u = (res.body && res.body.user) || {};
+        var body = res.body || {};
+        var u = body.user || {};
         if (window.TPKMAuth) {
           TPKMAuth.login({
             name: u.name_ko || u.name || (u.email || '').split('@')[0],
@@ -758,8 +771,25 @@
           });
         }
         if (window.__tpkmRebuildNav) __tpkmRebuildNav();
-        var params = new URLSearchParams(location.search);
-        location.href = params.get('next') || 'index.html';
+
+        // Existing account with a complete profile — treat as login.
+        if (!body.is_new_user && !body.profile_incomplete) {
+          var params = new URLSearchParams(location.search);
+          location.href = params.get('next') || 'index.html';
+          return;
+        }
+
+        // New or incomplete Google account — continue the signup wizard.
+        setGoogleSignupMode(true);
+        verifiedEmail = u.email || '';
+        document.getElementById('su-email').value = verifiedEmail;
+        document.getElementById('su-email-display').value = verifiedEmail;
+        if (u.name_ko) document.getElementById('su-name-ko').value = u.name_ko;
+        if (u.name_en) document.getElementById('su-name-en').value = String(u.name_en).toUpperCase();
+        document.getElementById('emailOk').classList.remove('hidden');
+        var okMsg = document.querySelector('#emailOk .callout div div');
+        if (okMsg) okMsg.innerHTML = '<strong>Google 계정 인증이 완료되었습니다.</strong>';
+        go(2);
       }).catch(function () { showSignupErr(tr.fail); });
     }
   })();
@@ -805,8 +835,12 @@
     var btn = this;
     var reqOk = Array.prototype.slice.call(reqs).every(function (r) { return r.checked; });
     if (!reqOk) { showSignupErr('필수 약관에 동의해 주세요.'); return; }
-    if (!verificationToken) {
+    if (!isGoogleSignup && !verificationToken) {
       showSignupErr('이메일 인증을 완료해 주세요.');
+      return;
+    }
+    if (!TopikApi.isLoggedIn() && isGoogleSignup) {
+      showSignupErr('Google 인증이 만료되었습니다. Step 1에서 다시 시도해 주세요.');
       return;
     }
     if (!validateSignupBirth(true)) return;
@@ -818,10 +852,7 @@
     }
     var photoB64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
 
-    var payload = {
-      verification_token: verificationToken,
-      password: document.getElementById('su-pw').value,
-      password_confirm: document.getElementById('su-pw2').value,
+    var profilePayload = {
       name_ko: document.getElementById('su-name-ko').value.trim(),
       name_en: document.getElementById('su-name-en').value.trim(),
       birth_date: document.getElementById('su-birth').value.trim(),
@@ -834,7 +865,7 @@
       purpose_code: Number(document.getElementById('su-purpose').value),
       photo_base64: photoB64,
       marketing_opt_in: opt.checked,
-      preferred_lang: (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase().slice(0, 2) === 'my' ? 'my' : (localStorage.getItem('tpkm_lang') === 'EN' ? 'en' : 'ko')
+      terms_agreed: []
     };
 
     if (!TopikApi.canUseApi()) {
@@ -842,26 +873,52 @@
       return;
     }
     setBusy(btn, true, '가입 처리 중…');
-    TopikApi.register(payload).then(function (res) {
+
+    function finishSignup(user) {
       setBusy(btn, false, '가입 완료');
-      if (!res.ok) {
-        var errBody = res.body && res.body.error;
-        if (res.status === 422 && errBody && errBody.code === 'AGE_RESTRICTED') {
-          setBirthFieldError(errBody.message || AGE_RESTRICTED_MSG);
-          go(2);
-        }
-        showSignupErr(TopikApi.parseError(res));
-        return;
-      }
-      if (window.TPKMAuth && res.body && res.body.user) {
+      if (window.TPKMAuth && user) {
         TPKMAuth.login({
-          name: res.body.user.name_ko || res.body.user.email,
-          email: res.body.user.email,
-          id: res.body.user.id
+          name: user.name_ko || user.email,
+          email: user.email,
+          id: user.id
         });
       }
       if (window.__tpkmRebuildNav) __tpkmRebuildNav();
       TPKM.openModal('modalDone');
+    }
+
+    function handleSignupError(res) {
+      setBusy(btn, false, '가입 완료');
+      var errBody = res.body && res.body.error;
+      if (res.status === 422 && errBody && errBody.code === 'AGE_RESTRICTED') {
+        setBirthFieldError(errBody.message || AGE_RESTRICTED_MSG);
+        go(2);
+      }
+      showSignupErr(TopikApi.parseError(res));
+    }
+
+    if (isGoogleSignup) {
+      TopikApi.updateProfile(profilePayload).then(function (res) {
+        if (!res.ok) { handleSignupError(res); return; }
+        finishSignup((res.body && res.body.user) || {});
+      }).catch(function () {
+        setBusy(btn, false, '가입 완료');
+        showSignupErr('네트워크 오류입니다.');
+      });
+      return;
+    }
+
+    var emailPayload = Object.assign({}, profilePayload, {
+      verification_token: verificationToken,
+      password: document.getElementById('su-pw').value,
+      password_confirm: document.getElementById('su-pw2').value,
+      preferred_lang: (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase().slice(0, 2) === 'my' ? 'my' : (localStorage.getItem('tpkm_lang') === 'EN' ? 'en' : 'ko')
+    });
+    delete emailPayload.terms_agreed;
+
+    TopikApi.register(emailPayload).then(function (res) {
+      if (!res.ok) { handleSignupError(res); return; }
+      finishSignup((res.body && res.body.user) || {});
     }).catch(function () {
       setBusy(btn, false, '가입 완료');
       showSignupErr('네트워크 오류입니다.');

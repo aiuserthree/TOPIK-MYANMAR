@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>로그인 — TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .auth-wrap {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+  .auth-head { text-align: center; margin-bottom: 24px; }
+  .auth-head h1 { font-size: 24px; }
+  .auth-head p { font-size: 14px; color: var(--text-3); margin-top: 6px; }
+
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--text-3); font-size: 12px;
+    margin: 20px 0;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 48px;
+    background: #fff;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 14.5px; font-weight: 500;
+    color: var(--text);
+    transition: background .12s var(--ease);
+  }
+  .google-btn:hover { background: var(--bg-2); }
+  .google-btn svg { width: 18px; height: 18px; }
+
+  .auth-options {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 16px;
+    font-size: 13px;
+  }
+  .auth-options a { color: var(--text-3); }
+  .auth-options a:hover { color: var(--primary); }
+  .auth-options .sep { color: var(--border); margin: 0 8px; }
+
+  .auth-foot {
+    margin-top: 28px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 13.5px; color: var(--text-3);
+  }
+  .auth-foot a { color: var(--primary); font-weight: 600; margin-left: 4px; }
+
+  .pw-wrap { position: relative; }
+  .pw-toggle {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    height: 28px; padding: 0 8px;
+    color: var(--text-3); font-size: 12px;
+  }
+  .pw-toggle:hover { color: var(--primary); }
+
+  /* Find ID modal result */
+  .find-result {
+    background: var(--bg-2); border-radius: var(--radius-sm);
+    padding: 14px; margin: 12px 0;
+    font-size: 14px;
+  }
+  .find-result .acct {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px dashed var(--border);
+  }
+  .find-result .acct:last-child { border-bottom: 0; }
+  .find-result .acct .mail {
+    font-family: 'Inter', sans-serif; font-weight: 600; color: var(--text);
+  }
+  .find-result .acct .type {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--primary-50); color: var(--primary);
+    font-weight: 600;
+  }
+  .find-result .acct .type.google { background: #fff4e3; color: #b86e00; }
+
+  /* Inline error alert */
+  .err-banner {
+    display: none;
+    align-items: flex-start; gap: 10px;
+    padding: 12px 14px;
+    background: var(--danger-50);
+    border: 1px solid #f5c8ce;
+    border-radius: var(--radius-sm);
+    color: var(--danger);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .err-banner.show { display: flex; }
+</style>
+</head>
+<body data-footer-compact>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <div class="auth-wrap">
+    <div class="auth-head">
+      <h1>로그인</h1>
+      <p>TOPIK 미얀마 시행 공식 접수 서비스</p>
+    </div>
+
+    <div class="err-banner" id="resetOkBanner" style="display:none;background:var(--success-50, #e8f5e9);border-color:#a7d7b5;color:var(--success,#0d7a3e)">
+      <span>비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.</span>
+    </div>
+    <div class="err-banner" id="errBanner">
+      <span>이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.</span>
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="form-row">
+        <label class="label" for="email">이메일 (아이디)</label>
+        <input id="email" name="email" type="email" class="input" placeholder="example@email.com" autocomplete="username">
+      </div>
+
+      <div class="form-row">
+        <label class="label" for="password">비밀번호</label>
+        <div class="pw-wrap">
+          <input id="password" name="password" type="password" class="input" placeholder="비밀번호 입력" autocomplete="current-password">
+          <button type="button" class="pw-toggle" id="pwToggle">표시</button>
+        </div>
+      </div>
+
+      <label class="check" style="margin-bottom: 18px;">
+        <input type="checkbox" id="remember">
+        <span class="box"></span>
+        <span>로그인 상태 유지</span>
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-block btn-lg">로그인</button>
+
+      <div class="auth-options">
+        <a href="javascript:void(0)" onclick="TPKM.openModal('modalFindId')">아이디(이메일) 찾기</a>
+        <span>
+          <a href="javascript:void(0)" onclick="TPKM.openModal('modalFindPw')">비밀번호 찾기</a>
+        </span>
+      </div>
+    </form>
+
+    <div class="auth-divider">또는</div>
+
+    <div id="googleArea">
+      <!-- Google Identity Services renders its own button here when OAuth is configured -->
+      <div id="gsiButton" style="display:flex; justify-content:center;"></div>
+      <!-- Fallback shown when OAuth is not configured / GIS unavailable -->
+      <button type="button" class="google-btn" id="googleFallbackBtn">
+        <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.99 10.99 0 0 0 1 12c0 1.77.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <span id="googleBtnLabel">Google 계정으로 로그인</span>
+      </button>
+      <p class="body-sm" id="googleHint" style="display:none; text-align:center; margin-top:10px; color:var(--text-3);"></p>
+    </div>
+
+    <div class="auth-foot">
+      아직 회원이 아니신가요?
+      <a href="signup.html">회원가입</a>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<!-- ============ 아이디(이메일) 찾기 모달 ============ -->
+<div class="modal-backdrop" id="modalFindId">
+  <div class="modal">
+    <div class="modal-head"><h3>아이디(이메일) 찾기</h3></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px; color:var(--text-3); margin-bottom: 14px;">가입 시 입력한 정보와 일치하는 이메일(=로그인 아이디)을 안내해 드립니다.</p>
+
+      <div id="findIdForm">
+        <div class="form-row">
+          <label class="label">한글 성명 <span class="req">*</span></label>
+          <input class="input" placeholder="홍길동" id="fi-name">
+        </div>
+        <div class="form-row">
+          <label class="label">생년월일 (8자리) <span class="req">*</span></label>
+          <input class="input" placeholder="19960101" maxlength="8" id="fi-bd">
+        </div>
+        <div class="form-row">
+          <label class="label">연락처 <span class="req">*</span></label>
+          <input class="input" placeholder="+95 ..." id="fi-tel">
+        </div>
+      </div>
+
+      <div id="findIdResult" class="hidden">
+        <div class="find-result" id="findIdResultBody"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalFindId'); resetFindId();">닫기</button>
+      <button class="btn btn-primary" id="btnFindId">아이디 확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 비밀번호 찾기 모달 ============ -->
+<div class="modal-backdrop" id="modalFindPw">
+  <div class="modal">
+    <div class="modal-head"><h3>비밀번호 찾기</h3></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px; color:var(--text-3); margin-bottom: 14px;">가입하신 이메일을 입력하시면 인증코드를 받아 새 비밀번호를 설정합니다. (유효시간 30분)</p>
+
+      <div id="findPwForm">
+        <div class="form-row">
+          <label class="label">이메일 <span class="req">*</span></label>
+          <input class="input" type="email" placeholder="example@email.com" id="fp-email">
+        </div>
+      </div>
+
+      <div id="findPwResult" class="hidden">
+        <div class="callout">
+          <div class="ico"></div>
+          <div>
+            <strong>인증코드를 발송했습니다.</strong><br>
+            <span id="find-pw-sent-email" style="font-family:'Inter',sans-serif;">example@email.com</span> 주소로 6자리 인증코드를 발송했습니다. 다음 화면에서 코드와 새 비밀번호를 입력해 주세요. (유효시간 30분)
+          </div>
+        </div>
+      </div>
+
+      <p id="findPwErr" style="display:none; color:var(--danger); font-size:13px; margin-top:10px;"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalFindPw'); resetFindPw();">닫기</button>
+      <button class="btn btn-primary" id="btnFindPw">인증코드 발송</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared/api-client.js"></script>
+<script src="assets/common.js"></script>
+<script>
+  // PW visibility toggle
+  document.getElementById('pwToggle').addEventListener('click', function () {
+    const pw = document.getElementById('password');
+    const isPw = pw.type === 'password';
+    pw.type = isPw ? 'text' : 'password';
+    this.textContent = isPw ? '숨김' : '표시';
+  });
+
+  // Login submit — API first (Phase 0); legacy demo if USE_API=false or unreachable + fallbackOnError
+  document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const pw = document.getElementById('password').value.trim();
+    const err = document.getElementById('errBanner');
+    const btn = this.querySelector('button[type="submit"]');
+    if (!email || !pw) {
+      err.classList.add('show');
+      err.querySelector('span').textContent = '이메일과 비밀번호를 모두 입력해 주세요.';
+      return;
+    }
+    err.classList.remove('show');
+    if (btn) { btn.disabled = true; btn.textContent = '로그인 중…'; }
+
+    const remember = document.getElementById('remember').checked;
+    const finish = function () {
+      if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
+    };
+
+    const goNext = function () {
+      const params = new URLSearchParams(location.search);
+      location.href = params.get('next') || 'index.html';
+    };
+
+    if (!window.TopikApi || typeof TopikApi.login !== 'function') {
+      TPKMAuth.login({ name: email.split('@')[0], email: email });
+      finish();
+      goNext();
+      return;
+    }
+
+    TopikApi.login(email, pw, { persist: remember })
+      .then(function (result) {
+        finish();
+        if (!result.ok) {
+          err.classList.add('show');
+          if (result.status === 401) {
+            err.querySelector('span').textContent =
+              '이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.';
+          } else if (result.status === 503 || result.error === 'database_unavailable') {
+            err.querySelector('span').textContent =
+              '서버를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+          } else if (result.status === 0) {
+            err.querySelector('span').textContent =
+              'API에 연결할 수 없습니다. API(localhost:3000) 실행 여부를 확인해 주세요.';
+          } else {
+            err.querySelector('span').textContent =
+              '로그인에 실패했습니다. (' + (result.error || result.status) + ')';
+          }
+          return;
+        }
+        const u = result.user || {};
+        TPKMAuth.login({
+          name: u.name_ko || u.name || email.split('@')[0],
+          email: u.email || email,
+          id: u.id,
+          role: u.role,
+        });
+        goNext();
+      })
+      .catch(function () {
+        finish();
+        err.classList.add('show');
+        err.querySelector('span').textContent =
+          '로그인 요청 중 오류가 발생했습니다. 네트워크를 확인해 주세요.';
+      });
+  });
+
+  // ---- Google Sign-In (GIS) — gated on backend /auth/google/config ----
+  (function initGoogleLogin() {
+    var GOOGLE_I18N = {
+      KO: {
+        label: 'Google 계정으로 로그인',
+        disabled: 'Google 간편 로그인은 운영 OAuth 설정 후 이용 가능합니다. 이메일 로그인을 이용해 주세요.',
+        fail: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
+        inactive: '이용이 제한된 계정입니다. 고객센터로 문의해 주세요.'
+      },
+      EN: {
+        label: 'Sign in with Google',
+        disabled: 'Google sign-in will be available after OAuth setup. Please use email login.',
+        fail: 'Google sign-in failed. Please try again.',
+        inactive: 'This account is not active. Please contact support.'
+      },
+      MY: {
+        label: 'Google ဖြင့် ဝင်ရောက်ရန်',
+        disabled: 'Google ဝင်ရောက်မှုကို OAuth ပြင်ဆင်ပြီးမှ အသုံးပြုနိုင်ပါမည်။ အီးမေးလ်ဖြင့် ဝင်ပါ။',
+        fail: 'Google ဖြင့် ဝင်ရောက်မှု မအောင်မြင်ပါ။ ထပ်စမ်းကြည့်ပါ။',
+        inactive: 'ဤအကောင့်ကို အသုံးပြု၍မရပါ။'
+      }
+    };
+    function lang() {
+      try { return (localStorage.getItem('tpkm_lang') || 'KO').toUpperCase(); }
+      catch (e) { return 'KO'; }
+    }
+    function t() { return GOOGLE_I18N[lang()] || GOOGLE_I18N.KO; }
+    function gisLocale() {
+      var l = lang().toLowerCase();
+      return l === 'en' ? 'en' : (l === 'my' ? 'my' : 'ko');
+    }
+
+    var area = document.getElementById('googleArea');
+    var mount = document.getElementById('gsiButton');
+    var fallback = document.getElementById('googleFallbackBtn');
+    var hint = document.getElementById('googleHint');
+    var label = document.getElementById('googleBtnLabel');
+    var tr = t();
+    if (label) label.textContent = tr.label;
+
+    function showDisabled() {
+      if (mount) mount.style.display = 'none';
+      if (fallback) {
+        fallback.style.display = 'flex';
+        fallback.disabled = true;
+        fallback.style.opacity = '0.55';
+        fallback.style.cursor = 'not-allowed';
+      }
+      if (hint) { hint.textContent = tr.disabled; hint.style.display = 'block'; }
+    }
+
+    if (fallback) {
+      fallback.addEventListener('click', function () {
+        if (fallback.disabled) alert(tr.disabled);
+      });
+    }
+
+    if (!window.TopikApi || typeof TopikApi.getGoogleConfig !== 'function' || !TopikApi.canUseApi()) {
+      showDisabled();
+      return;
+    }
+
+    TopikApi.getGoogleConfig().then(function (res) {
+      if (!res.ok || !res.body || !res.body.enabled || !res.body.client_id) {
+        showDisabled();
+        return;
+      }
+      loadGis(res.body.client_id);
+    }).catch(function () { showDisabled(); });
+
+    function loadGis(clientId) {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        renderGis(clientId);
+        return;
+      }
+      var existing = document.getElementById('gis-script');
+      var s = existing || document.createElement('script');
+      s.id = 'gis-script';
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true; s.defer = true;
+      s.onload = function () { renderGis(clientId); };
+      s.onerror = function () { showDisabled(); };
+      if (!existing) document.head.appendChild(s);
+    }
+
+    function renderGis(clientId) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredential,
+          ux_mode: 'popup'
+        });
+        mount.innerHTML = '';
+        var width = Math.min((area && area.offsetWidth) || 360, 400);
+        window.google.accounts.id.renderButton(mount, {
+          theme: 'outline', size: 'large', type: 'standard',
+          text: 'signin_with', shape: 'rectangular', logo_alignment: 'center',
+          width: width, locale: gisLocale()
+        });
+        if (fallback) fallback.style.display = 'none';
+        if (hint) hint.style.display = 'none';
+        mount.style.display = 'flex';
+      } catch (e) {
+        showDisabled();
+      }
+    }
+
+    function handleCredential(response) {
+      var idToken = response && response.credential;
+      var err = document.getElementById('errBanner');
+      if (err) err.classList.remove('show');
+      if (!idToken) {
+        if (err) { err.classList.add('show'); err.querySelector('span').textContent = tr.fail; }
+        return;
+      }
+      TopikApi.loginWithGoogle(idToken).then(function (res) {
+        if (!res.ok) {
+          var msg = TopikApi.parseError(res) || tr.fail;
+          if (res.status === 403) msg = tr.inactive;
+          else if (res.status === 503) msg = tr.disabled;
+          if (err) { err.classList.add('show'); err.querySelector('span').textContent = msg; }
+          else alert(msg);
+          return;
+        }
+        var u = (res.body && res.body.user) || {};
+        if (window.TPKMAuth) {
+          TPKMAuth.login({
+            name: u.name_ko || u.name || (u.email || '').split('@')[0],
+            email: u.email, id: u.id, role: u.role
+          });
+        }
+        var params = new URLSearchParams(location.search);
+        location.href = params.get('next') || 'index.html';
+      }).catch(function () {
+        if (err) { err.classList.add('show'); err.querySelector('span').textContent = tr.fail; }
+        else alert(tr.fail);
+      });
+    }
+  })();
+
+  // Find ID flow — calls real API (auth/find-email)
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function renderFindIdResult(matches) {
+    var body = document.getElementById('findIdResultBody');
+    if (!matches || !matches.length) {
+      body.innerHTML = '<p style="margin:4px 0; font-size:13px; color:var(--text-3);">입력하신 정보와 일치하는 계정을 찾을 수 없습니다. 입력 내용을 다시 확인해 주세요.</p>';
+      return;
+    }
+    body.innerHTML =
+      '<p style="margin-bottom:8px; font-size:13px;">입력하신 정보와 일치하는 계정입니다.</p>' +
+      matches.map(function (m) {
+        var isG = m.provider === 'google';
+        return '<div class="acct"><span class="mail">' + esc(m.email_masked) + '</span>' +
+          '<span class="type' + (isG ? ' google' : '') + '">' + (isG ? 'Google 계정' : '일반 가입') + '</span></div>';
+      }).join('');
+  }
+  document.getElementById('btnFindId').addEventListener('click', function () {
+    var btn = this;
+    var n = document.getElementById('fi-name').value.trim();
+    var b = document.getElementById('fi-bd').value.trim();
+    var t = document.getElementById('fi-tel').value.trim();
+    if (!n || !b || !t) { alert('이름, 생년월일, 연락처를 모두 입력해 주세요.'); return; }
+    if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
+    btn.disabled = true; var prev = btn.textContent; btn.textContent = '확인 중…';
+    TopikApi.findEmail({ name_ko: n, birth_date: b, phone: t }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) { btn.textContent = prev; alert(TopikApi.parseError(res)); return; }
+      renderFindIdResult(res.body.matches || []);
+      document.getElementById('findIdForm').classList.add('hidden');
+      document.getElementById('findIdResult').classList.remove('hidden');
+      btn.textContent = '로그인하러 가기';
+      btn.onclick = function () { TPKM.closeModal('modalFindId'); resetFindId(); };
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = prev; alert('네트워크 오류입니다.');
+    });
+  });
+  function resetFindId() {
+    document.getElementById('findIdForm').classList.remove('hidden');
+    document.getElementById('findIdResult').classList.add('hidden');
+    const btn = document.getElementById('btnFindId');
+    btn.textContent = '아이디 확인';
+    btn.onclick = null;
+  }
+
+  // Find PW flow — send the verification code here, then hand the email to the
+  // reset page (which lands straight on the code-entry step).
+  document.getElementById('btnFindPw').addEventListener('click', function () {
+    var btn = this;
+    var errEl = document.getElementById('findPwErr');
+    if (errEl) errEl.style.display = 'none';
+    var e = document.getElementById('fp-email').value.trim();
+    if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { alert('유효한 이메일을 입력해 주세요.'); return; }
+
+    function goReset() {
+      location.href = './password-reset.html?email=' + encodeURIComponent(e);
+    }
+
+    // Demo / static preview (no API): keep the old hand-off behaviour.
+    if (!window.TopikApi || !TopikApi.canUseApi()) { goReset(); return; }
+
+    var prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '발송 중…';
+    TopikApi.forgotPassword(e).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = prev;
+      if (!res.ok) {
+        var body = res.body || {};
+        // Per-user 60s limit means a fresh code was just sent → account exists.
+        if (res.status === 429 && body.error && body.error.code === 'RATE_LIMITED') {
+          goReset();
+          return;
+        }
+        alert(TopikApi.parseError(res));
+        return;
+      }
+      var b = res.body || {};
+      if (b.registered === false) {
+        alert('입력하신 이메일로 가입된 계정이 없습니다.');
+        return;
+      }
+      if (b.provider === 'google') {
+        alert('입력하신 이메일은 Google 계정으로 가입된 계정입니다. 구글 로그인을 이용해 주세요.');
+        return;
+      }
+      if (b.dev_code) {
+        try { sessionStorage.setItem('tpkm_pw_reset_devcode', b.dev_code); } catch (e2) {}
+      }
+      goReset();
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = prev;
+      alert('네트워크 오류입니다.');
+    });
+  });
+  function resetFindPw() {
+    document.getElementById('findPwForm').classList.remove('hidden');
+    document.getElementById('findPwResult').classList.add('hidden');
+    const btn = document.getElementById('btnFindPw');
+    btn.textContent = '인증코드 발송';
+    btn.style.display = '';
+    var errEl = document.getElementById('findPwErr');
+    if (errEl) errEl.style.display = 'none';
+  }
+
+  if (new URLSearchParams(location.search).get('reset') === 'ok') {
+    const b = document.getElementById('resetOkBanner');
+    if (b) b.style.display = 'flex';
+    try { history.replaceState({}, '', location.pathname + location.hash); } catch (e) {}
+  }
+</script>
+</body>
+</html>

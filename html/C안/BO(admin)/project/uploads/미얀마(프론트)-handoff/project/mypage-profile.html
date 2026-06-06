@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>내정보 수정 — TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .profile-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  .profile-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .profile-tabs button {
+    flex: 1; padding: 12px;
+    font-size: 14px; color: var(--text-3); font-weight: 500;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .profile-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .photo-section {
+    display: flex; gap: 16px; align-items: center;
+    padding: 20px;
+    background: var(--bg-2);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+  }
+  .photo-section .ph-prev {
+    width: 90px; height: 120px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-4);
+  }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .danger-zone {
+    margin-top: 32px;
+    padding: 20px;
+    border: 1px solid #f5c8ce;
+    border-radius: var(--radius);
+    background: var(--danger-50);
+  }
+  .danger-zone h3 { color: var(--danger); font-size: 16px; margin-bottom: 6px; }
+  .danger-zone p { font-size: 13px; color: #7a0d20; line-height: 1.5; }
+  .danger-zone .btn { margin-top: 12px; }
+</style>
+</head>
+<body data-require-login>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>마이페이지</span><span>내정보 수정</span></div>
+      <h1>내정보 수정</h1>
+      <p class="lead">가입 정보를 직접 수정하실 수 있습니다. 사진 변경 시 진행 중인 접수 건에도 즉시 반영됩니다.</p>
+    </div>
+  </header>
+
+  <div class="profile-wrap">
+
+    <div class="callout" style="margin-bottom: 20px;">
+      <div class="ico"></div>
+      <div>
+        <strong>비밀번호 변경 안내</strong> — 계정 관리 및 대리접수 방지를 위해 비밀번호는 6개월마다 변경을 권장합니다.
+        마지막 변경일: <strong>2025.10.05</strong>
+      </div>
+    </div>
+
+    <div class="profile-tabs">
+      <button class="active" data-tab="basic">기본정보·사진</button>
+      <button data-tab="account">계정·비밀번호</button>
+    </div>
+
+    <!-- ============ 기본정보 + 사진 ============ -->
+    <section class="tab-pane active" data-tab="basic">
+
+      <h2 class="h3" style="margin-bottom: 12px;">증명사진</h2>
+      <div class="photo-section">
+        <div class="ph-prev">현재 사진</div>
+        <div style="flex:1;">
+          <p style="font-size: 13.5px; color: var(--text-2);">시험 접수 시 자동 사용됩니다.</p>
+          <p class="body-sm" style="margin-top: 4px;">새 사진 등록 시 진행 중인 접수 건에도 즉시 반영되며, BO 사진 심사가 재실행됩니다.</p>
+          <div style="margin-top: 10px; display:flex; gap: 6px;">
+            <button class="btn btn-secondary btn-sm">파일 선택</button>
+            <button class="btn btn-text btn-sm">규격 안내</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="h3" style="margin: 24px 0 12px;">기본정보</h2>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">한글 성명</label>
+          <input class="input" value="홍길동">
+        </div>
+        <div class="form-row">
+          <label class="label">영문 성명 (여권 표기)</label>
+          <input class="input" value="HONG GILDONG">
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">생년월일</label>
+          <input class="input" value="19960115" maxlength="8">
+        </div>
+        <div class="form-row">
+          <label class="label">성별</label>
+          <select class="select"><option>남</option><option>여</option></select>
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">국적</label>
+          <select class="select"><option>미얀마 (Myanmar)</option><option>대한민국</option></select>
+        </div>
+        <div class="form-row">
+          <label class="label">제1언어</label>
+          <select class="select"><option>버마어 (Burmese)</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label">연락처</label>
+        <input class="input" value="+95 9 1234 5678">
+      </div>
+      <div class="row-2">
+        <div class="form-row">
+          <label class="label">직업</label>
+          <select class="select"><option>학생</option><option>회사원</option></select>
+        </div>
+        <div class="form-row">
+          <label class="label">응시동기</label>
+          <select class="select"><option>한국 유학</option><option>한국 취업</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label">응시목적</label>
+        <select class="select"><option>대학(원) 입학</option><option>EPS(고용허가제)</option></select>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;">기본정보 저장</button>
+    </section>
+
+    <!-- ============ 계정·비밀번호 ============ -->
+    <section class="tab-pane" data-tab="account">
+
+      <h2 class="h3" style="margin-bottom: 12px;">이메일 (로그인 ID)</h2>
+      <div class="form-row">
+        <input class="input" value="user@example.com">
+        <span class="hint">이메일 변경 시 변경된 주소로 재인증이 필요합니다.</span>
+      </div>
+
+      <h2 class="h3" style="margin: 24px 0 12px;">비밀번호 변경</h2>
+      <div class="form-row">
+        <label class="label">현재 비밀번호</label>
+        <input class="input" type="password">
+      </div>
+      <div class="form-row">
+        <label class="label">새 비밀번호</label>
+        <input class="input" type="password" placeholder="영문+숫자+특수문자 8자 이상">
+      </div>
+      <div class="form-row">
+        <label class="label">새 비밀번호 확인</label>
+        <input class="input" type="password">
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;">계정정보 저장</button>
+
+      <!-- 탈퇴 -->
+      <div class="danger-zone">
+        <h3>회원 탈퇴</h3>
+        <p>
+          탈퇴 시 진행 중인 접수 내역이 <strong>모두 취소</strong>됩니다.
+          탈퇴 후 동일 이메일로 재가입은 일정 기간 제한될 수 있습니다.
+        </p>
+        <button class="btn btn-danger btn-sm" onclick="TPKM.openModal('modalLeave')">회원 탈퇴</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<div class="modal-backdrop" id="modalLeave">
+  <div class="modal">
+    <div class="modal-head"><h3>회원 탈퇴</h3></div>
+    <div class="modal-body">
+      <p>정말 탈퇴하시겠습니까?<br><br>
+      <strong>탈퇴 시 진행 중인 접수 내역이 모두 취소</strong>됩니다.
+      취소된 접수에 대한 환불은 응시료 규정에 따라 처리됩니다.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalLeave')">취소</button>
+      <button class="btn btn-danger">탈퇴 진행</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+  document.querySelectorAll('.profile-tabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.profile-tabs button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.dataset.tab === b.dataset.tab));
+    });
+  });
+</script>
+</body>
+</html>

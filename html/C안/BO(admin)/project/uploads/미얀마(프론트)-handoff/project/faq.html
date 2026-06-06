@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FAQ — 게시판 | TOPIK Myanmar</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .faq-wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .faq-tools { display: flex; gap: 12px; flex-direction: column; margin-bottom: 20px; }
+  .faq-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .faq-search {
+    position: relative;
+  }
+  .faq-search input {
+    width: 100%; height: 44px;
+    padding: 0 16px 0 44px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); background: #fff;
+    font-size: 14.5px;
+  }
+  .faq-search input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-50); }
+  .faq-search::before {
+    content: ""; position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7588' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+    background-repeat: no-repeat;
+  }
+
+  .faq-group {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .faq-group .group-head {
+    padding: 14px 18px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .faq-group .group-head .ct {
+    margin-left: 6px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-3);
+    background: #fff; padding: 2px 8px; border-radius: 99px;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  .accordion details summary { padding: 18px 20px; }
+  .accordion .a { padding: 0 20px 20px 44px; }
+</style>
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main class="page" role="main">
+
+  <header class="page-head">
+    <div class="container">
+      <div class="crumb"><span>게시판</span><span>FAQ</span></div>
+      <h1>자주 묻는 질문</h1>
+      <p class="lead">접수·시험·결과 관련 자주 묻는 질문을 분류별로 모아두었습니다.</p>
+    </div>
+  </header>
+
+  <div class="faq-wrap">
+
+    <div class="faq-tools">
+      <div class="faq-search"><input type="search" placeholder="질문 검색 (예: 응시료, 수험번호, 환불…)"></div>
+      <div class="faq-tabs">
+        <button class="chip active">전체</button>
+        <button class="chip">접수</button>
+        <button class="chip">시험</button>
+        <button class="chip">결과</button>
+        <button class="chip">기타</button>
+      </div>
+    </div>
+
+    <!-- 접수 -->
+    <div class="faq-group">
+      <div class="group-head">접수 <span class="ct">4</span></div>
+      <div class="accordion">
+        <details>
+          <summary>
+            <span class="q">TOPIK Ⅰ과 Ⅱ를 동시에 접수할 수 있나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">동일 회차 내에서 TOPIK Ⅰ과 TOPIK Ⅱ를 동시에 접수하실 수 있습니다. 두 시험은 동일한 시험장 코드로 부여되며, 응시료는 수준별로 각각 오프라인 수납됩니다.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">접수 후 회원정보를 수정하고 싶습니다.</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">마이페이지 · 내정보 수정에서 성명·생년월일·국적·연락처·이메일·비밀번호·사진을 모두 직접 수정하실 수 있습니다. 수정 후 진행 중인 접수에도 자동 반영됩니다.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">접수 마감 후에도 신청할 수 있나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">접수 기간 종료 후에는 어떠한 경우에도 추가 접수가 불가합니다. 다음 회차 접수를 이용해 주세요.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">사진은 어디서 등록하나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">회원가입 시 등록한 증명사진이 시험 접수에 자동으로 사용됩니다. 접수 단계에서는 사진 업로드가 불가하며, 변경이 필요하면 마이페이지 · 내정보 수정에서 사진을 교체해 주세요.</div>
+        </details>
+      </div>
+    </div>
+
+    <!-- 시험 -->
+    <div class="faq-group">
+      <div class="group-head">시험 <span class="ct">3</span></div>
+      <div class="accordion">
+        <details>
+          <summary>
+            <span class="q">시험 당일 어떤 신분증을 가져가야 하나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">여권, 미얀마 NRC(국민등록증), 거주증, 국가 발급 사진 부착 신분증 중 1개를 지참해 주세요. 사진 부착·유효 기간 내·본인 일치가 모두 충족되어야 합니다. 자세한 내용은 <a href="rules-id.html" class="text-primary">신분증 규정</a> 참고.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">수험표는 어떻게 출력하나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">수험표는 본 사이트가 아닌 <strong>TOPIK 본부 홈페이지(topik.go.kr)</strong>에서 시험일 2주 전부터 출력하실 수 있습니다. 출력 방법은 <a href="ticket.html" class="text-primary">수험표 출력</a> 페이지를 참고해 주세요.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">시험 시간에 늦으면 어떻게 되나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">시험 시작 후에는 어떠한 경우에도 입실이 불가합니다. 반드시 시작 시간 30분 전까지 시험장에 도착해 주세요.</div>
+        </details>
+      </div>
+    </div>
+
+    <!-- 결과 -->
+    <div class="faq-group">
+      <div class="group-head">결과 <span class="ct">2</span></div>
+      <div class="accordion">
+        <details>
+          <summary>
+            <span class="q">합격 발표는 언제, 어디서 확인하나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">시험 후 약 6주 뒤에 합격 발표가 진행됩니다. TOPIK 본부 홈페이지(topik.go.kr)에서 수험번호와 생년월일로 확인할 수 있으며, 본 사이트 공지사항에서도 발표일이 안내됩니다.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">성적표는 얼마나 유효한가요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">TOPIK 성적은 발표일로부터 <strong>2년간</strong> 유효합니다. 유학·취업 등 활용 시 만료일을 확인해 주세요.</div>
+        </details>
+      </div>
+    </div>
+
+    <!-- 기타 -->
+    <div class="faq-group">
+      <div class="group-head">기타 <span class="ct">2</span></div>
+      <div class="accordion">
+        <details>
+          <summary>
+            <span class="q">응시료를 환불받고 싶습니다.</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a">오프라인 수납 전이라면 마이페이지에서 직접 접수를 취소하실 수 있습니다. 수납 완료 후에는 <a href="refund-correction.html" class="text-primary">환불·정보정정신청 게시판</a>에서 환불 신청해 주세요. 환불률은 <a href="rules-fee.html" class="text-primary">응시료 규정</a> 참고.</div>
+        </details>
+        <details>
+          <summary>
+            <span class="q">사이트 이용 중 문제가 발생하면 어디로 문의하나요?</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </summary>
+          <div class="a"><a href="qna.html" class="text-primary">문의게시판</a>을 이용해 주시거나, 운영 시간(평일 09:00–17:00) 내 topik.myanmar@mofa.go.kr 로 이메일 문의해 주세요.</div>
+        </details>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-tabbar"></div>
+
+<script src="assets/common.js"></script>
+<script>
+  document.querySelectorAll('.faq-tabs .chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.faq-tabs .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
