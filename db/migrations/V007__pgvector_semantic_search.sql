@@ -11,11 +11,8 @@
 --   sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
 -- 저장소 없을 때: scp 로 /tmp 에 복사 후 chmod 644, 동일하게 stdin 또는 -f /tmp/... 적용
 --
--- 로컬 (repo root):
+-- 로컬 (repo root, postgresql-15-pgvector 설치 후):
 --   sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
--- 로컬 Docker (docker-compose.pgvector.yml):
---   docker compose -f docker-compose.pgvector.yml up -d
---   psql "$DATABASE_URL" -f db/migrations/V007__pgvector_semantic_search.sql
 
 CREATE EXTENSION IF NOT EXISTS vector;
 

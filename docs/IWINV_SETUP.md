@@ -5,7 +5,7 @@
 - Web 서버: Vite 정적 빌드(`apps/web/dist`) + FastAPI(`apps/api`) + nginx
 - DB 서버: PostgreSQL 15+ **+ pgvector**
 - 오브젝트 스토리지: IwinV S3 호환 API (`https://kr.object.iwinv.kr`) — 회원 사진·파일 업로드용 (별도 서비스, AWS 계정 불필요)
-- 배포 방식: Docker 사용 안 함
+- 배포 방식: nginx + systemd (Web VPS), apt PostgreSQL (DB VPS)
 - 방화벽: Iwinv ELCAP에서 먼저 제한하고, 서버 내부 `ufw`로 같은 규칙을 한 번 더 적용
 
 아래 값은 현재 확정된 운영 서버 값입니다. **운영 도메인·발신 메일 주소는 확정**되었으나 도메인 구매·DNS 위임은 아직 진행 중입니다. `REPO_URL`, 비밀번호 값은 실제 운영 값으로 바꿔서 사용합니다.

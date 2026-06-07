@@ -2,19 +2,18 @@
 
 Node.js 20 + Fastify 4 + TypeScript skeleton. PostgreSQL schema lives in `../db/` (Flyway SQL).
 
-**macOS 로컬 실행 (Docker/Postgres 설치부터):** [로컬실행_가이드.md](./로컬실행_가이드.md)
+**macOS 로컬 실행 (PostgreSQL 설치부터):** [로컬실행_가이드.md](./로컬실행_가이드.md)
 
 ## Prerequisites
 
 - Node.js 20+
-- Docker (optional, for local Postgres)
+- PostgreSQL 15+ (로컬 또는 IwinV DB VPS 원격)
 - `psql` CLI (for `npm run migrate`)
 
 ## Quick start
 
 ```bash
-# 1. Start Postgres
-docker compose up -d
+# 1. PostgreSQL 준비 (로컬실행_가이드.md 참고)
 
 # 2. Install & migrate
 cd api

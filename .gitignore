@@ -18,7 +18,7 @@ public/
 public-bo/
 html/C*/BO/dist/
 
-# Self-hosted compose secrets (POSTGRES_PASSWORD) — see docker-compose.prod.yml
+# Repo-root local secrets (never commit)
 .env
 api/.env.production
 

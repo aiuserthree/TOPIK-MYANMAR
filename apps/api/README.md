@@ -23,7 +23,7 @@ apps/api/
 
 ## 로컬 실행
 
-Docker 없이 Python 가상환경과 PostgreSQL 접속 정보만 사용합니다.
+Python 가상환경과 PostgreSQL 접속 정보만 사용합니다.
 
 ```bash
 cd apps/api
@@ -64,14 +64,6 @@ psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V004__user
 psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V005__application_drafts.sql
 psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V006__fo_contract_and_security.sql
 sudo -u postgres psql -d topik_myanmar < ../../db/migrations/V007__pgvector_semantic_search.sql
-```
-
-로컬 Docker (pgvector 포함, 선택):
-
-```bash
-# repo root
-docker compose -f docker-compose.pgvector.yml up -d
-# DATABASE_URL=postgresql+asyncpg://topik_app:topik_dev@127.0.0.1:5432/topik_myanmar
 ```
 
 Iwinv VPS의 PostgreSQL에 직접 연결할 경우 `DATABASE_URL`의 host를 VPS 내부 IP 또는 허용된 공인 IP로 바꿉니다.

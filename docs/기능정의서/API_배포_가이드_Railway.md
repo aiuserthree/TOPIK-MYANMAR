@@ -2,7 +2,7 @@
 
 **작성일:** 2026-06-03  
 **상태:** 스캐폴딩 완료 — **수동 Railway 배포** (토큰·시크릿은 repo에 저장하지 않음)  
-**관련:** `api/Dockerfile`, `railway.toml`, `api/.env.production.example`, `백엔드_스택_결정.md`
+**관련:** `api/.env.production.example`, `백엔드_스택_결정.md` — **부록(과거 임시 UAT)**. 현재 운영은 [`IWINV_SETUP.md`](../IWINV_SETUP.md).
 
 ---
 
@@ -13,7 +13,7 @@
 | FO (Vercel) | `https://topik-myanmar.vercel.app` |
 | API (Railway) | `https://topikmyanmar-production.up.railway.app` |
 | DB | Railway PostgreSQL addon |
-| 로컬 DB | `docker-compose.yml` (PostgreSQL 15) |
+| 로컬 DB | 로컬 PostgreSQL 15 또는 IwinV DB VPS 원격 연결 |
 
 컨테이너 시작 시 `node scripts/migrate.js` → Flyway SQL + `dev_seed.sql` 적용 후 API 기동.
 
@@ -25,7 +25,7 @@
 
 1. [Railway](https://railway.app) 로그인
 2. **New Project** → **Deploy from GitHub repo** → 본 저장소 선택
-3. 서비스 **Settings → Root Directory** 는 **비워 둠** (repo root — `railway.toml`·`api/Dockerfile` 기준)
+3. 서비스 **Settings → Root Directory** 는 **비워 둠** (repo root 기준)
 
 ### ② PostgreSQL 추가
 
@@ -66,27 +66,19 @@ Railway URL 확정 후 FO HTML의 API meta를 갱신:
 
 ---
 
-## 3. 로컬 개발 (docker-compose)
+## 3. 로컬 개발
+
+로컬 PostgreSQL을 준비한 뒤:
 
 ```bash
-docker compose up -d
 cd api && cp .env.example .env && npm install && npm run migrate && npm run dev
 ```
 
-FO는 Live Server 등으로 `html/C안/FO` 미리보기 — API는 `http://localhost:3000`.
+FO는 Live Server 등으로 `html/C안/FO` 미리보기 — API는 `http://localhost:3000`. 상세는 [`api/로컬실행_가이드.md`](../../api/로컬실행_가이드.md).
 
 ---
 
-## 4. Docker 수동 빌드 (검증)
-
-```bash
-docker build -f api/Dockerfile -t topik-api .
-docker run --rm -e DATABASE_URL=... -e JWT_SECRET=test -p 3000:3000 topik-api
-```
-
----
-
-## 5. Phase 2b (다음 개발)
+## 4. Phase 2b (다음 개발)
 
 아래 API는 **미구현** — 우선순위 B:
 
