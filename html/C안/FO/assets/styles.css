@@ -249,7 +249,9 @@ p { margin: 0; }
 .status-pay      { background: var(--st-pay-bg);      color: var(--st-pay); }
 .status-approved { background: var(--st-approved-bg); color: var(--st-approved); }
 .status-number   { background: var(--st-number-bg);   color: var(--st-number); }
-.status-rejected { background: var(--st-rejected-bg); color: var(--st-rejected); }
+.status-rejected,
+.status-photo_rejected,
+.status-app_rejected { background: var(--st-rejected-bg); color: var(--st-rejected); }
 .status-cancel   { background: var(--st-cancel-bg);   color: var(--st-cancel); }
 
 /* ---------- Forms ---------- */

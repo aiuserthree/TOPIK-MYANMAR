@@ -30,8 +30,8 @@ ROUND_107 = {
     "exam_date": datetime(2026, 10, 18, tzinfo=MM_TZ).date(),
     "registration_start_at": datetime(2026, 7, 17, 0, 0, tzinfo=MM_TZ),
     "registration_end_at": datetime(2026, 7, 21, 23, 59, 59, tzinfo=MM_TZ),
-    "fee_level_i": 50_000,
-    "fee_level_ii": 75_000,
+    "fee_level_i": 25,
+    "fee_level_ii": 25,
     "capacity": 0,
     "registration_status": "open",
 }
@@ -39,6 +39,16 @@ ROUND_107 = {
 
 def _hash(pw: str) -> str:
     return bcrypt.hashpw(pw.encode(), bcrypt.gensalt(rounds=10)).decode()
+
+
+async def _sync_exam_fees(db: AsyncSession) -> None:
+    """모든 회차 응시료를 ROUND_107 기준(USD)으로 맞춤 — seed 재실행 시 기존 DB 갱신."""
+    fee_i = ROUND_107["fee_level_i"]
+    fee_ii = ROUND_107["fee_level_ii"]
+    result = await db.execute(select(ExamRound))
+    for rnd in result.scalars().all():
+        rnd.fee_level_i = fee_i
+        rnd.fee_level_ii = fee_ii
 
 
 async def _ensure_round_107(db: AsyncSession) -> None:
@@ -149,6 +159,7 @@ async def main() -> None:
             )
 
         await _ensure_round_107(db)
+        await _sync_exam_fees(db)
 
         # 레거시 데모 회차(99회) — 기존 DB 호환용, 신규에는 107회만 생성
         old99 = await db.execute(select(ExamRound).where(ExamRound.round_no == 99))

@@ -203,6 +203,16 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="modalReason">
+  <div class="modal" style="max-width: 480px;">
+    <div class="modal-head"><h3 data-i18n-content="mp.reason_title">반려 사유</h3></div>
+    <div class="modal-body" id="reasonBody"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalReason')" data-i18n-content="btn.close">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="modalCancel">
   <div class="modal">
     <div class="modal-head"><h3 data-i18n-content="mp.cancel_q">접수를 취소하시겠습니까?</h3></div>
@@ -238,6 +248,11 @@
     'mp.btn_confirm': { ko: '접수 확인증', my: 'အတည်ပြုလက်မှတ်', en: 'Confirmation' },
     'mp.btn_ticket': { ko: '수험표 출력', my: 'ဝင်ခွင့်လက်မှတ် ထုတ်ရန်', en: 'Admit card' },
     'mp.btn_rephoto': { ko: '사진 재등록', my: 'ဓာတ်ပုံ ပြန်တင်ရန်', en: 'Re-upload photo' },
+    'mp.btn_reapply': { ko: '재접수', my: 'ပြန်လျှောက်ရန်', en: 'Re-apply' },
+    'mp.btn_reason': { ko: '사유보기', my: 'အကြောင်းရင်း ကြည့်ရန်', en: 'View reason' },
+    'mp.reason_title': { ko: '반려 사유', my: 'ပယ်ချ အကြောင်းရင်း', en: 'Rejection reason' },
+    'mp.status_photo_rejected': { ko: '사진 반려', my: 'ဓာတ်ပုံ ပယ်ချ', en: 'Photo rejected' },
+    'mp.status_app_rejected': { ko: '반려', my: 'ပယ်ချ', en: 'Rejected' },
     'mp.exam_num_pending': { ko: '부여 전', my: 'မသတ်မှတ်ရသေး', en: 'Not yet assigned' },
     'mp.photo_pending': { ko: '대기', my: 'စောင့်ဆိုင်း', en: 'Pending' },
     'mp.photo_approved': { ko: '승인 완료', my: 'အတည်ပြုပြီး', en: 'Approved' },
@@ -273,7 +288,8 @@
     'mp.t_level': { ko: '응시 급수', my: 'ဖြေဆိုအဆင့်', en: 'Level' },
     'mp.t_applicant': { ko: '응시자', my: 'ဖြေဆိုသူ', en: 'Applicant' },
     'mp.t_birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
-    'mp.t_pay_status': { ko: '수납 상태', my: 'ပေးသွင်းမှု အခြေအနေ', en: 'Payment status' }
+    'mp.t_pay_status': { ko: '수납 상태', my: 'ပေးသွင်းမှု အခြေအနေ', en: 'Payment status' },
+    'mp.t_fee': { ko: '응시료', my: 'ဖြေဆိုကြေး', en: 'Test fee' }
   };
 </script>
 <script src="shared/api-client.js"></script>
@@ -329,6 +345,28 @@
     return (item.levels && item.levels[0]) || {};
   }
 
+  var FALLBACK_FEES = { I: 25, II: 25 };
+
+  function feeForItem(item) {
+    if (item.fee != null) return Number(item.fee);
+    var pl = primaryLevel(item);
+    var level = pl.exam_level || item.exam_level || 'I';
+    var r = item.exam_round || {};
+    if (r.fees && r.fees[level] != null) return Number(r.fees[level]);
+    if (level === 'I' && r.fee_level_i != null) return Number(r.fee_level_i);
+    if (level === 'II' && r.fee_level_ii != null) return Number(r.fee_level_ii);
+    return FALLBACK_FEES[level] || 25;
+  }
+
+  function formatFee(n) {
+    return '$' + (Number(n) || 0).toLocaleString('en-US') + ' USD';
+  }
+
+  function feeDisplayForItem(item) {
+    if (item.fee_formatted) return item.fee_formatted;
+    return formatFee(feeForItem(item));
+  }
+
   function photoCell(level) {
     var pr = PHOTO_LABELS[level.photo_review_status] || PHOTO_LABELS.pending;
     if (level.photo_review_status === 'rejected') {
@@ -348,24 +386,51 @@
     return '<div class="v" style="color:' + p.color + ';">' + esc(bt(p.key, '')) + '</div>';
   }
 
-  function examNumCell(item) {
-    var nums = (item.levels || [])
-      .map(function (l) {
-        if (l.exam_number_visible && l.exam_number) return l.exam_number;
-        return null;
-      })
-      .filter(Boolean);
-    if (nums.length) {
-      return '<div class="v exam-num">' + esc(nums.join(' / ')) + '</div>';
+  function examNumCell(level) {
+    if (level.exam_number_visible && level.exam_number) {
+      return '<div class="v exam-num">' + esc(level.exam_number) + '</div>';
     }
     return '<div class="v pending">' + esc(bt('mp.exam_num_pending', '부여 전')) + '</div>';
   }
 
+  function rejectionReasonText(item, level) {
+    if (item.rejection_reason) return item.rejection_reason;
+    var l = level || primaryLevel(item);
+    if (!l) return '';
+    if (l.photo_review_status === 'rejected') {
+      var parts = [];
+      if (l.photo_reject_code) {
+        parts.push(bt(REJECT_CODES[l.photo_reject_code], l.photo_reject_code));
+      }
+      if (l.photo_reject_note) parts.push(l.photo_reject_note);
+      if (parts.length) return parts.join(' — ');
+    }
+    if (l.reject_reason) return l.reject_reason;
+    return '';
+  }
+
+  function findItemByKey(key) {
+    if (!key) return null;
+    var all = (currentItems.active || []).concat(currentItems.past || []);
+    return all.find(function (i) {
+      return String(i.application_id) === String(key) || String(i.submission_id) === String(key);
+    }) || null;
+  }
+
+  function openReasonModal(item) {
+    var reason = rejectionReasonText(item);
+    document.getElementById('reasonBody').innerHTML =
+      '<p style="margin:0; font-size:14px; line-height:1.6; color:var(--text); white-space:pre-wrap;">' +
+      esc(reason || bt('mp.reason_title', '반려 사유')) + '</p>';
+    TPKM.openModal('modalReason');
+  }
+
   function buildCard(item) {
     var st = item.fo_card_status || 'applied';
-    var lvl = item.levels_text || '';
+    var lvl = item.levels_text || item.level_text || '';
     var pl = primaryLevel(item);
-    var applyNo = pl.application_no || '';
+    var applyNo = item.application_no || pl.application_no || '';
+    var itemKey = item.application_id || item.submission_id;
     var submitted = item.submitted_at_formatted || '';
     var meta = bt('mp.meta_exam_date', '시험일') + ' ' + esc(item.exam_date_formatted || '') +
       (item.venue && item.venue.name_ko ? ' · ' + esc(item.venue.name_ko) : '');
@@ -374,31 +439,49 @@
     var beforePay = ['applied', 'photo', 'pay'].indexOf(st) >= 0;
     var ticketOk = st === 'number';
     var confirmOk = ['applied', 'photo', 'pay', 'number', 'approved'].indexOf(st) >= 0;
-    var rejected = st === 'rejected';
+    var photoRejected = st === 'photo_rejected';
+    var appRejected = st === 'app_rejected';
+    var hasReason = !!(item.rejection_reason || rejectionReasonText(item, pl));
 
     if (confirmOk) {
-      actions += '<button type="button" class="btn btn-secondary btn-sm" data-act="confirm" data-sub="' +
-        esc(item.submission_id) + '">' + esc(bt('mp.btn_confirm', '접수 확인증')) + '</button>';
+      actions += '<button type="button" class="btn btn-secondary btn-sm" data-act="confirm" data-key="' +
+        esc(itemKey) + '">' + esc(bt('mp.btn_confirm', '접수 확인증')) + '</button>';
     }
     if (ticketOk) {
       actions += '<a href="ticket.html?submission=' + encodeURIComponent(item.submission_id) +
         '" class="btn btn-primary btn-sm" data-act="ticket">' + esc(bt('mp.btn_ticket', '수험표 출력')) + '</a>';
     }
-    if (beforePay && !rejected) {
+    if (beforePay && !photoRejected && !appRejected && item.application_id) {
       actions +=
-        '<button type="button" class="btn btn-ghost btn-sm" data-act="cancel" data-sub="' +
-        esc(item.submission_id) +
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="cancel" data-app="' +
+        esc(item.application_id) +
         '">' + esc(bt('mp.cancel_btn', '접수 취소')) + '</button>';
     }
-    if (rejected) {
+    if (photoRejected) {
       actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="rephoto">' + esc(bt('mp.btn_rephoto', '사진 재등록')) + '</a>';
+    }
+    if (appRejected) {
+      var reLv = pl.exam_level || item.exam_level || '';
+      var reAppId = item.application_id || pl.id || '';
+      actions += '<a href="register.html?reapply=1&amp;exam_round_id=' + encodeURIComponent(item.exam_round_id) +
+        (reLv ? '&amp;level=' + encodeURIComponent(reLv) : '') +
+        (reAppId ? '&amp;application_id=' + encodeURIComponent(reAppId) : '') +
+        '" class="btn btn-primary btn-sm" data-act="reapply">' + esc(bt('mp.btn_reapply', '재접수')) + '</a>';
+    }
+    if ((photoRejected || appRejected) && hasReason) {
+      actions += '<button type="button" class="btn btn-ghost btn-sm" data-act="reason" data-key="' +
+        esc(itemKey) + '">' + esc(bt('mp.btn_reason', '사유보기')) + '</button>';
     }
 
     var statusClass = 'status status-' + st;
-    var statusLabel = esc(item.card_status_label || '');
+    var statusLabel = esc(item.card_status_label || (
+      st === 'photo_rejected' ? bt('mp.status_photo_rejected', '사진 반려') :
+      st === 'app_rejected' ? bt('mp.status_app_rejected', '반려') : ''
+    ));
 
     return (
-      '<div class="app-card" data-status="' + esc(st) + '" data-submission-id="' + esc(item.submission_id) + '">' +
+      '<div class="app-card" data-status="' + esc(st) + '" data-application-id="' + esc(item.application_id || '') +
+        '" data-submission-id="' + esc(item.submission_id) + '">' +
         '<div class="app-head">' +
           '<div class="lt">' +
             '<h3><span class="round-n">' + roundTitle(item) + '</span> <span class="lvls">' + esc(lvl) + '</span></h3>' +
@@ -410,7 +493,7 @@
           '</div>' +
         '</div>' +
         '<div class="app-grid">' +
-          '<div class="it"><div class="l">' + esc(bt('mp.col_exam_num', '수험번호')) + '</div>' + examNumCell(item) + '</div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.col_exam_num', '수험번호')) + '</div>' + examNumCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_photo', '사진 심사')) + '</div>' + photoCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_pay', '응시료 수납')) + '</div>' + payCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_date', '접수일')) + '</div><div class="v" style="color:var(--text-2); font-weight:500;">' + esc(submitted) + '</div></div>' +
@@ -452,12 +535,13 @@
     gateActions();
     bindConfirmButtons();
     bindCancelButtons();
+    bindReasonButtons();
   }
 
   function bindCancelButtons() {
-    document.querySelectorAll('[data-act="cancel"][data-sub]').forEach(function (btn) {
+    document.querySelectorAll('[data-act="cancel"][data-app]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        cancelSubmissionId = btn.getAttribute('data-sub');
+        cancelApplicationId = btn.getAttribute('data-app');
         TPKM.openModal('modalCancel');
       });
     });
@@ -488,12 +572,9 @@
 
   function openConfirmForItem(item) {
     var pl = primaryLevel(item);
-    var levels = (item.levels || []).map(function (l) {
-      return l.exam_level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
-    }).join(' · ');
-    var payDone = (item.levels || []).some(function (l) {
-      return l.payment_status === 'paid';
-    });
+    var levelText = item.levels_text || item.level_text ||
+      (pl.exam_level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ');
+    var payDone = pl.payment_status === 'paid';
     var u = currentProfile || {};
     var birth = u.birth_date;
     if (birth && birth.length === 8) {
@@ -505,7 +586,9 @@
         '<tr><th>' + esc(bt('mp.apply_no', '접수번호')) + '</th><td style="font-family:Inter,sans-serif;">' + esc(pl.application_no) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.col_exam_num', '수험번호')) + '</th><td style="font-family:Inter,sans-serif;">' +
           (pl.exam_number_visible && pl.exam_number ? esc(pl.exam_number) : esc(bt('mp.exam_num_pending', '부여 전'))) + '</td></tr>' +
-        '<tr><th>' + esc(bt('mp.t_level', '응시 급수')) + '</th><td>' + esc(levels) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_level', '응시 급수')) + '</th><td>' + esc(levelText) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_fee', '응시료')) + '</th><td style="font-family:Inter,sans-serif; font-weight:600; color:var(--primary);">' +
+          esc(feeDisplayForItem(item)) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.col_date', '접수일')) + '</th><td>' + esc(item.submitted_at_formatted) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_applicant', '응시자')) + '</th><td>' + esc(u.name_ko || '') + ' / ' + esc(u.name_en || '') + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_birth', '생년월일')) + '</th><td>' + esc(birth || '—') + '</td></tr>' +
@@ -516,12 +599,19 @@
   }
 
   function bindConfirmButtons() {
-    document.querySelectorAll('[data-act="confirm"][data-sub]').forEach(function (btn) {
+    document.querySelectorAll('[data-act="confirm"][data-key]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var sub = btn.getAttribute('data-sub');
-        var item = (currentItems.active || []).concat(currentItems.past || [])
-          .find(function (i) { return String(i.submission_id) === String(sub); });
+        var item = findItemByKey(btn.getAttribute('data-key'));
         if (item) openConfirmForItem(item);
+      });
+    });
+  }
+
+  function bindReasonButtons() {
+    document.querySelectorAll('[data-act="reason"][data-key]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var item = findItemByKey(btn.getAttribute('data-key'));
+        if (item) openReasonModal(item);
       });
     });
   }
@@ -532,14 +622,21 @@
       var beforePay = ['applied', 'photo', 'pay'].indexOf(st) >= 0;
       var ticketOk = st === 'number';
       var confirmOk = ['applied', 'photo', 'pay', 'number', 'approved'].indexOf(st) >= 0;
+      var rejected = st === 'photo_rejected' || st === 'app_rejected';
       card.querySelectorAll('[data-act="cancel"]').forEach(function (b) {
-        b.style.display = beforePay ? '' : 'none';
+        b.style.display = (beforePay && !rejected) ? '' : 'none';
       });
       card.querySelectorAll('[data-act="ticket"]').forEach(function (b) {
         b.style.display = ticketOk ? '' : 'none';
       });
       card.querySelectorAll('[data-act="confirm"]').forEach(function (b) {
         b.style.display = confirmOk ? '' : 'none';
+      });
+      card.querySelectorAll('[data-act="rephoto"]').forEach(function (b) {
+        b.style.display = st === 'photo_rejected' ? '' : 'none';
+      });
+      card.querySelectorAll('[data-act="reapply"]').forEach(function (b) {
+        b.style.display = st === 'app_rejected' ? '' : 'none';
       });
     });
   }
@@ -551,7 +648,7 @@
     renderLists();
   }
 
-  var cancelSubmissionId = null;
+  var cancelApplicationId = null;
 
   function showLoadError(msg) {
     var html =
@@ -593,13 +690,13 @@
 
   document.getElementById('btnConfirmCancel').addEventListener('click', function () {
     var btn = this;
-    if (!cancelSubmissionId) {
+    if (!cancelApplicationId) {
       TPKM.closeModal('modalCancel');
       return;
     }
     btn.disabled = true;
     btn.textContent = bt('mp.processing', '처리 중…');
-    TopikApi.cancelSubmission(cancelSubmissionId).then(function (res) {
+    TopikApi.cancelApplication(cancelApplicationId).then(function (res) {
       btn.disabled = false;
       btn.textContent = bt('mp.cancel_btn', '접수 취소');
       TPKM.closeModal('modalCancel');
@@ -607,7 +704,7 @@
         alert(TopikApi.parseError(res));
         return;
       }
-      cancelSubmissionId = null;
+      cancelApplicationId = null;
       loadApplications();
     }).catch(function () {
       btn.disabled = false;

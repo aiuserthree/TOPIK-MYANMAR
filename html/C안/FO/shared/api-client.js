@@ -457,6 +457,16 @@
     );
   }
 
+  function cancelApplication(applicationId, reason) {
+    return apiFetch(
+      "/api/v1/applications/" + encodeURIComponent(applicationId) + "/cancel",
+      {
+        method: "POST",
+        body: JSON.stringify({ reason: reason || "사용자 취소" }),
+      }
+    );
+  }
+
   function getApplicationDraft() {
     return apiFetch("/api/v1/application-draft");
   }
@@ -733,6 +743,7 @@
     submitApplication: submitApplication,
     getMyApplications: getMyApplications,
     cancelSubmission: cancelSubmission,
+    cancelApplication: cancelApplication,
     getApplicationDraft: getApplicationDraft,
     saveApplicationDraft: saveApplicationDraft,
     deleteApplicationDraft: deleteApplicationDraft,

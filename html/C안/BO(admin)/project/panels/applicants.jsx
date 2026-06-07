@@ -24,7 +24,12 @@ const STATUS_CHIPS = [
   { id: 'refund',   label: '환불자' },
 ];
 
-const REJECT_REASONS = ['사진 부적합', '정보 불일치', '중복 접수', '기타'];
+const GENERAL_REJECT_REASONS = ['정보 불일치', '중복 접수', '기타'];
+
+/** FO 접수 취소 — API `cancelled` → BO `cancel` (bo-api-bridge mapApplicantStatus) */
+function isFoCancelled(a) {
+  return !!(a && a.status === 'cancel');
+}
 
 function ApplicantsPanel() {
   const state = useStore();
@@ -425,6 +430,7 @@ function ApplicantsPanel() {
                 <th>사진심사</th>
                 <th>수납</th>
                 <th>수험번호</th>
+                <th>상태</th>
                 <th className="no-print">관리</th>
               </tr>
             </thead>
@@ -443,6 +449,7 @@ function ApplicantsPanel() {
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
                   <td>{a.paid ? <Pill kind="approved">수납완료</Pill> : <Pill kind="pay">미수납</Pill>}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
+                  <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
                   <td className="no-print">
                     <div className="row-actions">
                       <button className="ibtn" title="상세 보기" onClick={() => setDetailId(a.id)}><I.Eye style={{ width: 14, height: 14 }}/> 상세보기</button>
@@ -451,7 +458,7 @@ function ApplicantsPanel() {
                 </tr>
               ))}
               {!pageRows.length && (
-                <tr><td colSpan="11">
+                <tr><td colSpan="12">
                   <div className="empty">
                     <div className="icon"><I.Search/></div>
                     <div className="ttl">조건에 맞는 접수자가 없습니다</div>
@@ -567,7 +574,7 @@ function PhotoImg({ src, alt, fallback, className, rotate, style, onClick }) {
       loading="lazy"
       onClick={onClick}
       onError={() => setErr(true)}
-      style={{ objectFit: 'cover', width: '100%', height: '100%', ...(rotate ? { transform: `rotate(${rotate}deg)` } : {}), ...style }}
+      style={{ ...(rotate ? { transform: `rotate(${rotate}deg)` } : {}), ...style }}
     />
   );
 }
@@ -602,6 +609,7 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
   const [zoom, setZoom] = useState(false);
   const [rotate, setRotate] = useState(0);
   if (!a) return null;
+  const locked = isFoCancelled(a);
   const venue = state.venues.find(v => v.id === a.venueId);
   const hue = (a.id.charCodeAt(a.id.length - 1) * 17) % 360;
   const finalReason = reason === '기타' ? other : (other ? `${reason} — ${other}` : reason);
@@ -622,12 +630,12 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
       footer={mode === 'reject'
         ? <>
             <button className="btn btn-secondary" onClick={() => setMode(null)}>뒤로</button>
-            <button className="btn btn-danger" onClick={reject} disabled={reason === '기타' && !other.trim()}>반려 처리</button>
+            <button className="btn btn-danger" onClick={reject} disabled={locked || (reason === '기타' && !other.trim())}>반려 처리</button>
           </>
         : <>
             <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-            <button className="btn btn-danger" onClick={() => setMode('reject')}>반려</button>
-            <button className="btn btn-primary" onClick={approve}>승인</button>
+            <button className="btn btn-danger" onClick={() => setMode('reject')} disabled={locked}>반려</button>
+            <button className="btn btn-primary" onClick={approve} disabled={locked}>승인</button>
           </>}>
       <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: '0 0 150px' }}>
@@ -690,6 +698,7 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
   const [rotate, setRotate] = useState(0);
   const [zoom, setZoom] = useState(false);
   if (!a) return null;
+  const locked = isFoCancelled(a);
   const downloadOriginal = () => {
     if (!a.photoFileId || !window.TopikBoApi || !TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg')) {
       toastErr('원본 사진을 받을 수 없습니다. (사진 미제출 또는 API 미연결)');
@@ -723,9 +732,9 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
       sub={<span>회차 컨텍스트 · 접수ID <code className="code-id">{a.id}</code> · 상태 <Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></span>}
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        <button className="btn btn-secondary" onClick={onReject}>반려</button>
-        <button className="btn btn-secondary" onClick={onPay}>{a.paid ? '수납 취소' : '수납'}</button>
-        <button className="btn btn-primary" onClick={onApprove}>승인</button>
+        <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
+        <button className="btn btn-secondary" onClick={onPay} disabled={locked}>{a.paid ? '수납 취소' : '수납'}</button>
+        <button className="btn btn-primary" onClick={onApprove} disabled={locked}>승인</button>
       </>}>
       <div className="lp-tabs">
         <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>기본 정보</button>
@@ -747,20 +756,20 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
                 <PhotoStatusPill status={a.photoStatus}/>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button className="ibtn" style={{ flex: 1 }} onClick={() => setPhotoMode(photoMode === 'reject' ? null : 'reject')}>사진 반려</button>
-                <button className="ibtn" style={{ flex: 1 }} onClick={approvePhoto} disabled={a.photoStatus === 'approved'}>사진 승인</button>
+                <button className="ibtn" style={{ flex: 1 }} onClick={() => setPhotoMode(photoMode === 'reject' ? null : 'reject')} disabled={locked}>사진 반려</button>
+                <button className="ibtn" style={{ flex: 1 }} onClick={approvePhoto} disabled={locked || a.photoStatus === 'approved'}>사진 승인</button>
               </div>
               {photoMode === 'reject' && (
                 <div style={{ marginTop: 10 }}>
                   <FormRow label="사진 반려 사유" required>
-                    <select className="select" value={photoReason} onChange={e => setPhotoReason(e.target.value)}>
+                    <select className="select" value={photoReason} onChange={e => setPhotoReason(e.target.value)} disabled={locked}>
                       {PHOTO_REJECT_REASONS.map(r => <option key={r}>{r}</option>)}
                     </select>
                   </FormRow>
                   <FormRow label={photoReason === '기타' ? '상세 사유' : '추가 안내(선택)'} required={photoReason === '기타'}>
-                    <textarea className="textarea" rows="2" value={photoOther} onChange={e => setPhotoOther(e.target.value)} placeholder="예) 정면 사진이 아닙니다. 사진을 다시 등록해주세요."></textarea>
+                    <textarea className="textarea" rows="2" value={photoOther} onChange={e => setPhotoOther(e.target.value)} placeholder="예) 정면 사진이 아닙니다. 사진을 다시 등록해주세요." disabled={locked}></textarea>
                   </FormRow>
-                  <button className="btn btn-secondary btn-block" onClick={rejectPhoto} disabled={photoReason === '기타' && !photoOther.trim()}>사진 반려 처리</button>
+                  <button className="btn btn-secondary btn-block" onClick={rejectPhoto} disabled={locked || (photoReason === '기타' && !photoOther.trim())}>사진 반려 처리</button>
                 </div>
               )}
             </div>
@@ -917,7 +926,7 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
                 <td>{DataStore.venueName(a.venueId)}</td>
                 <td>
                   {a.photoStatus === 'pending'
-                    ? <button className="ibtn" onClick={() => onPhotoApprove(a.id)}>사진 승인</button>
+                    ? <button className="ibtn" onClick={() => onPhotoApprove(a.id)} disabled={isFoCancelled(a)}>사진 승인</button>
                     : <PhotoStatusPill status={a.photoStatus}/>}
                 </td>
                 <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
@@ -984,7 +993,7 @@ function ApproveModal({ modal, onClose, onConfirm }) {
 // ===== Reject modal (TPKM_BO_2_1_5) =====
 function RejectModal({ modal, onClose, onConfirm }) {
   const state = useStore();
-  const [reason, setReason] = useState(REJECT_REASONS[0]);
+  const [reason, setReason] = useState(GENERAL_REJECT_REASONS[0]);
   const [other, setOther] = useState('');
   const ids = modal.ids;
   const rows = ids.map(id => state.applicants.find(a => a.id === id)).filter(Boolean);
@@ -1000,7 +1009,7 @@ function RejectModal({ modal, onClose, onConfirm }) {
       </div>
       <FormRow label="반려 사유" required>
         <select className="select" value={reason} onChange={e => setReason(e.target.value)}>
-          {REJECT_REASONS.map(r => <option key={r}>{r}</option>)}
+          {GENERAL_REJECT_REASONS.map(r => <option key={r}>{r}</option>)}
         </select>
       </FormRow>
       <FormRow label={reason === '기타' ? '상세 사유' : '추가 안내 (선택)'} required={reason === '기타'}>

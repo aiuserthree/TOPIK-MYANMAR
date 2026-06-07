@@ -28,10 +28,10 @@
   ];
 
   const SESSIONS = [
-    { id: 's107', no: 107, name: '제107회 TOPIK', applyStart: '2026-07-17', applyEnd: '2026-07-21', examDate: '2026-10-18', resultDate: '', cap: 1200, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03','v04'], status: 'open', applicants: 0 },
-    { id: 's106', no: 106, name: '제106회 TOPIK', applyStart: '2026-06-01', applyEnd: '2026-07-21', examDate: '2026-09-19', resultDate: '2026-10-20', cap: 1200, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03','v04'], status: 'closed', applicants: 0 },
-    { id: 's105', no: 105, name: '제105회 TOPIK', applyStart: '2026-02-10', applyEnd: '2026-03-15', examDate: '2026-05-09', resultDate: '2026-06-10', cap: 1000, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03'], status: 'closed', applicants: 942 },
-    { id: 's104', no: 104, name: '제104회 TOPIK', applyStart: '2025-10-01', applyEnd: '2025-10-31', examDate: '2025-12-14', resultDate: '2026-01-15', cap: 1000, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03'], status: 'closed', applicants: 887 },
+    { id: 's107', no: 107, name: '제107회 TOPIK', applyStart: '2026-07-17', applyEnd: '2026-07-21', examDate: '2026-10-18', resultDate: '', cap: 1200, feeI: 25, feeII: 25, venues: ['v01','v02','v03','v04'], status: 'open', applicants: 0 },
+    { id: 's106', no: 106, name: '제106회 TOPIK', applyStart: '2026-06-01', applyEnd: '2026-07-21', examDate: '2026-09-19', resultDate: '2026-10-20', cap: 1200, feeI: 25, feeII: 25, venues: ['v01','v02','v03','v04'], status: 'closed', applicants: 0 },
+    { id: 's105', no: 105, name: '제105회 TOPIK', applyStart: '2026-02-10', applyEnd: '2026-03-15', examDate: '2026-05-09', resultDate: '2026-06-10', cap: 1000, feeI: 25, feeII: 25, venues: ['v01','v02','v03'], status: 'closed', applicants: 942 },
+    { id: 's104', no: 104, name: '제104회 TOPIK', applyStart: '2025-10-01', applyEnd: '2025-10-31', examDate: '2025-12-14', resultDate: '2026-01-15', cap: 1000, feeI: 25, feeII: 25, venues: ['v01','v02','v03'], status: 'closed', applicants: 887 },
   ];
 
   // ---- Applicants ----
@@ -425,7 +425,7 @@
   // ---- Format helpers (Korean text mostly) ----
   function fmtNum(n) { return new Intl.NumberFormat('ko-KR').format(n); }
   function fmtResultDate(d) { return d || '미정'; }
-  function fmtCurrency(n) { return fmtNum(n) + ' MMK'; }
+  function fmtCurrency(n) { return '$' + fmtNum(n) + ' USD'; }
   function statusLabel(s) {
     return ({
       applied: '접수완료', photo: '사진심사중', pay: '수납대기',

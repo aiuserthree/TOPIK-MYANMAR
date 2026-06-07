@@ -74,6 +74,24 @@
     transition: all .15s var(--ease);
   }
   .lvl-card:has(input:checked) { border-color: var(--primary); background: var(--primary-50); }
+  .lvl-card.disabled {
+    opacity: .55; cursor: not-allowed; pointer-events: none;
+    border-color: var(--border); background: var(--bg-2);
+  }
+  .lvl-card.disabled:has(input:checked) { border-color: var(--border); background: var(--bg-2); }
+  .lvl-card .lvl-lock-note {
+    font-size: 12px; font-weight: 600; color: var(--text-3);
+    margin-top: 6px;
+  }
+
+  .venue-select-wrap.locked select {
+    opacity: .55; cursor: not-allowed;
+    background: var(--bg-2); color: var(--text-2);
+  }
+  .venue-lock-note {
+    font-size: 12px; font-weight: 600; color: var(--text-3);
+    margin-top: 8px; display: none;
+  }
   .lvl-card .ck-box {
     width: 22px; height: 22px;
     border: 1.5px solid var(--border-strong);
@@ -199,10 +217,13 @@
       </div>
 
       <h2 class="h3" style="margin: 28px 0 6px;" data-i18n-content="reg.venue_title">시험장 선택</h2>
-      <p class="body-sm" style="margin-bottom: 10px;" data-i18n-content="reg.venue_desc">접수 회차에 배정 가능한 시험장입니다.</p>
-      <select class="input" id="venueSelect" style="width:100%; max-width:480px;">
-        <option value="" data-i18n-content="reg.venue_ph">시험장을 선택해 주세요</option>
-      </select>
+      <p class="body-sm" style="margin-bottom: 10px;" id="venueDesc" data-i18n-content="reg.venue_desc">접수 회차에 배정 가능한 시험장입니다.</p>
+      <div class="venue-select-wrap" id="venueSelectWrap">
+        <select class="input" id="venueSelect" style="width:100%; max-width:480px;">
+          <option value="" data-i18n-content="reg.venue_ph">시험장을 선택해 주세요</option>
+        </select>
+        <div class="venue-lock-note" id="venueLockNote" data-i18n-content="reg.venue_reapply_lock">재접수 시 기존 시험장으로 접수됩니다.</div>
+      </div>
 
       <h2 class="h3" style="margin: 28px 0 6px;"><span data-i18n-content="reg.level_title">응시 급수 선택</span> <span style="font-size: 12px; color:var(--text-3); font-weight:400;" data-i18n-content="reg.multi_select">(복수 선택 가능)</span></h2>
       <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.level_desc">TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.</p>
@@ -214,7 +235,7 @@
           <div style="flex:1;">
             <div class="ttl">TOPIK Ⅰ <span style="font-size:12px; color:var(--text-3); font-weight:500;" data-i18n-content="reg.lvl1_sub">초급 (1·2급)</span></div>
             <div class="sub" data-i18n-content="reg.lvl1_detail">듣기 30 + 읽기 40 · 100분 · 200점</div>
-            <div class="fee" id="feeLvl1" data-fee-level="I"><span data-i18n-content="reg.fee_label">응시료</span> 50,000 MMK</div>
+            <div class="fee" id="feeLvl1" data-fee-level="I"><span data-i18n-content="reg.fee_label">응시료</span> $25 USD</div>
           </div>
         </label>
         <label class="lvl-card">
@@ -223,7 +244,7 @@
           <div style="flex:1;">
             <div class="ttl">TOPIK Ⅱ <span style="font-size:12px; color:var(--text-3); font-weight:500;" data-i18n-content="reg.lvl2_sub">중·고급 (3~6급)</span></div>
             <div class="sub" data-i18n-content="reg.lvl2_detail">듣기 50 + 쓰기 4 + 읽기 50 · 180분 · 300점</div>
-            <div class="fee" id="feeLvl2" data-fee-level="II"><span data-i18n-content="reg.fee_label">응시료</span> 75,000 MMK</div>
+            <div class="fee" id="feeLvl2" data-fee-level="II"><span data-i18n-content="reg.fee_label">응시료</span> $25 USD</div>
           </div>
         </label>
       </div>
@@ -394,6 +415,8 @@
     'reg.venue_title': { ko: '시험장 선택', my: 'စာစစ်ဌာန ရွေးချယ်ရန်', en: 'Select venue' },
     'reg.venue_desc': { ko: '접수 회차에 배정 가능한 시험장입니다.', my: 'ဤအကြိမ်ရေအတွက် သတ်မှတ်နိုင်သော စာစစ်ဌာနများ။', en: 'Venues available for this session.' },
     'reg.venue_ph': { ko: '시험장을 선택해 주세요', my: 'စာစစ်ဌာန ရွေးချယ်ပါ', en: 'Please select a venue' },
+    'reg.venue_reapply_lock': { ko: '재접수 시 기존 시험장으로 접수됩니다.', my: 'ပြန်လျှောက်ရာတွင် ယခင်စာစစ်ဌာနဖြင့် လျှောက်ထားမည်။', en: 'Re-application uses your original exam venue.' },
+    'reg.venue_inprogress_lock': { ko: '진행 중인 급수와 동일한 시험장으로 접수됩니다.', my: 'ဆောင်ရွက်ဆဲ အဆင့်နှင့် တူညီသော စာစစ်ဌာနဖြင့် လျှောက်ထားမည်။', en: 'Registration uses the same venue as your in-progress level.' },
     'reg.level_title': { ko: '응시 급수 선택', my: 'အဆင့် ရွေးချယ်ရန်', en: 'Select level' },
     'reg.multi_select': { ko: '(복수 선택 가능)', my: '(တစ်ခုထက်ပို ရွေးနိုင်)', en: '(multiple allowed)' },
     'reg.level_desc': { ko: 'TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.', my: 'TOPIK Ⅰ နှင့် Ⅱ ကို တစ်ပြိုင်တည်း ဖြေဆိုနိုင်သည်။', en: 'You can take TOPIK I and II at the same time.' },
@@ -460,11 +483,50 @@
     venues: [],
     profile: null,
     selectedRoundId: null,
+    reapplyLockedVenueId: null,
+    reapplyLockedVenueName: null,
   };
 
+  var REAPPLY_KEY = 'tpkm_reg_reapply';
+
+  function initReapplyMode() {
+    var params = new URLSearchParams(location.search);
+    if (params.get('reapply') !== '1') return;
+    var roundId = params.get('exam_round_id');
+    var level = params.get('level');
+    var applicationId = params.get('application_id');
+    var venueId = params.get('venue_id') || params.get('exam_venue_id');
+    try {
+      sessionStorage.setItem(REAPPLY_KEY, JSON.stringify({
+        reapply: true,
+        examRoundId: roundId ? Number(roundId) : null,
+        level: level ? String(level).toUpperCase() : null,
+        applicationId: applicationId ? Number(applicationId) : null,
+        venueId: venueId ? Number(venueId) : null
+      }));
+    } catch (e) {}
+    if (history.replaceState) {
+      history.replaceState(null, '', 'register.html');
+    }
+  }
+
+  function getReapplyMode() {
+    try {
+      var raw = sessionStorage.getItem(REAPPLY_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  function clearReapplyMode() {
+    try { sessionStorage.removeItem(REAPPLY_KEY); } catch (e) {}
+  }
+
+  initReapplyMode();
+
   // ---- 응시료 (회차 데이터 기반, API 무응답 시에만 폴백) ----
-  // 기대 키: round.fees = { "I": <MMK>, "II": <MMK> } (또는 fee_topik_i / fee_topik_ii)
-  var FALLBACK_FEES = { I: 50000, II: 75000 };
+  // 기대 키: round.fees = { "I": <USD>, "II": <USD> } (또는 fee_topik_i / fee_topik_ii)
+  var FALLBACK_FEES = { I: 25, II: 25 };
   function feeFor(round, level) {
     if (round) {
       if (round.fees && round.fees[level] != null) return Number(round.fees[level]);
@@ -477,8 +539,8 @@
     }
     return FALLBACK_FEES[level];
   }
-  function formatMMK(n) {
-    return (Number(n) || 0).toLocaleString('en-US') + ' MMK';
+  function formatFee(n) {
+    return '$' + (Number(n) || 0).toLocaleString('en-US') + ' USD';
   }
   function feeLabelText() {
     return (window.TPKMLang && TPKMLang.t('reg.fee_label')) || '응시료';
@@ -488,7 +550,7 @@
       var el = document.getElementById(pair[0]);
       if (!el) return;
       el.innerHTML = '<span data-i18n-content="reg.fee_label">' + feeLabelText() + '</span> ' +
-        formatMMK(feeFor(round, pair[1]));
+        formatFee(feeFor(round, pair[1]));
     });
   }
 
@@ -578,7 +640,360 @@
       list.appendChild(card);
     });
     bindRoundCards();
+    applyReapplyRoundPreselect();
     updateFeeDisplay(getSelectedRound());
+    applyLevelLocks();
+  }
+
+  function applyReapplyRoundPreselect() {
+    var mode = getReapplyMode();
+    if (!mode || !mode.reapply || !mode.examRoundId) return;
+    var cards = document.querySelectorAll('.round-card');
+    cards.forEach(function (c) {
+      if (Number(c.dataset.roundId) === Number(mode.examRoundId) && !c.classList.contains('disabled')) {
+        cards.forEach(function (x) { x.classList.remove('selected'); });
+        c.classList.add('selected');
+        REG_STATE.selectedRoundId = Number(mode.examRoundId);
+      }
+    });
+  }
+
+  function levelLockReason(app) {
+    var st = app.fo_card_status || '';
+    if (st === 'photo' || st === 'photo_rejected') return '사진 심사중';
+    if (st === 'pay') return '수납 대기';
+    if (st === 'approved' || st === 'number' || st === 'applied') return '접수 진행중';
+    return '심사 진행중';
+  }
+
+  function isRejectedLevelApp(app) {
+    if (!app) return false;
+    return app.fo_card_status === 'app_rejected' || app.status === 'rejected';
+  }
+
+  function isCancelledLevelApp(app) {
+    if (!app) return false;
+    if (app.status === 'cancelled') return true;
+    if (app.fo_card_status === 'cancelled' || app.fo_card_status === 'cancel') return true;
+    if (app.cancelled_at) return true;
+    return false;
+  }
+
+  function isReapplySelectableLevelApp(app) {
+    return isRejectedLevelApp(app) || isCancelledLevelApp(app);
+  }
+
+  function isActiveLevelApp(app) {
+    if (!app || isCancelledLevelApp(app)) return false;
+    return !isRejectedLevelApp(app);
+  }
+
+  function levelAppFromItem(item, lvRow) {
+    if (!lvRow) return item;
+    var st = lvRow.status || '';
+    var fo = item.fo_card_status || 'applied';
+    if (st === 'cancelled') fo = 'cancelled';
+    else if (lvRow.photo_review_status === 'rejected') fo = 'photo_rejected';
+    else if (st === 'rejected') fo = 'app_rejected';
+    return {
+      exam_round_id: item.exam_round_id,
+      exam_venue_id: item.exam_venue_id,
+      exam_level: lvRow.exam_level,
+      status: st,
+      fo_card_status: fo,
+      tab: st === 'cancelled' ? 'past' : item.tab,
+      venue: item.venue,
+      cancelled_at: lvRow.cancelled_at || null
+    };
+  }
+
+  function pickLevelApp(state, lv, app) {
+    var prev = state[lv];
+    if (isCancelledLevelApp(app)) {
+      if (!prev || isCancelledLevelApp(prev) || !isActiveLevelApp(prev)) state[lv] = app;
+      return;
+    }
+    if (!prev || isCancelledLevelApp(prev)) {
+      state[lv] = app;
+      return;
+    }
+    if (isActiveLevelApp(app) && !isActiveLevelApp(prev)) state[lv] = app;
+  }
+
+  function buildLevelStateForRound(items, roundId) {
+    var state = { I: null, II: null };
+    var rid = Number(roundId);
+    (items || []).forEach(function (it) {
+      if (Number(it.exam_round_id) !== rid) return;
+      if (it.exam_level === 'I' || it.exam_level === 'II') {
+        pickLevelApp(state, it.exam_level, it);
+        return;
+      }
+      if (it.levels && it.levels.length) {
+        it.levels.forEach(function (lvRow) {
+          if (lvRow.exam_level !== 'I' && lvRow.exam_level !== 'II') return;
+          pickLevelApp(state, lvRow.exam_level, levelAppFromItem(it, lvRow));
+        });
+      }
+    });
+    return state;
+  }
+
+  function getNonCancelledRoundApps(items, roundId) {
+    var rid = Number(roundId);
+    return (items || []).filter(function (it) {
+      if (Number(it.exam_round_id) !== rid) return false;
+      if (it.exam_level === 'I' || it.exam_level === 'II') return !isCancelledLevelApp(it);
+      if (it.levels && it.levels.length) {
+        return it.levels.some(function (lvRow) {
+          return (lvRow.exam_level === 'I' || lvRow.exam_level === 'II') &&
+            lvRow.status !== 'cancelled';
+        });
+      }
+      return it.tab !== 'past';
+    });
+  }
+
+  function resetLevelCardState(inputId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var card = input.closest('.lvl-card');
+    var note = card && card.querySelector('.lvl-lock-note');
+    input.disabled = false;
+    if (card) card.classList.remove('disabled');
+    if (note) note.remove();
+  }
+
+  function resetAllLevelCardStates() {
+    resetLevelCardState('lvl1');
+    resetLevelCardState('lvl2');
+    REG_STATE.reapplySelectableLevels = null;
+  }
+
+  function formatVenueLabel(v) {
+    if (!v) return '';
+    if (typeof v === 'string') return v;
+    var ko = v.name_ko || v.name || '';
+    var en = v.name_en ? ' (' + v.name_en + ')' : '';
+    return ko + en;
+  }
+
+  function resetVenueLock() {
+    REG_STATE.reapplyLockedVenueId = null;
+    REG_STATE.reapplyLockedVenueName = null;
+    var wrap = document.getElementById('venueSelectWrap');
+    var sel = document.getElementById('venueSelect');
+    var note = document.getElementById('venueLockNote');
+    if (wrap) wrap.classList.remove('locked');
+    if (sel) {
+      sel.disabled = false;
+      Array.from(sel.options).forEach(function (opt) {
+        opt.disabled = false;
+        opt.hidden = false;
+      });
+    }
+    if (note) note.style.display = 'none';
+  }
+
+  function ensureVenueOption(venueId, venueName) {
+    var sel = document.getElementById('venueSelect');
+    if (!sel || !venueId) return;
+    var existing = sel.querySelector('option[value="' + venueId + '"]');
+    if (existing) return;
+    var opt = document.createElement('option');
+    opt.value = String(venueId);
+    opt.textContent = venueName || ('시험장 #' + venueId);
+    sel.appendChild(opt);
+  }
+
+  function applyVenueLock(venueId, venueName, lockReason) {
+    if (!venueId) return;
+    REG_STATE.reapplyLockedVenueId = Number(venueId);
+    REG_STATE.reapplyLockedVenueName = venueName || null;
+    ensureVenueOption(venueId, venueName);
+    var sel = document.getElementById('venueSelect');
+    if (sel) {
+      sel.value = String(venueId);
+      Array.from(sel.options).forEach(function (opt) {
+        if (!opt.value) {
+          opt.disabled = true;
+          opt.hidden = true;
+        } else {
+          opt.disabled = Number(opt.value) !== Number(venueId);
+        }
+      });
+      sel.disabled = true;
+    }
+    var wrap = document.getElementById('venueSelectWrap');
+    var note = document.getElementById('venueLockNote');
+    if (wrap) wrap.classList.add('locked');
+    if (note) {
+      var key = lockReason === 'reapply' ? 'reg.venue_reapply_lock' : 'reg.venue_inprogress_lock';
+      note.setAttribute('data-i18n-content', key);
+      if (window.TPKMLang && TPKMLang.t) {
+        note.textContent = TPKMLang.t(key);
+      }
+      note.style.display = 'block';
+    }
+  }
+
+  function hasInProgressLevel(levelState) {
+    return (levelState.I && isActiveLevelApp(levelState.I)) ||
+      (levelState.II && isActiveLevelApp(levelState.II));
+  }
+
+  function resolveReapplyVenueFromApps(roundApps, mode) {
+    var inProgress = (roundApps || []).filter(isActiveLevelApp);
+    var pool = inProgress.length ? inProgress : roundApps;
+    if (pool.length) {
+      var item = pool[0];
+      var venueId = item.exam_venue_id;
+      var venueName = formatVenueLabel(item.venue);
+      if (!venueName && venueId) {
+        var found = (REG_STATE.venues || []).find(function (v) { return Number(v.id) === Number(venueId); });
+        venueName = formatVenueLabel(found);
+      }
+      return { venueId: venueId, venueName: venueName };
+    }
+    if (mode && mode.venueId) {
+      var vid = Number(mode.venueId);
+      var vfound = (REG_STATE.venues || []).find(function (v) { return Number(v.id) === vid; });
+      return { venueId: vid, venueName: formatVenueLabel(vfound) };
+    }
+    return null;
+  }
+
+  function preselectVenueWithoutLock(venueId) {
+    if (!venueId) return;
+    var venueSel = document.getElementById('venueSelect');
+    if (!venueSel) return;
+    var opt = venueSel.querySelector('option[value="' + venueId + '"]');
+    if (opt) venueSel.value = String(venueId);
+  }
+
+  function setLevelCardState(inputId, level, app, reapplySelectableLevels) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var card = input.closest('.lvl-card');
+    var body = card && card.querySelector('div[style*="flex:1"]');
+    var note = card && card.querySelector('.lvl-lock-note');
+
+    if (!app) return;
+
+    if (isReapplySelectableLevelApp(app)) {
+      reapplySelectableLevels.push(level);
+      if (note) note.remove();
+      return;
+    }
+
+    if (isActiveLevelApp(app)) {
+      input.checked = false;
+      input.disabled = true;
+      if (card) card.classList.add('disabled');
+      if (body) {
+        if (!note) {
+          note = document.createElement('div');
+          note.className = 'lvl-lock-note';
+          body.appendChild(note);
+        }
+        note.textContent = levelLockReason(app);
+      }
+    }
+  }
+
+  function resolveLevelLockRoundId() {
+    var mode = getReapplyMode();
+    if (mode && mode.reapply && mode.examRoundId) return Number(mode.examRoundId);
+    if (REG_STATE.selectedRoundId) return Number(REG_STATE.selectedRoundId);
+    var round = getSelectedRound();
+    return round ? Number(round.id) : null;
+  }
+
+  function applyLevelLocks() {
+    var roundId = resolveLevelLockRoundId();
+    if (!roundId || !window.TopikApi || !TopikApi.getMyApplications || !TopikApi.isLoggedIn()) {
+      resetAllLevelCardStates();
+      return;
+    }
+
+    var mode = getReapplyMode();
+    var isReapply = !!(mode && mode.reapply);
+
+    resetAllLevelCardStates();
+    if (!isReapply) resetVenueLock();
+    REG_STATE.levelLocksPending = true;
+    var lockRoundId = roundId;
+    REG_STATE._levelLockReq = (REG_STATE._levelLockReq || 0) + 1;
+    var lockReqId = REG_STATE._levelLockReq;
+    TopikApi.getMyApplications().then(function (res) {
+      if (lockReqId !== REG_STATE._levelLockReq) return;
+      if (lockRoundId !== resolveLevelLockRoundId()) return;
+      if (!res.ok || !res.body) return;
+      var items = res.body.items || [];
+      var levelState = buildLevelStateForRound(items, lockRoundId);
+      var roundApps = getNonCancelledRoundApps(items, lockRoundId);
+
+      var reapplySelectableLevels = [];
+      setLevelCardState('lvl1', 'I', levelState.I, reapplySelectableLevels);
+      setLevelCardState('lvl2', 'II', levelState.II, reapplySelectableLevels);
+
+      if (isReapply) {
+        REG_STATE.reapplySelectableLevels = reapplySelectableLevels.slice();
+        resetVenueLock();
+        if (hasInProgressLevel(levelState)) {
+          var lockedVenue = resolveReapplyVenueFromApps(roundApps, mode);
+          if (lockedVenue && lockedVenue.venueId) {
+            applyVenueLock(lockedVenue.venueId, lockedVenue.venueName, 'reapply');
+          }
+        } else if (roundApps.length) {
+          preselectVenueWithoutLock(roundApps[0].exam_venue_id);
+        }
+      } else if (hasInProgressLevel(levelState)) {
+        var lockedVenueNormal = resolveReapplyVenueFromApps(roundApps, null);
+        if (lockedVenueNormal && lockedVenueNormal.venueId) {
+          applyVenueLock(lockedVenueNormal.venueId, lockedVenueNormal.venueName, 'inprogress');
+        }
+      } else if (roundApps.length) {
+        preselectVenueWithoutLock(roundApps[0].exam_venue_id);
+      }
+
+      if (isReapply) {
+        var preselect = [];
+        if (mode.level && reapplySelectableLevels.indexOf(mode.level) >= 0) {
+          preselect.push(mode.level);
+        } else {
+          reapplySelectableLevels.forEach(function (lv) {
+            var app = lv === 'II' ? levelState.II : levelState.I;
+            if (app && isRejectedLevelApp(app)) preselect.push(lv);
+          });
+        }
+        preselect.forEach(function (lv) {
+          var id = lv === 'II' ? 'lvl2' : 'lvl1';
+          var input = document.getElementById(id);
+          if (input && !input.disabled) input.checked = true;
+        });
+      }
+
+      updateSummary();
+    }).catch(function () { /* level locks optional */ })
+      .finally(function () { REG_STATE.levelLocksPending = false; });
+  }
+
+  function getInvalidReapplyLevels(levels) {
+    var mode = getReapplyMode();
+    if (!mode || !mode.reapply || !REG_STATE.reapplySelectableLevels) return [];
+    return (levels || []).filter(function (lv) {
+      return REG_STATE.reapplySelectableLevels.indexOf(lv) < 0;
+    });
+  }
+
+  function getSelectableLevels() {
+    var levels = [];
+    var l1 = document.getElementById('lvl1');
+    var l2 = document.getElementById('lvl2');
+    if (l1 && l1.checked && !l1.disabled) levels.push('I');
+    if (l2 && l2.checked && !l2.disabled) levels.push('II');
+    return levels;
   }
 
   function renderVenueSelect(venues) {
@@ -591,6 +1006,12 @@
       opt.textContent = v.name_ko + (v.name_en ? ' (' + v.name_en + ')' : '');
       sel.appendChild(opt);
     });
+    var mode = getReapplyMode();
+    if (REG_STATE.reapplyLockedVenueId) {
+      var lockReason = (mode && mode.reapply) ? 'reapply' : 'inprogress';
+      applyVenueLock(REG_STATE.reapplyLockedVenueId, REG_STATE.reapplyLockedVenueName, lockReason);
+      return;
+    }
     if (venues.length === 1) sel.value = String(venues[0].id);
   }
 
@@ -677,6 +1098,7 @@
         c.classList.add('selected');
         REG_STATE.selectedRoundId = Number(c.dataset.roundId);
         updateFeeDisplay(getSelectedRound());
+        applyLevelLocks();
       });
     });
   }
@@ -697,12 +1119,32 @@
     const cur = +document.querySelector('.step-pane.active').dataset.s;
     // STEP1 validation
     if (cur === 1) {
-      const any = document.getElementById('lvl1').checked || document.getElementById('lvl2').checked;
-      if (!any) { alert('응시 급수를 1개 이상 선택해 주세요.'); return; }
+      const levels = getSelectableLevels();
+      if (!levels.length) { alert('응시 급수를 1개 이상 선택해 주세요.'); return; }
+      var mode = getReapplyMode();
+      if (REG_STATE.levelLocksPending) {
+        alert('접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      var l1 = document.getElementById('lvl1');
+      var l2 = document.getElementById('lvl2');
+      if ((l1 && l1.checked && l1.disabled) || (l2 && l2.checked && l2.disabled)) {
+        alert('진행 중인 급수는 선택할 수 없습니다.');
+        return;
+      }
+      if (mode && mode.reapply && REG_STATE.reapplySelectableLevels) {
+        var invalidReapply = getInvalidReapplyLevels(levels);
+        if (invalidReapply.length) {
+          alert('심사 진행 중인 급수는 재접수할 수 없습니다.');
+          return;
+        }
+      }
       if (!document.querySelector('.round-card.selected')) {
         alert('응시 회차를 선택해 주세요.'); return;
       }
-      const venue = document.getElementById('venueSelect').value;
+      const venue = REG_STATE.reapplyLockedVenueId
+        ? String(REG_STATE.reapplyLockedVenueId)
+        : document.getElementById('venueSelect').value;
       if (!venue) { alert('시험장을 선택해 주세요.'); return; }
     }
     if (cur === 4) return;
@@ -764,8 +1206,12 @@
     const venueSel = document.getElementById('venueSelect');
     const sumVenue = document.getElementById('sumVenue');
     if (sumVenue && venueSel) {
-      const opt = venueSel.options[venueSel.selectedIndex];
-      sumVenue.textContent = opt && opt.value ? opt.textContent : '—';
+      if (REG_STATE.reapplyLockedVenueId && REG_STATE.reapplyLockedVenueName) {
+        sumVenue.textContent = REG_STATE.reapplyLockedVenueName;
+      } else {
+        const opt = venueSel.options[venueSel.selectedIndex];
+        sumVenue.textContent = opt && opt.value ? opt.textContent : '—';
+      }
     }
     const u = REG_STATE.profile;
     if (u) {
@@ -782,22 +1228,27 @@
       var total = 0;
       if (l1) total += feeFor(round, 'I');
       if (l2) total += feeFor(round, 'II');
-      sumFee.textContent = lvls.length ? formatMMK(total) : '—';
+      sumFee.textContent = lvls.length ? formatFee(total) : '—';
     }
   }
 
   function buildSubmitPayload() {
     const round = getSelectedRound();
-    const levels = [];
-    if (document.getElementById('lvl1').checked) levels.push('I');
-    if (document.getElementById('lvl2').checked) levels.push('II');
-    return {
+    const levels = getSelectableLevels();
+    var mode = getReapplyMode();
+    var venueId = Number(document.getElementById('venueSelect').value) || undefined;
+    if (REG_STATE.reapplyLockedVenueId) {
+      venueId = REG_STATE.reapplyLockedVenueId;
+    }
+    var payload = {
       exam_round_id: round ? round.id : REG_STATE.selectedRoundId,
       exam_levels: levels,
-      exam_venue_id: Number(document.getElementById('venueSelect').value) || undefined,
+      exam_venue_id: venueId,
       photo_checklist_confirmed: true,
       terms_agreed: buildExamTermsAgreed(),
     };
+    if (mode && mode.reapply) payload.reapply = true;
+    return payload;
   }
 
   function showSubmitError(msg) {
@@ -813,6 +1264,20 @@
       alert('약관에 동의해 주세요.'); return;
     }
     showSubmitError('');
+
+    if (REG_STATE.levelLocksPending) {
+      alert('접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    var submitLevels = getSelectableLevels();
+    if (!submitLevels.length) {
+      alert('응시 급수를 1개 이상 선택해 주세요.'); return;
+    }
+    if (getInvalidReapplyLevels(submitLevels).length) {
+      alert('심사 진행 중인 급수는 재접수할 수 없습니다.');
+      return;
+    }
 
     if (!window.TopikApi || !TopikApi.isLoggedIn()) {
       alert('로그인이 필요합니다.'); location.href = 'login.html?next=' + encodeURIComponent('register.html'); return;
@@ -834,6 +1299,7 @@
       btn.textContent = '접수하기';
       if (res.ok) {
         localStorage.removeItem(DRAFT_KEY);
+        clearReapplyMode();
         if (TopikApi.deleteApplicationDraft) {
           TopikApi.deleteApplicationDraft().catch(function () {});
         }
@@ -885,7 +1351,9 @@
       cards[d.round].classList.add('selected');
       if (cards[d.round].dataset.roundId) REG_STATE.selectedRoundId = Number(cards[d.round].dataset.roundId);
     }
-    if (d.venueId) document.getElementById('venueSelect').value = String(d.venueId);
+    if (d.venueId && !(getReapplyMode() && getReapplyMode().reapply)) {
+      document.getElementById('venueSelect').value = String(d.venueId);
+    }
     document.getElementById('lvl1').checked = !!d.lvl1;
     document.getElementById('lvl2').checked = !!d.lvl2;
     if (Array.isArray(d.photoChecks)) {
@@ -895,6 +1363,7 @@
     }
     document.getElementById('agreeTerms').checked = !!d.agree;
     updateSummary();
+    applyLevelLocks();
     if (d.step) go(d.step);
   }
 
@@ -1002,6 +1471,8 @@
   }
 
   function restoreDraft() {
+    var mode = getReapplyMode();
+    if (mode && mode.reapply) return;
     restoreDraftFromApi();
   }
   restoreDraft();

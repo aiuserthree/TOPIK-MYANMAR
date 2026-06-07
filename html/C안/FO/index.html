@@ -112,8 +112,18 @@
     border-top: 1px dashed var(--border);
     font-size: 12.5px; color: var(--text-3);
     display: flex; justify-content: space-between;
+    gap: 12px;
   }
-  .dday-foot strong { color: var(--text-2); font-weight: 600; }
+  .dday-foot-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.35;
+  }
+  .dday-foot-item strong { color: var(--text-2); font-weight: 600; }
+  @media (max-width: 767px) {
+    .dday-foot { display: none; }
+  }
 
   @media (min-width: 768px) {
     .hero { padding: 56px 0 64px; }
@@ -287,9 +297,9 @@
             <div class="dday-cell"><div class="n" id="dd-s">--</div><div class="u">SEC</div></div>
           </div>
           <div class="dday-foot">
-            <span>접수 기간 <strong>2026.07.17 ~ 07.21</strong></span>
-            <span>응시료 납부 <strong>2026.07.24 ~ 07.26</strong></span>
-            <span>시험일 <strong>2026.10.18</strong></span>
+            <span class="dday-foot-item">접수기간<br><strong>2026.07.17 ~ 07.21</strong></span>
+            <span class="dday-foot-item">응시료 납부<br><strong>2026.07.24 ~ 07.26</strong></span>
+            <span class="dday-foot-item">시험일<br><strong>2026.10.18</strong></span>
           </div>
         </div>
       </div>
@@ -444,7 +454,7 @@
     'home.round_tag': { ko: '제{n}회', my: '({n}) ကြိမ်မြောက်', en: 'Session {n}' },
     'home.exam_name': { ko: '한국어능력시험', my: 'ကိုရီးယားဘာသာ ကျွမ်းကျင်မှု စာမေးပွဲ', en: 'TOPIK' },
     'home.until_close': { ko: '접수 마감까지', my: 'လျှောက်ထားမှု ပိတ်ရန် ကျန်', en: 'until registration closes' },
-    'home.reg_period': { ko: '접수 기간', my: 'လျှောက်ထားကာလ', en: 'Registration' },
+    'home.reg_period': { ko: '접수기간', my: 'လျှောက်ထားကာလ', en: 'Registration' },
     'home.pay': { ko: '응시료 납부', my: 'ဖြေဆိုကြေး ပေးသွင်း', en: 'Fee payment' },
     'home.exam_date': { ko: '시험일', my: 'စာမေးပွဲနေ့', en: 'Exam date' },
     'home.schedule': { ko: '시험 일정', my: 'စာမေးပွဲ အချိန်ဇယား', en: 'exam schedule' },
@@ -587,16 +597,19 @@
     var timer = null;
     var closed = false;
 
+    function footItem(label, date) {
+      return '<span class="dday-foot-item">' + label + '<br><strong>' + date + '</strong></span>';
+    }
+
     function footHtml(isClosed) {
       var exam = bt('home.exam_date', '시험일');
       var pay = bt('home.pay', '응시료 납부');
       if (isClosed) {
-        return '<span>' + exam + ' <strong>' + examDot() + '</strong></span>' +
-               '<span>' + pay + ' <strong>' + SCHED.payPeriod + '</strong></span>';
+        return footItem(exam, examDot()) + footItem(pay, SCHED.payPeriod);
       }
-      return '<span>' + bt('home.reg_period', '접수 기간') + ' <strong>' + regPeriod() + '</strong></span>' +
-             '<span>' + pay + ' <strong>' + SCHED.payPeriod + '</strong></span>' +
-             '<span>' + exam + ' <strong>' + examDot() + '</strong></span>';
+      return footItem(bt('home.reg_period', '접수기간'), regPeriod()) +
+             footItem(pay, SCHED.payPeriod) +
+             footItem(exam, examDot());
     }
 
     // 접수기간·시험일·회차번호 등 정적 텍스트를 SCHED 기준으로 다시 그린다.

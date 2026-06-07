@@ -22,12 +22,18 @@
   }
 
   function resolveBaseUrl() {
-    // 우선순위: window.TOPIK_API_BASE > <meta topik-api-base> > 동일 오리진("")
+    // 우선순위: window.TOPIK_API_BASE > <meta topik-api-base> > localhost:8000 > 동일 오리진("")
     if (typeof global.TOPIK_API_BASE === "string" && global.TOPIK_API_BASE.trim()) {
       return global.TOPIK_API_BASE.trim();
     }
     var metaBase = readMetaApiBase();
     if (metaBase) return metaBase;
+    var loc = global.location;
+    if (!loc || !loc.hostname) return "http://127.0.0.1:8000";
+    var host = loc.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "http://127.0.0.1:8000";
+    }
     return "";
   }
 
@@ -338,6 +344,19 @@
       return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(id) + "/status", {
         method: "POST",
         body: JSON.stringify({ registration_status: registrationStatus }),
+      });
+    },
+    revokeExamRound: function (id) {
+      return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(id) + "/revoke", {
+        method: "POST",
+        body: "{}",
+      });
+    },
+    restoreExamRound: function (id, registrationStatus) {
+      var body = registrationStatus ? { registration_status: registrationStatus } : {};
+      return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(id) + "/restore", {
+        method: "POST",
+        body: JSON.stringify(body),
       });
     },
     getExamVenues: function () { return apiFetch("/api/v1/admin/exam-venues"); },

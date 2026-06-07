@@ -6,6 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 from app.config import get_settings
 from app.lib.env_validate import validate_runtime_settings
@@ -85,6 +86,26 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
                 "details": jsonable_encoder(exc.errors()),
             }
         },
+    )
+
+
+@app.exception_handler(IntegrityError)
+async def _integrity_exception_handler(request: Request, exc: IntegrityError):
+    """Unhandled unique/FK violations → JSON 409/400 (CORS-safe) instead of bare 500."""
+    msg = str(exc.orig) if exc.orig else str(exc)
+    if "application_submissions_user_id_exam_round_id" in msg:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "error": {
+                    "code": "ALREADY_SUBMITTED",
+                    "message": "이미 해당 회차에 접수한 내역이 있습니다.",
+                }
+            },
+        )
+    return JSONResponse(
+        status_code=400,
+        content={"error": {"code": "CONFLICT", "message": "요청이 기존 데이터와 충돌합니다."}},
     )
 
 

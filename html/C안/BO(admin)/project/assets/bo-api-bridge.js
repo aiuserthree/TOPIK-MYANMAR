@@ -13,6 +13,7 @@
     scheduled: "planned",
     open: "open",
     closed: "closed",
+    revoked: "revoked",
   };
   var STATUS_TO_API = { planned: "scheduled", open: "open", closed: "closed" };
 
@@ -191,6 +192,7 @@
     approve: "승인", reject: "반려", payment_complete: "수납", payment_cancel: "수납취소",
     board_reply: "수정", board_delete: "삭제", board_workflow: "수정",
     term_create: "생성", term_update: "수정", term_publish: "게시", term_retire: "폐지",
+    exam_round_revoke: "폐지", exam_round_restore: "복구",
     user_update: "수정", user_reset_password: "비밀번호초기화",
     admin_create: "생성", admin_update: "수정", admin_reset_password: "비밀번호초기화",
     exam_round_create: "생성", exam_venue_update: "수정", exam_number_assign: "수험번호부여",
@@ -548,7 +550,7 @@
   DS.apiPhotoReject = function (id, reason) {
     return Api.photoReview(id, { action: "reject", photo_reject_note: reason }).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      applyLocalApplicant(id, { photoStatus: "rejected", photoOk: false, status: "rejected", rejectReason: reason });
+      applyLocalApplicant(id, { photoStatus: "rejected", photoOk: false, status: "photo", rejectReason: reason });
       return true;
     });
   };
@@ -605,6 +607,13 @@
         return DS.reloadApplicants(sessionId).then(function () { return res.body; });
       }
       return res.body;
+    });
+  };
+
+  DS.apiRevokeSession = function (id) {
+    return Api.revokeExamRound(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      return DS.initFromApi();
     });
   };
 

@@ -254,7 +254,7 @@ curl -s -X POST "$API/api/v1/admin/exam-venues" -H "Authorization: Bearer $ADMIN
 
 curl -s -X POST "$API/api/v1/admin/exam-rounds" -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"round_no":108,"title":"제108회 TOPIK","exam_date":"2026-12-20","registration_start_at":"2026-11-01T00:00:00+06:30","registration_end_at":"2026-11-10T23:59:59+06:30","fee_level_i":50000,"fee_level_ii":75000,"capacity":1200,"venue_ids":[1,2]}'
+  -d '{"round_no":108,"title":"제108회 TOPIK","exam_date":"2026-12-20","registration_start_at":"2026-11-01T00:00:00+06:30","registration_end_at":"2026-11-10T23:59:59+06:30","fee_level_i":25,"fee_level_ii":25,"capacity":1200,"venue_ids":[1,2]}'
 
 curl -s -X POST "$API/api/v1/admin/exam-rounds/5/status" -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H 'Content-Type: application/json' -d '{"registration_status":"open"}'

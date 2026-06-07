@@ -233,7 +233,6 @@
     'tk.bn_login': { ko: '로그인하면 수험번호 공개 여부를 이 페이지에서 확인할 수 있습니다. 수험표 출력은 <strong>TOPIK 본부(topik.go.kr)</strong>에서 진행됩니다.', my: 'အကောင့်ဝင်ပါက ဖြေဆိုသူနံပါတ် ထုတ်ပြန်မှု အခြေအနေကို ဤစာမျက်နှာတွင် ကြည့်နိုင်သည်။ ဝင်ခွင့်လက်မှတ်ကို <strong>TOPIK ဌာနချုပ် (topik.go.kr)</strong> တွင် ထုတ်သည်။', en: 'Sign in to see whether your exam number is published here. Admit cards are printed at <strong>TOPIK HQ (topik.go.kr)</strong>.' },
     'tk.bn_eligible': { ko: '아래 수험번호로 <strong>TOPIK 본부 홈페이지(topik.go.kr)</strong>에서 수험표를 출력하세요. 본 사이트는 수험표 직접 출력을 지원하지 않습니다.', my: 'အောက်ပါ ဖြေဆိုသူနံပါတ်ဖြင့် <strong>TOPIK ဌာနချုပ် ဝက်ဘ်ဆိုက် (topik.go.kr)</strong> တွင် ဝင်ခွင့်လက်မှတ် ထုတ်ပါ။ ဤဆိုက်တွင် တိုက်ရိုက် ထုတ်၍မရပါ။', en: 'Use the exam number(s) below to print your admit card at <strong>TOPIK HQ (topik.go.kr)</strong>. This site does not print directly.' },
     'tk.bn_pending': { ko: '수험번호는 부여되었으나 아직 공개일 전입니다. 공개일 이후 이 페이지와 <a href="mypage.html">접수 확인</a>에서 확인할 수 있습니다.', my: 'ဖြေဆိုသူနံပါတ် ပေးအပ်ပြီးဖြစ်သော်လည်း ထုတ်ပြန်ရက် မရောက်သေးပါ။ ထုတ်ပြန်ရက်နောက်ပိုင်း ဤစာမျက်နှာနှင့် <a href="mypage.html">လျှောက်ထားမှု အခြေအနေ</a> တွင် ကြည့်နိုင်သည်။', en: 'Your exam number is assigned but not yet published. After the release date, check it here and on <a href="mypage.html">Application status</a>.' },
-    'tk.bn_inprogress': { ko: '접수·심사·수납이 진행 중입니다. 수험번호는 수납 마감 후 일괄 부여되며, 공개일 이후 수험표 출력 안내가 표시됩니다. <a href="mypage.html">접수 확인</a>', my: 'လျှောက်ထားမှု·စိစစ်မှု·ပေးသွင်းမှု ဆောင်ရွက်ဆဲဖြစ်သည်။ ဖြေဆိုသူနံပါတ်ကို ပေးသွင်းမှု ပိတ်ပြီးနောက် တစ်ပြိုင်တည်း ပေးအပ်မည်။ <a href="mypage.html">လျှောက်ထားမှု အခြေအနေ</a>', en: 'Registration/review/payment is in progress. Exam numbers are assigned after payment closes; printing guidance appears after the release date. <a href="mypage.html">Application status</a>' },
     'tk.bn_none_eligible': { ko: '수험표 출력 대상 접수가 없습니다. <a href="mypage.html">접수 확인</a>', my: 'ဝင်ခွင့်လက်မှတ် ထုတ်ရန် လျှောက်လွှာ မရှိပါ။ <a href="mypage.html">လျှောက်ထားမှု အခြေအနေ</a>', en: 'No registration is eligible for an admit card. <a href="mypage.html">Application status</a>' },
     'tk.bn_empty': { ko: '진행 중인 접수가 없습니다. <a href="register.html">시험 접수</a> · <a href="mypage.html">접수 확인</a>', my: 'ဆောင်ရွက်ဆဲ လျှောက်လွှာ မရှိပါ။ <a href="register.html">စာမေးပွဲ လျှောက်ရန်</a> · <a href="mypage.html">လျှောက်ထားမှု အခြေအနေ</a>', en: 'No in-progress registration. <a href="register.html">Register</a> · <a href="mypage.html">Application status</a>' },
     'tk.bn_login_link': { ko: '<a href="login.html?next=ticket.html">로그인</a>하면 수험번호가 공개된 접수 건을 확인할 수 있습니다. 수험표 인쇄는 본 사이트가 아닌 <strong>topik.go.kr</strong>에서 진행됩니다.', my: '<a href="login.html?next=ticket.html">အကောင့်ဝင်</a>ပါက ဖြေဆိုသူနံပါတ် ထုတ်ပြန်ပြီးသော လျှောက်လွှာများကို ကြည့်နိုင်သည်။ ဝင်ခွင့်လက်မှတ်ကို ဤဆိုက်တွင်မဟုတ်ဘဲ <strong>topik.go.kr</strong> တွင် ထုတ်သည်။', en: '<a href="login.html?next=ticket.html">Sign in</a> to see registrations with a published exam number. Printing is done at <strong>topik.go.kr</strong>, not on this site.' },
@@ -275,9 +274,27 @@
   }
 
   function hasVisibleExamNumber(item) {
+    if (item.exam_number_visible && item.exam_number) return true;
     return (item.levels || []).some(function (l) {
       return l.exam_number_visible && l.exam_number;
     });
+  }
+
+  function groupBySubmission(items) {
+    var map = {};
+    var order = [];
+    items.forEach(function (item) {
+      var sid = String(item.submission_id);
+      if (!map[sid]) {
+        map[sid] = Object.assign({}, item, { levels: [] });
+        order.push(sid);
+      }
+      var levels = item.levels && item.levels.length ? item.levels : [item];
+      levels.forEach(function (l) {
+        map[sid].levels.push(l);
+      });
+    });
+    return order.map(function (sid) { return map[sid]; });
   }
 
   function buildTicketCard(item, highlight) {
@@ -339,16 +356,18 @@
       }
 
       var all = (res.body && res.body.items) ? res.body.items : [];
-      var eligible = all.filter(hasVisibleExamNumber);
-      var pending = all.filter(function (i) {
-        return !hasVisibleExamNumber(i) &&
-          (i.fo_card_status === 'number' || i.fo_card_status === 'approved' ||
-           (i.levels || []).some(function (l) { return l.exam_number && !l.exam_number_visible; }));
+      var grouped = groupBySubmission(all);
+      var eligibleFlat = all.filter(hasVisibleExamNumber);
+      var eligible = groupBySubmission(eligibleFlat);
+      var pending = grouped.filter(function (g) {
+        return !hasVisibleExamNumber(g) &&
+          (g.fo_card_status === 'number' || g.fo_card_status === 'approved' ||
+           (g.levels || []).some(function (l) { return l.exam_number && !l.exam_number_visible; }));
       });
-      var inProgress = all.filter(function (i) {
-        return !hasVisibleExamNumber(i) &&
-          ['applied', 'photo', 'pay', 'approved'].indexOf(i.fo_card_status) >= 0 &&
-          pending.indexOf(i) < 0;
+      var inProgress = grouped.filter(function (g) {
+        return !hasVisibleExamNumber(g) &&
+          ['applied', 'photo', 'pay', 'approved'].indexOf(g.fo_card_status) >= 0 &&
+          pending.indexOf(g) < 0;
       });
 
       if (eligible.length === 0 && all.length === 0) {
@@ -366,9 +385,7 @@
         }).join('');
       } else if (pending.length > 0) {
         html += '<div class="ticket-banner warn">' + bt('tk.bn_pending', '수험번호는 부여되었으나 아직 공개일 전입니다. 공개일 이후 이 페이지와 <a href="mypage.html">접수 확인</a>에서 확인할 수 있습니다.') + '</div>';
-      } else if (inProgress.length > 0) {
-        html += '<div class="ticket-banner warn">' + bt('tk.bn_inprogress', '접수·심사·수납이 진행 중입니다. 수험번호는 수납 마감 후 일괄 부여되며, 공개일 이후 수험표 출력 안내가 표시됩니다. <a href="mypage.html">접수 확인</a>') + '</div>';
-      } else {
+      } else if (inProgress.length === 0) {
         html += '<div class="ticket-banner info">' + bt('tk.bn_none_eligible', '수험표 출력 대상 접수가 없습니다. <a href="mypage.html">접수 확인</a>') + '</div>';
       }
 

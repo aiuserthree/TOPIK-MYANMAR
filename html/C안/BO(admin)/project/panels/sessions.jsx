@@ -4,6 +4,7 @@ function SessionsPanel() {
   const state = useStore();
   const [edit, setEdit] = useState(null); // {id} or {new:true}
   const [delId, setDelId] = useState(null);
+  const revokeTarget = delId ? state.sessions.find(x => x.id === delId) : null;
 
   const sessions = state.sessions.slice().sort((a,b) => (b.examDate || '').localeCompare(a.examDate || ''));
 
@@ -42,12 +43,20 @@ function SessionsPanel() {
     toastOk('회차가 복제되었습니다.');
   };
 
-  const remove = () => {
+  const remove = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiRevokeSession(delId);
+      if (ok) {
+        setDelId(null);
+        toastOk('회차가 폐지되었습니다.');
+      }
+      return;
+    }
     const s = state.sessions.find(x => x.id === delId);
     if (!s) return;
-    const idx = state.sessions.indexOf(s);
-    state.sessions.splice(idx, 1);
-    DataStore.addAudit({ type: '회차', targetId: s.id, action: '삭제', before: { ...s }, memo: '회차 폐지' });
+    const before = { ...s };
+    s.status = 'revoked';
+    DataStore.addAudit({ type: '회차', targetId: s.id, action: '폐지', before, after: { ...s }, memo: '회차 폐지' });
     DataStore.notify();
     setDelId(null);
     toastOk('회차가 폐지되었습니다.');
@@ -76,9 +85,12 @@ function SessionsPanel() {
             </thead>
             <tbody>
               {sessions.map(s => {
+                const isRevoked = s.status === 'revoked';
                 const isOpen = s.status === 'open', isClosed = s.status === 'closed';
+                const statusKind = isRevoked ? 'retired' : isOpen ? 'approved' : isClosed ? 'cancel' : 'applied';
+                const statusLabel = isRevoked ? '폐지' : isOpen ? '접수중' : isClosed ? '마감' : '예정';
                 return (
-                  <tr key={s.id}>
+                  <tr key={s.id} style={isRevoked ? { opacity: 0.6 } : undefined}>
                     <td className="code-id">{s.no}회</td>
                     <td><b>{s.name}</b></td>
                     <td className="code">{s.applyStart} ~ {s.applyEnd}</td>
@@ -88,12 +100,14 @@ function SessionsPanel() {
                     <td className="num">{DataStore.fmtNum(s.applicants || 0)}</td>
                     <td className="code">{DataStore.fmtNum(s.feeI)}/{DataStore.fmtNum(s.feeII)}</td>
                     <td>{s.venues.length}개소</td>
-                    <td><Pill kind={isOpen ? 'approved' : isClosed ? 'cancel' : 'applied'}>{isOpen ? '접수중' : isClosed ? '마감' : '예정'}</Pill></td>
+                    <td><Pill kind={statusKind}>{statusLabel}</Pill></td>
                     <td>
                       <div className="row-actions">
-                        <button className="ibtn" onClick={() => setEdit({ id: s.id })}><I.Edit style={{ width: 12, height: 12 }}/> 수정</button>
-                        <button className="ibtn" onClick={() => duplicate(s)}><I.Copy style={{ width: 12, height: 12 }}/> 복제</button>
-                        <button className="ibtn danger" onClick={() => setDelId(s.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                        {!isRevoked && <>
+                          <button className="ibtn" onClick={() => setEdit({ id: s.id })}><I.Edit style={{ width: 12, height: 12 }}/> 수정</button>
+                          <button className="ibtn" onClick={() => duplicate(s)}><I.Copy style={{ width: 12, height: 12 }}/> 복제</button>
+                          <button className="ibtn danger" onClick={() => setDelId(s.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                        </>}
                       </div>
                     </td>
                   </tr>
@@ -105,13 +119,17 @@ function SessionsPanel() {
       </div>
 
       {edit && <SessionEditLP edit={edit} onClose={() => setEdit(null)} onSave={save}/>}
-      {delId && (
+      {delId && revokeTarget && (
         <Modal open onClose={() => setDelId(null)} title="회차 폐지" danger
           footer={<>
             <button className="btn btn-secondary" onClick={() => setDelId(null)}>취소</button>
             <button className="btn btn-danger" onClick={remove}>폐지</button>
           </>}>
-          <div>회차를 폐지하시겠습니까? <b>접수자 정보는 유지</b>되며 회차는 비공개로 전환됩니다(soft-delete 권장).</div>
+          <div>
+            <b>{revokeTarget.name}</b> ({revokeTarget.no}회) 회차를 폐지하시겠습니까?
+            <br/><br/>
+            <span className="muted">접수자 정보는 유지되며 회차는 비공개로 전환됩니다.</span>
+          </div>
         </Modal>
       )}
     </>
@@ -121,18 +139,47 @@ function SessionsPanel() {
 function SessionEditLP({ edit, onClose, onSave }) {
   const state = useStore();
   const existing = edit.id ? state.sessions.find(s => s.id === edit.id) : null;
-  const [f, setF] = useState(existing ? { ...existing } : {
-    no: (Math.max(...state.sessions.map(s => s.no)) + 1),
+  const nextNo = state.sessions.length
+    ? Math.max(...state.sessions.map(s => Number(s.no) || 0)) + 1
+    : 1;
+  const [f, setF] = useState(() => existing ? {
+    ...existing,
+    venues: (existing.venues || []).map(String),
+    resultDate: existing.resultDate || '',
+    cap: existing.cap != null ? Number(existing.cap) : 0,
+    feeI: existing.feeI != null ? Number(existing.feeI) : 0,
+    feeII: existing.feeII != null ? Number(existing.feeII) : 0,
+    no: existing.no != null ? Number(existing.no) : nextNo,
+  } : {
+    no: nextNo,
     name: '',
     applyStart: '', applyEnd: '', examDate: '', resultDate: '',
-    cap: 1000, feeI: 12000, feeII: 15000, venues: [], status: 'planned'
+    cap: 1000, feeI: 25, feeII: 25, venues: [], status: 'planned'
   });
 
   useEffect(() => { if (!f.name && !existing) setF(s => ({ ...s, name: `제${s.no}회 TOPIK` })); }, []);
 
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
-  const toggleVenue = (vid) => set('venues', f.venues.includes(vid) ? f.venues.filter(x => x !== vid) : [...f.venues, vid]);
-  const valid = f.name && f.applyStart && f.applyEnd && f.examDate && f.cap > 0 && f.feeI > 0 && f.feeII > 0 && f.venues.length > 0
+  const selectAllOnFocus = (e) => e.target.select();
+  const parseRequiredInt = (raw) => {
+    const n = parseInt(raw, 10);
+    return Number.isNaN(n) ? 0 : n;
+  };
+  const toggleVenue = (vid) => setF(s => {
+    const venues = (s.venues || []).map(String);
+    const id = String(vid);
+    return { ...s, venues: venues.includes(id) ? venues.filter(x => x !== id) : [...venues, id] };
+  });
+  const venues = (f.venues || []).map(String);
+  const cap = Number(f.cap);
+  const feeI = Number(f.feeI);
+  const feeII = Number(f.feeII);
+  const valid = f.name.trim()
+    && f.applyStart && f.applyEnd && f.examDate
+    && !Number.isNaN(cap) && cap >= 0
+    && !Number.isNaN(feeI) && feeI > 0
+    && !Number.isNaN(feeII) && feeII > 0
+    && venues.length > 0
     && f.applyStart < f.applyEnd && f.applyEnd < f.examDate
     && (!f.resultDate || f.examDate < f.resultDate);
 
@@ -145,7 +192,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
       </>}>
       <FieldSet legend="기본 정보" cols={2}>
         <FormRow label="회차 번호" required>
-          <input type="number" className="input" value={f.no} onChange={e => set('no', parseInt(e.target.value||'0'))}/>
+          <input type="number" className="input" value={f.no} onFocus={selectAllOnFocus} onChange={e => set('no', parseRequiredInt(e.target.value))}/>
         </FormRow>
         <FormRow label="회차명" required>
           <input className="input" value={f.name} onChange={e => set('name', e.target.value)}/>
@@ -158,7 +205,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
           </select>
         </FormRow>
         <FormRow label="정원" required>
-          <input type="number" className="input" value={f.cap} onChange={e => set('cap', parseInt(e.target.value||'0'))}/>
+          <input type="number" className="input" value={f.cap} min={0} onFocus={selectAllOnFocus} onChange={e => set('cap', parseRequiredInt(e.target.value))}/>
         </FormRow>
       </FieldSet>
 
@@ -169,16 +216,16 @@ function SessionEditLP({ edit, onClose, onSave }) {
         <FormRow label="합격발표일"><input type="date" className="input" value={f.resultDate} onChange={e => set('resultDate', e.target.value)} placeholder="미정 시 비워두기"/></FormRow>
       </FieldSet>
 
-      <FieldSet legend="응시료(MMK)" cols={2}>
-        <FormRow label="TOPIK Ⅰ" required><input type="number" step="500" className="input" value={f.feeI} onChange={e => set('feeI', parseInt(e.target.value||'0'))}/></FormRow>
-        <FormRow label="TOPIK Ⅱ" required><input type="number" step="500" className="input" value={f.feeII} onChange={e => set('feeII', parseInt(e.target.value||'0'))}/></FormRow>
+      <FieldSet legend="응시료(USD)" cols={2}>
+        <FormRow label="TOPIK Ⅰ" required><input type="number" step="1" min={1} className="input" value={f.feeI} onFocus={selectAllOnFocus} onChange={e => set('feeI', parseRequiredInt(e.target.value))}/></FormRow>
+        <FormRow label="TOPIK Ⅱ" required><input type="number" step="1" min={1} className="input" value={f.feeII} onFocus={selectAllOnFocus} onChange={e => set('feeII', parseRequiredInt(e.target.value))}/></FormRow>
       </FieldSet>
 
       <FieldSet legend="시험장 다중 선택">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
           {state.venues.filter(v => v.active).map(v => (
             <label key={v.id} className="kv" style={{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
-              <input type="checkbox" checked={f.venues.includes(v.id)} onChange={() => toggleVenue(v.id)}/>
+              <input type="checkbox" checked={venues.includes(String(v.id))} onChange={() => toggleVenue(v.id)}/>
               <div>
                 <div className="k">{v.region} · 코드 {v.code}</div>
                 <div className="v" style={{ fontSize: 13, fontWeight: 500 }}>{v.nameKo}</div>
@@ -191,7 +238,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
 
       {!valid && (
         <div style={{ padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
-          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 &lt; 접수마감 &lt; 시험일) + 시험장 1개 이상 선택이 필요합니다. 합격발표일은 미정 시 비워두세요.
+          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 &lt; 접수마감 &lt; 시험일) + 시험장 1개 이상 선택이 필요합니다. 정원 0은 미정을 의미합니다. 합격발표일은 미정 시 비워두세요.
         </div>
       )}
     </LP>

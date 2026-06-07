@@ -10,6 +10,7 @@ from urllib.parse import quote
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, Query, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
@@ -132,6 +133,20 @@ class RoundBody(BaseModel):
     fee_level_ii: int
     capacity: int
     venue_ids: list[int] = Field(default_factory=list)
+
+
+class RoundPatchBody(BaseModel):
+    round_no: int | None = None
+    title: str | None = None
+    exam_date: date | None = None
+    registration_start_at: datetime | None = None
+    registration_end_at: datetime | None = None
+    fee_level_i: int | None = None
+    fee_level_ii: int | None = None
+    capacity: int | None = None
+    registration_status: str | None = None
+    exam_number_visible_at: datetime | None = None
+    venue_ids: list[int] | None = None
 
 
 class VenueBody(BaseModel):
@@ -873,7 +888,7 @@ async def create_round(
 @router.patch("/exam-rounds/{round_id}")
 async def update_round(
     round_id: int,
-    body: dict,
+    body: RoundPatchBody,
     admin: AuthUser = Depends(require_admin),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
@@ -882,8 +897,12 @@ async def update_round(
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
     if not rnd:
         raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    if rnd.registration_status == "revoked":
+        raise api_error("VALIDATION_ERROR", "폐지된 회차는 수정할 수 없습니다.", 400)
     before = {"title": rnd.title, "registration_status": rnd.registration_status}
+    patch = body.model_dump(exclude_unset=True)
     for key in (
+        "round_no",
         "title",
         "exam_date",
         "registration_start_at",
@@ -894,15 +913,16 @@ async def update_round(
         "registration_status",
         "exam_number_visible_at",
     ):
-        if key in body:
-            setattr(rnd, key, body[key])
-    if "venue_ids" in body:
+        if key in patch:
+            setattr(rnd, key, patch[key])
+    if "venue_ids" in patch:
         await db.execute(delete(ExamRoundVenue).where(ExamRoundVenue.exam_round_id == round_id))
-        for vid in body["venue_ids"]:
+        for vid in patch["venue_ids"]:
             db.add(ExamRoundVenue(exam_round_id=round_id, exam_venue_id=vid))
     await write_audit(
         db, admin_user_id=admin.id, action_type="exam_round_update",
-        target_type="exam_rounds", target_id=round_id, before_data=before, after_data=body, ip_address=ip,
+        target_type="exam_rounds", target_id=round_id, before_data=before,
+        after_data=jsonable_encoder(patch), ip_address=ip,
     )
     await db.commit()
     return {"updated": True}
@@ -932,6 +952,76 @@ async def round_status(
     )
     await db.commit()
     return {"registration_status": status}
+
+
+@router.post("/exam-rounds/{round_id}/revoke")
+async def revoke_round(
+    round_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)  # RBAC: 회차 폐지 = 최고관리자
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    if rnd.registration_status == "revoked":
+        raise api_error("VALIDATION_ERROR", "이미 폐지된 회차입니다.", 400)
+    before = {"registration_status": rnd.registration_status}
+    rnd.registration_status = "revoked"
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_round_revoke",
+        target_type="exam_rounds", target_id=round_id,
+        before_data=before, after_data={"registration_status": "revoked"}, ip_address=ip,
+    )
+    await db.commit()
+    return {"revoked": True, "registration_status": "revoked"}
+
+
+@router.post("/exam-rounds/{round_id}/restore")
+async def restore_round(
+    round_id: int,
+    body: dict | None = None,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)  # RBAC: 회차 복구 = 최고관리자
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    if rnd.registration_status != "revoked":
+        raise api_error("VALIDATION_ERROR", "폐지된 회차만 복구할 수 있습니다.", 400)
+
+    body = body or {}
+    status = body.get("registration_status")
+    if status:
+        if status not in ("scheduled", "open", "closed"):
+            raise api_error("VALIDATION_ERROR", "registration_status가 올바르지 않습니다.")
+    else:
+        audit_res = await db.execute(
+            select(AdminAuditLog)
+            .where(
+                AdminAuditLog.action_type == "exam_round_revoke",
+                AdminAuditLog.target_type == "exam_rounds",
+                AdminAuditLog.target_id == str(round_id),
+            )
+            .order_by(AdminAuditLog.created_at.desc())
+            .limit(1)
+        )
+        log = audit_res.scalar_one_or_none()
+        prev = (log.before_data or {}).get("registration_status") if log else None
+        status = prev if prev in ("scheduled", "open", "closed") else "scheduled"
+
+    before = {"registration_status": rnd.registration_status}
+    rnd.registration_status = status
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_round_restore",
+        target_type="exam_rounds", target_id=round_id,
+        before_data=before, after_data={"registration_status": status}, ip_address=ip,
+    )
+    await db.commit()
+    return {"restored": True, "registration_status": status}
 
 
 @router.get("/exam-venues")

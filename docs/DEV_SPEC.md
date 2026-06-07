@@ -677,8 +677,8 @@ sudo nginx -t && sudo systemctl reload nginx
 | --- | --- | --- |
 | 1차 회차 | **제107회** (접수 7/17~21, 시험 10/18) | `scripts/seed_dev.py` |
 | 시험장 | BO에서 등록 — seed에 시험장 **미포함** | 빈 `exam_venues` OK |
-| 응시료·수납처 FO | **정적 HTML 문구** (`rules-fee.html`, `apply-howto.html`) — API/DB 연동 **없음** | 임시 50,000/75,000 MMK·수납기간 하드코딩 |
-| 응시료 seed | 임시 `fee_level_i/ii` (107회 회차 메타) | BO·`register.html` 금액 표시용 |
+| 응시료·수납처 FO | **정적 HTML 문구** (`rules-fee.html`, `apply-howto.html`) — API/DB 연동 **없음** | TOPIK Ⅰ·Ⅱ 각 **25 USD**·수납기간 하드코딩 |
+| 응시료 seed | `fee_level_i/ii` = **25** (USD, 107회 회차 메타) | BO·`register.html` 금액 표시용 |
 | 일정 API | `index.html`·`guide-overview.html`만 `getExamRounds`로 수납기간 등 보조 표시 | `payment_start_at`/`payment_end_at` 계산 필드 |
 | BO 마케팅 공지 | 게시 시 `marketing_opt_in` 회원 일괄 메일 | `POST /admin/notices/{id}/send-marketing` |
 | 동시성 | `rev` + `If-Match` / body `rev` → 409 | `app/lib/rev.py` |

@@ -66,7 +66,12 @@ async def list_exam_rounds(
     registration_status: str | None = Query(None),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    stmt = select(ExamRound).options(selectinload(ExamRound.venue_links)).order_by(ExamRound.round_no.desc())
+    stmt = (
+        select(ExamRound)
+        .options(selectinload(ExamRound.venue_links))
+        .where(ExamRound.registration_status != "revoked")
+        .order_by(ExamRound.round_no.desc())
+    )
     if registration_status:
         stmt = stmt.where(ExamRound.registration_status == registration_status)
     result = await db.execute(stmt)
