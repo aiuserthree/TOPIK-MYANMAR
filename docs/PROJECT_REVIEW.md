@@ -46,7 +46,7 @@
 | `assets/photo-upload.js` | 가입/프로필 사진 업로드 UI |
 | `shared/topik-i18n-content.js` | KO/MY/EN 페이지 본문 번역 (`TOPIKPageI18n`) |
 | `html/shared/api-client.js` | FO API 클라이언트 (`TopikApi`) — HTML에서 `shared/api-client.js`로 참조 |
-| `assets/favicon.svg`, `favicon.ico`, `robots.txt`, `sitemap.xml`, `vercel.json` | 메타/배포 |
+| `assets/favicon.svg`, `favicon.ico`, `robots.txt`, `sitemap.xml` | 메타/배포 |
 
 **누락 파일 (참조만 존재):**
 
@@ -67,7 +67,7 @@
 
 - `USE_API=false` 또는 base URL 없으면 **데모 로그인**(`demo-local` 토큰) + `localStorage` 폴백
 - `register.html`: API 미연결 시 `localStorage` 키 `tpkm_register_draft_v1` 폴백
-- 기본 API base: `build.py`가 `<meta name="topik-api-base">` 주입 (기본 Railway URL)
+- API base: `TOPIK_API_BASE` 설정 시 `build.py`가 `<meta name="topik-api-base">` 주입. 미설정 시 IwinV nginx 동일 origin `/api`
 
 ### A.4 i18n (KO / MY / EN)
 
@@ -196,7 +196,7 @@ html/C안/BO(admin)/project/
 | `build.py` | `html/C안/FO` + `html/shared` | `public/` | FO 경로 ✅ |
 | `build-bo.py` | `html/C안/BO(admin)/project` + `html/shared` | `public-bo/` | BO(admin) 반영 |
 
-**`build.py` 치명적 이슈:** FO의 `shared/topik-i18n-content.js` 복사 후 `html/shared/`로 **`shared/` 전체를 rmtree·교체** → Vercel 빌드 시 **i18n JS 유실** (`html/shared/`에는 `api-client.js`만 존재).  
+**`build.py` 치명적 이슈:** FO의 `shared/topik-i18n-content.js` 복사 후 `html/shared/`로 **`shared/` 전체를 rmtree·교체** → 정적 빌드 시 **i18n JS 유실** (`html/shared/`에는 `api-client.js`만 존재).  
 동일 이슈: `roster-codes.js`는 FO HTML이 참조하나 `html/shared/`에도 FO `shared/`에도 **없음**.
 
 ### D.3 `html/shared/`
@@ -325,5 +325,5 @@ html/C안/BO(admin)/project/
 
 - [`DEV_SPEC.md`](DEV_SPEC.md) — 개발 스펙
 - [`IWINV_SETUP.md`](IWINV_SETUP.md) — IwinV VPS 운영
-- [`DEPLOY.md`](DEPLOY.md) — Vercel/Railway·셀프호스트 체크리스트
+- [`DEPLOY.md`](DEPLOY.md) — IwinV + FastAPI 배포 체크리스트
 - [`MIGRATION.md`](../MIGRATION.md) — 재개발 스캐폴드

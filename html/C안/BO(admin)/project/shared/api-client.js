@@ -1,7 +1,7 @@
 /**
  * FO API client — Phase 0 (auth/login).
  * Override (priority): window.TOPIK_API_BASE, window.API_BASE_URL, window.USE_API = false.
- * Production: <meta name="topik-api-base" content="https://xxx.railway.app">
+ * Production (IwinV): meta omitted — same-origin /api via nginx. Override: TOPIK_API_BASE or meta content.
  */
 (function (global) {
   "use strict";

@@ -411,8 +411,7 @@ See `.env.example`. Key variables:
 
 - `DATABASE_URL` — PostgreSQL connection string
 - `JWT_SECRET` / `JWT_REFRESH_SECRET` — token signing
-- `CORS_ORIGINS` — allowed FO origins (exact match). Any `https://*.vercel.app` origin
-  is also allowed automatically (covers Vercel preview deploys); add custom domains here.
+- `CORS_ORIGINS` — allowed FO/BO origins (exact match). Development also allows `http://localhost:*` and `http://127.0.0.1:*`.
 - `PUBLIC_FO_BASE` — FO origin used to build email deep links (password reset, etc.)
 - `PUBLIC_BO_BASE` — BO origin for admin notification links (optional)
 - `MAIL_SUPPORT` — support email shown in template footers (default `topik.myanmar@koica.go.kr`)
@@ -424,7 +423,7 @@ See `.env.example`. Key variables:
   in the current FastAPI target; incomplete production S3 configuration must fail instead of falling back to local. Optional `S3_ENDPOINT` (MinIO/S3-compatible), `S3_PREFIX`.
 - `INTERNAL_API_KEY` — protects `POST /internal/notifications/*` (dev: open when unset)
 - `ENABLE_PASSWORD_EXPIRY_CRON` — `true`면 API 프로세스에서 매일 비밀번호 만료 배치 (선택; 기본은 로그인 훅)
-- `MAIL_PROVIDER` (`console` | `resend` | `smtp`) / `MAIL_FROM` / `RESEND_API_KEY` /
+- `MAIL_PROVIDER` (`console` | `smtp`) / `MAIL_FROM` /
   `SMTP_HOST` `SMTP_PORT` `SMTP_SECURE` `SMTP_USER` `SMTP_PASS` — outbound email
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google Sign-In. Blank = feature off
   (config endpoint returns `enabled:false`, `POST /auth/google` returns 503). Set

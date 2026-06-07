@@ -334,7 +334,7 @@ export async function meRoutes(app: FastifyInstance) {
           }
         }
         // Log the error class/pg code so a genuine failure here is diagnosable
-        // from Railway logs instead of only ever showing "database_unavailable".
+        // from server logs instead of only ever showing "database_unavailable".
         const e = err as { name?: string; code?: string };
         app.log.error(
           { err, errName: e?.name, pgCode: e?.code, where: "PATCH /api/v1/me" },

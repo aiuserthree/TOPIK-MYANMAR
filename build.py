@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Copy C안 FO + html/shared into public/ for static deploy (IwinV / Vercel)."""
+"""Copy C안 FO + html/shared into public/ for IwinV nginx static deploy."""
 import os
 import re
 import shutil
@@ -9,7 +9,7 @@ SHARED_SRC = pathlib.Path("html/shared")
 FO_SHARED_SRC = None  # resolved below
 DST = pathlib.Path("public")
 
-SKIP_NAMES = {".vercel", "vercel.json", "docs"}
+SKIP_NAMES = {".vercel", "docs"}
 
 
 def _resolve_fo_src() -> pathlib.Path:
@@ -61,8 +61,7 @@ shutil.copytree(FO_SRC, DST, ignore=ignore)
 _merge_shared(DST / "shared")
 
 # IwinV: same-origin /api via nginx — default empty base (no meta) or TOPIK_API_BASE=/api
-# Legacy Vercel: TOPIK_API_BASE=https://topikmyanmar-production.up.railway.app python3 build.py
-# Local FastAPI: TOPIK_API_BASE=http://localhost:8000 python3 build.py
+# Local FastAPI: TOPIK_API_BASE=http://127.0.0.1:8000 python3 build.py
 _DEFAULT_API_BASE = ""
 API_BASE = os.environ.get("TOPIK_API_BASE", _DEFAULT_API_BASE).rstrip("/")
 API_META = f'<meta name="topik-api-base" content="{API_BASE}">' if API_BASE else ""

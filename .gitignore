@@ -13,7 +13,7 @@ scripts/node_modules/
 # 대용량 디자인 산출물 zip (git 비추적 — 외부 저장소/전달본으로 관리)
 시안/**/*.zip
 
-# Vercel build outputs
+# Static build outputs
 public/
 public-bo/
 html/C*/BO/dist/
@@ -22,7 +22,7 @@ html/C*/BO/dist/
 .env
 api/.env.production
 
-# AWS / local secrets (keys live in Railway Variables only)
+# AWS / local secrets (never commit)
 topik-mm-s3-api_accessKeys.csv
 *_accessKeys.csv
 

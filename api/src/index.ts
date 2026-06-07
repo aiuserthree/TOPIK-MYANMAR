@@ -58,22 +58,10 @@ await app.register(rateLimit, {
   timeWindow: "1 minute",
 });
 
-// Allow any https://*.vercel.app origin (covers Vercel preview deploy URLs like
-// topik-myanmar-git-xyz.vercel.app) in addition to the exact CORS_ORIGINS list.
-function isVercelPreview(origin: string): boolean {
-  try {
-    const url = new URL(origin);
-    return url.protocol === "https:" && url.hostname.endsWith(".vercel.app");
-  } catch {
-    return false;
-  }
-}
-
 await app.register(cors, {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
     if (config.corsOrigins.includes(origin)) return cb(null, true);
-    if (isVercelPreview(origin)) return cb(null, true);
     if (
       config.appEnv === "development" &&
       (origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1"))

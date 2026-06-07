@@ -20,8 +20,7 @@ A안·B안 HTML은 참고·비교용으로 유지합니다. **신규 기능·FO 
 | 빌드 | `python3 build.py` |
 | 산출 | `public/` (루트 `index.html` 등) |
 | 공통 JS | `html/shared/` + FO `shared/` merge → `public/shared/` |
-| **운영 (목표)** | IwinV Web VPS nginx — `https://www.topik-myanmar.com` |
-| **부록 (과거)** | Vercel `vercel.json` — 임시 dev/UAT만 |
+| **운영** | IwinV Web VPS nginx — `https://www.topik-myanmar.com` |
 
 상세: [`IWINV_SETUP.md`](../IWINV_SETUP.md), `배포_아키텍처.md`.
 

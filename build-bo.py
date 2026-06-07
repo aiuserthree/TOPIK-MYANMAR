@@ -10,7 +10,6 @@ SHARED_SRC = ROOT / "html" / "shared"
 
 SKIP_NAMES = {
     ".vercel",
-    "vercel.json",
     "docs",
     "dist",
     "uploads",
