@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     enable_email_worker: bool = Field(default=False, validation_alias="ENABLE_EMAIL_WORKER")
     public_fo_base: str = Field(default="https://www.topik-myanmar.com", validation_alias="PUBLIC_FO_BASE")
     min_signup_age_years: int = Field(default=14, validation_alias="MIN_SIGNUP_AGE_YEARS")
+    embedding_model: str = Field(
+        default="text-embedding-3-small",
+        validation_alias="EMBEDDING_MODEL",
+    )
+    embedding_dimensions: int = Field(default=1536, validation_alias="EMBEDDING_DIMENSIONS")
+    semantic_search_enabled: bool = Field(default=False, validation_alias="SEMANTIC_SEARCH_ENABLED")
 
     model_config = SettingsConfigDict(
         env_file=".env",

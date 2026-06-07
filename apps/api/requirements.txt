@@ -13,3 +13,4 @@ eval_type_backport
 boto3
 openpyxl
 httpx
+pgvector

@@ -1,0 +1,30 @@
+# Optional local PostgreSQL 15 + pgvector for apps/api development.
+# 신규 운영 스택(IwinV)은 Docker 없이 VPS PostgreSQL + pgvector extension을 사용합니다.
+#
+#   docker compose -f docker-compose.pgvector.yml up -d
+#   psql postgresql://topik_app:topik_dev@127.0.0.1:5432/topik_myanmar -f db/migrations/V001__initial_schema.sql
+#   ... V002 ~ V006 ...
+#   psql postgresql://topik_app:topik_dev@127.0.0.1:5432/topik_myanmar -f db/migrations/V007__pgvector_semantic_search.sql
+#
+# DATABASE_URL (apps/api/.env):
+#   postgresql+asyncpg://topik_app:topik_dev@127.0.0.1:5432/topik_myanmar
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_USER: topik_app
+      POSTGRES_PASSWORD: topik_dev
+      POSTGRES_DB: topik_myanmar
+    ports:
+      - "5432:5432"
+    volumes:
+      - topik_pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U topik_app -d topik_myanmar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  topik_pgvector_data:

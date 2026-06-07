@@ -3,7 +3,7 @@
 이 문서는 `Myanmar_v2.0` 프로젝트를 Iwinv VPS 2대에 배포하기 위한 실무 절차입니다.
 
 - Web 서버: Vite 정적 빌드(`apps/web/dist`) + FastAPI(`apps/api`) + nginx
-- DB 서버: PostgreSQL 15+
+- DB 서버: PostgreSQL 15+ **+ pgvector**
 - 오브젝트 스토리지: IwinV S3 호환 API (`https://kr.object.iwinv.kr`) — 회원 사진·파일 업로드용 (별도 서비스, AWS 계정 불필요)
 - 배포 방식: Docker 사용 안 함
 - 방화벽: Iwinv ELCAP에서 먼저 제한하고, 서버 내부 `ufw`로 같은 규칙을 한 번 더 적용
@@ -439,6 +439,17 @@ sudo apt install -y postgresql-15 postgresql-contrib
 psql --version
 ```
 
+### 2.4.1 pgvector extension (의미 검색·RAG)
+
+FAQ/공지 의미 검색, RAG 챗봇, 유사 문의·중복 접수 탐지를 위해 **pgvector** 패키지를 설치합니다. PostgreSQL 메이저 버전에 맞는 패키지명을 사용합니다.
+
+```bash
+sudo apt install -y postgresql-15-pgvector
+sudo -u postgres psql -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
+```
+
+`CREATE EXTENSION vector` 및 `semantic_chunks` 테이블은 migration **V007**(§2.8)에서 적용합니다. V007은 **postgres superuser**로 실행하며, `sudo -u postgres psql -f …`는 OS user `postgres`가 파일 경로를 직접 열기 때문에 `/root` 등 제한 디렉터리에서는 `Permission denied`가 납니다. §2.8의 **stdin 리다이렉트**(`< 절대경로`) 방식을 사용하세요. 적용 후 Web API `GET /health/db` 응답에 `"pgvector": true`가 포함됩니다.
+
 ### 2.5 DB와 계정 생성
 
 강한 비밀번호로 바꿔서 실행합니다.
@@ -509,7 +520,20 @@ psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_m
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V004__user_last_login.sql
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V005__application_drafts.sql
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V006__fo_contract_and_security.sql
+# V007: root(또는 현재 셸)가 파일을 읽고 postgres가 SQL 실행 — -f 상대경로는 /root 등에서 Permission denied
+sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
 ```
+
+V007의 `CREATE EXTENSION`은 **postgres superuser** 권한이 필요합니다. `topik_app`으로 V007을 실행하면 extension 생성에서 실패합니다.
+
+저장소가 DB VPS에 없으면 로컬에서 `scp db/migrations/V007__pgvector_semantic_search.sql root@115.68.227.1:/tmp/` 후:
+
+```bash
+chmod 644 /tmp/V007__pgvector_semantic_search.sql
+sudo -u postgres psql -d topik_myanmar < /tmp/V007__pgvector_semantic_search.sql
+```
+
+`-f` 절대경로를 쓸 경우 상위 디렉터리가 `postgres`에게 traversable 해야 합니다 (`chmod o+x /opt /opt/myanmar-v2` 등).
 
 DB 서버에서 로컬로 적용한다면 host를 `127.0.0.1`로 바꿀 수 있습니다.
 

@@ -17,7 +17,7 @@
 | 신규 API | `apps/api` | FastAPI FO/BO API 대부분 구현 (auth·me·접수·콘텐츠·게시판·admin·파일·메일) |
 | 레거시 FO/BO | `html/C안/` | FO 25페이지 HTML; BO UI·API 연동은 `BO(admin)/project/` (과거 `BO/` stub 디렉터리는 저장소에 없음) |
 | 레거시 API | `api/` | README·일부 소스만 존재(전체 구현 미동봉) |
-| DB 스키마 | `db/migrations/` | V001~V006 SQL migration 포함 |
+| DB 스키마 | `db/migrations/` | V001~V007 SQL migration 포함 |
 | 이메일 시안 | `시안/email/` | C안 에디토리얼 14종 미리보기; API 렌더 `apps/api/app/lib/email_render.py` |
 
 과거 임시 dev/UAT(Vercel FO + Railway API + Resend)는 [`DEPLOY.md`](DEPLOY.md) **부록**에만 유지합니다. **목표 운영**은 IwinV VPS 2대 + 테라웹메일 SMTP입니다.
@@ -32,7 +32,7 @@
 | 신규 Backend | Python 3.11+ · FastAPI · SQLAlchemy(async) · asyncpg | `apps/api` |
 | 레거시 Frontend | HTML + CSS + JavaScript | FO: `html/C안/FO` (React 없음); BO: `html/C안/BO(admin)/project/` (React 18 CDN + `bo-api-bridge.js`로 FastAPI 연동) |
 | 레거시 Backend | Node.js 20 · Fastify 4 · TypeScript | `api/` |
-| Database | PostgreSQL 15+ | IwinV DB VPS |
+| Database | PostgreSQL 15+ **+ pgvector** | IwinV DB VPS — FAQ/공지 의미 검색·RAG·중복 탐지용 |
 | Object Storage | IwinV S3 호환 (`https://kr.object.iwinv.kr`) | 회원·접수 사진 |
 | 운영 원칙 | **Docker 미사용**(신규 스택) | 레거시 셀프호스트용 `docker-compose.prod.yml`은 별도 |
 
@@ -285,7 +285,7 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 6.1 Migration 파일
 
-**저장소에 포함된 파일 (V001~V006):**
+**저장소에 포함된 파일 (V001~V007):**
 
 | 파일 | 내용 |
 | --- | --- |
@@ -295,14 +295,29 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 | `V004__user_last_login.sql` | `users.last_login_at` |
 | `V005__application_drafts.sql` | `application_drafts` (user당 1건, JSONB, 30일 TTL) |
 | `V006__fo_contract_and_security.sql` | 지역별 시험장코드, 로그인/비밀글 잠금, 약관 동의 이력 |
+| `V007__pgvector_semantic_search.sql` | **pgvector extension**, `semantic_chunks` (FAQ/공지/RAG/중복접수 embedding) |
 
-운영·로컬 모두 **V001 → V006 순서**로 `psql -f` 적용 ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.8). Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적용 절차의 기준은 SQL migration입니다.
+운영·로컬 모두 **V001 → V007 순서**로 `psql -f` 적용 ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8). V007의 `CREATE EXTENSION vector`는 **postgres superuser**로 실행하며, IwinV 등에서는 `sudo -u postgres psql -f` 대신 **stdin**(`< 절대경로`)을 사용합니다(`-f`는 OS user `postgres`가 경로를 열어 `/root` 등에서 `Permission denied`). Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적용 절차의 기준은 SQL migration입니다.
 
 ### 6.2 스키마 개요 (문서·V005 기준)
 
 - **V001(문서 기준):** `users`, `exam_rounds`, `exam_venues`, `applications`, `admin_users`, `notices`, `faq_items`, `terms`, `country_region_codes` 등
 - **V005:** `application_drafts` — FO `register.html` 접수 임시저장
 - **V006:** 로그인 잠금, 비밀글 잠금, 지역별 시험장코드 UNIQUE, `terms_consents`
+- **V007:** pgvector + `semantic_chunks` — `source_type`(notice/faq/board_post/application/terms/rag_corpus), 다국어·청크 단위 embedding, HNSW(cosine) 인덱스. **API embedding/sync·검색 엔드포인트는 후속 단계** (`SEMANTIC_SEARCH_ENABLED=false` 기본)
+
+### 6.2.1 pgvector (의미 검색·RAG)
+
+| 항목 | 값 |
+| --- | --- |
+| Extension | `vector` (pgvector) |
+| Embedding 테이블 | `semantic_chunks` |
+| 차원 | 1536 (OpenAI `text-embedding-3-small` 호환, `EMBEDDING_DIMENSIONS`) |
+| 유사도 | cosine (`vector_cosine_ops`, HNSW) |
+| 로컬 Docker (선택) | `docker compose -f docker-compose.pgvector.yml up -d` |
+| Health | `GET /health/db` → `"pgvector": true/false` |
+
+**예정 기능 (스키마만 준비):** FAQ/공지 의미 검색, RAG 챗봇, 게시판 유사 문의·중복 접수 탐지.
 
 ### 6.3 연결 문자열 형식
 
@@ -314,7 +329,7 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 6.4 Alembic
 
-`apps/api/alembic/versions/20260606_0001_initial_schema.py` — ORM `metadata.create_all` bootstrap revision **1개** 존재. **운영·로컬 DB 적용 기준은 SQL migration(V001~V006)**이며, 이미 V001~V006이 적용된 DB에 Alembic revision을 섞지 않습니다. 신규 빈 DB 로컬 부트스트랩·ORM 스냅샷용으로만 사용합니다.
+`apps/api/alembic/versions/20260606_0001_initial_schema.py` — ORM `metadata.create_all` bootstrap revision **1개** 존재. **운영·로컬 DB 적용 기준은 SQL migration(V001~V007)**이며, 이미 V001~V007이 적용된 DB에 Alembic revision을 섞지 않습니다. 신규 빈 DB 로컬 부트스트랩·ORM 스냅샷용으로만 사용합니다.
 
 ---
 
@@ -426,13 +441,16 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 9.1 신규 스택 (권장 개발 경로)
 
-**PostgreSQL 준비** — DB가 없으면 생성 후 V001~V006 순서 적용:
+**PostgreSQL 준비** — DB가 없으면 생성 후 V001~V007 순서 적용:
 
 ```bash
 createdb topik_myanmar
 for f in db/migrations/V00{1,2,3,4,5,6}__*.sql; do
   psql postgresql://localhost:5432/topik_myanmar -f "$f"
 done
+# V007 (pgvector) — superuser 필요. stdin: 현재 셸이 파일 읽음 (-f 는 postgres 가 경로 열기)
+sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
+# IwinV: /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql 절대경로 — IWINV_SETUP.md §2.8
 ```
 
 **API:**
@@ -695,7 +713,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 | BO 정적 | `python3 build-bo.py` → `public-bo/` (동일) |
 | API | `apps/api` venv + `systemctl restart myanmar-api` |
 | Vite FO (선택) | `apps/web` `npm run build` → `dist/` |
-| DB 스키마 | `db/migrations/V001`~`V006` 순서 `psql -f` |
+| DB 스키마 | `db/migrations/V001`~`V007` 순서 `psql -f` (V007: postgres superuser, IwinV는 stdin `<`) |
 | 운영 시드 | `CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py` (**`seed_dev.py` 금지**) |
 | 첫 BO 관리자 | `ADMIN_EMAIL=… ADMIN_PASSWORD=… python3 scripts/create_admin.py` |
 

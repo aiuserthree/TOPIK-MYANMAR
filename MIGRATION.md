@@ -6,7 +6,7 @@
 
 - Frontend: Vite + React + TypeScript (`apps/web`)
 - Backend: Python FastAPI 3.11+ (`apps/api`)
-- Database: PostgreSQL on Iwinv VPS
+- Database: PostgreSQL 15+ on Iwinv VPS **+ pgvector** (FAQ/공지 의미 검색·RAG·중복 탐지)
 - Object Storage: IwinV S3 호환 오브젝트 스토리지 (회원 사진·파일 업로드, `docs/IWINV_SETUP.md` §5)
 - 운영 원칙: 신규 스택에는 Docker를 사용하지 않고, 기존 `api/`, `html/`, `build.py`, `build-bo.py`는 보존합니다.
 - BO 화면 디자인 handoff: `html/C안/BO(admin)/project/` (운영 API stub은 `html/C안/BO/`)
@@ -62,6 +62,17 @@ psql "$DATABASE_URL" -f db/migrations/V002__email_outbox_retry.sql
 psql "$DATABASE_URL" -f db/migrations/V003__bo_integration.sql
 psql "$DATABASE_URL" -f db/migrations/V004__user_last_login.sql
 psql "$DATABASE_URL" -f db/migrations/V005__application_drafts.sql
+psql "$DATABASE_URL" -f db/migrations/V006__fo_contract_and_security.sql
+# V007 — postgres superuser (CREATE EXTENSION vector). IwinV: docs/IWINV_SETUP.md §2.4.1
+# stdin: 현재 셸이 파일을 읽고 postgres 가 SQL 실행 (-f 는 postgres 가 경로를 열어 /root 등에서 실패)
+sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
+```
+
+로컬 Docker (선택):
+
+```bash
+docker compose -f docker-compose.pgvector.yml up -d
+# V001~V007 순서 적용 — DATABASE_URL=postgresql://topik_app:topik_dev@127.0.0.1:5432/topik_myanmar
 ```
 
 ## Iwinv VPS PostgreSQL 기본 설정
@@ -70,7 +81,7 @@ Ubuntu VPS 예시:
 
 ```bash
 sudo apt update
-sudo apt install -y postgresql postgresql-contrib
+sudo apt install -y postgresql postgresql-contrib postgresql-15-pgvector
 sudo -u postgres psql
 ```
 

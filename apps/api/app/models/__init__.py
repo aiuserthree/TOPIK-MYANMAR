@@ -12,6 +12,7 @@ from app.models.application import (
 from app.models.content import FaqItem, Notice, Term, TermConsent
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue
 from app.models.system import EmailOutbox, FileAttachment
+from app.models.semantic import SemanticChunk
 from app.models.user import User
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "FaqItem",
     "FileAttachment",
     "Notice",
+    "SemanticChunk",
     "Term",
     "TermConsent",
     "User",

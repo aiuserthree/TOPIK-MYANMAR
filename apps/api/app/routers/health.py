@@ -13,6 +13,9 @@ async def health() -> dict[str, str]:
 
 
 @router.get("/health/db")
-async def health_db(db: AsyncSession = Depends(get_db_session)) -> dict[str, str]:
+async def health_db(db: AsyncSession = Depends(get_db_session)) -> dict[str, str | bool]:
     await db.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "connected"}
+    pgvector = bool(
+        (await db.execute(text("SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')"))).scalar()
+    )
+    return {"status": "ok", "database": "connected", "pgvector": pgvector}
