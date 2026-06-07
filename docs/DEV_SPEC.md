@@ -17,7 +17,7 @@
 | 신규 API | `apps/api` | FastAPI FO/BO API 대부분 구현 (auth·me·접수·콘텐츠·게시판·admin·파일·메일) |
 | 레거시 FO/BO | `html/C안/` | FO HTML 일부; BO UI는 `BO(admin)/project/`, API stub은 `BO/`(assets만) |
 | 레거시 API | `api/` | README·일부 소스만 존재(전체 구현 미동봉) |
-| DB 스키마 | `db/migrations/` | V001~V005 SQL migration 포함 |
+| DB 스키마 | `db/migrations/` | V001~V006 SQL migration 포함 |
 | 이메일 시안 | `시안/email/` | C안 에디토리얼 14종 미리보기; API 렌더 `apps/api/app/lib/email_render.py` |
 
 과거 임시 dev/UAT(Vercel FO + Railway API + Resend)는 [`DEPLOY.md`](DEPLOY.md) **부록**에만 유지합니다. **목표 운영**은 IwinV VPS 2대 + 테라웹메일 SMTP입니다.
@@ -267,7 +267,7 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 | `build.py` | `html/C안/FO` + `html/shared` | `public/` | Vercel FO 배포 |
 | `build-bo.py` | `html/C안/BO` + `html/shared` | `public-bo/` | Vercel BO 배포 |
 
-**갭:** `build-bo.py`는 `html/C안/BO/`(assets만, HTML 없음)를 복사합니다. 실제 BO UI는 `html/C안/BO(admin)/project/`에 있으므로, 스크립트를 수정하거나 handoff 경로를 `BO/`로 옮기기 전까지 **BO 정적 배포는 사실상 동작하지 않습니다.**
+`build-bo.py`는 실제 BO UI인 `html/C안/BO(admin)/project/`를 우선 복사하고, `html/shared/`와 BO 자체 `shared/`를 `public-bo/shared/`로 병합합니다. 운영에서 `TOPIK_API_BASE`를 생략하면 nginx 동일 origin `/api`를 사용하고, 별도 API origin이 필요할 때만 meta를 주입합니다.
 
 환경 변수 `TOPIK_API_BASE`로 API base URL을 HTML `<meta name="topik-api-base">`에 주입합니다. **미설정 시 meta 미주입** — IwinV nginx 동일 origin `/api` 사용. 레거시 Railway URL은 `TOPIK_API_BASE=https://topikmyanmar-production.up.railway.app`로 명시 시에만 사용합니다.
 
@@ -277,7 +277,7 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 
 ### 6.1 Migration 파일
 
-**저장소에 포함된 파일 (V001~V005):**
+**저장소에 포함된 파일 (V001~V006):**
 
 | 파일 | 내용 |
 | --- | --- |
@@ -286,13 +286,15 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 | `V003__bo_integration.sql` | BO 연동 스키마 |
 | `V004__user_last_login.sql` | `users.last_login_at` |
 | `V005__application_drafts.sql` | `application_drafts` (user당 1건, JSONB, 30일 TTL) |
+| `V006__fo_contract_and_security.sql` | 지역별 시험장코드, 로그인/비밀글 잠금, 약관 동의 이력 |
 
-운영·로컬 모두 **V001 → V005 순서**로 `psql -f` 적용 ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.8).
+운영·로컬 모두 **V001 → V006 순서**로 `psql -f` 적용 ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.8). Alembic 단일 revision은 신규 빈 DB용 ORM 스키마 생성 보조 수단이며, 운영 적용 절차의 기준은 현재 SQL migration입니다.
 
 ### 6.2 스키마 개요 (문서·V005 기준)
 
 - **V001(문서 기준):** `users`, `exam_rounds`, `exam_venues`, `applications`, `admin_users`, `notices`, `faq_items`, `terms`, `country_region_codes` 등
-- **V005(저장소 확인):** `application_drafts` — FO `register.html` 접수 임시저장
+- **V005:** `application_drafts` — FO `register.html` 접수 임시저장
+- **V006:** 로그인 잠금, 비밀글 잠금, 지역별 시험장코드 UNIQUE, `terms_consents`
 
 ### 6.3 연결 문자열 형식
 
@@ -416,11 +418,11 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 
 ### 9.1 신규 스택 (권장 개발 경로)
 
-**PostgreSQL 준비** — DB가 없으면 생성 후 V001~V005 순서 적용:
+**PostgreSQL 준비** — DB가 없으면 생성 후 V001~V006 순서 적용:
 
 ```bash
 createdb topik_myanmar
-for f in db/migrations/V00{1,2,3,4,5}__*.sql; do
+for f in db/migrations/V00{1,2,3,4,5,6}__*.sql; do
   psql postgresql://localhost:5432/topik_myanmar -f "$f"
 done
 ```
@@ -468,10 +470,10 @@ Vite dev server는 `/api`를 FastAPI(`127.0.0.1:8000`)로 프록시합니다.
 | 상태 | 범위 |
 | --- | --- |
 | **구현됨** | Health, FO auth(일반 가입·로그인·이메일 인증·비번재설정), me, exam-rounds/venues, application-draft/submissions, notices/faq/terms, board, files, admin 접수·회차·시험장·콘텐츠·게시판·회원·관리자·감사 |
-| **부분** | Google OAuth (`/auth/google/config` → `enabled: false`), 이메일 템플릿 14종 중 API 렌더 **2종** (`signup_verify_code`, `password_reset`) |
-| **미구현** | `find-email`, Google login/register, BO export (`roster.xlsx`, `photos.zip`), `/internal/notifications/*`, 일부 admin export·마케팅 메일 템플릿 |
+| **부분** | Google OAuth (`/auth/google/config` → `enabled: false`, client id 확정 후 연결), 이메일 템플릿 14종 중 API 렌더 **2종** (`signup_verify_code`, `password_reset`) |
+| **미구현/보류** | `find-email`, Google login/register(합의 보류), `/internal/notifications/*`, 일부 admin export·마케팅 메일 템플릿 |
 
-ORM model·repository·JWT·S3/local storage·`email_outbox` 워커는 구현되어 있습니다 (`app/lib/mail.py`, `email_worker.py`).
+ORM model·repository·JWT·S3/local storage·파일 프록시·`photos.zip`·`email_outbox` 워커는 구현되어 있습니다 (`app/lib/storage.py`, `app/routers/files.py`, `app/routers/admin_api.py`, `app/lib/mail.py`, `email_worker.py`).
 
 ### 10.2 레거시 Fastify (`api/`)
 
@@ -543,7 +545,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | 구성요소 | 명령/URL |
 | --- | --- |
 | FO 빌드 | `python3 build.py` — IwinV: `TOPIK_API_BASE` 생략(동일 origin `/api`) 또는 `/api` |
-| BO 빌드 | `python3 build-bo.py` (현재 `BO/` stub만 복사 — **handoff 미반영**) |
+| BO 빌드 | `python3 build-bo.py` — `html/C안/BO(admin)/project/` + shared 병합 → `public-bo/` |
 | IwinV FO | `https://www.topik-myanmar.com` (DNS·SSL 확정 후) |
 | IwinV API | `https://www.topik-myanmar.com/api/` (nginx → FastAPI) |
 

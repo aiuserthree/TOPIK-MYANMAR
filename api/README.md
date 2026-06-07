@@ -422,7 +422,7 @@ See `.env.example`. Key variables:
 - `UPLOAD_DIR` — local disk root for photos (default `var/uploads`, gitignored)
 - `UPLOAD_MAX_BYTES` — max decoded image size (default 5 MB)
 - `S3_BUCKET` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET` — required when `STORAGE_PROVIDER=s3`
-  (incomplete → warn + local fallback). Optional `S3_ENDPOINT` (MinIO/S3-compatible), `S3_PREFIX`.
+  in the current FastAPI target; incomplete production S3 configuration must fail instead of falling back to local. Optional `S3_ENDPOINT` (MinIO/S3-compatible), `S3_PREFIX`.
 - `INTERNAL_API_KEY` — protects `POST /internal/notifications/*` (dev: open when unset)
 - `ENABLE_PASSWORD_EXPIRY_CRON` — `true`면 API 프로세스에서 매일 비밀번호 만료 배치 (선택; 기본은 로그인 훅)
 - `MAIL_PROVIDER` (`console` | `resend` | `smtp`) / `MAIL_FROM` / `RESEND_API_KEY` /

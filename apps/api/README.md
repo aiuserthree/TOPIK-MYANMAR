@@ -62,13 +62,14 @@ psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V002__emai
 psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V003__bo_integration.sql
 psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V004__user_last_login.sql
 psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V005__application_drafts.sql
+psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V006__fo_contract_and_security.sql
 ```
 
 Iwinv VPS의 PostgreSQL에 직접 연결할 경우 `DATABASE_URL`의 host를 VPS 내부 IP 또는 허용된 공인 IP로 바꿉니다.
 
 ## Alembic
 
-Alembic 설정은 준비만 해두었습니다. 현재 운영 기준 스키마는 기존 SQL migration이므로, 초기 단계에서는 `db/migrations`를 그대로 적용하고 기능 migration을 시작할 때 Alembic revision을 추가하세요.
+현재 운영 기준 적용 절차는 `db/migrations/V001`부터 `V006`까지의 SQL migration입니다. Alembic의 단일 초기 revision은 신규 빈 DB에 ORM 기준 스키마를 만들기 위한 보조 수단이며, 운영 DB 변경 이력의 기준으로 혼용하지 않습니다.
 
 ```bash
 cd apps/api

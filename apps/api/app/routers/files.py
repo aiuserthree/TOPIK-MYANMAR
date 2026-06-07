@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
-from app.lib.deps import AuthUser, get_optional_user, require_any_admin
+from app.lib.deps import AuthUser, get_optional_user
 from app.lib.errors import api_error
 from app.lib.security import decode_access_token
 from app.lib.storage import get_file_row, read_file_bytes, resolve_local_path
@@ -83,8 +83,10 @@ async def get_file(
 async def get_admin_file(
     file_id: int,
     token: str | None = Query(None),
-    admin: AuthUser = Depends(require_any_admin),
+    admin: AuthUser | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db_session),
 ):
-    row, _ = await _authorize_file(file_id, admin, token, db)
+    row, auth = await _authorize_file(file_id, admin, token, db)
+    if not auth.is_admin:
+        raise api_error("FORBIDDEN", "관리자 파일 접근 권한이 없습니다.", 403)
     return _file_response(row)

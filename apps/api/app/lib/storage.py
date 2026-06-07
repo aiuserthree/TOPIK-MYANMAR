@@ -26,18 +26,30 @@ def _upload_root() -> Path:
     return root
 
 
-def _s3_configured() -> bool:
-    return bool(settings.s3_bucket and settings.s3_access_key and settings.s3_secret)
+def _missing_s3_settings() -> list[str]:
+    required = {
+        "S3_BUCKET": settings.s3_bucket,
+        "S3_ACCESS_KEY": settings.s3_access_key,
+        "S3_SECRET": settings.s3_secret,
+    }
+    return [name for name, value in required.items() if not value]
+
+
+def validate_storage_settings() -> None:
+    """Fail fast when production S3 is selected but required credentials are absent."""
+    if settings.storage_provider.lower() != "s3":
+        return
+    missing = _missing_s3_settings()
+    if missing:
+        raise RuntimeError(
+            "STORAGE_PROVIDER=s3 requires " + ", ".join(missing) + "; refusing local fallback"
+        )
 
 
 def _effective_provider() -> str:
     if settings.storage_provider.lower() != "s3":
         return "local"
-    if not _s3_configured():
-        logger.warning(
-            "STORAGE_PROVIDER=s3 but S3_BUCKET/S3_ACCESS_KEY/S3_SECRET incomplete; falling back to local"
-        )
-        return "local"
+    validate_storage_settings()
     return "s3"
 
 

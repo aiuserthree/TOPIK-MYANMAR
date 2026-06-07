@@ -139,6 +139,7 @@ def _admin_token_response(admin: AdminUser) -> dict:
             "email": admin.email,
             "name": admin.name,
             "role": admin.role,
+            "must_change_password": admin.must_change_password,
         },
     }
 

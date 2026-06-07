@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
+from app.lib.storage import validate_storage_settings
 from app.lib.email_worker import email_worker_loop
 from app.routers import (
     admin_api,
@@ -26,6 +27,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_storage_settings()
     worker_task: asyncio.Task | None = None
     if settings.enable_email_worker:
         worker_task = asyncio.create_task(email_worker_loop())

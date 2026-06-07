@@ -1,12 +1,12 @@
-"""initial schema — V001 core tables + application_drafts (V005)
+"""initial schema — ORM snapshot for a new empty database
 
 Revision ID: 20260606_0001
 Revises:
 Create Date: 2026-06-06
 
-Reconstructs the documented PostgreSQL schema (V001–V004 semantics) for the
-FastAPI stack. Legacy SQL files V001–V004 are not in the repo; this revision
-is the Alembic-native source of truth going forward.
+Creates tables from SQLAlchemy metadata for local/bootstrap use. Production
+schema history is still the SQL chain in db/migrations/V001 through V006; do
+not mix this revision into an already-migrated production database.
 """
 
 from __future__ import annotations

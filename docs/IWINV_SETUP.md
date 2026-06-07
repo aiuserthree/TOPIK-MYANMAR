@@ -621,14 +621,14 @@ sudo systemctl restart myanmar-api
 
 | 변수 | 설명 |
 | --- | --- |
-| `STORAGE_PROVIDER` | `local`(개발·임시) 또는 `s3`(운영 권장) |
+| `STORAGE_PROVIDER` | `local`(개발 전용) 또는 `s3`(운영 필수) |
 | `S3_BUCKET` | 콘솔에서 만든 버킷 이름 |
 | `S3_REGION` | `kr-standard` |
 | `S3_ACCESS_KEY` / `S3_SECRET` | 인증키 관리에서 발급 |
 | `S3_ENDPOINT` | `https://kr.object.iwinv.kr` (IwinV 필수) |
 | `S3_PREFIX` | (선택) 버킷 내 객체 키 prefix, 예: `photos` |
 
-필수 S3 변수가 빠지면 레거시 API는 경고 후 `local`로 폴백합니다. 운영에서는 반드시 `s3`와 전체 변수를 설정합니다.
+`STORAGE_PROVIDER=s3`에서 필수 S3 변수가 빠지면 API는 시작 또는 저장 시 명확히 실패합니다. 운영에서는 조용한 local 폴백을 허용하지 않으므로, 배포 전 실제 IwinV 인증키로 업로드·조회·사진 zip 스모크를 수행합니다.
 
 ### 5.5 네트워크
 

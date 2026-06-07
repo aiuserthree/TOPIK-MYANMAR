@@ -144,10 +144,10 @@ html/C안/BO(admin)/project/
 |--|---------------------|----------------|
 | HTML | `admin-login.html`, `admin.html` | **없음** |
 | UI | React 14패널 풀 콘솔 | JS 4개만: `bo-api-data.js`, `panels/notices.js`, `faq.js`, `photos.js` |
-| API | Mock | README상 API 연동 stub 의도 (파일 일부 미확인/경로 이슈) |
-| `build-bo.py` 입력 | ❌ 가리키지 않음 | ✅ `html/C안/BO/`만 복사 |
+| API | `bo-api-client.js` + `bo-api-bridge.js`로 FastAPI 주요 경로 연동 | 과거 stub assets |
+| `build-bo.py` 입력 | ✅ 우선 사용 | 후보 아님 |
 
-**결론:** authoritative UI = **BO(admin)**; `build-bo.py`·`BO/` stub·문서(DEPLOY §5)의 "정적 BO HTML" 설명은 **불일치**.
+**결론:** authoritative UI = **BO(admin)**이며, 현재 `build-bo.py`는 이 경로와 shared 파일을 `public-bo/`로 병합합니다. `html/C안/BO/`는 과거 stub 참고용입니다.
 
 ---
 
@@ -169,17 +169,11 @@ html/C안/BO(admin)/project/
 
 **현재 구현:**
 
-| Method | Path |
-|--------|------|
-| GET | `/health` |
-| GET | `/api/v1/auth/status` (placeholder) |
+- FO auth/me/application/exam-rounds/notices/faq/terms/board/files
+- BO `/api/v1/admin/*` 주요 경로(applications, payment, photo-review, exam-numbers, photos.zip, notices/faq/terms CRUD, exam-rounds/venues, users, admin-users, board reply, audit)
+- ORM model, JWT, S3/local storage, email outbox/worker
 
-**FO+BO에 필요하나 미구현 (레거시 `api/README.md` 계약 기준 ~80+ 엔드포인트):**
-
-- FO auth/me/application/exam-rounds/notices/faq/terms/board/files 전부
-- BO `/api/v1/admin/*` 전부 (applications, payment, photo-review, exam-numbers, roster.xlsx, photos.zip, notices/faq/terms CRUD, exam-rounds/venues, users, admin-users, board reply 등)
-- Internal `/internal/notifications/*`
-- ORM model, repository, JWT, S3 storage, email worker — **없음** (config/database 스캐폴드만)
+**남은 보류/미구현:** Google OAuth(client id 확정 후), 이메일 실운영 발송 도메인·SMTP 계정 확정 후 스모크, `find-email`, 일부 내부 알림/마케팅 템플릿.
 
 ---
 
@@ -200,7 +194,7 @@ html/C안/BO(admin)/project/
 | 스크립트 | 입력 | 출력 | 정합성 |
 |----------|------|------|--------|
 | `build.py` | `html/C안/FO` + `html/shared` | `public/` | FO 경로 ✅ |
-| `build-bo.py` | `html/C안/BO` (stub) + `html/shared` | `public-bo/` | **BO(admin) 미반영 ❌** — HTML 없어 배포 무의미 |
+| `build-bo.py` | `html/C안/BO(admin)/project` + `html/shared` | `public-bo/` | BO(admin) 반영 |
 
 **`build.py` 치명적 이슈:** FO의 `shared/topik-i18n-content.js` 복사 후 `html/shared/`로 **`shared/` 전체를 rmtree·교체** → Vercel 빌드 시 **i18n JS 유실** (`html/shared/`에는 `api-client.js`만 존재).  
 동일 이슈: `roster-codes.js`는 FO HTML이 참조하나 `html/shared/`에도 FO `shared/`에도 **없음**.
@@ -220,11 +214,11 @@ html/C안/BO(admin)/project/
 
 | 문서 | FO/BO(admin) 대비 | 판정 |
 |------|-------------------|------|
-| **`docs/DEV_SPEC.md`** | FO/BO(admin) 경로·14패널·build-bo gap·V005만 존재 — **대체로 정확** | ⚠️ §11.2 "FO **7개** HTML" → **실제 25개**. 그 외 구조·갭 서술은 맞음 |
-| **`docs/IWINV_SETUP.md`** | `apps/web/dist` + FastAPI, BO handoff=`BO(admin)`, build-bo 불일치, `/admin/` nginx — **정확** | ✅ |
-| **`MIGRATION.md`** | V001~V005 적용 안내, apps 스캐폴드 — **정확** (V001~V004 파일 없음은 DEV_SPEC과 동일) | ✅ |
-| **`docs/DEPLOY.md`** | FO `build.py` — **정확** | ⚠️ §5·§6 BO = `html/C안/BO/` + `login.html`/`applications.html`/`bo-api-client.js` — **구식·오류** (실제 BO UI는 BO(admin), stub에 HTML 없음) |
-| **`api/README.md`** | API 계약·FO 연동 — **정확한 설계 문서** | ⚠️ "Static BO UI = html/C안/BO/" — **저장소와 불일치**; 소스 트리 가정은 현 워크스페이스와 불일치 |
+| **`docs/DEV_SPEC.md`** | FO/BO(admin) 경로·14패널·S3·V001~V006 기준으로 갱신됨 | ✅ |
+| **`docs/IWINV_SETUP.md`** | `apps/web/dist` + FastAPI, BO handoff=`BO(admin)`, `/admin/` nginx, S3 필수 설정 실패 정책 | ✅ |
+| **`MIGRATION.md`** | 과거 기준 문서. 운영 DB 적용은 현재 `db/migrations/V001`~`V006` SQL 기준 | ⚠️ |
+| **`docs/DEPLOY.md`** | FO/BO 빌드, FastAPI, S3 운영 기준으로 갱신됨 | ✅ |
+| **`api/README.md`** | 레거시 API 계약 참고 문서. 운영 기준은 `apps/api`와 `docs/DEV_SPEC.md` | ⚠️ |
 | **`html/C안/FO/docs/00_IA.md`** | 25페이지 IA — FO HTML과 **일치** | ✅ |
 | **`html/C안/BO(admin)/project/docs/IA.md`** | 14패널 IA — 패널 JSX와 **일치** | ✅ |
 | **`docs/기능정의서/*`** | handoff `uploads/`에 BO 기능정의서 사본 존재; 루트 `docs/기능정의서/`는 도메인·정책 위주 | 참고용 (FO/BO 화면 spec은 BO(admin)/uploads가 더 직접적) |
@@ -237,13 +231,13 @@ html/C안/BO(admin)/project/
 
 1. **`build.py` 수정:** `html/shared` 복사 시 `topik-i18n-content.js`(및 `roster-codes.js`) **merge** — 덮어쓰기로 i18n/roster 유실 방지
 2. **`roster-codes.js` 복원/작성** — signup/register/mypage-profile 필수
-3. **`build-bo.py` 입력 경로** → `html/C안/BO(admin)/project/` (또는 handoff를 deployable 경로로 이동)
-4. **`db/migrations` V001~V004 복원** — V005는 `users(id)` FK; 단독 적용 불가
-5. **레거시 `api/` 전체 소스 복원** 또는 **FastAPI로 계약 이전 착수** — FO `TopikApi`가 호출하는 API 없으면 운영 불가
+3. **BO 정적 배포 검증** — `build-bo.py`가 `html/C안/BO(admin)/project/`와 shared 병합 후 `public-bo/` 생성하는지 운영 서버에서 확인
+4. **`db/migrations` V001~V006 적용** — 신규 DB는 SQL migration 체인을 순서대로 적용
+5. **FastAPI 계약 검증** — FO/BO가 호출하는 주요 API를 운영 DB·S3 설정으로 스모크
 
 ### P1 — 운영 MVP
 
-6. **FastAPI (또는 복원 Fastify) FO API:** auth → me → exam-rounds/venues → application-draft/submissions → notices/faq/terms → board → files(S3)
+6. **FastAPI FO/BO API 운영 스모크:** auth → me → exam-rounds/venues → application-draft/submissions → notices/faq/terms → board → files(S3) → admin/photos.zip
 7. **IwinV FO:** 단기 — `build.py` FO 정적 + FastAPI; 중기 — `apps/web` 페이지 이전 (signup/register/mypage 우선)
 8. **BO 운영 UI 결정:** (a) BO(admin) mock을 `/admin/` 정적 제공 + API 연동 layer 신규 작성, 또는 (b) README 설계대로 **비-React** BO HTML 재구현 (`bo-api-client.js`)
 9. **FastAPI BO admin 라우터** — applicants/photos/payment/exam-numbers/export 우선
@@ -270,7 +264,7 @@ html/C안/BO(admin)/project/
 - [ ] **BO 경로**
   - [ ] `ln -sf ".../BO(admin)/project" /opt/myanmar-v2/bo-handoff` ([`IWINV_SETUP.md`](IWINV_SETUP.md) §1.11)
   - [ ] nginx `location /admin/` → handoff 정적
-  - [ ] `build-bo.py`는 현재 **사용 불가** (stub만 복사)
+  - [ ] `python3 build-bo.py` 실행 후 `public-bo/` 결과 확인
 - [ ] FastAPI systemd `myanmar-api` :8000
 - [ ] nginx `/` → FO dist, `/api/` → FastAPI
 - [ ] `apps/api/.env`, `apps/web/.env.production` chmod 600
@@ -279,7 +273,7 @@ html/C안/BO(admin)/project/
 ### G.2 DB VPS (`115.68.227.1`)
 
 - [ ] PostgreSQL `topik_myanmar`, `topik_app` (Web IP만 5432 허용)
-- [ ] **V001~V005 migration 전체 적용** (현재 V005만 있음)
+- [ ] **V001~V006 migration 전체 적용**
 - [ ] 운영 시드(국가/지역 코드) — dev 시드 금지
 - [ ] `create-admin`으로 첫 BO 관리자
 - [ ] 일일 `pg_dump` cron
@@ -317,13 +311,13 @@ html/C안/BO(admin)/project/
 |------|---------------|-------------|-----------|
 | FO UI | `html/C안/FO/` (25 HTML) | ✅ 존재, API 연동 코드 풍부 | roster-codes 누락, build i18n 유실 |
 | BO UI | `BO(admin)/project/` (14 패널) | ✅ mock 프로토타입 완성 | API·production 빌드 없음 |
-| BO deploy | BO(admin) | `build-bo.py` → stub `BO/` | **Critical** |
-| API | `api/README.md` 계약 | FastAPI placeholder + Fastify 5파일 | **Critical** |
-| DB | V001~V005 | V005만 | **Critical** |
+| BO deploy | BO(admin) | `build-bo.py`가 BO(admin) + shared 병합 | 운영 서버 빌드 검증 필요 |
+| API | FastAPI `apps/api` | FO/BO 주요 API 구현 | 실 운영 DB·S3 스모크 필요 |
+| DB | V001~V006 | SQL migration 체인 존재 | 운영 적용 필요 |
 | 신규 FE | apps/web | Home 1p | **Major** |
-| 문서 | DEV_SPEC, IWINV | 대체로 정확 | DEPLOY BO 섹션, DEV_SPEC "7페이지" 구식 |
+| 문서 | DEV_SPEC, IWINV, DEPLOY | 운영 기준으로 갱신 | 과거 리뷰성 문서는 참고용 |
 
-**핵심 결론:** FO·BO(admin) handoff는 **화면·IA·기능 범위 기준으로 상당히 완성**되어 있으나, **배포 스크립트·공유 JS·DB·백엔드·신규 apps 스택이 handoff를 따라가지 못하는 상태**입니다. IwinV 운영 전 P0(빌드·migration·API·누락 JS) 해결이 선행되어야 합니다.
+**핵심 결론:** FO·BO(admin) handoff와 FastAPI 구현은 운영 목표에 가까워졌지만, IwinV 운영 전에는 실제 도메인·DB·S3 credentials로 빌드/마이그레이션/API 스모크를 끝내야 합니다.
 
 ---
 
