@@ -1010,6 +1010,7 @@
     }
 
     var emailPayload = Object.assign({}, profilePayload, {
+      email: verifiedEmail || document.getElementById('su-email').value.trim(),
       verification_token: verificationToken,
       password: document.getElementById('su-pw').value,
       password_confirm: document.getElementById('su-pw2').value,

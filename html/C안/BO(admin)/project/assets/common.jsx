@@ -51,7 +51,7 @@ const I = {
 };
 
 // ----- LP (Layer Popup, right slide-in panel) -----
-function LP({ open, title, sub, onClose, size, children, footer }) {
+function LP({ open, title, sub, onClose, size, children, footer, tabs }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -69,6 +69,7 @@ function LP({ open, title, sub, onClose, size, children, footer }) {
           </div>
           <button className="lp-close" onClick={onClose} aria-label="닫기"><I.X/></button>
         </div>
+        {tabs}
         <div className="lp-body">{children}</div>
         {footer && <div className="lp-foot">{footer}</div>}
       </div>

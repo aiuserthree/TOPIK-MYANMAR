@@ -735,13 +735,14 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
         <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
         <button className="btn btn-secondary" onClick={onPay} disabled={locked}>{a.paid ? '수납 취소' : '수납'}</button>
         <button className="btn btn-primary" onClick={onApprove} disabled={locked}>승인</button>
-      </>}>
-      <div className="lp-tabs">
-        <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>기본 정보</button>
-        <button className={tab === 'memo' ? 'active' : ''} onClick={() => setTab('memo')}>메모</button>
-        <button className={tab === 'log' ? 'active' : ''} onClick={() => setTab('log')}>처리 이력 ({log.length})</button>
-      </div>
-
+      </>}
+      tabs={
+        <div className="lp-tabs">
+          <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>기본 정보</button>
+          <button className={tab === 'memo' ? 'active' : ''} onClick={() => setTab('memo')}>메모</button>
+          <button className={tab === 'log' ? 'active' : ''} onClick={() => setTab('log')}>처리 이력 ({log.length})</button>
+        </div>
+      }>
       {tab === 'profile' && (
         <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 24 }}>
           <div>
@@ -820,7 +821,7 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
           <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid var(--border)' }}/>
           <div>
             <div className="label" style={{ fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>지난 메모</div>
-            <pre style={{ background: 'var(--bg-2)', padding: 12, borderRadius: 6, fontSize: 12.5, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: 'var(--text-2)', maxHeight: 280, overflow: 'auto' }}>{a.memo || '메모 없음'}</pre>
+            <pre style={{ background: 'var(--bg-2)', padding: 12, borderRadius: 6, fontSize: 12.5, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: 'var(--text-2)' }}>{a.memo || '메모 없음'}</pre>
           </div>
         </div>
       )}
