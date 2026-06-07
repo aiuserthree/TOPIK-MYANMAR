@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
 from app.lib.deps import AuthUser, require_user
+from app.lib.email_notify import notify_account_status
 from app.lib.errors import api_error
+from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_photo
 from app.lib.validation import (
@@ -25,6 +27,7 @@ router = APIRouter(tags=["me"])
 
 
 class UpdateMeBody(BaseModel):
+    rev: int | None = None
     name_ko: str | None = None
     name_en: str | None = None
     birth_date: str | None = None
@@ -84,6 +87,8 @@ async def get_me(auth: AuthUser = Depends(require_user), db: AsyncSession = Depe
 @router.patch("/me")
 async def update_me(
     body: UpdateMeBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
     auth: AuthUser = Depends(require_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -91,7 +96,9 @@ async def update_me(
     user = result.scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+    check_rev(user, expected_rev_from_request(request, body.rev, if_match), label="프로필")
     data = body.model_dump(exclude_unset=True)
+    data.pop("rev", None)
     if "birth_date" in data and data["birth_date"]:
         birth = normalize_birth_date(data["birth_date"])
         if not birth:
@@ -118,7 +125,7 @@ async def update_me(
             )
         except ValueError as exc:
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
-    user.rev += 1
+    bump_rev(user)
     await db.commit()
     await db.refresh(user)
     return {"user": serialize_user(user)}
@@ -165,5 +172,6 @@ async def withdraw(
         .where(Application.user_id == user.id, Application.cancelled_at.is_(None))
         .values(cancelled_at=now, cancel_reason="회원 탈퇴", status="cancelled")
     )
+    await notify_account_status(db, user, action="withdrawn")
     await db.commit()
     return {"withdrawn": True}

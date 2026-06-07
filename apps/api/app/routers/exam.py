@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,15 +13,29 @@ from app.models.exam import ExamRound, ExamVenue
 router = APIRouter(tags=["exam"])
 
 
+def _payment_window(r: ExamRound) -> tuple[str | None, str | None]:
+    """응시료 수납 기간 — 접수 마감 후 3~5일(제107회 정책 기준)."""
+    if not r.registration_end_at:
+        return None, None
+    start = r.registration_end_at + timedelta(days=3)
+    end = r.registration_end_at + timedelta(days=5)
+    return start.isoformat(), end.isoformat()
+
+
 def serialize_round(r: ExamRound) -> dict:
+    payment_start, payment_end = _payment_window(r)
+    result_date = r.result_date.isoformat() if r.result_date else None
     return {
         "id": r.id,
         "round_no": r.round_no,
         "title": r.title,
         "exam_date": r.exam_date.isoformat(),
-        "result_date": r.result_date.isoformat() if r.result_date else None,
+        "result_date": result_date,
+        "result_announcement_date": result_date,
         "registration_start_at": r.registration_start_at.isoformat(),
         "registration_end_at": r.registration_end_at.isoformat(),
+        "payment_start_at": payment_start,
+        "payment_end_at": payment_end,
         "fee_level_i": r.fee_level_i,
         "fee_level_ii": r.fee_level_ii,
         "fees": {"I": r.fee_level_i, "II": r.fee_level_ii},

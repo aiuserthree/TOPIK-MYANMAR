@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
-from app.lib.email_render import render_password_reset, render_signup_verify_code
+from app.lib.email_render import render_password_reset, render_signup_verify_code, render_transactional
 from app.models.system import EmailOutbox
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,12 @@ def render_template(
     if template_key == "password_reset":
         subject, text, html = render_password_reset(lang, variables, cfg.public_fo_base)
         return RenderedEmail(subject=subject, text=text, html=html)
+
+    try:
+        subject, text, html = render_transactional(template_key, lang, variables, cfg.public_fo_base)
+        return RenderedEmail(subject=subject, text=text, html=html)
+    except KeyError:
+        pass
 
     subject = f"[TOPIK Myanmar] {template_key}"
     text = json.dumps(variables, ensure_ascii=False, indent=2)

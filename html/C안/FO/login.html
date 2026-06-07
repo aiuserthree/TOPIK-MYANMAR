@@ -323,7 +323,7 @@
               '서버를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.';
           } else if (result.status === 0) {
             err.querySelector('span').textContent =
-              'API에 연결할 수 없습니다. API(localhost:3000) 실행 여부를 확인해 주세요.';
+              'API에 연결할 수 없습니다. API(localhost:8000) 실행 여부를 확인해 주세요.';
           } else {
             err.querySelector('span').textContent =
               '로그인에 실패했습니다. (' + (result.error || result.status) + ')';

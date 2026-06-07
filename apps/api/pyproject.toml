@@ -16,6 +16,8 @@ dependencies = [
     "python-multipart",
     "email-validator",
     "boto3",
+    "openpyxl",
+    "httpx",
 ]
 
 [project.optional-dependencies]

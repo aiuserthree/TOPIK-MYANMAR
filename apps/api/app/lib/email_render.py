@@ -200,6 +200,41 @@ def _paragraph(block: dict[str, Any], variables: dict[str, Any]) -> str:
     )
 
 
+def _reason_box(block: dict[str, Any], variables: dict[str, Any]) -> str:
+    t = THEME_C
+    tone = block.get("tone", "negative")
+    color = t["status"][tone] if tone in t["status"] else t["primary"]
+    tint = t["status_tint"][tone] if tone in t["status_tint"] else t["accent_tint"]
+    title = _sub(block.get("title", ""), variables)
+    reason = _sub(block.get("reason", ""), variables)
+    return (
+        f'<tr><td style="padding:8px 0;">'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>'
+        f'<td style="background:{tint};border-radius:0;padding:15px 18px;border-left:3px solid {color};">'
+        f'<div style="font:700 13px/1.4 {FONT};color:{color};margin-bottom:8px;">{_esc(title)}</div>'
+        f'<div style="font:500 14px/1.6 {FONT};color:{t["body"]};white-space:pre-wrap;">{_esc(reason)}</div>'
+        f"</td></tr></table></td></tr>"
+    )
+
+
+def _steps_block(block: dict[str, Any], variables: dict[str, Any]) -> str:
+    t = THEME_C
+    items = block.get("items") or []
+    rows = []
+    for i, item in enumerate(items, 1):
+        rows.append(
+            f'<tr><td style="padding:6px 0;font:500 14px/1.6 {FONT};color:{t["body"]};">'
+            f'<span style="color:{t["primary"]};font-weight:700;">{i}.</span> {_esc(_sub(item, variables))}</td></tr>'
+        )
+    title = _sub(block.get("title", ""), variables)
+    return (
+        f'<tr><td style="padding:8px 0;">'
+        f'<div style="font:700 13px/1.4 {FONT};color:{t["ink"]};margin-bottom:8px;">{_esc(title)}</div>'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">'
+        f"{''.join(rows)}</table></td></tr>"
+    )
+
+
 def _render_block(block: dict[str, Any], variables: dict[str, Any]) -> str:
     kind = block.get("type", "paragraph")
     if kind == "code":
@@ -208,6 +243,10 @@ def _render_block(block: dict[str, Any], variables: dict[str, Any]) -> str:
         return _info_table(block, variables)
     if kind == "notice":
         return _notice_block(block, variables)
+    if kind == "reasonBox":
+        return _reason_box(block, variables)
+    if kind == "steps":
+        return _steps_block(block, variables)
     return _paragraph(block, variables)
 
 
@@ -429,6 +468,33 @@ def render_signup_verify_code(locale: str, variables: dict[str, Any], public_fo_
     )
     html = render_c_html(layout, merged, locale=lang)
     return subject, text.strip(), html
+
+
+def render_transactional(
+    template_key: str, locale: str, variables: dict[str, Any], public_fo_base: str
+) -> tuple[str, str, str]:
+    from app.lib.email_templates import TRANSACTIONAL_LAYOUTS
+
+    lang = locale[:2].lower() if locale else "ko"
+    layouts = TRANSACTIONAL_LAYOUTS.get(template_key, {})
+    layout = layouts.get(lang) or layouts.get("ko")
+    if not layout:
+        raise KeyError(template_key)
+    merged = _base_variables(variables, public_fo_base)
+    subject = _sub(layout.subject, merged)
+    text_parts = [merged.get("userName", ""), subject]
+    for block in layout.blocks:
+        if block.get("type") == "infoTable":
+            for row in block.get("rows", []):
+                text_parts.append(f"{row[0]}: {_sub(row[1], merged)}")
+        elif block.get("type") == "code":
+            text_parts.append(_sub(block.get("value", ""), merged))
+        elif block.get("reason"):
+            text_parts.append(_sub(block["reason"], merged))
+        elif block.get("text"):
+            text_parts.append(_sub(block["text"], merged))
+    html = render_c_html(layout, merged, locale=lang)
+    return subject, "\n".join(p for p in text_parts if p).strip(), html
 
 
 def render_password_reset(locale: str, variables: dict[str, Any], public_fo_base: str) -> tuple[str, str, str]:

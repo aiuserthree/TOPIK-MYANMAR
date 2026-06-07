@@ -27,7 +27,9 @@ from app.lib.security import (
     verify_code,
     verify_password,
 )
+from app.lib.email_notify import notify_password_expiry_reminder
 from app.lib.mail import enqueue_email, format_verification_code, is_mailer_live
+from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
 from app.lib.validation import (
     gender_to_code,
@@ -98,6 +100,12 @@ class RegisterBody(BaseModel):
     preferred_lang: str = "ko"
     # 동의한 약관 항목/버전(계약서 6.4). 예: [{"term_type":"service","version":"1.0","agreed":true}]
     terms_agreed: list[dict] = []
+
+
+class FindEmailBody(BaseModel):
+    name_ko: str
+    birth_date: str
+    phone: str
 
 
 class ForgotPasswordBody(BaseModel):
@@ -176,6 +184,39 @@ _LOCK_MESSAGE = (
     f"{LOGIN_LOCK_MINUTES}분 후 다시 시도해 주세요."
 )
 
+PASSWORD_REMINDER_DAYS = 180
+PASSWORD_REMINDER_COOLDOWN_DAYS = 30
+
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    if not domain:
+        return "***"
+    visible = local[:1] if local else ""
+    return f"{visible}***@{domain}"
+
+
+async def _maybe_password_reminder(db: AsyncSession, user: User) -> None:
+    if not user.password_changed_at or user.signup_provider != "email":
+        return
+    now = datetime.now(timezone.utc)
+    days = (now - user.password_changed_at).days
+    if days < PASSWORD_REMINDER_DAYS:
+        return
+    cooldown = now - timedelta(days=PASSWORD_REMINDER_COOLDOWN_DAYS)
+    recent = await db.execute(
+        select(EmailOutbox.id)
+        .where(
+            EmailOutbox.user_id == user.id,
+            EmailOutbox.template_key == "password_expiry_reminder",
+            EmailOutbox.created_at >= cooldown,
+        )
+        .limit(1)
+    )
+    if recent.scalar_one_or_none():
+        return
+    await notify_password_expiry_reminder(db, user, days_since=days)
+
 
 @router.post("/login")
 async def login(
@@ -212,8 +253,28 @@ async def login(
         await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     _reset_login_state(user)
+    await _maybe_password_reminder(db, user)
     await db.commit()
     return _user_token_response(user)
+
+
+@router.post("/find-email")
+async def find_email(body: FindEmailBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+    birth = normalize_birth_date(body.birth_date)
+    if not birth:
+        raise api_error("VALIDATION_ERROR", "생년월일 형식이 올바르지 않습니다.")
+    name = body.name_ko.strip()
+    phone = body.phone.strip()
+    result = await db.execute(
+        select(User.email).where(
+            User.name_ko == name,
+            User.birth_date == birth,
+            User.phone == phone,
+            User.status == "active",
+        )
+    )
+    emails = [_mask_email(row) for row in result.scalars().all()]
+    return {"matches": [{"email": e} for e in emails]}
 
 
 @router.post("/logout")

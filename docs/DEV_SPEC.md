@@ -143,7 +143,9 @@ apps/api/
 | Board | `/api/v1/board/*` | 구현 |
 | Files | `/api/v1/files/:id`, `/admin/files/:id` | 구현 (local/S3) |
 | Admin | `/api/v1/admin/*` (접수·회차·시험장·콘텐츠·게시판·회원·관리자·감사) | 구현 |
-| Export | `roster.xlsx`, `photos.zip` 등 | **미구현** |
+| Export | `roster.xlsx`, `photos.zip` | **구현** (`GET /admin/exam-rounds/{id}/roster.xlsx`, `photos.zip`) |
+| Find email | `POST /auth/find-email` | **구현** |
+| Marketing mail | `POST /admin/notices/{id}/send-marketing` | **구현** |
 | Internal | `/internal/notifications/*` | **미구현** |
 
 **환경 변수** (`.env.example`):
@@ -436,6 +438,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 다른 터미널 — 제107회 시드 + 스모크 테스트
+python3 scripts/seed_dev.py
+python3 scripts/test_phase1_flow.py
 ```
 
 **Web:**
@@ -469,11 +475,11 @@ Vite dev server는 `/api`를 FastAPI(`127.0.0.1:8000`)로 프록시합니다.
 
 | 상태 | 범위 |
 | --- | --- |
-| **구현됨** | Health, FO auth(일반 가입·로그인·이메일 인증·비번재설정), me, exam-rounds/venues, application-draft/submissions, notices/faq/terms, board, files, admin 접수·회차·시험장·콘텐츠·게시판·회원·관리자·감사 |
-| **부분** | Google OAuth (`/auth/google/config` → `enabled: false`, client id 확정 후 연결), 이메일 템플릿 14종 중 API 렌더 **2종** (`signup_verify_code`, `password_reset`) |
-| **미구현/보류** | `find-email`, Google login/register(합의 보류), `/internal/notifications/*`, 일부 admin export·마케팅 메일 템플릿 |
+| **구현됨 (1단계)** | Health, FO/BO auth, `find-email`, me(rev/If-Match), exam-rounds/venues(`payment_*`·`result_announcement_date`), application-draft/submissions, notices/faq/terms, board, files, admin 전반, **연명부 xlsx zip**, **photos.zip**, **마케팅 공지 일괄 메일**, **이메일 14종 렌더+도메인 트리거(ko/my/en)**, **optimistic locking(rev/409)** |
+| **부분** | Google OAuth (`enabled: false`), `/internal/notifications/*`(레거시 계약, 미등록) |
+| **미구현/보류** | Google login/register, 운영 SMTP 실발송(도메인·DNS 확정 후) |
 
-ORM model·repository·JWT·S3/local storage·파일 프록시·`photos.zip`·`email_outbox` 워커는 구현되어 있습니다 (`app/lib/storage.py`, `app/routers/files.py`, `app/routers/admin_api.py`, `app/lib/mail.py`, `email_worker.py`).
+`html/C안` FO/BO는 `html/shared/{api-client,bo-api-client}.js`로 FastAPI(`:8000`) 연동. 응시료·수납처 안내 페이지(`rules-fee.html`, `apply-howto.html`)는 **정적 문구** — API/DB 연동 없음(아래 §15).
 
 ### 10.2 레거시 Fastify (`api/`)
 
@@ -589,13 +595,14 @@ docker compose -f docker-compose.prod.yml up -d --build
 3. **`roster-codes.js`** — FO 3페이지 참조, 저장소 누락
 4. **레거시 `api/` Fastify** — 참조용 잔존; 신규 개발은 `apps/api` 기준
 
-### 14.2 FastAPI·운영 완성
+### 14.2 FastAPI·운영 완성 (1단계 이후)
 
 1. IwinV Web/DB [`IWINV_SETUP.md`](IWINV_SETUP.md) — nginx, systemd, PostgreSQL, **테라웹메일 SMTP** DNS(MX/SPF/DKIM)
-2. BO export API — `roster.xlsx`, `photos.zip` ([`api/README.md`](../api/README.md) 계약)
-3. Google OAuth, `find-email`, 나머지 이메일 템플릿 12종 (`시안/email/` → `email_render.py`)
+2. Google OAuth (`/auth/google`) — 고객사 앱 등록 확정 후
+3. ~~이메일 i18n(my/en) 14종~~ — 완료 (`email_templates.py` + `email_render.py` 인증 2종)
 4. `STORAGE_PROVIDER=s3` + IwinV 오브젝트 스토리지 (운영 사진)
 5. `html/C안/FO` → `apps/web` 페이지 이전 (중기)
+6. 응시료·수납처 — 고객사 최종 문구 확정 후 `rules-fee.html` 등 정적 HTML 갱신 (API 연동 불필요, §15)
 
 ### 14.3 운영 전환
 
@@ -603,6 +610,22 @@ docker compose -f docker-compose.prod.yml up -d --build
 - `CORS_ORIGINS`, `PUBLIC_FO_BASE`, Google OAuth origins, `VITE_API_URL=/api` 일괄 갱신
 - 운영 DB: dev 시드 금지, 첫 BO 관리자 시드/스크립트로 생성
 - SMTP 스모크: `python3 scripts/test_smtp.py --to <메일>`
+
+---
+
+## 15. 1단계 확정 정책 (2026-06-07)
+
+| 항목 | 결정 | 구현 |
+| --- | --- | --- |
+| 1차 회차 | **제107회** (접수 7/17~21, 시험 10/18) | `scripts/seed_dev.py` |
+| 시험장 | BO에서 등록 — seed에 시험장 **미포함** | 빈 `exam_venues` OK |
+| 응시료·수납처 FO | **정적 HTML 문구** (`rules-fee.html`, `apply-howto.html`) — API/DB 연동 **없음** | 임시 50,000/75,000 MMK·수납기간 하드코딩 |
+| 응시료 seed | 임시 `fee_level_i/ii` (107회 회차 메타) | BO·`register.html` 금액 표시용 |
+| 일정 API | `index.html`·`guide-overview.html`만 `getExamRounds`로 수납기간 등 보조 표시 | `payment_start_at`/`payment_end_at` 계산 필드 |
+| BO 마케팅 공지 | 게시 시 `marketing_opt_in` 회원 일괄 메일 | `POST /admin/notices/{id}/send-marketing` |
+| 동시성 | `rev` + `If-Match` / body `rev` → 409 | `app/lib/rev.py` |
+
+**고객사 확정 대기** — [`기능정의서/정책_합의_워크시트.md`](기능정의서/정책_합의_워크시트.md) §「개발팀 메모」참고.
 
 ---
 

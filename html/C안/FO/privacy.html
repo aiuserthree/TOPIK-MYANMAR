@@ -199,7 +199,7 @@ window.TPKM_PAGE_I18N = {
     var meta = document.querySelector('meta[name="' + metaName + '"]');
     if (meta && meta.content && meta.content.trim()) return meta.content.trim();
     var host = location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:3000';
+    if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:8000';
     return '';
   }
 

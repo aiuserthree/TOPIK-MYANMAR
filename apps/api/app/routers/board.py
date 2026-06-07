@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.lib.deps import AuthUser, require_user
 from app.lib.errors import api_error
+from app.lib.email_notify import notify_board_post_created, resolve_admin_notify_email
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_upload
@@ -238,6 +239,10 @@ async def create_post(
             f.owner_type = _ATTACH_OWNER_POST
             f.owner_id = post.id
 
+    user = (await db.execute(select(User).where(User.id == auth.id))).scalar_one_or_none()
+    if user:
+        admin_email = await resolve_admin_notify_email(db)
+        await notify_board_post_created(db, post, user, admin_email=admin_email)
     await db.commit()
     await db.refresh(post)
     return {"id": post.id, "workflow_status": post.workflow_status, "message": "접수되었습니다."}

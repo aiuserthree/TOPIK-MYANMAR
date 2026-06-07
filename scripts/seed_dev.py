@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dev seed: reference data + demo user + admin (requires running PostgreSQL)."""
+"""Dev seed: reference data + demo user + admin + 제107회 회차 (requires PostgreSQL)."""
 from __future__ import annotations
 
 import asyncio
@@ -7,6 +7,7 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import bcrypt
 from sqlalchemy import select
@@ -16,12 +17,77 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 from app.models.admin import AdminUser  # noqa: E402
+from app.models.content import FaqItem, Notice, Term  # noqa: E402
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue  # noqa: E402
 from app.models.user import User  # noqa: E402
+
+MM_TZ = ZoneInfo("Asia/Yangon")
+
+# 제107회 — 정책_합의_워크시트 확정값 (시험장은 BO 등록 예정 → seed 미포함)
+ROUND_107 = {
+    "round_no": 107,
+    "title": "제107회",
+    "exam_date": datetime(2026, 10, 18, tzinfo=MM_TZ).date(),
+    "registration_start_at": datetime(2026, 7, 17, 0, 0, tzinfo=MM_TZ),
+    "registration_end_at": datetime(2026, 7, 21, 23, 59, 59, tzinfo=MM_TZ),
+    "fee_level_i": 50_000,
+    "fee_level_ii": 75_000,
+    "capacity": 0,
+    "registration_status": "open",
+}
 
 
 def _hash(pw: str) -> str:
     return bcrypt.hashpw(pw.encode(), bcrypt.gensalt(rounds=10)).decode()
+
+
+async def _ensure_round_107(db: AsyncSession) -> None:
+    exists = await db.execute(select(ExamRound).where(ExamRound.round_no == 107))
+    if exists.scalar_one_or_none():
+        return
+    rnd = ExamRound(**ROUND_107)
+    db.add(rnd)
+    await db.flush()
+
+    notice = Notice(
+        category="접수",
+        title="제107회 TOPIK 접수 안내",
+        body_html="<p>제107회 TOPIK 접수가 시작되었습니다. 접수 기간·응시료·수납 안내는 공지 본문을 확인해 주세요.</p>",
+        is_published=True,
+        is_pinned=True,
+        published_at=datetime.now(timezone.utc),
+    )
+    db.add(notice)
+
+    for ttype, title, body in (
+        ("service", "이용약관 v1.0 (임시)", "<p>이용약관 임시 본문입니다. 고객사 최종 문구 확정 후 교체 예정.</p>"),
+        ("privacy", "개인정보처리방침 v1.0 (임시)", "<p>개인정보처리방침 임시 본문입니다.</p>"),
+        ("marketing", "마케팅 수신 동의 v1.0 (임시)", "<p>마케팅 정보 수신 동의 안내 임시 본문입니다.</p>"),
+    ):
+        term_exists = await db.execute(select(Term).where(Term.term_type == ttype, Term.version == "1.0"))
+        if not term_exists.scalar_one_or_none():
+            db.add(
+                Term(
+                    term_type=ttype,
+                    version="1.0",
+                    title=title,
+                    body_ko=body,
+                    status="published",
+                    published_at=datetime.now(timezone.utc),
+                )
+            )
+
+    faq_exists = await db.execute(select(FaqItem).limit(1))
+    if not faq_exists.scalar_one_or_none():
+        db.add(
+            FaqItem(
+                category="접수",
+                question_ko="응시료는 어디서 납부하나요?",
+                answer_ko="오프라인 수납만 가능합니다. 수납처·계좌·운영시간은 TOPIK 규정 > 응시료 안내 페이지 및 공지사항을 참고해 주세요. (임시 안내 — 고객사 확정 후 갱신)",
+                sort_order=1,
+                is_active=True,
+            )
+        )
 
 
 async def main() -> None:
@@ -66,6 +132,7 @@ async def main() -> None:
                     job_code=1,
                     motive_code=1,
                     purpose_code=1,
+                    marketing_opt_in=True,
                     password_changed_at=datetime.now(timezone.utc) - timedelta(days=200),
                 )
             )
@@ -81,37 +148,16 @@ async def main() -> None:
                 )
             )
 
-        venue_res = await db.execute(select(ExamVenue).limit(1))
-        if not venue_res.scalar_one_or_none():
-            venue = ExamVenue(
-                venue_code="01",
-                name_ko="양곤대 흘라잉캠퍼스",
-                name_en="Yangon Univ. Hlaing Campus",
-                country_code="025",
-                region_code="001",
-                capacity=600,
-            )
-            db.add(venue)
-            await db.flush()
-            now = datetime.now(timezone.utc)
-            rnd = ExamRound(
-                round_no=99,
-                title="제99회 TOPIK (데모)",
-                exam_date=datetime.now(timezone.utc).date(),
-                registration_start_at=now - timedelta(days=1),
-                registration_end_at=now + timedelta(days=30),
-                fee_level_i=50000,
-                fee_level_ii=75000,
-                capacity=600,
-                registration_status="open",
-            )
-            db.add(rnd)
-            await db.flush()
-            db.add(ExamRoundVenue(exam_round_id=rnd.id, exam_venue_id=venue.id))
+        await _ensure_round_107(db)
+
+        # 레거시 데모 회차(99회) — 기존 DB 호환용, 신규에는 107회만 생성
+        old99 = await db.execute(select(ExamRound).where(ExamRound.round_no == 99))
+        if not old99.scalar_one_or_none():
+            pass  # 99회 자동 생성 안 함 — 107회가 기준
 
         await db.commit()
     await engine.dispose()
-    print("Seed complete.")
+    print("Seed complete (제107회 + regions + demo accounts).")
 
 
 if __name__ == "__main__":

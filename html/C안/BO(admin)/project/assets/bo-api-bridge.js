@@ -668,12 +668,23 @@
       is_pinned: !!data.pin,
       is_published: !!data.public,
     };
-    var p = data.id && !data._isNew
+    var isNew = !data.id || data._isNew;
+    var p = !isNew
       ? Api.updateNotice(data.id, payload)
       : Api.createNotice(payload);
     return p.then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      return DS.initFromApi();
+      var noticeId = !isNew ? data.id : (res.body && (res.body.id || res.body.notice_id));
+      var sendP = Promise.resolve({ ok: true, body: { queued: 0 } });
+      if (isNew && data.public && noticeId && Api.sendMarketingNotice) {
+        sendP = Api.sendMarketingNotice(noticeId);
+      }
+      return sendP.then(function (mailRes) {
+        if (mailRes.ok && mailRes.body && mailRes.body.queued > 0) {
+          toastOk("공지 등록 완료 · 마케팅 동의 회원 " + mailRes.body.queued + "명에게 알림을 발송했습니다.");
+        }
+        return DS.initFromApi();
+      });
     });
   };
 

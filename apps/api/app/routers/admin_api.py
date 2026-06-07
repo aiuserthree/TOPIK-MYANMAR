@@ -6,9 +6,10 @@ import re
 import secrets
 import string
 import zipfile
+from urllib.parse import quote
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
@@ -26,6 +27,20 @@ from app.lib.deps import (
 )
 from app.lib.errors import api_error
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
+from app.config import get_settings
+from app.lib.email_notify import (
+    notify_account_status,
+    notify_application_approved,
+    notify_application_rejected,
+    notify_board_reply,
+    notify_member_info_changed,
+    notify_photo_rejected,
+    notify_temp_password,
+    resolve_admin_notify_email,
+)
+from app.lib.mail import enqueue_email
+from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
+from app.lib.roster_export import build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import read_file_bytes
 from app.lib.validation import is_valid_password
@@ -39,22 +54,37 @@ from app.models.user import User
 from app.routers.exam import serialize_round, serialize_venue
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+settings = get_settings()
+
+MARKETING_BATCH_LIMIT = 500
+
+
+def _attachment_disposition(filename: str) -> str:
+    ascii_name = "".join(c if ord(c) < 128 else "_" for c in filename) or "download"
+    return f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(filename)}'
 
 
 class RejectBody(BaseModel):
     reject_reason: str | None = None
+    rev: int | None = None
 
 
 class PaymentBody(BaseModel):
     receipt_no: str | None = None
     payment_memo: str | None = None
     ignore_capacity: bool = False
+    rev: int | None = None
 
 
 class PhotoReviewBody(BaseModel):
     action: str
     photo_reject_code: str | None = None
     photo_reject_note: str | None = None
+    rev: int | None = None
+
+
+class RevBody(BaseModel):
+    rev: int | None = None
 
 
 class ReplyBody(BaseModel):
@@ -132,6 +162,7 @@ class UserPatchBody(BaseModel):
     nationality: str | None = None
     marketing_opt_in: bool | None = None
     status: str | None = None
+    rev: int | None = None
 
 
 class AdminUserBody(BaseModel):
@@ -245,6 +276,7 @@ def _app_row_dict(
         "payment_receipt_no": app.payment_receipt_no,
         "paid_at": app.paid_at.isoformat() if app.paid_at else None,
         "created_at": app.created_at.isoformat() if app.created_at else None,
+        "rev": app.rev,
     }
 
 
@@ -409,6 +441,76 @@ async def export_photos_zip(
     )
 
 
+@router.get("/exam-rounds/{round_id}/roster.xlsx")
+async def export_roster_xlsx(
+    round_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """연명부 xlsx zip — 지역·시험장·수준별 파일 (계약서 3절)."""
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    apps = (
+        await db.execute(
+            select(Application).where(
+                Application.exam_round_id == round_id,
+                Application.status != "cancelled",
+            )
+        )
+    ).scalars().all()
+    users, venues, _rounds = await _load_app_refs(db, apps)
+    region_names: dict[tuple[str, str], str] = {}
+    rres = await db.execute(select(CountryRegionCode))
+    for rc in rres.scalars().all():
+        region_names[(rc.country_code, rc.region_code)] = rc.name_ko
+
+    row_dicts = [
+        _app_row_dict(a, users.get(a.user_id), venues.get(a.exam_venue_id), rnd)
+        for a in apps
+    ]
+    groups = group_roster_rows(row_dicts, region_names=region_names)
+    zip_bytes, zip_name = build_roster_zip(round_no=rnd.round_no, groups=groups)
+
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="roster_export",
+        target_type="exam_rounds",
+        target_id=round_id,
+        after_data={"files": len(groups), "rows": len(row_dicts)},
+        ip_address=ip,
+    )
+    await db.commit()
+
+    return StreamingResponse(
+        io.BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={"Content-Disposition": _attachment_disposition(zip_name)},
+    )
+
+
+@router.get("/exam-rounds/{round_id}/photos.zip")
+async def export_round_photos_zip(
+    round_id: int,
+    venue_id: int | None = Query(None),
+    level: str | None = Query(None),
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """회차 단위 사진 zip (query-param 경로 alias)."""
+    return await export_photos_zip(
+        round_id=round_id,
+        venue_id=venue_id,
+        level=level,
+        admin=admin,
+        ip=ip,
+        db=db,
+    )
+
+
 @router.get("/applications/{app_id}")
 async def admin_get_application(
     app_id: int,
@@ -448,47 +550,68 @@ async def admin_get_application(
 @router.post("/applications/{app_id}/approve")
 async def approve_application(
     app_id: int,
+    request: Request,
+    body: RevBody | None = None,
+    if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev if body else None, if_match), label="접수")
     before = app.status
     app.status = "approved"
     app.approved_at = datetime.now(timezone.utc)
+    bump_rev(app)
+    user = (await db.execute(select(User).where(User.id == app.user_id))).scalar_one_or_none()
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
+    venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == app.exam_venue_id))).scalar_one_or_none()
+    if user and rnd:
+        await notify_application_approved(db, app, user, rnd, venue)
     await write_audit(db, admin_user_id=admin.id, action_type="approve", target_type="applications", target_id=app_id, before_data={"status": before}, after_data={"status": app.status})
     await db.commit()
-    return {"approved": True}
+    return {"approved": True, "rev": app.rev}
 
 
 @router.post("/applications/{app_id}/reject")
 async def reject_application(
     app_id: int,
     body: RejectBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
     app.status = "rejected"
     app.reject_reason = body.reject_reason
+    bump_rev(app)
+    user = (await db.execute(select(User).where(User.id == app.user_id))).scalar_one_or_none()
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
+    if user and rnd:
+        await notify_application_rejected(db, app, user, rnd, reject_reason=body.reject_reason)
     await write_audit(db, admin_user_id=admin.id, action_type="reject", target_type="applications", target_id=app_id, memo=body.reject_reason)
     await db.commit()
-    return {"rejected": True}
+    return {"rejected": True, "rev": app.rev}
 
 
 @router.post("/applications/{app_id}/payment")
 async def payment_application(
     app_id: int,
     body: PaymentBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
     if app.photo_review_status != "approved":
         raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 수납할 수 있습니다.", 400)
     app.payment_status = "paid"
@@ -496,9 +619,10 @@ async def payment_application(
     app.paid_at = datetime.now(timezone.utc)
     app.payment_receipt_no = body.receipt_no
     app.payment_memo = body.payment_memo
+    bump_rev(app)
     await write_audit(db, admin_user_id=admin.id, action_type="payment_complete", target_type="applications", target_id=app_id)
     await db.commit()
-    return {"paid": True}
+    return {"paid": True, "rev": app.rev}
 
 
 @router.post("/applications/{app_id}/payment/cancel")
@@ -520,12 +644,15 @@ async def cancel_payment(
 async def photo_review(
     app_id: int,
     body: PhotoReviewBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
     if body.action == "approve":
         app.photo_review_status = "approved"
         app.status = "payment_pending"
@@ -534,11 +661,21 @@ async def photo_review(
         app.photo_reject_code = body.photo_reject_code
         app.photo_reject_note = body.photo_reject_note
         app.status = "photo_review"
+        user = (await db.execute(select(User).where(User.id == app.user_id))).scalar_one_or_none()
+        if user:
+            await notify_photo_rejected(
+                db,
+                app,
+                user,
+                photo_reject_code=body.photo_reject_code,
+                photo_reject_note=body.photo_reject_note,
+            )
     else:
         raise api_error("VALIDATION_ERROR", "action은 approve 또는 reject여야 합니다.")
+    bump_rev(app)
     await write_audit(db, admin_user_id=admin.id, action_type=f"photo_review_{body.action}", target_type="applications", target_id=app_id)
     await db.commit()
-    return {"photo_review_status": app.photo_review_status}
+    return {"photo_review_status": app.photo_review_status, "rev": app.rev}
 
 
 def _assign_group_serials(apps_sorted: list[Application], accommodation_ids: set[int]) -> dict[int, int]:
@@ -911,6 +1048,61 @@ async def create_notice(
     return {"id": notice.id}
 
 
+@router.post("/notices/{notice_id}/send-marketing")
+async def send_marketing_notice(
+    notice_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """마케팅 수신 동의 회원에게 공지 알림 메일 일괄 enqueue (속도: 배치 상한)."""
+    notice = (await db.execute(select(Notice).where(Notice.id == notice_id))).scalar_one_or_none()
+    if not notice:
+        raise api_error("NOT_FOUND", "공지를 찾을 수 없습니다.", 404)
+    if not notice.is_published:
+        raise api_error("VALIDATION_ERROR", "게시된 공지만 발송할 수 있습니다.", 400)
+
+    base = settings.public_fo_base.rstrip("/")
+    published = fmt_date(notice.published_at) if notice.published_at else fmt_date(notice.created_at)
+    notice_url = f"{base}/notice.html"
+
+    result = await db.execute(
+        select(User)
+        .where(User.status == "active", User.marketing_opt_in.is_(True))
+        .order_by(User.id.asc())
+        .limit(MARKETING_BATCH_LIMIT)
+    )
+    users = result.scalars().all()
+    queued = 0
+    for user in users:
+        await enqueue_email(
+            db,
+            template_key="notice_marketing",
+            to_email=user.email,
+            locale=user.preferred_lang,
+            user_id=user.id,
+            variables={
+                "noticeTitle": notice.title,
+                "noticeCategory": notice.category,
+                "publishedAt": published,
+                "noticeUrl": notice_url,
+            },
+        )
+        queued += 1
+
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="notice_marketing_send",
+        target_type="notices",
+        target_id=notice_id,
+        after_data={"queued": queued, "notice_title": notice.title},
+        ip_address=ip,
+    )
+    await db.commit()
+    return {"queued": queued, "notice_id": notice_id}
+
+
 @router.patch("/notices/{notice_id}")
 async def update_notice(
     notice_id: int,
@@ -1245,6 +1437,38 @@ async def admin_get_board_post(
     return {"post": data}
 
 
+@router.get("/board/posts/{post_id}/comments")
+async def admin_list_board_comments(
+    post_id: int,
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    post = (await db.execute(select(BoardPost).where(BoardPost.id == post_id))).scalar_one_or_none()
+    if not post:
+        raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+    comments_res = await db.execute(
+        select(BoardComment)
+        .where(BoardComment.board_post_id == post_id, BoardComment.is_deleted.is_(False))
+        .order_by(BoardComment.created_at, BoardComment.id)
+    )
+    return {
+        "items": [
+            {
+                "id": c.id,
+                "body": c.body,
+                "parent_comment_id": c.parent_comment_id,
+                "author_admin_id": c.author_admin_id,
+                "author_user_id": c.author_user_id,
+                "is_admin": c.author_admin_id is not None,
+                "is_secret": c.is_secret,
+                "created_at": c.created_at.isoformat(),
+                "created_at_label": fmt_datetime(c.created_at),
+            }
+            for c in comments_res.scalars().all()
+        ]
+    }
+
+
 @router.post("/board/posts/{post_id}/comments")
 async def admin_create_board_comment(
     post_id: int,
@@ -1338,6 +1562,9 @@ async def reply_post(
     post.admin_replier_id = admin.id
     if body.mark_complete:
         post.workflow_status = "answered" if post.board_type == "inquiry" else "completed"
+    user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
+    if user:
+        await notify_board_reply(db, post, user, activity_type="공식 답변")
     await write_audit(db, admin_user_id=admin.id, action_type="board_reply", target_type="board_posts", target_id=post_id)
     await db.commit()
     return {"replied": True}
@@ -1369,6 +1596,8 @@ async def admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSession
 async def update_user(
     user_id: int,
     body: UserPatchBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(require_admin),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
@@ -1376,14 +1605,32 @@ async def update_user(
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "회원을 찾을 수 없습니다.", 404)
+    check_rev(user, expected_rev_from_request(request, body.rev, if_match), label="회원")
     before = {"status": user.status, "email": user.email}
     data = body.model_dump(exclude_unset=True)
+    data.pop("rev", None)
+    field_labels = {
+        "name_ko": "한글성명",
+        "name_en": "영문성명",
+        "email": "이메일",
+        "phone": "연락처",
+        "nationality": "국적",
+        "marketing_opt_in": "마케팅수신",
+        "status": "상태",
+    }
+    changed_fields: list[str] = []
+    diff_lines: list[str] = []
     if "status" in data and data["status"] not in ("active", "suspended", "withdrawn"):
         raise api_error("VALIDATION_ERROR", "status가 올바르지 않습니다.", 400)
     # RBAC: 회원 정지/탈퇴는 최고관리자(계약서 7절).
     if data.get("status") in ("suspended", "withdrawn"):
         _require_super(admin)
     for key, val in data.items():
+        old = getattr(user, key, None)
+        if old != val:
+            label = field_labels.get(key, key)
+            changed_fields.append(label)
+            diff_lines.append(f"{label}: {old} → {val}")
         setattr(user, key, val)
     if data.get("status") == "withdrawn":
         now = datetime.now(timezone.utc)
@@ -1399,6 +1646,17 @@ async def update_user(
             .where(Application.user_id == user_id, Application.cancelled_at.is_(None))
             .values(cancelled_at=now, cancel_reason="관리자 회원 탈퇴", status="cancelled")
         )
+    bump_rev(user)
+    admin_row = (await db.execute(select(AdminUser).where(AdminUser.id == admin.id))).scalar_one_or_none()
+    changed_by = f"{admin_row.name}({admin_row.email})" if admin_row else str(admin.id)
+    if changed_fields and data.get("status") not in ("suspended", "withdrawn"):
+        await notify_member_info_changed(
+            db, user, changed_fields=changed_fields, diff_lines=diff_lines, changed_by=changed_by
+        )
+    if data.get("status") == "suspended":
+        await notify_account_status(db, user, action="suspended")
+    elif data.get("status") == "withdrawn":
+        await notify_account_status(db, user, action="withdrawn")
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -1410,7 +1668,7 @@ async def update_user(
         ip_address=ip,
     )
     await db.commit()
-    return {"updated": True}
+    return {"updated": True, "rev": user.rev}
 
 
 @router.post("/users/{user_id}/reset-password")
@@ -1426,6 +1684,7 @@ async def reset_user_password(
     temp = "tpkm" + "".join(secrets.choice(alphabet) for _ in range(8))
     user.password_hash = hash_password(temp)
     user.password_changed_at = None
+    await notify_temp_password(db, user, temp)
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -1522,6 +1781,7 @@ async def reset_admin_password(
     temp = "tpkm" + "".join(secrets.choice(alphabet) for _ in range(8))
     row.password_hash = hash_password(temp)
     row.must_change_password = True
+    await notify_temp_password(db, row, temp, is_admin=True, admin_username=row.email)
     await write_audit(
         db,
         admin_user_id=admin.id,
