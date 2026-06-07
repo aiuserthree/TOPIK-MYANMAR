@@ -127,7 +127,7 @@ function ApplicantsPanel() {
   const doPhotoReject = async (id, reason) => {
     if (!reason || !reason.trim()) { toastErr('반려 사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      if (await DataStore.apiPhotoReject(id, reason)) toastOk('사진이 반려되었습니다. 응시자에게 이메일이 발송됩니다.', { title: '사진 심사', type: 'success' });
+      if (await DataStore.apiPhotoReject(id, reason)) toastOk('사진이 반려되었습니다. 반려 사유는 FO 마이페이지에 안내됩니다.', { title: '사진 심사', type: 'success' });
       return;
     }
     const a = state.applicants.find(x => x.id === id);
@@ -139,7 +139,7 @@ function ApplicantsPanel() {
     a.rejectReason = reason;
     DataStore.addAudit({ type: '사진', targetId: id, action: '반려', before, after: { photoStatus: 'rejected', status: 'rejected', rejectReason: reason }, memo: reason });
     DataStore.notify();
-    toastOk('사진이 반려되었습니다. 응시자에게 이메일이 발송됩니다.', { title: '사진 심사', type: 'success' });
+    toastOk('사진이 반려되었습니다. 반려 사유는 FO 마이페이지에 안내됩니다.', { title: '사진 심사', type: 'success' });
   };
   const doBulkPhotoApprove = async (ids) => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
@@ -180,7 +180,7 @@ function ApplicantsPanel() {
     }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       const n = await DataStore.apiApprove(ids);
-      if (n) toastOk(`${n}건이 승인되었습니다. (이메일 통지 전송)`, { title: '승인 완료', type: 'success' });
+      if (n) toastOk(`${n}건이 승인되었습니다.`, { title: '승인 완료', type: 'success' });
       setApproveModal(null);
       setSelected(new Set());
       return;
@@ -195,7 +195,7 @@ function ApplicantsPanel() {
       DataStore.addAudit({ type: '접수자', targetId: id, action: '승인', before, after: { status: 'approved' }, memo: '' });
     });
     DataStore.notify();
-    toastOk(`${n}건이 승인되었습니다. (이메일 통지 전송)`, { title: '승인 완료', type: 'success' });
+    toastOk(`${n}건이 승인되었습니다.`, { title: '승인 완료', type: 'success' });
     setApproveModal(null);
     setSelected(new Set());
   };
@@ -204,7 +204,7 @@ function ApplicantsPanel() {
     if (!reason || !reason.trim()) { toastErr('반려 사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       const n = await DataStore.apiReject(ids, reason);
-      if (n) toastOk(`${n}건이 반려되었습니다. (이메일 통지)`, { title: '반려 완료', type: 'success' });
+      if (n) toastOk(`${n}건이 반려되었습니다.`, { title: '반려 완료', type: 'success' });
       setRejectModal(null);
       setSelected(new Set());
       return;
@@ -220,7 +220,7 @@ function ApplicantsPanel() {
       DataStore.addAudit({ type: '접수자', targetId: id, action: '반려', before, after: { status: 'rejected', rejectReason: reason }, memo: reason });
     });
     DataStore.notify();
-    toastOk(`${n}건이 반려되었습니다. (이메일 통지)`, { title: '반려 완료', type: 'success' });
+    toastOk(`${n}건이 반려되었습니다.`, { title: '반려 완료', type: 'success' });
     setRejectModal(null);
     setSelected(new Set());
   };
@@ -434,7 +434,7 @@ function ApplicantsPanel() {
                   <td className="cb"><input type="checkbox" checked={selected.has(a.id)} onChange={() => toggleOne(a.id)}/></td>
                   <td className="num">{a.no}</td>
                   <td>
-                    <PhotoThumb status={a.photoStatus} name={a.nameKo} seed={a.id}/>
+                    <PhotoThumb status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl}/>
                   </td>
                   <td><a style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }} onClick={() => setDetailId(a.id)}>{a.nameKo}</a></td>
                   <td>{a.nameEn}</td>
@@ -468,23 +468,8 @@ function ApplicantsPanel() {
         </div>
       </div>
 
-      {/* 노출시점 설정 */}
-      <div className="acard no-print" style={{ marginTop: 16 }}>
-        <div className="acard-head">
-          <h3>수험번호 / 수험표 노출 시점 설정 (FO 접수확인)</h3>
-        </div>
-        <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <FormRow label="노출 시작일" hint="이 날짜 이전에는 FO에서 수험번호 미노출">
-            <input type="date" className="input" style={{ height: 38, width: 200 }} defaultValue="2026-08-15"/>
-          </FormRow>
-          <FormRow label="노출 시작 시각">
-            <input type="time" className="input" style={{ height: 38, width: 140 }} defaultValue="09:00"/>
-          </FormRow>
-          <button className="btn btn-primary" style={{ marginTop: 23 }} onClick={() => { DataStore.addAudit({ type: '회차', targetId: sessionId, action: '수정', memo: '수험번호 노출 시점 변경' }); toastOk('노출 시점이 저장되었습니다.'); }}>
-            노출 시점 저장
-          </button>
-        </div>
-      </div>
+      {/* 노출시점 설정 — 서버 저장(exam_number_visible_at) */}
+      <ExamVisibilityCard sessionId={sessionId}/>
 
       {/* Detail LP (TPKM_BO_2_1_6) */}
       {detailId && <ApplicantDetailLP id={detailId} onClose={() => setDetailId(null)}
@@ -502,7 +487,9 @@ function ApplicantsPanel() {
       {rejectModal && <RejectModal modal={rejectModal} onClose={() => setRejectModal(null)} onConfirm={(reason) => doReject(rejectModal.ids, reason)}/>}
       {examModal && <ExamAssignModal onClose={() => setExamModal(false)} doAssign={doAssignExam}/>}
       {excelModal && <ExcelExportModal onClose={() => setExcelModal(false)} rows={filtered}/>}
-      {zipModal && <ZipExportModal onClose={() => setZipModal(false)} rows={filtered}/>}
+      {zipModal && <ZipExportModal onClose={() => setZipModal(false)} rows={filtered}
+        venueId={venueF !== 'all' ? venueF : null}
+        level={levelF === 'Ⅰ' ? 'I' : levelF === 'Ⅱ' ? 'II' : null}/>}
 
       <style>{`
         @media print {
@@ -517,16 +504,84 @@ function ApplicantsPanel() {
   );
 }
 
-// ---- thumb (initial-based avatar with subtle gradient) ----
-function PhotoThumb({ status, name, seed }) {
-  if (status === 'pending') return <div className="photo" style={{ background: 'var(--st-photo-bg)', color: 'var(--st-photo)' }}>미심사</div>;
-  if (status === 'rejected') return <div className="photo" style={{ background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)' }}>반려</div>;
-  const hue = (seed.charCodeAt(seed.length - 1) * 17) % 360;
+// ===== 수험번호/수험표 노출 시점 설정 (exam_number_visible_at 서버 저장) =====
+function ExamVisibilityCard({ sessionId }) {
+  const state = useStore();
+  const session = state.sessions.find(s => s.id === sessionId);
+  const iso = session?.examNumberVisibleAt || '';
+  const initDate = iso ? iso.slice(0, 10) : '';
+  const initTime = iso ? (iso.replace('T', ' ').slice(11, 16) || '09:00') : '09:00';
+  const [date, setDate] = useState(initDate);
+  const [time, setTime] = useState(initTime);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    setDate(iso ? iso.slice(0, 10) : '');
+    setTime(iso ? (iso.replace('T', ' ').slice(11, 16) || '09:00') : '09:00');
+  }, [iso, sessionId]);
+
+  const save = async () => {
+    if (!date) { toastErr('노출 시작일을 선택해주세요.'); return; }
+    const visibleAt = `${date}T${(time || '00:00')}:00`;
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      setSaving(true);
+      const ok = await DataStore.apiSetExamVisibility(sessionId, visibleAt);
+      setSaving(false);
+      if (ok) toastOk('수험번호 노출 시점이 저장되었습니다. (FO 접수확인에 반영)');
+      return;
+    }
+    DataStore.addAudit({ type: '회차', targetId: sessionId, action: '수정', memo: `수험번호 노출 시점 변경(${visibleAt})` });
+    toastOk('노출 시점이 저장되었습니다.');
+  };
+
   return (
-    <div className="photo" style={{ background: `linear-gradient(160deg, hsl(${hue} 35% 88%), hsl(${hue} 30% 78%))`, color: '#fff', fontSize: 13, fontWeight: 700 }}>
-      {name.slice(0, 1)}
+    <div className="acard no-print" style={{ marginTop: 16 }}>
+      <div className="acard-head">
+        <h3>수험번호 / 수험표 노출 시점 설정 (FO 접수확인)</h3>
+      </div>
+      <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <FormRow label="노출 시작일" hint="이 일시 이전에는 FO에서 수험번호 미노출">
+          <input type="date" className="input" style={{ height: 38, width: 200 }} value={date} onChange={e => setDate(e.target.value)}/>
+        </FormRow>
+        <FormRow label="노출 시작 시각">
+          <input type="time" className="input" style={{ height: 38, width: 140 }} value={time} onChange={e => setTime(e.target.value)}/>
+        </FormRow>
+        <button className="btn btn-primary" style={{ marginTop: 23 }} onClick={save} disabled={saving}>
+          {saving ? '저장 중…' : '노출 시점 저장'}
+        </button>
+        {iso && <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 설정: <code className="code-id">{iso.replace('T', ' ').slice(0, 16)}</code></div>}
+      </div>
     </div>
   );
+}
+
+// ---- 실제 사진 표시(<img>) — 실패 시 fallback(이니셜/상태 박스) ----
+function PhotoImg({ src, alt, fallback, className, rotate, style, onClick }) {
+  const [err, setErr] = useState(false);
+  useEffect(() => { setErr(false); }, [src]);
+  if (!src || err) return fallback;
+  return (
+    <img
+      className={className}
+      src={src}
+      alt={alt || ''}
+      loading="lazy"
+      onClick={onClick}
+      onError={() => setErr(true)}
+      style={{ objectFit: 'cover', width: '100%', height: '100%', ...(rotate ? { transform: `rotate(${rotate}deg)` } : {}), ...style }}
+    />
+  );
+}
+
+// ---- thumb: 실제 사진 우선, 없으면 이니셜/상태 박스 ----
+function PhotoThumb({ status, name, seed, photoUrl }) {
+  const initial = (name || '?').slice(0, 1);
+  const hue = ((seed || 'x').charCodeAt((seed || 'x').length - 1) * 17) % 360;
+  const fb = status === 'pending'
+    ? <div className="photo" style={{ background: 'var(--st-photo-bg)', color: 'var(--st-photo)' }}>미심사</div>
+    : status === 'rejected'
+      ? <div className="photo" style={{ background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)' }}>반려</div>
+      : <div className="photo" style={{ background: `linear-gradient(160deg, hsl(${hue} 35% 88%), hsl(${hue} 30% 78%))`, color: '#fff', fontSize: 13, fontWeight: 700 }}>{initial}</div>;
+  return <PhotoImg src={photoUrl} alt={name} className="photo" fallback={fb}/>;
 }
 
 // ---- 사진 심사 상태 렀 (미심사 · 승인 · 반려) ----
@@ -545,10 +600,16 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
   const [reason, setReason] = useState(PHOTO_REJECT_REASONS[0]);
   const [other, setOther] = useState('');
   const [zoom, setZoom] = useState(false);
+  const [rotate, setRotate] = useState(0);
   if (!a) return null;
   const venue = state.venues.find(v => v.id === a.venueId);
   const hue = (a.id.charCodeAt(a.id.length - 1) * 17) % 360;
   const finalReason = reason === '기타' ? other : (other ? `${reason} — ${other}` : reason);
+  const downloadOriginal = () => {
+    if (!a.photoFileId || !window.TopikBoApi || !TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg')) {
+      toastErr('원본 사진을 받을 수 없습니다. (사진 미제출 또는 API 미연결)');
+    }
+  };
   const approve = () => { onApprove(id); onClose(); };
   const reject = () => {
     if (reason === '기타' && !other.trim()) { toastErr('상세 사유를 입력해주세요.'); return; }
@@ -570,12 +631,10 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
           </>}>
       <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: '0 0 150px' }}>
-          {a.photoStatus === 'rejected'
-            ? <div className="photo-lg" style={{ background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)' }}>반려된 사진</div>
-            : <div className="photo-lg" onClick={() => setZoom(true)} style={{ cursor: 'zoom-in', background: `linear-gradient(160deg, hsl(${hue} 40% 84%), hsl(${hue} 35% 58%))`, color: '#fff', fontSize: 64, fontWeight: 700 }}>{a.nameKo.slice(0,1)}</div>}
+          <PhotoLarge status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl} rotate={rotate} onClick={a.photoUrl ? () => setZoom(true) : null}/>
           <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-            <button className="ibtn" style={{ flex: 1 }} onClick={() => setZoom(true)}><I.Eye style={{ width: 12, height: 12 }}/> 원본</button>
-            <button className="ibtn" style={{ flex: 1 }}><I.Download style={{ width: 12, height: 12 }}/> 받기</button>
+            <button className="ibtn" style={{ flex: 1 }} onClick={() => setRotate(r => (r + 90) % 360)} disabled={!a.photoUrl}>회전</button>
+            <button className="ibtn" style={{ flex: 1 }} onClick={downloadOriginal} disabled={!a.photoFileId}><I.Download style={{ width: 12, height: 12 }}/> 받기</button>
           </div>
         </div>
         <div style={{ flex: 1 }}>
@@ -609,8 +668,10 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
       </div>
 
       {zoom && (
-        <div className="modal-backdrop open" style={{ zIndex: 340 }} onClick={() => setZoom(false)}>
-          <div style={{ width: 'min(420px, 90vw)', aspectRatio: '3/4', borderRadius: 10, background: `linear-gradient(160deg, hsl(${hue} 40% 80%), hsl(${hue} 35% 48%))`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 160, fontWeight: 700 }}>{a.nameKo.slice(0,1)}</div>
+        <div className="modal-backdrop open" style={{ zIndex: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setZoom(false)}>
+          {a.photoUrl
+            ? <img src={a.photoUrl} alt={a.nameKo} style={{ width: 'min(420px, 90vw)', maxHeight: '86vh', objectFit: 'contain', borderRadius: 10, transform: `rotate(${rotate}deg)`, background: '#fff' }}/>
+            : <div style={{ width: 'min(420px, 90vw)', aspectRatio: '3/4', borderRadius: 10, background: `linear-gradient(160deg, hsl(${hue} 40% 80%), hsl(${hue} 35% 48%))`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 160, fontWeight: 700 }}>{a.nameKo.slice(0,1)}</div>}
         </div>
       )}
     </LP>
@@ -626,7 +687,14 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
   const [photoMode, setPhotoMode] = useState(null);
   const [photoReason, setPhotoReason] = useState(PHOTO_REJECT_REASONS[0]);
   const [photoOther, setPhotoOther] = useState('');
+  const [rotate, setRotate] = useState(0);
+  const [zoom, setZoom] = useState(false);
   if (!a) return null;
+  const downloadOriginal = () => {
+    if (!a.photoFileId || !window.TopikBoApi || !TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg')) {
+      toastErr('원본 사진을 받을 수 없습니다. (사진 미제출 또는 API 미연결)');
+    }
+  };
   const venue = state.venues.find(v => v.id === a.venueId);
   const log = state.audit.filter(l => l.targetId === id);
   const photoRejectReason = photoReason === '기타' ? photoOther : (photoOther ? `${photoReason} — ${photoOther}` : photoReason);
@@ -668,10 +736,10 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
       {tab === 'profile' && (
         <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 24 }}>
           <div>
-            <PhotoLarge status={a.photoStatus} name={a.nameKo} seed={a.id}/>
+            <PhotoLarge status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl} rotate={rotate} onClick={a.photoUrl ? () => setZoom(true) : null}/>
             <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-              <button className="ibtn" style={{ flex: 1 }}><I.Download style={{ width: 12, height: 12 }}/> 원본 받기</button>
-              <button className="ibtn" style={{ flex: 1 }}>회전 보정</button>
+              <button className="ibtn" style={{ flex: 1 }} onClick={downloadOriginal} disabled={!a.photoFileId}><I.Download style={{ width: 12, height: 12 }}/> 원본 받기</button>
+              <button className="ibtn" style={{ flex: 1 }} onClick={() => setRotate(r => (r + 90) % 360)} disabled={!a.photoUrl}>회전 보정</button>
             </div>
             <div style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
@@ -761,6 +829,12 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
           ))}
         </div>
       )}
+
+      {zoom && a.photoUrl && (
+        <div className="modal-backdrop open" style={{ zIndex: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setZoom(false)}>
+          <img src={a.photoUrl} alt={a.nameKo} style={{ width: 'min(460px, 90vw)', maxHeight: '86vh', objectFit: 'contain', borderRadius: 10, transform: `rotate(${rotate}deg)`, background: '#fff' }}/>
+        </div>
+      )}
     </LP>
   );
 }
@@ -774,15 +848,15 @@ function KV({ k, v }) {
   );
 }
 
-function PhotoLarge({ status, name, seed }) {
-  if (status === 'pending') return <div className="photo-lg" style={{ background: 'var(--st-photo-bg)', color: 'var(--st-photo)' }}>사진 미심사</div>;
-  if (status === 'rejected') return <div className="photo-lg" style={{ background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)' }}>사진 반려</div>;
-  const hue = (seed.charCodeAt(seed.length - 1) * 17) % 360;
-  return (
-    <div className="photo-lg" style={{ background: `linear-gradient(160deg, hsl(${hue} 35% 86%), hsl(${hue} 30% 70%))`, color: '#fff', fontSize: 80, fontWeight: 700 }}>
-      {name.slice(0, 1)}
-    </div>
-  );
+function PhotoLarge({ status, name, seed, photoUrl, rotate, onClick }) {
+  const initial = (name || '?').slice(0, 1);
+  const hue = ((seed || 'x').charCodeAt((seed || 'x').length - 1) * 17) % 360;
+  const fb = status === 'pending'
+    ? <div className="photo-lg" style={{ background: 'var(--st-photo-bg)', color: 'var(--st-photo)' }}>사진 미심사</div>
+    : status === 'rejected'
+      ? <div className="photo-lg" style={{ background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)' }}>사진 반려</div>
+      : <div className="photo-lg" style={{ background: `linear-gradient(160deg, hsl(${hue} 35% 86%), hsl(${hue} 30% 70%))`, color: '#fff', fontSize: 80, fontWeight: 700 }}>{initial}</div>;
+  return <PhotoImg src={photoUrl} alt={name} className="photo-lg" rotate={rotate} fallback={fb} onClick={onClick} style={onClick ? { cursor: 'zoom-in' } : null}/>;
 }
 
 // ===== Pay modal (TPKM_BO_2_1_3) — 수납 / 수납취소(환불자) =====
@@ -835,7 +909,7 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
           <tbody>
             {rows.map(a => (
               <tr key={a.id}>
-                <td><PhotoThumb status={a.photoStatus} name={a.nameKo} seed={a.id}/></td>
+                <td><PhotoThumb status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl}/></td>
                 <td>{a.nameKo}</td>
                 <td>{a.nameEn}</td>
                 <td className="code">{a.dob}</td>
@@ -893,7 +967,7 @@ function ApproveModal({ modal, onClose, onConfirm }) {
         <button className="btn btn-primary" onClick={onConfirm} disabled={blocked.length > 0}>승인 완료</button>
       </>}>
       <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-        대상 <b>{rows.length}</b>건을 승인합니다. 승인 완료 시 응시자에게 이메일이 발송됩니다(문자 제외).
+        대상 <b>{rows.length}</b>건을 승인합니다. 승인 완료 시 FO 마이페이지·접수확인에 반영됩니다.
       </div>
       {blocked.length > 0 && (
         <div style={{ marginTop: 12, padding: 10, background: 'var(--danger-50)', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5 }}>
@@ -982,25 +1056,32 @@ function ExamAssignModal({ onClose, doAssign }) {
 function ExcelExportModal({ onClose, rows }) {
   const state = useStore();
   const [mode, setMode] = useState('current'); // current | full
-  // group rows by (시험장, 급수)
-  const groups = useMemo(() => {
-    const m = new Map();
-    rows.forEach(a => {
-      const venue = state.venues.find(v => v.id === a.venueId);
-      const key = `${a.level}_미얀마_${venue?.nameKo || '미지정'}`;
-      if (!m.has(key)) m.set(key, []);
-      m.get(key).push(a);
-    });
-    return Array.from(m.entries()).map(([k, v]) => ({ k, n: v.length }));
-  }, [rows, state.venues]);
   const session = state.sessions.find(s => s.id === state.activeSessionId);
+
+  const levelPfx = (lv) => String(lv || '').indexOf('동시') >= 0 ? 'TOPIK Ⅰ·Ⅱ'
+    : (String(lv).indexOf('Ⅱ') >= 0 ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ');
+
+  // 지역·시험장·시험수준별 개별 파일(단일 시트) — 파일명 TOPIK Ⅰ_미얀마_{지역}_{시험장}.xlsx
+  const groups = useMemo(() => {
+    const src = mode === 'full' ? state.applicants.filter(a => a.sessionId === state.activeSessionId) : rows;
+    const m = new Map();
+    src.forEach(a => {
+      const venue = state.venues.find(v => v.id === a.venueId);
+      const region = venue ? (venue.region || '미얀마') : '미지정';
+      const vname = venue ? venue.nameKo : '미지정';
+      const fname = `${levelPfx(a.level)}_미얀마_${region}_${vname}.xlsx`;
+      m.set(fname, (m.get(fname) || 0) + 1);
+    });
+    return Array.from(m.entries()).map(([k, n]) => ({ k, n }));
+  }, [rows, state.venues, state.applicants, mode]);
+  const totalRows = groups.reduce((s, g) => s + g.n, 0);
 
   const doExport = () => {
     const role = (DataStore.getAdminSession && DataStore.getAdminSession()?.role) || 'super';
     if (window.TOPIKBoBridge && !TOPIKBoBridge.enforcePerm(role, '접수 관리|엑셀·사진 zip 다운로드', 'execute')) return;
     const run = () => {
-      DataStore.addAudit({ type: '접수자', targetId: '—', action: '게시', memo: `연명부 엑셀 내보내기(${rows.length}건, ${mode === 'full' ? '회차전체 zip' : '현재 필터'})` });
-      toastOk(`${rows.length}건의 연명부 엑셀 파일을 생성했습니다.`, { title: '엑셀 생성 완료' });
+      DataStore.addAudit({ type: '접수자', targetId: '—', action: '게시', memo: `연명부 엑셀 내보내기(${totalRows}건, ${groups.length}개 파일, ${mode === 'full' ? '회차전체' : '현재 필터'})` });
+      toastOk(`연명부 엑셀 ${groups.length}개 파일을 생성했습니다.`, { title: '엑셀 생성 완료' });
       onClose();
     };
     if (window.TOPIKBoBridge) {
@@ -1013,78 +1094,76 @@ function ExcelExportModal({ onClose, rows }) {
     <Modal open onClose={onClose} title="연명부 양식 엑셀 내보내기"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" onClick={doExport}>다운로드</button>
+        <button className="btn btn-primary" onClick={doExport} disabled={!groups.length}>다운로드</button>
       </>}>
       <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-        <b>11컬럼</b>(연락처/이메일 제외): 한글성명 · 영문성명 · 생년월일 · 성별 · 국적 · 제1언어 · 직업 · 응시동기 · 응시목적 · 급수 · 수험번호
+        「연명부 양식.xlsx」 <b>10컬럼</b>: 한글성명 · 영문성명 · 생년월일(8) · 성별(1/2) · 국적 · 제1언어 · 직업코드 · 응시동기코드 · 응시목적코드 · 수험번호(13)
       </div>
       <div className="seg" style={{ marginTop: 12 }}>
         <button className={mode === 'current' ? 'active' : ''} onClick={() => setMode('current')}>현재 필터({rows.length})</button>
-        <button className={mode === 'full' ? 'active' : ''} onClick={() => setMode('full')}>회차 전체(시험장×수준별 zip)</button>
+        <button className={mode === 'full' ? 'active' : ''} onClick={() => setMode('full')}>회차 전체</button>
       </div>
       <div style={{ marginTop: 16 }}>
-        <div className="label" style={{ fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>생성될 파일 미리보기</div>
-        <div style={{ background: 'var(--bg-2)', borderRadius: 6, padding: 12, fontSize: 12.5, fontFamily: 'Inter, monospace', color: 'var(--text-2)', maxHeight: 200, overflow: 'auto' }}>
-          {mode === 'current' ? (
-            <div>제{session?.no}회 TOPIK 지원자 연명부(미얀마_혼합).xlsx <span style={{ color: 'var(--text-3)' }}>({rows.length}행)</span></div>
-          ) : (
-            groups.map(g => (
-              <div key={g.k}>제{session?.no}회 TOPIK 지원자 연명부(TOPIK_{g.k}).xlsx <span style={{ color: 'var(--text-3)' }}>({g.n}행)</span></div>
-            ))
-          )}
+        <div className="label" style={{ fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>생성될 파일(지역·시험장·수준별 / 단일 시트{groups.length > 1 ? ' · zip 묶음' : ''})</div>
+        <div style={{ background: 'var(--bg-2)', borderRadius: 6, padding: 12, fontSize: 12.5, fontFamily: 'Inter, monospace', color: 'var(--text-2)', maxHeight: 220, overflow: 'auto' }}>
+          {groups.length === 0
+            ? <div style={{ color: 'var(--text-3)' }}>대상 없음</div>
+            : groups.map(g => (
+                <div key={g.k}>{g.k} <span style={{ color: 'var(--text-3)' }}>({g.n}행)</span></div>
+              ))}
         </div>
-        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>※ 응시자코드 순으로 정렬(연명부 ‘작성된 수험번호 순으로 시험실 배치’ 원칙).</div>
+        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>※ 수험번호(영문명 정렬) 순으로 행 배치 · 파일당 단일 시트(여러 시트 작성 시 등록 불가).</div>
       </div>
     </Modal>
   );
 }
 
 // ===== 사진 zip 다운로드 (TPKM_BO_2_1_9) =====
-function ZipExportModal({ onClose, rows }) {
+function ZipExportModal({ onClose, rows, venueId, level }) {
   const state = useStore();
-  const includeMissing = useMemo(() => rows.some(a => !a.photoOk || a.status === 'rejected'), [rows]);
-  const missingCount = rows.filter(a => !a.photoOk || a.status === 'rejected').length;
+  const [busy, setBusy] = useState(false);
+  const apiMode = !!(DataStore.isApiMode && DataStore.isApiMode());
+  const session = state.sessions.find(s => s.id === state.activeSessionId);
   const doExport = () => {
     const role = (DataStore.getAdminSession && DataStore.getAdminSession()?.role) || 'super';
     if (window.TOPIKBoBridge && !TOPIKBoBridge.enforcePerm(role, '접수 관리|엑셀·사진 zip 다운로드', 'execute')) return;
-    const done = () => {
-      DataStore.addAudit({ type: '접수자', targetId: '—', action: '게시', memo: `사진 zip 다운로드(${rows.length}건, 폴더구조 {지역}/{시험장}/TOPIK_{급수}/{수험번호}.jpg)` });
-      toastOk(`${rows.length - missingCount}장의 사진 zip 파일을 생성했습니다.`, { title: 'ZIP 생성 완료' });
-      onClose();
-    };
-    if (window.TOPIKBoBridge) {
-      TOPIKBoBridge.exportPhotosZip({ rows, state }).then(done).catch(e => toastErr(e.message || 'ZIP 생성 실패'));
-      return;
-    }
-    done();
+    if (!apiMode) { toastErr('사진 zip 다운로드는 서버 연결(API)이 필요합니다.'); return; }
+    setBusy(true);
+    TOPIKBoBridge.exportPhotosZip({ roundId: state.activeSessionId, venueId, level })
+      .then(() => {
+        DataStore.addAudit({ type: '접수자', targetId: '—', action: '게시', memo: '사진 zip 서버 다운로드({지역}/{시험장}/{수준}/{수험번호}.jpg)' });
+        toastOk('사진 zip 다운로드를 시작했습니다.', { title: 'ZIP 다운로드' });
+        onClose();
+      })
+      .catch(e => toastErr(e.message || 'ZIP 다운로드 실패'))
+      .then(() => setBusy(false));
   };
   return (
     <Modal open onClose={onClose} title="사진 일괄 다운로드 (zip)"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" onClick={doExport}>다운로드</button>
+        <button className="btn btn-primary" onClick={doExport} disabled={busy || !apiMode}>{busy ? '다운로드 중…' : '다운로드'}</button>
       </>}>
       <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12 }}>
-        zip 폴더 구조 · 파일명은 <b>13자리 수험번호 + .jpg</b> (다른 정보 포함 금지)
+        서버가 실제 사진 파일을 <b>{'{지역}/{시험장}/{수준}'}</b> 폴더 구조로 압축하여 스트리밍합니다.
+        파일명은 <b>13자리 수험번호 + .jpg</b> (다른 정보 포함 금지). 수험번호 미부여/사진 없음은 누락 리포트로 동봉됩니다.
       </div>
       <div style={{ background: 'var(--bg-2)', borderRadius: 6, padding: 12, fontSize: 12, fontFamily: 'Inter, monospace', color: 'var(--text-2)' }}>
 {`└─ 미얀마/
    ├─ 양곤대 흘라잉캠퍼스/
-   │  ├─ TOPIK_Ⅰ/
+   │  ├─ TOPIK Ⅰ/
    │  │   ├─ 0250017010001.jpg
    │  │   └─ 0250017010002.jpg
-   │  └─ TOPIK_Ⅱ/
+   │  └─ TOPIK Ⅱ/
    │      └─ 0250018010001.jpg
-   ├─ 한국문화원/
-   │  └─ ...
-   └─ 누락_리포트.xlsx  (사진 누락/반려/규격 미충족)`}
+   └─ 누락_리포트.txt`}
       </div>
-      {includeMissing && (
-        <div style={{ marginTop: 12, padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
-          ⚠ 사진 누락·반려·규격 미충족 <b>{missingCount}</b>건은 누락 리포트로 동봉됩니다.
+      {!apiMode && (
+        <div style={{ marginTop: 12, padding: 10, background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)', borderRadius: 6, fontSize: 12.5 }}>
+          ⚠ 현재 API에 연결되어 있지 않아 사진 zip을 받을 수 없습니다.
         </div>
       )}
-      <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-3)' }}>※ 대용량 zip 다운로드는 비동기 작업 큐로 처리되며 완료 후 다운로드 링크를 알림으로 발송합니다.</div>
+      <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-3)' }}>대상 회차: <b>{session?.name || '—'}</b> · 서버 엔드포인트 <code className="code-id">GET /api/v1/admin/applications/photos.zip</code></div>
     </Modal>
   );
 }

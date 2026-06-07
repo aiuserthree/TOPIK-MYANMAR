@@ -6,29 +6,56 @@
   var ACCEPT = ['image/jpeg', 'image/jpg', 'image/png'];
   var SPEC_MODAL_ID = 'modalPhotoSpec';
 
-  var SPEC_HTML =
-    '<ul class="photo-spec-list">' +
-      '<li>여권용 · 정면 촬영 · JPG·PNG 형식</li>' +
-      '<li>3:4 비율 (35×45mm 권장), 최대 2MB</li>' +
-      '<li>6개월 이내 촬영한 컬러 사진 (흑백 불가)</li>' +
-      '<li>흰 배경, 표정 자연스럽게, 상반신 정면</li>' +
-      '<li>모자·선글라스·앞머리로 얼굴이 가려지지 않음</li>' +
-      '<li>연예인·타인 사진이 아닌 본인 사진</li>' +
-      '<li>시험 당일 신분증과 동일인 식별 가능</li>' +
-    '</ul>' +
-    '<p class="photo-spec-note">부적합 사진은 사진 심사에서 반려될 수 있습니다. 접수 단계에서는 사진 변경이 불가하므로 가입·수정 시 신중히 등록해 주세요.</p>';
+  // i18n 헬퍼 — 중앙 사전(TPKMLang.t) 사용, 미정의 시 KO 폴백
+  function pt(key, fallback) {
+    try {
+      if (window.TPKMLang && typeof TPKMLang.t === 'function') {
+        var v = TPKMLang.t(key);
+        if (v) return v;
+      }
+    } catch (e) { /* ignore */ }
+    return fallback;
+  }
+
+  // 「연명부 및 사진제출 안내.xlsx」 기준 규격 — 여권용 정면 jpg, 금지사진 안내
+  function specHtml() {
+    var lines = [
+      pt('photo.spec_1', '여권용 정면 컬러 사진 (JPG) · 흰색·단색 배경'),
+      pt('photo.spec_2', '최근 6개월 이내 촬영한 사진'),
+      pt('photo.spec_3', '모자·학사모·선글라스·이어폰 착용 금지'),
+      pt('photo.spec_4', '앞머리로 얼굴(눈썹·눈)을 가리지 않음'),
+      pt('photo.spec_5', '위·아래·좌·우가 아닌 정면 사진'),
+      pt('photo.spec_6', '흑백·흐릿·불분명한 사진 불가'),
+      pt('photo.spec_7', '연예인·타인 등 본인이 아닌 사진 불가'),
+      pt('photo.spec_filename', '파일명은 접수 후 시스템이 수험번호로 자동 관리합니다.')
+    ];
+    return '<ul class="photo-spec-list">' +
+      lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') +
+      '</ul>' +
+      '<p class="photo-spec-note">' +
+      pt('photo.spec_note', '부적합 사진은 사진 심사에서 반려되어 응시·성적 처리가 불가할 수 있습니다. 접수 단계에서는 사진 변경이 불가하므로 가입·수정 시 신중히 등록해 주세요.') +
+      '</p>';
+  }
 
   function ensureSpecModal() {
-    if (document.getElementById(SPEC_MODAL_ID)) return;
+    var existing = document.getElementById(SPEC_MODAL_ID);
+    if (existing) {
+      // 언어 전환 후 재오픈 시 내용 갱신
+      var head = existing.querySelector('#photoSpecTitle');
+      var body = existing.querySelector('.modal-body');
+      if (head) head.textContent = pt('photo.spec_title', '증명사진 규격 안내');
+      if (body) body.innerHTML = specHtml();
+      return;
+    }
     var wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
     wrap.id = SPEC_MODAL_ID;
     wrap.innerHTML =
       '<div class="modal modal-photo-spec" role="dialog" aria-modal="true" aria-labelledby="photoSpecTitle">' +
-        '<div class="modal-head"><h3 id="photoSpecTitle">증명사진 규격 안내</h3></div>' +
-        '<div class="modal-body">' + SPEC_HTML + '</div>' +
+        '<div class="modal-head"><h3 id="photoSpecTitle">' + pt('photo.spec_title', '증명사진 규격 안내') + '</h3></div>' +
+        '<div class="modal-body">' + specHtml() + '</div>' +
         '<div class="modal-foot">' +
-          '<button type="button" class="btn btn-primary" data-photo-spec-close>확인</button>' +
+          '<button type="button" class="btn btn-primary" data-photo-spec-close>' + pt('btn.confirm', '확인') + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(wrap);
@@ -45,12 +72,12 @@
   }
 
   function validateFile(file) {
-    if (!file) return '파일을 선택해 주세요.';
+    if (!file) return pt('photo.err_select', '파일을 선택해 주세요.');
     var type = (file.type || '').toLowerCase();
     if (ACCEPT.indexOf(type) === -1 && !/\.(jpe?g|png)$/i.test(file.name || '')) {
-      return 'JPG·PNG 형식만 업로드할 수 있습니다.';
+      return pt('photo.err_type', 'JPG·PNG 형식만 업로드할 수 있습니다.');
     }
-    if (file.size > MAX_BYTES) return '파일 크기는 2MB 이하여야 합니다.';
+    if (file.size > MAX_BYTES) return pt('photo.err_size', '파일 크기는 2MB 이하여야 합니다.');
     return '';
   }
 

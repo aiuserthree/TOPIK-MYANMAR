@@ -127,65 +127,65 @@
 <main class="page" role="main">
   <div class="signup-wrap">
     <div class="signup-head">
-      <h1>회원가입</h1>
-      <p>TOPIK 미얀마 시행 공식 접수 서비스에 오신 것을 환영합니다.</p>
+      <h1 data-i18n-content="signup.title">회원가입</h1>
+      <p data-i18n-content="su.welcome">TOPIK 미얀마 시행 공식 접수 서비스에 오신 것을 환영합니다.</p>
     </div>
 
     <ol class="steps" style="margin-bottom: 28px;">
       <li class="step active" data-s="1">
         <span class="n">1</span>
-        <span>이메일 인증</span>
+        <span data-i18n-content="su.step1">이메일 인증</span>
       </li>
       <li class="step" data-s="2">
         <span class="n">2</span>
-        <span>기본정보 입력</span>
+        <span data-i18n-content="su.step2">기본정보 입력</span>
       </li>
       <li class="step" data-s="3">
         <span class="n">3</span>
-        <span>약관 동의</span>
+        <span data-i18n-content="su.step3">약관 동의</span>
       </li>
     </ol>
 
     <!-- ============ STEP 1: 이메일 인증 + 구글 ============ -->
     <section class="step-pane active" data-s="1">
-      <h2 class="h3" style="margin-bottom: 6px;">이메일 인증</h2>
-      <p class="body-sm" style="margin-bottom: 20px;">인증된 이메일이 곧 회원 아이디(로그인 ID)가 됩니다.</p>
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="su.s1_title">이메일 인증</h2>
+      <p class="body-sm" style="margin-bottom: 20px;" data-i18n-content="su.s1_desc">인증된 이메일이 곧 회원 아이디(로그인 ID)가 됩니다.</p>
 
       <div class="form-row">
-        <label class="label">이메일 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="su.email">이메일</span> <span class="req">*</span></label>
         <div class="input-group">
           <input class="input" type="email" id="su-email" placeholder="example@email.com">
-          <button class="btn btn-secondary" id="btnSendCode" type="button">인증코드 발송</button>
+          <button class="btn btn-secondary" id="btnSendCode" type="button" data-i18n-content="su.send_code">인증코드 발송</button>
         </div>
-        <span class="hint">미얀마 통신 환경을 고려해 안정적인 이메일 주소를 입력해 주세요.</span>
+        <span class="hint" data-i18n-content="su.email_hint">미얀마 통신 환경을 고려해 안정적인 이메일 주소를 입력해 주세요.</span>
       </div>
 
       <div class="form-row hidden" id="otpRow">
-        <label class="label">인증코드 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="su.otp">인증코드</span> <span class="req">*</span></label>
         <div class="otp-row">
           <div class="otp-wrap">
-            <input class="input" id="su-otp" maxlength="6" placeholder="6자리">
+            <input class="input" id="su-otp" maxlength="6" placeholder="6자리" data-i18n-content="su.otp_ph" data-i18n-content-placeholder>
             <span class="otp-timer" id="otpTimer">05:00</span>
           </div>
-          <button class="btn btn-secondary" id="btnConfirmCode" type="button">확인</button>
+          <button class="btn btn-secondary" id="btnConfirmCode" type="button" data-i18n-content="btn.confirm">확인</button>
         </div>
-        <span class="hint" id="otpHint">이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)</span>
+        <span class="hint" id="otpHint" data-i18n-content="su.otp_hint">이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)</span>
         <div class="callout callout-neutral hidden" id="otpMailPending" style="margin-top:10px;">
           <div class="ico"></div>
-          <div>인증 메일이 아직 도착하지 않았다면 스팸함을 확인해 주세요. 계속 오지 않으면 <strong>topik.myanmar@mofa.go.kr</strong>로 문의해 주세요.</div>
+          <div data-i18n-content="su.otp_pending" data-i18n-content-html>인증 메일이 아직 도착하지 않았다면 스팸함을 확인해 주세요. 계속 오지 않으면 <strong>topik.myanmar@mofa.go.kr</strong>로 문의해 주세요.</div>
         </div>
       </div>
 
       <div class="form-row hidden" id="emailOk">
         <div class="callout callout-neutral" style="background:var(--success-50); border-color:#bce3cf; color:var(--success);">
           <div class="ico" style="background:var(--success);"></div>
-          <div><strong>이메일 인증이 완료되었습니다.</strong></div>
+          <div><strong data-i18n-content="su.email_ok">이메일 인증이 완료되었습니다.</strong></div>
         </div>
       </div>
 
       <div class="auth-divider" style="display:flex; align-items:center; gap:12px; color:var(--text-3); font-size:12px; margin:24px 0;">
         <span style="flex:1; height:1px; background:var(--border);"></span>
-        또는
+        <span data-i18n-content="common.or">또는</span>
         <span style="flex:1; height:1px; background:var(--border);"></span>
       </div>
 
@@ -201,167 +201,167 @@
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-primary btn-block btn-lg" id="btnGoStep2" disabled>다음</button>
+        <button class="btn btn-primary btn-block btn-lg" id="btnGoStep2" disabled data-i18n-content="btn.next">다음</button>
       </div>
     </section>
 
     <!-- ============ STEP 2: 기본정보 + 사진 ============ -->
     <section class="step-pane" data-s="2">
-      <h2 class="h3" style="margin-bottom: 6px;">기본정보 + 증명사진</h2>
-      <p class="body-sm" style="margin-bottom: 20px;">시험 접수 시 자동으로 사용됩니다. 정확히 입력해 주세요.</p>
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="su.s2_title">기본정보 + 증명사진</h2>
+      <p class="body-sm" style="margin-bottom: 20px;" data-i18n-content="su.s2_desc">시험 접수 시 자동으로 사용됩니다. 정확히 입력해 주세요.</p>
 
       <div class="form-row">
-        <label class="label">이메일 (아이디)</label>
+        <label class="label" data-i18n-content="su.email_id">이메일 (아이디)</label>
         <input class="input" id="su-email-display" readonly value="">
       </div>
 
       <div class="row-2">
         <div class="form-row">
-          <label class="label">한글 성명 <span class="req">*</span></label>
-          <input class="input" id="su-name-ko" placeholder="홍길동">
+          <label class="label"><span data-i18n-content="su.name_ko">한글 성명</span> <span class="req">*</span></label>
+          <input class="input" id="su-name-ko" placeholder="홍길동" data-i18n-content="su.name_ko_ph" data-i18n-content-placeholder>
         </div>
         <div class="form-row">
-          <label class="label">영문 성명 (여권 표기) <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.name_en">영문 성명 (여권 표기)</span> <span class="req">*</span></label>
           <input class="input" id="su-name-en" placeholder="HONG GILDONG">
         </div>
       </div>
 
       <div class="row-2">
         <div class="form-row">
-          <label class="label">생년월일 <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.birth">생년월일</span> <span class="req">*</span></label>
           <input class="input" id="su-birth" placeholder="YYYYMMDD" maxlength="8" inputmode="numeric" autocomplete="bday">
-          <span class="hint">만 14세 이상만 가입할 수 있습니다. (YYYYMMDD 8자리)</span>
+          <span class="hint" data-i18n-content="su.birth_hint">만 14세 이상만 가입할 수 있습니다. (YYYYMMDD 8자리)</span>
           <span class="field-err hidden" id="su-birth-err" role="alert"></span>
         </div>
         <div class="form-row">
-          <label class="label">성별 <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.gender">성별</span> <span class="req">*</span></label>
           <select class="select" id="su-gender">
-            <option value="">선택</option>
-            <option value="1">남</option>
-            <option value="2">여</option>
+            <option value="" data-i18n-content="form.select">선택</option>
+            <option value="1" data-i18n-content="su.male">남</option>
+            <option value="2" data-i18n-content="su.female">여</option>
           </select>
         </div>
       </div>
 
       <div class="row-2">
         <div class="form-row">
-          <label class="label">국적 <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.nationality">국적</span> <span class="req">*</span></label>
           <select class="select" id="su-nationality">
-            <option value="">선택</option>
-            <option>미얀마</option>
-            <option>대한민국</option>
-            <option>기타</option>
+            <option value="" data-i18n-content="form.select">선택</option>
+            <option data-i18n-content="nat.mm">미얀마</option>
+            <option data-i18n-content="nat.kr">대한민국</option>
+            <option data-i18n-content="qna.cat_etc">기타</option>
           </select>
         </div>
         <div class="form-row">
-          <label class="label">제1언어 <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.lang1">제1언어</span> <span class="req">*</span></label>
           <select class="select" id="su-lang1">
-            <option value="">선택</option>
-            <option>미얀마어</option>
-            <option>한국어</option>
-            <option>영어</option>
-            <option>기타</option>
+            <option value="" data-i18n-content="form.select">선택</option>
+            <option data-i18n-content="lang.my">미얀마어</option>
+            <option data-i18n-content="lang.ko">한국어</option>
+            <option data-i18n-content="lang.en">영어</option>
+            <option data-i18n-content="qna.cat_etc">기타</option>
           </select>
         </div>
       </div>
 
       <div class="form-row">
-        <label class="label">연락처 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="su.phone">연락처</span> <span class="req">*</span></label>
         <input class="input" id="su-phone" placeholder="+95 9 ...">
       </div>
 
       <div class="row-2">
         <div class="form-row">
-          <label class="label">직업 <span class="req">*</span></label>
-          <select class="select" id="su-job"><option value="">선택</option></select>
+          <label class="label"><span data-i18n-content="su.job">직업</span> <span class="req">*</span></label>
+          <select class="select" id="su-job"><option value="" data-i18n-content="form.select">선택</option></select>
         </div>
         <div class="form-row">
-          <label class="label">응시동기 <span class="req">*</span></label>
-          <select class="select" id="su-motive"><option value="">선택</option></select>
+          <label class="label"><span data-i18n-content="su.motive">응시동기</span> <span class="req">*</span></label>
+          <select class="select" id="su-motive"><option value="" data-i18n-content="form.select">선택</option></select>
         </div>
       </div>
 
       <div class="form-row">
-        <label class="label">응시목적 <span class="req">*</span></label>
-        <select class="select" id="su-purpose"><option value="">선택</option></select>
+        <label class="label"><span data-i18n-content="su.purpose">응시목적</span> <span class="req">*</span></label>
+        <select class="select" id="su-purpose"><option value="" data-i18n-content="form.select">선택</option></select>
       </div>
 
       <div id="pw-section">
         <div class="form-row">
-          <label class="label">비밀번호 <span class="req">*</span></label>
-          <input class="input" type="password" id="su-pw" placeholder="영문+숫자+특수문자 8자 이상">
+          <label class="label"><span data-i18n-content="su.pw">비밀번호</span> <span class="req">*</span></label>
+          <input class="input" type="password" id="su-pw" placeholder="영문+숫자+특수문자 8자 이상" data-i18n-content="su.pw_ph" data-i18n-content-placeholder>
           <div class="pw-strength" id="pwBar">
             <div class="seg"></div><div class="seg"></div><div class="seg"></div><div class="seg"></div>
           </div>
-          <div class="pw-meta" id="pwMeta">8자 이상 / 영문·숫자·특수문자 조합 권장</div>
+          <div class="pw-meta" id="pwMeta" data-i18n-content="su.pw_meta">8자 이상 / 영문·숫자·특수문자 조합 권장</div>
         </div>
 
         <div class="form-row">
-          <label class="label">비밀번호 확인 <span class="req">*</span></label>
-          <input class="input" type="password" id="su-pw2" placeholder="동일한 비밀번호를 다시 입력">
+          <label class="label"><span data-i18n-content="su.pw2">비밀번호 확인</span> <span class="req">*</span></label>
+          <input class="input" type="password" id="su-pw2" placeholder="동일한 비밀번호를 다시 입력" data-i18n-content="su.pw2_ph" data-i18n-content-placeholder>
         </div>
       </div>
 
       <div class="form-row">
-        <label class="label">증명사진 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="su.photo_label">증명사진</span> <span class="req">*</span></label>
         <div class="photo-upload" id="signupPhotoZone">
-          <div class="photo-preview">사진<br>미리보기</div>
+          <div class="photo-preview" data-i18n-content="photo.preview" data-i18n-content-html>사진<br>미리보기</div>
           <div class="photo-info">
-            <h4>여권용 정면 증명사진</h4>
-            <p>JPG·PNG, 3:4 비율 (35×45mm 권장), 최대 2MB. 6개월 이내 촬영본을 사용해 주세요.</p>
+            <h4 data-i18n-content="su.photo_h">여권용 정면 증명사진</h4>
+            <p data-i18n-content="su.photo_desc">여권용 정면 컬러 사진(JPG/PNG)·흰색 배경·최근 6개월 이내, 최대 2MB. 모자·선글라스·흑백·비정면 사진은 사용할 수 없습니다. 자세한 기준은 [규격 안내]를 확인해 주세요.</p>
             <div class="photo-actions">
-              <button class="btn btn-secondary btn-sm" type="button" data-photo-select>파일 선택</button>
-              <button class="btn btn-text btn-sm" type="button" data-photo-spec>규격 안내</button>
+              <button class="btn btn-secondary btn-sm" type="button" data-photo-select data-i18n-content="board.file_select">파일 선택</button>
+              <button class="btn btn-text btn-sm" type="button" data-photo-spec data-i18n-content="su.photo_spec_btn">규격 안내</button>
             </div>
           </div>
         </div>
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-secondary" data-back>이전</button>
-        <button class="btn btn-primary" data-next>다음</button>
+        <button class="btn btn-secondary" data-back data-i18n-content="btn.prev">이전</button>
+        <button class="btn btn-primary" data-next data-i18n-content="btn.next">다음</button>
       </div>
     </section>
 
     <!-- ============ STEP 3: 약관 동의 ============ -->
     <section class="step-pane" data-s="3">
-      <h2 class="h3" style="margin-bottom: 6px;">약관 동의</h2>
-      <p class="body-sm" style="margin-bottom: 20px;">서비스 이용을 위해 약관에 동의해 주세요.</p>
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="su.step3">약관 동의</h2>
+      <p class="body-sm" style="margin-bottom: 20px;" data-i18n-content="su.s3_desc">서비스 이용을 위해 약관에 동의해 주세요.</p>
 
       <div class="terms-list">
         <label class="check terms-all" style="width:100%; font-size: 15px; font-weight: 600;">
           <input type="checkbox" id="termsAll">
           <span class="box"></span>
-          <span>전체 약관에 동의합니다</span>
+          <span data-i18n-content="su.terms_all">전체 약관에 동의합니다</span>
         </label>
         <label class="check terms-item" style="width:100%;">
-          <input type="checkbox" class="t-req">
+          <input type="checkbox" class="t-req" data-terms-type="service">
           <span class="box"></span>
-          <span><span class="req">[필수]</span> 서비스 이용약관 동의</span>
-          <a href="terms.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;">보기</a>
+          <span><span class="req">[필수]</span> <span data-i18n-content="su.terms_service">서비스 이용약관 동의</span></span>
+          <a href="terms.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;" data-i18n-content="su.terms_view">보기</a>
         </label>
         <label class="check terms-item" style="width:100%;">
-          <input type="checkbox" class="t-req">
+          <input type="checkbox" class="t-req" data-terms-type="privacy">
           <span class="box"></span>
-          <span><span class="req">[필수]</span> 개인정보 수집·이용 동의</span>
-          <a href="privacy.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;">보기</a>
+          <span><span class="req">[필수]</span> <span data-i18n-content="su.terms_privacy">개인정보 수집·이용 동의</span></span>
+          <a href="privacy.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;" data-i18n-content="su.terms_view">보기</a>
         </label>
         <label class="check terms-item" style="width:100%;">
-          <input type="checkbox" class="t-opt">
+          <input type="checkbox" class="t-opt" data-terms-type="marketing">
           <span class="box"></span>
-          <span><span class="opt">[선택]</span> 마케팅 정보 수신 동의 (이메일)</span>
-          <a href="marketing.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;">보기</a>
+          <span><span class="opt">[선택]</span> <span data-i18n-content="su.terms_marketing">마케팅 정보 수신 동의 (이메일)</span></span>
+          <a href="marketing.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;" data-i18n-content="su.terms_view">보기</a>
         </label>
       </div>
 
       <div class="callout callout-neutral" style="margin-top: 20px;">
         <div class="ico"></div>
-        <div>가입 시 등록한 증명사진은 시험 접수 시 자동으로 사용됩니다. 접수 단계에서는 사진 업로드·변경이 불가하니, 본 가입 화면에서 신중하게 등록해 주세요.</div>
+        <div data-i18n-content="su.photo_notice">가입 시 등록한 증명사진은 시험 접수 시 자동으로 사용됩니다. 접수 단계에서는 사진 업로드·변경이 불가하니, 본 가입 화면에서 신중하게 등록해 주세요.</div>
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-secondary" data-back>이전</button>
-        <button class="btn btn-primary" id="btnFinish">가입 완료</button>
+        <button class="btn btn-secondary" data-back data-i18n-content="btn.prev">이전</button>
+        <button class="btn btn-primary" id="btnFinish" data-i18n-content="su.finish">가입 완료</button>
       </div>
     </section>
   </div>
@@ -377,16 +377,80 @@
       <div class="done-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
       </div>
-      <h3 style="font-size: 20px; margin-bottom: 8px;">가입이 완료되었습니다</h3>
-      <p style="color: var(--text-3); font-size: 14px;">자동으로 로그인됩니다.<br>이제 TOPIK 시험을 접수하실 수 있습니다.</p>
+      <h3 style="font-size: 20px; margin-bottom: 8px;" data-i18n-content="su.done_title">가입이 완료되었습니다</h3>
+      <p style="color: var(--text-3); font-size: 14px;" data-i18n-content="su.done_desc" data-i18n-content-html>자동으로 로그인됩니다.<br>이제 TOPIK 시험을 접수하실 수 있습니다.</p>
     </div>
     <div class="modal-foot">
-      <a href="index.html" class="btn btn-secondary">홈으로</a>
-      <a href="register.html" class="btn btn-primary">시험 접수하기</a>
+      <a href="index.html" class="btn btn-secondary" data-i18n-content="su.go_home">홈으로</a>
+      <a href="register.html" class="btn btn-primary" data-i18n-content="su.go_register">시험 접수하기</a>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'su.welcome': { ko: 'TOPIK 미얀마 시행 공식 접수 서비스에 오신 것을 환영합니다.', my: 'TOPIK မြန်မာ တရားဝင် လျှောက်လွှာ ဝန်ဆောင်မှုသို့ ကြိုဆိုပါသည်။', en: 'Welcome to the official TOPIK Myanmar registration service.' },
+    'su.step1': { ko: '이메일 인증', my: 'အီးမေးလ် အတည်ပြုခြင်း', en: 'Email verification' },
+    'su.step2': { ko: '기본정보 입력', my: 'အချက်အလက် ဖြည့်သွင်းခြင်း', en: 'Basic information' },
+    'su.step3': { ko: '약관 동의', my: 'စည်းကမ်း သဘောတူခြင်း', en: 'Agree to terms' },
+    'su.s1_title': { ko: '이메일 인증', my: 'အီးမေးလ် အတည်ပြုခြင်း', en: 'Email verification' },
+    'su.s1_desc': { ko: '인증된 이메일이 곧 회원 아이디(로그인 ID)가 됩니다.', my: 'အတည်ပြုထားသော အီးမေးလ်သည် အဖွဲ့ဝင် အိုင်ဒီ (login ID) ဖြစ်လာမည်။', en: 'Your verified email becomes your member ID (login ID).' },
+    'su.email': { ko: '이메일', my: 'အီးမေးလ်', en: 'Email' },
+    'su.send_code': { ko: '인증코드 발송', my: 'ကုဒ် ပို့ရန်', en: 'Send code' },
+    'su.email_hint': { ko: '미얀마 통신 환경을 고려해 안정적인 이메일 주소를 입력해 주세요.', my: 'မြန်မာ ဆက်သွယ်ရေး အခြေအနေကို ထည့်သွင်းစဉ်းစားပြီး တည်ငြိမ်သော အီးမေးလ်လိပ်စာ ထည့်ပါ။', en: 'Use a reliable email address suited to Myanmar networks.' },
+    'su.otp': { ko: '인증코드', my: 'အတည်ပြုကုဒ်', en: 'Verification code' },
+    'su.otp_ph': { ko: '6자리', my: '၆ လုံး', en: '6 digits' },
+    'su.otp_hint': { ko: '이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)', my: 'အီးမေးလ်သို့ ပို့ထားသော ၆ လုံးကုဒ်ကို ထည့်ပါ။ (၅ မိနစ် သက်တမ်း)', en: 'Enter the 6-digit code sent to your email. (valid 5 min)' },
+    'su.otp_pending': { ko: '인증 메일이 아직 도착하지 않았다면 스팸함을 확인해 주세요. 계속 오지 않으면 <strong>topik.myanmar@mofa.go.kr</strong>로 문의해 주세요.', my: 'အတည်ပြုမေးလ် မရောက်သေးပါက spam ဖိုလ်ဒါ စစ်ပါ။ ဆက်မရောက်ပါက <strong>topik.myanmar@mofa.go.kr</strong> သို့ ဆက်သွယ်ပါ။', en: "If the verification email hasn't arrived, check your spam folder. If it still doesn't arrive, contact <strong>topik.myanmar@mofa.go.kr</strong>." },
+    'su.email_ok': { ko: '이메일 인증이 완료되었습니다.', my: 'အီးမေးလ် အတည်ပြုခြင်း ပြီးဆုံးပါပြီ။', en: 'Email verification complete.' },
+    'common.or': { ko: '또는', my: 'သို့မဟုတ်', en: 'or' },
+    'su.s2_title': { ko: '기본정보 + 증명사진', my: 'အချက်အလက် + သက်သေခံဓာတ်ပုံ', en: 'Basic info + ID photo' },
+    'su.s2_desc': { ko: '시험 접수 시 자동으로 사용됩니다. 정확히 입력해 주세요.', my: 'စာမေးပွဲ လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုမည်။ မှန်ကန်စွာ ဖြည့်ပါ။', en: 'Used automatically when you register for the exam. Please enter accurately.' },
+    'su.email_id': { ko: '이메일 (아이디)', my: 'အီးမေးလ် (အိုင်ဒီ)', en: 'Email (ID)' },
+    'su.name_ko': { ko: '한글 성명', my: 'ကိုရီးယား အမည်', en: 'Korean name' },
+    'su.name_ko_ph': { ko: '홍길동', my: 'ဥပမာ - 홍길동', en: 'e.g. 홍길동' },
+    'su.name_en': { ko: '영문 성명 (여권 표기)', my: 'အင်္ဂလိပ် အမည် (ပတ်စ်ပို့အတိုင်း)', en: 'English name (as in passport)' },
+    'su.birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
+    'su.birth_hint': { ko: '만 14세 이상만 가입할 수 있습니다. (YYYYMMDD 8자리)', my: 'အသက် ၁၄ နှစ်နှင့်အထက်သာ စာရင်းသွင်းနိုင်သည်။ (YYYYMMDD ၈ လုံး)', en: 'Only those aged 14+ can sign up. (YYYYMMDD, 8 digits)' },
+    'su.gender': { ko: '성별', my: 'ကျား/မ', en: 'Gender' },
+    'su.male': { ko: '남', my: 'ကျား', en: 'Male' },
+    'su.female': { ko: '여', my: 'မ', en: 'Female' },
+    'su.nationality': { ko: '국적', my: 'နိုင်ငံသား', en: 'Nationality' },
+    'nat.mm': { ko: '미얀마', my: 'မြန်မာ', en: 'Myanmar' },
+    'nat.kr': { ko: '대한민국', my: 'ကိုရီးယား', en: 'Republic of Korea' },
+    'su.lang1': { ko: '제1언어', my: 'ပထမ ဘာသာစကား', en: 'First language' },
+    'lang.my': { ko: '미얀마어', my: 'မြန်မာဘာသာ', en: 'Burmese' },
+    'lang.ko': { ko: '한국어', my: 'ကိုရီးယားဘာသာ', en: 'Korean' },
+    'lang.en': { ko: '영어', my: 'အင်္ဂလိပ်ဘာသာ', en: 'English' },
+    'su.phone': { ko: '연락처', my: 'ဆက်သွယ်ရန်', en: 'Phone' },
+    'su.job': { ko: '직업', my: 'အလုပ်အကိုင်', en: 'Occupation' },
+    'su.motive': { ko: '응시동기', my: 'ဖြေဆိုရခြင်း အကြောင်းရင်း', en: 'Reason for taking' },
+    'su.purpose': { ko: '응시목적', my: 'ဖြေဆိုရခြင်း ရည်ရွယ်ချက်', en: 'Purpose of taking' },
+    'su.pw': { ko: '비밀번호', my: 'စကားဝှက်', en: 'Password' },
+    'su.pw_ph': { ko: '영문+숫자+특수문자 8자 이상', my: 'အက္ခရာ+ဂဏန်း+သင်္ကေတ ၈ လုံးအထက်', en: 'Letters + numbers + symbols, 8+ chars' },
+    'su.pw_meta': { ko: '8자 이상 / 영문·숫자·특수문자 조합 권장', my: '၈ လုံးအထက် / အက္ခရာ·ဂဏန်း·သင်္ကေတ ပေါင်းစပ်ရန် အကြံပြု', en: '8+ chars / mix of letters, numbers, symbols recommended' },
+    'su.pw2': { ko: '비밀번호 확인', my: 'စကားဝှက် အတည်ပြု', en: 'Confirm password' },
+    'su.pw2_ph': { ko: '동일한 비밀번호를 다시 입력', my: 'တူညီသော စကားဝှက် ထပ်ထည့်ပါ', en: 'Re-enter the same password' },
+    'su.photo_label': { ko: '증명사진', my: 'သက်သေခံ ဓာတ်ပုံ', en: 'ID photo' },
+    'su.photo_h': { ko: '여권용 정면 증명사진', my: 'ပတ်စ်ပို့သုံး ရှေ့မျက်နှာ ဓာတ်ပုံ', en: 'Passport-style frontal ID photo' },
+    'su.photo_desc': { ko: '여권용 정면 컬러 사진(JPG/PNG)·흰색 배경·최근 6개월 이내, 최대 2MB. 모자·선글라스·흑백·비정면 사진은 사용할 수 없습니다. 자세한 기준은 [규격 안내]를 확인해 주세요.', my: 'ပတ်စ်ပို့သုံး ရှေ့မျက်နှာ အရောင်ဓာတ်ပုံ (JPG/PNG)·အဖြူနောက်ခံ·လွန်ခဲ့သော ၆ လအတွင်း၊ အများဆုံး 2MB။ ဦးထုပ်·နေကာမျက်မှန်·အဖြူအမည်း·ရှေ့မဟုတ်သော ဓာတ်ပုံ မရ။ အသေးစိတ်ကို [စံချိန်စံညွှန်း] တွင် ကြည့်ပါ။', en: 'Passport-style frontal color photo (JPG/PNG), white background, taken within 6 months, max 2MB. No hats, sunglasses, black-and-white, or non-frontal photos. See [requirements] for details.' },
+    'su.photo_spec_btn': { ko: '규격 안내', my: 'စံချိန်စံညွှန်း', en: 'Requirements' },
+    'su.s3_desc': { ko: '서비스 이용을 위해 약관에 동의해 주세요.', my: 'ဝန်ဆောင်မှု အသုံးပြုရန် စည်းကမ်းများကို သဘောတူပါ။', en: 'Please agree to the terms to use the service.' },
+    'su.terms_all': { ko: '전체 약관에 동의합니다', my: 'စည်းကမ်းအားလုံးကို သဘောတူသည်', en: 'I agree to all terms' },
+    'su.terms_service': { ko: '서비스 이용약관 동의', my: 'ဝန်ဆောင်မှု အသုံးပြုမှု စည်းကမ်း သဘောတူ', en: 'Agree to the Terms of Service' },
+    'su.terms_privacy': { ko: '개인정보 수집·이용 동의', my: 'ကိုယ်ရေးအချက်အလက် ကောက်ယူ·အသုံးပြုမှု သဘောတူ', en: 'Agree to collection/use of personal data' },
+    'su.terms_marketing': { ko: '마케팅 정보 수신 동의 (이메일)', my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူ (အီးမေးလ်)', en: 'Agree to receive marketing info (email)' },
+    'su.terms_view': { ko: '보기', my: 'ကြည့်ရန်', en: 'View' },
+    'su.photo_notice': { ko: '가입 시 등록한 증명사진은 시험 접수 시 자동으로 사용됩니다. 접수 단계에서는 사진 업로드·변경이 불가하니, 본 가입 화면에서 신중하게 등록해 주세요.', my: 'မှတ်ပုံတင်စဉ် တင်ထားသော ဓာတ်ပုံကို စာမေးပွဲ လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုသည်။ လျှောက်ထားဆဲအဆင့်တွင် ဓာတ်ပုံ ပြောင်း၍မရသဖြင့် ဤမှတ်ပုံတင် စာမျက်နှာတွင် ဂရုတစိုက် တင်ပါ။', en: 'The ID photo you register at sign-up is used automatically for exam registration. It cannot be changed during registration, so upload carefully here.' },
+    'su.finish': { ko: '가입 완료', my: 'အကောင့်ဖွင့်ပြီး', en: 'Complete sign-up' },
+    'su.done_title': { ko: '가입이 완료되었습니다', my: 'အကောင့်ဖွင့်ခြင်း ပြီးဆုံးပါပြီ', en: 'Sign-up complete' },
+    'su.done_desc': { ko: '자동으로 로그인됩니다.<br>이제 TOPIK 시험을 접수하실 수 있습니다.', my: 'အလိုအလျောက် ဝင်ရောက်ပါမည်။<br>ယခု TOPIK စာမေးပွဲ လျှောက်ထားနိုင်ပါပြီ။', en: 'You will be signed in automatically.<br>You can now register for the TOPIK exam.' },
+    'su.go_home': { ko: '홈으로', my: 'ပင်မသို့', en: 'Home' },
+    'su.go_register': { ko: '시험 접수하기', my: 'စာမေးပွဲ လျှောက်ရန်', en: 'Register for exam' },
+    'form.select': { ko: '선택', my: 'ရွေးချယ်ပါ', en: 'Select' },
+    'qna.cat_etc': { ko: '기타', my: 'အခြား', en: 'Other' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="shared/roster-codes.js"></script>
 <script src="assets/common.js"></script>
@@ -407,6 +471,43 @@
   var verificationToken = '';
   var signupBusy = false;
   var isGoogleSignup = false;
+
+  // ---- 약관 동의 이력 (계약서 6.4) ----
+  // 현행 게시 약관 버전을 조회해 두고, 동의한 항목만 terms_agreed 로 전송한다.
+  var TERMS_VERSIONS = {};
+  function normalizeTermsType(raw) {
+    var t = String(raw || '').toLowerCase();
+    if (t.indexOf('privacy') >= 0) return 'privacy';
+    if (t.indexOf('marketing') >= 0) return 'marketing';
+    if (t.indexOf('service') >= 0 || t.indexOf('terms') >= 0 || t === 'tos' || t === 'use') return 'service';
+    return t || '';
+  }
+  function loadTermsVersions() {
+    if (!window.TopikApi || !TopikApi.getTerms || !TopikApi.canUseApi()) return;
+    var lang = (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase().slice(0, 2);
+    TopikApi.getTerms({ lang: lang }).then(function (res) {
+      if (!res.ok || !res.body) return;
+      var items = res.body.items || res.body.terms || (Array.isArray(res.body) ? res.body : []);
+      items.forEach(function (it) {
+        var type = normalizeTermsType(it.type || it.code || it.kind || it.slug);
+        if (!type) return;
+        var ver = it.version || it.current_version || it.published_version || null;
+        TERMS_VERSIONS[type] = ver;
+      });
+    }).catch(function () { /* 버전 미상 시 backend 가 현행 버전 보정 */ });
+  }
+  loadTermsVersions();
+
+  function buildTermsAgreed() {
+    var out = [];
+    var now = new Date().toISOString();
+    document.querySelectorAll('[data-terms-type]').forEach(function (cb) {
+      if (!cb.checked) return;
+      var type = cb.getAttribute('data-terms-type');
+      out.push({ type: type, version: TERMS_VERSIONS[type] || null, agreed: true, agreed_at: now });
+    });
+    return out;
+  }
 
   function setGoogleSignupMode(on) {
     isGoogleSignup = !!on;
@@ -865,7 +966,7 @@
       purpose_code: Number(document.getElementById('su-purpose').value),
       photo_base64: photoB64,
       marketing_opt_in: opt.checked,
-      terms_agreed: []
+      terms_agreed: buildTermsAgreed()
     };
 
     if (!TopikApi.canUseApi()) {
@@ -914,7 +1015,7 @@
       password_confirm: document.getElementById('su-pw2').value,
       preferred_lang: (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase().slice(0, 2) === 'my' ? 'my' : (localStorage.getItem('tpkm_lang') === 'EN' ? 'en' : 'ko')
     });
-    delete emailPayload.terms_agreed;
+    // terms_agreed: 가입 시 동의한 약관 항목/버전을 그대로 전송 (계약서 6.4)
 
     TopikApi.register(emailPayload).then(function (res) {
       if (!res.ok) { handleSignupError(res); return; }

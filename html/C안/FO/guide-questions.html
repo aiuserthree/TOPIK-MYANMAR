@@ -75,15 +75,15 @@
 
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>TOPIK 안내</span><span>문항 구성</span></div>
+      <div class="crumb"><span data-i18n-content="guide.title">TOPIK 안내</span><span data-i18n-content="guide.questions">문항 구성</span></div>
       <h1 data-i18n-content="guide.questions">문항 구성</h1>
       <p class="lead" data-i18n-content="gq.lead">영역별 문항 수와 점수 배분, 시험 시간을 안내합니다.</p>
 
       <nav class="subnav" aria-label="TOPIK 안내 하위 메뉴">
-        <a href="guide-overview.html">시험 개요</a>
-        <a href="guide-intro.html">시험 소개</a>
-        <a href="guide-questions.html" class="active">문항 구성</a>
-        <a href="guide-evaluation.html">평가 기준</a>
+        <a href="guide-overview.html" data-i18n-content="guide.overview">시험 개요</a>
+        <a href="guide-intro.html" data-i18n-content="guide.intro">시험 소개</a>
+        <a href="guide-questions.html" class="active" data-i18n-content="guide.questions">문항 구성</a>
+        <a href="guide-evaluation.html" data-i18n-content="guide.evaluation">평가 기준</a>
       </nav>
     </div>
   </header>
@@ -95,7 +95,7 @@
       <div class="q-section">
         <div class="q-hd">
           <div class="ttl">TOPIK <span class="ro">Ⅰ</span></div>
-          <div class="meta">
+          <div class="meta" data-i18n-content="gq.meta1" data-i18n-content-html>
             <strong>100분</strong> · 200점<br>
             총 70문항
           </div>
@@ -103,33 +103,33 @@
         <table class="q-table">
           <thead>
             <tr>
-              <th>영역</th>
-              <th>유형</th>
-              <th>문항 수</th>
-              <th>배점</th>
-              <th>시간</th>
+              <th data-i18n-content="gq.th_area">영역</th>
+              <th data-i18n-content="gq.th_type">유형</th>
+              <th data-i18n-content="gq.th_count">문항 수</th>
+              <th data-i18n-content="gq.th_score">배점</th>
+              <th data-i18n-content="gq.th_time">시간</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td class="col-area">듣기</td>
-              <td>선택형 (객관식)</td>
+              <td class="col-area" data-i18n-content="gq.area_listening">듣기</td>
+              <td data-i18n-content="gq.type_mc">선택형 (객관식)</td>
               <td class="num">30</td>
               <td class="num">100</td>
-              <td class="num">40분</td>
+              <td class="num" data-i18n-content="gq.min_40">40분</td>
             </tr>
             <tr>
-              <td class="col-area">읽기</td>
-              <td>선택형 (객관식)</td>
+              <td class="col-area" data-i18n-content="gq.area_reading">읽기</td>
+              <td data-i18n-content="gq.type_mc">선택형 (객관식)</td>
               <td class="num">40</td>
               <td class="num">100</td>
-              <td class="num">60분</td>
+              <td class="num" data-i18n-content="gq.min_60">60분</td>
             </tr>
             <tr class="total">
-              <td colspan="2">총계</td>
+              <td colspan="2" data-i18n-content="gq.total">총계</td>
               <td class="num">70</td>
               <td class="num">200</td>
-              <td class="num">100분</td>
+              <td class="num" data-i18n-content="gq.min_100">100분</td>
             </tr>
           </tbody>
         </table>
@@ -139,7 +139,7 @@
       <div class="q-section lvl-2">
         <div class="q-hd">
           <div class="ttl">TOPIK <span class="ro">Ⅱ</span></div>
-          <div class="meta">
+          <div class="meta" data-i18n-content="gq.meta2" data-i18n-content-html>
             <strong>180분</strong> · 300점<br>
             총 104문항
           </div>
@@ -147,39 +147,39 @@
         <table class="q-table">
           <thead>
             <tr>
-              <th>영역</th>
-              <th>유형</th>
-              <th>문항 수</th>
-              <th>배점</th>
-              <th>시간</th>
+              <th data-i18n-content="gq.th_area">영역</th>
+              <th data-i18n-content="gq.th_type">유형</th>
+              <th data-i18n-content="gq.th_count">문항 수</th>
+              <th data-i18n-content="gq.th_score">배점</th>
+              <th data-i18n-content="gq.th_time">시간</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td class="col-area">듣기</td>
-              <td>선택형 (객관식)</td>
+              <td class="col-area" data-i18n-content="gq.area_listening">듣기</td>
+              <td data-i18n-content="gq.type_mc">선택형 (객관식)</td>
               <td class="num">50</td>
               <td class="num">100</td>
-              <td rowspan="2" class="num">110분</td>
+              <td rowspan="2" class="num" data-i18n-content="gq.min_110">110분</td>
             </tr>
             <tr>
-              <td class="col-area">쓰기</td>
-              <td>서답형 (주관식)</td>
+              <td class="col-area" data-i18n-content="gq.area_writing">쓰기</td>
+              <td data-i18n-content="gq.type_sa">서답형 (주관식)</td>
               <td class="num">4</td>
               <td class="num">100</td>
             </tr>
             <tr>
-              <td class="col-area">읽기</td>
-              <td>선택형 (객관식)</td>
+              <td class="col-area" data-i18n-content="gq.area_reading">읽기</td>
+              <td data-i18n-content="gq.type_mc">선택형 (객관식)</td>
               <td class="num">50</td>
               <td class="num">100</td>
-              <td class="num">70분</td>
+              <td class="num" data-i18n-content="gq.min_70">70분</td>
             </tr>
             <tr class="total">
-              <td colspan="2">총계</td>
+              <td colspan="2" data-i18n-content="gq.total">총계</td>
               <td class="num">104</td>
               <td class="num">300</td>
-              <td class="num">180분</td>
+              <td class="num" data-i18n-content="gq.min_180">180분</td>
             </tr>
           </tbody>
         </table>
@@ -187,7 +187,7 @@
 
       <div class="callout callout-neutral">
         <div class="ico"></div>
-        <div>
+        <div data-i18n-content="gq.callout" data-i18n-content-html>
           <strong>쓰기 영역 안내</strong><br>
           TOPIK Ⅱ 쓰기는 단문 완성형(2문항) + 작문형(2문항)으로 구성되며, 응시자 본인 손으로 답안지에 직접 작성합니다.
           모범 답안 및 채점 기준 예시는 TOPIK 본부(topik.go.kr)에서 확인하실 수 있습니다.
@@ -201,6 +201,31 @@
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'gq.lead': { ko: '영역별 문항 수와 점수 배분, 시험 시간을 안내합니다.', my: 'ပိုင်းအလိုက် မေးခွန်းအရေအတွက်၊ အမှတ်ခွဲဝေမှုနှင့် စာမေးပွဲ အချိန်ကို လမ်းညွှန်ပေးသည်။', en: 'Number of questions, score allocation, and test time by section.' },
+    'gq.meta1': { ko: '<strong>100분</strong> · 200점<br>총 70문항', my: '<strong>၁၀၀ မိနစ်</strong> · ၂၀၀ မှတ်<br>စုစုပေါင်း မေးခွန်း ၇၀', en: '<strong>100 min</strong> · 200 pts<br>70 questions total' },
+    'gq.meta2': { ko: '<strong>180분</strong> · 300점<br>총 104문항', my: '<strong>၁၈၀ မိနစ်</strong> · ၃၀၀ မှတ်<br>စုစုပေါင်း မေးခွန်း ၁၀၄', en: '<strong>180 min</strong> · 300 pts<br>104 questions total' },
+    'gq.th_area': { ko: '영역', my: 'ပိုင်း', en: 'Section' },
+    'gq.th_type': { ko: '유형', my: 'အမျိုးအစား', en: 'Type' },
+    'gq.th_count': { ko: '문항 수', my: 'မေးခွန်း အရေအတွက်', en: 'Questions' },
+    'gq.th_score': { ko: '배점', my: 'အမှတ်', en: 'Points' },
+    'gq.th_time': { ko: '시간', my: 'အချိန်', en: 'Time' },
+    'gq.area_listening': { ko: '듣기', my: 'နားထောင်ခြင်း', en: 'Listening' },
+    'gq.area_reading': { ko: '읽기', my: 'ဖတ်ရှုခြင်း', en: 'Reading' },
+    'gq.area_writing': { ko: '쓰기', my: 'ရေးသားခြင်း', en: 'Writing' },
+    'gq.type_mc': { ko: '선택형 (객관식)', my: 'ရွေးချယ်ဖြေ (multiple choice)', en: 'Multiple choice' },
+    'gq.type_sa': { ko: '서답형 (주관식)', my: 'ဖြည့်စွက်ဖြေ (subjective)', en: 'Constructed response (subjective)' },
+    'gq.total': { ko: '총계', my: 'စုစုပေါင်း', en: 'Total' },
+    'gq.min_40': { ko: '40분', my: '၄၀ မိနစ်', en: '40 min' },
+    'gq.min_60': { ko: '60분', my: '၆၀ မိနစ်', en: '60 min' },
+    'gq.min_70': { ko: '70분', my: '၇၀ မိနစ်', en: '70 min' },
+    'gq.min_100': { ko: '100분', my: '၁၀၀ မိနစ်', en: '100 min' },
+    'gq.min_110': { ko: '110분', my: '၁၁၀ မိနစ်', en: '110 min' },
+    'gq.min_180': { ko: '180분', my: '၁၈၀ မိနစ်', en: '180 min' },
+    'gq.callout': { ko: '<strong>쓰기 영역 안내</strong><br> TOPIK Ⅱ 쓰기는 단문 완성형(2문항) + 작문형(2문항)으로 구성되며, 응시자 본인 손으로 답안지에 직접 작성합니다. 모범 답안 및 채점 기준 예시는 TOPIK 본부(topik.go.kr)에서 확인하실 수 있습니다.', my: '<strong>ရေးသားခြင်း ပိုင်း အကြောင်း</strong><br> TOPIK Ⅱ ရေးသားခြင်းသည် ဝါကျတို ဖြည့်စွက်ခြင်း (၂ မေးခွန်း) + စာစီစာကုံး (၂ မေးခွန်း) ဖြင့် ဖွဲ့စည်းထားပြီး ဖြေဆိုသူ ကိုယ်တိုင် လက်ဖြင့် အဖြေစာရွက်တွင် တိုက်ရိုက် ရေးသားရသည်။ စံပြ အဖြေနှင့် အမှတ်ပေး စံနှုန်း နမူနာများကို TOPIK ဌာနချုပ် (topik.go.kr) တွင် ကြည့်ရှုနိုင်သည်။', en: '<strong>About the writing section</strong><br> TOPIK II writing consists of short-sentence completion (2 questions) and composition (2 questions), and candidates write directly on the answer sheet by hand. Model answers and sample scoring criteria are available at TOPIK headquarters (topik.go.kr).' }
+  };
+</script>
 <script src="assets/common.js"></script>
 </body>
 </html>

@@ -39,10 +39,15 @@ class ExamVenue(TimestampMixin, Base):
             ["country_code", "region_code"],
             ["country_region_codes.country_code", "country_region_codes.region_code"],
         ),
+        # 시험장코드(④)는 지역 내 01부터 → 지역별 UNIQUE (전역 UNIQUE 아님).
+        UniqueConstraint(
+            "country_code", "region_code", "venue_code",
+            name="exam_venues_region_venue_unique",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    venue_code: Mapped[str] = mapped_column(String(2), unique=True, nullable=False)
+    venue_code: Mapped[str] = mapped_column(String(2), nullable=False)
     name_ko: Mapped[str] = mapped_column(String(200), nullable=False)
     name_en: Mapped[Optional[str]] = mapped_column(String(200))
     address: Mapped[Optional[str]] = mapped_column(Text)

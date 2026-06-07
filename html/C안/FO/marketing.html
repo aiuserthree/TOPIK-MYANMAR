@@ -31,9 +31,9 @@
 <main class="page" role="main">
   <header class="page-head">
     <div class="container legal-wrap">
-      <div class="crumb"><span>법적 고지</span><span>마케팅 정보 수신 동의</span></div>
-      <h1>마케팅 정보 수신 동의</h1>
-      <p class="lead">TOPIK Myanmar가 제공하는 시험·이벤트·서비스 안내 등 마케팅 정보 수신에 관한 안내입니다. 본 동의는 선택 사항이며, 동의하지 않아도 회원가입 및 시험 접수에는 제한이 없습니다.</p>
+      <div class="crumb"><span data-i18n-content="mkt.crumb_legal">법적 고지</span><span data-i18n-content="mkt.crumb_title">마케팅 정보 수신 동의</span></div>
+      <h1 data-i18n-content="mkt.h1">마케팅 정보 수신 동의</h1>
+      <p class="lead" data-i18n-content="mkt.lead">TOPIK Myanmar가 제공하는 시험·이벤트·서비스 안내 등 마케팅 정보 수신에 관한 안내입니다. 본 동의는 선택 사항이며, 동의하지 않아도 회원가입 및 시험 접수에는 제한이 없습니다.</p>
       <p class="updated" id="termsUpdated">본 문서는 서비스 오픈 전 임시 안내이며, 최종본은 대사관 확인 후 갱신될 수 있습니다.</p>
     </div>
   </header>
@@ -47,32 +47,106 @@
       </div>
 
       <div id="termsFallback">
-      <h2>1. 수신 목적</h2>
-      <p>TOPIK 시험 일정·접수 안내, 이벤트·설문, 서비스 개선 및 신규 기능 소식 등 이용자에게 유용한 정보를 안내하기 위해 마케팅 정보를 발송합니다.</p>
+      <h2 data-i18n-content="mkt.s1_h">1. 수신 목적</h2>
+      <p data-i18n-content="mkt.s1_p">TOPIK 시험 일정·접수 안내, 이벤트·설문, 서비스 개선 및 신규 기능 소식 등 이용자에게 유용한 정보를 안내하기 위해 마케팅 정보를 발송합니다.</p>
 
-      <h2>2. 수신 항목 및 방법</h2>
+      <h2 data-i18n-content="mkt.s2_h">2. 수신 항목 및 방법</h2>
       <ul>
-        <li>발송 채널: 이메일</li>
-        <li>발송 내용: 시험·접수 일정 알림, 이벤트·공지, 서비스 안내 등</li>
+        <li data-i18n-content="mkt.s2_li1">발송 채널: 이메일</li>
+        <li data-i18n-content="mkt.s2_li2">발송 내용: 시험·접수 일정 알림, 이벤트·공지, 서비스 안내 등</li>
       </ul>
 
-      <h2>3. 선택 동의 안내</h2>
-      <p>본 동의는 선택 사항입니다. 동의하지 않으셔도 회원가입·시험 접수 등 필수 서비스 이용에는 어떠한 불이익도 없습니다.</p>
+      <h2 data-i18n-content="mkt.s3_h">3. 선택 동의 안내</h2>
+      <p data-i18n-content="mkt.s3_p">본 동의는 선택 사항입니다. 동의하지 않으셔도 회원가입·시험 접수 등 필수 서비스 이용에는 어떠한 불이익도 없습니다.</p>
 
-      <h2>4. 동의 철회</h2>
-      <p>마이페이지 또는 대사관 문의(topik.myanmar@mofa.go.kr)를 통해 언제든지 수신 동의를 철회할 수 있으며, 철회 시 이후 마케팅 정보 발송이 중단됩니다. (시험·접수 관련 필수 안내는 계속 발송될 수 있습니다.)</p>
+      <h2 data-i18n-content="mkt.s4_h">4. 동의 철회</h2>
+      <p data-i18n-content="mkt.s4_p">마이페이지 또는 대사관 문의(topik.myanmar@mofa.go.kr)를 통해 언제든지 수신 동의를 철회할 수 있으며, 철회 시 이후 마케팅 정보 발송이 중단됩니다. (시험·접수 관련 필수 안내는 계속 발송될 수 있습니다.)</p>
       </div><!-- /#termsFallback -->
 
       <p style="margin-top: 32px;">
-        <a href="terms.html" class="btn btn-secondary">이용약관</a>
-        <a href="privacy.html" class="btn btn-secondary" style="margin-left:8px;">개인정보처리방침</a>
-        <a href="index.html" class="btn btn-secondary" style="margin-left:8px;">홈으로</a>
+        <a href="terms.html" class="btn btn-secondary" data-i18n-content="foot.terms">이용약관</a>
+        <a href="privacy.html" class="btn btn-secondary" style="margin-left:8px;" data-i18n-content="foot.privacy">개인정보처리방침</a>
+        <a href="index.html" class="btn btn-secondary" style="margin-left:8px;" data-i18n-content="mkt.home">홈으로</a>
       </p>
     </div>
   </section>
 </main>
 
 <div id="site-footer"></div>
+<script>
+window.TPKM_PAGE_I18N = {
+  'mkt.crumb_legal': {
+    ko: '법적 고지',
+    my: 'ဥပဒေဆိုင်ရာ အကြောင်းကြားချက်',
+    en: 'Legal notices'
+  },
+  'mkt.crumb_title': {
+    ko: '마케팅 정보 수신 동의',
+    my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူညီခြင်း',
+    en: 'Consent to marketing'
+  },
+  'mkt.h1': {
+    ko: '마케팅 정보 수신 동의',
+    my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူညီခြင်း',
+    en: 'Consent to receive marketing information'
+  },
+  'mkt.lead': {
+    ko: 'TOPIK Myanmar가 제공하는 시험·이벤트·서비스 안내 등 마케팅 정보 수신에 관한 안내입니다. 본 동의는 선택 사항이며, 동의하지 않아도 회원가입 및 시험 접수에는 제한이 없습니다.',
+    my: 'TOPIK Myanmar မှ ပေးအပ်သော စာမေးပွဲ·ပွဲ·ဝန်ဆောင်မှု အသိပေးချက် စသည့် ကြော်ငြာ အချက်အလက် လက်ခံခြင်းဆိုင်ရာ အသိပေးချက် ဖြစ်သည်။ ဤသဘောတူညီမှုသည် ရွေးချယ်နိုင်သော အရာဖြစ်ပြီး၊ သဘောမတူသော်လည်း အကောင့်ဖွင့်ခြင်းနှင့် စာမေးပွဲ လျှောက်ထားခြင်းတွင် ကန့်သတ်ချက် မရှိပါ။',
+    en: 'This notice concerns receiving marketing information such as exam, event, and service announcements provided by TOPIK Myanmar. This consent is optional; you can sign up and register for the exam even without consenting.'
+  },
+  'mkt.s1_h': {
+    ko: '1. 수신 목적',
+    my: '၁. လက်ခံရခြင်း ရည်ရွယ်ချက်',
+    en: '1. Purpose of receiving'
+  },
+  'mkt.s1_p': {
+    ko: 'TOPIK 시험 일정·접수 안내, 이벤트·설문, 서비스 개선 및 신규 기능 소식 등 이용자에게 유용한 정보를 안내하기 위해 마케팅 정보를 발송합니다.',
+    my: 'TOPIK စာမေးပွဲ အချိန်ဇယား·လျှောက်ထားမှု အသိပေးချက်၊ ပွဲ·စစ်တမ်း၊ ဝန်ဆောင်မှု တိုးတက်စေမှုနှင့် လုပ်ဆောင်ချက်အသစ် သတင်း စသည့် အသုံးပြုသူအတွက် အသုံးဝင်သော အချက်အလက်များ ပေးပို့ရန် ကြော်ငြာ အချက်အလက်ကို ပေးပို့သည်။',
+    en: 'Marketing information is sent to provide useful information to users, such as TOPIK exam schedule and registration notices, events and surveys, and news about service improvements and new features.'
+  },
+  'mkt.s2_h': {
+    ko: '2. 수신 항목 및 방법',
+    my: '၂. လက်ခံမည့် အကြောင်းအရာနှင့် နည်းလမ်း',
+    en: '2. Items and methods of receiving'
+  },
+  'mkt.s2_li1': {
+    ko: '발송 채널: 이메일',
+    my: 'ပို့လွှတ်မည့် လမ်းကြောင်း: အီးမေးလ်',
+    en: 'Delivery channel: email'
+  },
+  'mkt.s2_li2': {
+    ko: '발송 내용: 시험·접수 일정 알림, 이벤트·공지, 서비스 안내 등',
+    my: 'ပို့လွှတ်မည့် အကြောင်းအရာ: စာမေးပွဲ·လျှောက်ထားမှု အချိန်ဇယား အသိပေးချက်၊ ပွဲ·ကြေညာချက်၊ ဝန်ဆောင်မှု အသိပေးချက် စသည်',
+    en: 'Content: exam·registration schedule alerts, events·notices, service announcements, etc.'
+  },
+  'mkt.s3_h': {
+    ko: '3. 선택 동의 안내',
+    my: '၃. ရွေးချယ် သဘောတူညီမှု အသိပေးချက်',
+    en: '3. Notice on optional consent'
+  },
+  'mkt.s3_p': {
+    ko: '본 동의는 선택 사항입니다. 동의하지 않으셔도 회원가입·시험 접수 등 필수 서비스 이용에는 어떠한 불이익도 없습니다.',
+    my: 'ဤသဘောတူညီမှုသည် ရွေးချယ်နိုင်သော အရာဖြစ်သည်။ သဘောမတူသော်လည်း အကောင့်ဖွင့်ခြင်း·စာမေးပွဲ လျှောက်ထားခြင်း စသည့် မရှိမဖြစ် ဝန်ဆောင်မှု အသုံးပြုရာတွင် မည်သည့် နစ်နာမှုမျှ မရှိပါ။',
+    en: 'This consent is optional. Even if you do not consent, there is no disadvantage in using essential services such as sign-up and exam registration.'
+  },
+  'mkt.s4_h': {
+    ko: '4. 동의 철회',
+    my: '၄. သဘောတူညီမှု ရုပ်သိမ်းခြင်း',
+    en: '4. Withdrawal of consent'
+  },
+  'mkt.s4_p': {
+    ko: '마이페이지 또는 대사관 문의(topik.myanmar@mofa.go.kr)를 통해 언제든지 수신 동의를 철회할 수 있으며, 철회 시 이후 마케팅 정보 발송이 중단됩니다. (시험·접수 관련 필수 안내는 계속 발송될 수 있습니다.)',
+    my: 'ကျွန်ုပ်စာမျက်နှာ သို့မဟုတ် သံရုံး ဆက်သွယ်ရန် (topik.myanmar@mofa.go.kr) မှတစ်ဆင့် အချိန်မရွေး လက်ခံရန် သဘောတူညီမှုကို ရုပ်သိမ်းနိုင်ပြီး၊ ရုပ်သိမ်းပါက နောက်ပိုင်း ကြော်ငြာ အချက်အလက် ပေးပို့မှု ရပ်ဆိုင်းပါမည်။ (စာမေးပွဲ·လျှောက်ထားမှုဆိုင်ရာ မရှိမဖြစ် အသိပေးချက်များကို ဆက်လက် ပေးပို့နိုင်သည်။)',
+    en: 'You may withdraw your consent at any time via My Page or the Embassy contact (topik.myanmar@mofa.go.kr); upon withdrawal, marketing information will no longer be sent. (Essential notices related to the exam and registration may continue to be sent.)'
+  },
+  'mkt.home': {
+    ko: '홈으로',
+    my: 'ပင်မသို့',
+    en: 'Home'
+  }
+};
+</script>
 <script src="assets/common.js"></script>
 <script>
 /* 마케팅 수신 동의 본문 — BO에서 게시한 최신본을 공개 API로 불러와 렌더 (실패 시 정적 폴백 유지) */

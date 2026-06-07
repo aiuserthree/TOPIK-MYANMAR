@@ -7,17 +7,15 @@
   var STORAGE = { access: "bo_access_token", admin: "bo_admin_user" };
 
   function resolveBaseUrl() {
+    // 우선순위: window.TOPIK_API_BASE > <meta topik-api-base> > 동일 오리진("")
+    // 도메인 미확정이므로 미설정 시 같은 오리진의 /api 를 사용한다(localhost 하드코딩 제거).
+    // 로컬 개발에서 API가 다른 포트(:8000)에 있으면 meta 또는 window.TOPIK_API_BASE 로 지정.
     if (typeof global.TOPIK_API_BASE === "string" && global.TOPIK_API_BASE.trim()) {
       return global.TOPIK_API_BASE.trim();
     }
     if (typeof document !== "undefined") {
       var meta = document.querySelector('meta[name="topik-api-base"]');
       if (meta && meta.content && meta.content.trim()) return meta.content.trim();
-    }
-    var loc = global.location;
-    if (!loc || !loc.hostname) return "http://localhost:8000";
-    if (loc.hostname === "localhost" || loc.hostname === "127.0.0.1") {
-      return "http://localhost:8000";
     }
     return "";
   }
@@ -72,8 +70,10 @@
       store.setItem(STORAGE.admin, JSON.stringify(account));
       global.sessionStorage.setItem("bo_session", JSON.stringify({
         id: account.email,
+        email: account.email,
         name: account.name,
         role: account.role,
+        must_change_password: !!account.must_change_password,
         loginAt: new Date().toISOString(),
       }));
       return isAuthenticated();
@@ -149,6 +149,89 @@
     return "요청을 처리할 수 없습니다.";
   }
 
+  /**
+   * 관리자 첨부/증명사진의 <img src> URL.
+   * <img>는 Authorization 헤더를 못 보내므로 토큰을 query(?token=)로 전달한다.
+   * (files 라우트가 이 용도로 ?token= 을 허용함)
+   */
+  function fileUrl(fileId) {
+    if (fileId == null || fileId === "" || !canUseApi()) return "";
+    var token = getAccessToken();
+    return apiUrl("/api/v1/admin/files/" + encodeURIComponent(fileId)) +
+      (token ? "?token=" + encodeURIComponent(token) : "");
+  }
+
+  function triggerBlobDownload(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
+  function filenameFromDisposition(res, fallback) {
+    var cd = (res.headers && res.headers.get && res.headers.get("Content-Disposition")) || "";
+    var m = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(cd);
+    if (m && m[1]) {
+      try { return decodeURIComponent(m[1].replace(/"/g, "")); } catch (e) { return m[1].replace(/"/g, ""); }
+    }
+    return fallback;
+  }
+
+  /** 사진 원본 다운로드 (관리자 파일). 동일 오리진이면 download 속성, 아니면 새 탭. */
+  function downloadFile(fileId, filename) {
+    var url = fileUrl(fileId);
+    if (!url) return false;
+    var a = document.createElement("a");
+    a.href = url;
+    if (filename) a.download = filename;
+    a.target = "_blank";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return true;
+  }
+
+  /**
+   * 사진 zip 서버 다운로드 — GET /api/v1/admin/applications/photos.zip
+   * 서버가 {지역}/{시험장}/{수준}/{수험번호}.jpg 구조로 스트리밍한다(클라 더미 제거).
+   */
+  function downloadPhotosZip(query) {
+    if (!canUseApi()) {
+      return Promise.resolve({ ok: false, status: 0, body: { error: { message: "API not configured" } } });
+    }
+    var parts = [];
+    Object.keys(query || {}).forEach(function (k) {
+      if (query[k] != null && query[k] !== "" && query[k] !== "all") {
+        parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(query[k]));
+      }
+    });
+    var qs = parts.length ? "?" + parts.join("&") : "";
+    var headers = { Accept: "application/zip,application/octet-stream,*/*" };
+    var token = getAccessToken();
+    if (token) headers.Authorization = "Bearer " + token;
+    return fetch(apiUrl("/api/v1/admin/applications/photos.zip" + qs), { headers: headers })
+      .then(function (res) {
+        var ct = (res.headers && res.headers.get && res.headers.get("Content-Type")) || "";
+        if (!res.ok || ct.indexOf("application/json") > -1) {
+          return res.json().catch(function () { return {}; }).then(function (body) {
+            return { ok: false, status: res.status, body: body };
+          });
+        }
+        return res.blob().then(function (blob) {
+          triggerBlobDownload(blob, filenameFromDisposition(res, "TOPIK_사진.zip"));
+          return { ok: true, status: res.status };
+        });
+      })
+      .catch(function () {
+        return { ok: false, status: 0, body: { error: { message: "사진 zip 다운로드에 실패했습니다." } } };
+      });
+  }
+
   global.TopikBoApi = {
     baseUrl: API_BASE_URL,
     canUseApi: canUseApi,
@@ -159,6 +242,39 @@
     isAuthenticated: isAuthenticated,
     apiFetch: apiFetch,
     parseError: parseError,
+    fileUrl: fileUrl,
+    downloadFile: downloadFile,
+    downloadPhotosZip: downloadPhotosZip,
+    changeMyPassword: function (currentPassword, newPassword) {
+      return apiFetch("/api/v1/admin/me/change-password", {
+        method: "POST",
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      });
+    },
+    getTermsConsents: function (q) {
+      var parts = [];
+      Object.keys(q || {}).forEach(function (k) {
+        if (q[k] != null && q[k] !== "" && q[k] !== "all") {
+          parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(q[k]));
+        }
+      });
+      return apiFetch("/api/v1/admin/terms/consents" + (parts.length ? "?" + parts.join("&") : ""));
+    },
+    getBoardComments: function (postId) {
+      return apiFetch("/api/v1/admin/board/posts/" + encodeURIComponent(postId) + "/comments");
+    },
+    createBoardComment: function (postId, payload) {
+      return apiFetch("/api/v1/admin/board/posts/" + encodeURIComponent(postId) + "/comments", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      });
+    },
+    setExamNumberVisibility: function (roundId, visibleAt) {
+      return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId), {
+        method: "PATCH",
+        body: JSON.stringify({ exam_number_visible_at: visibleAt || null }),
+      });
+    },
     getApplications: function (q) {
       var parts = [];
       Object.keys(q || {}).forEach(function (k) {

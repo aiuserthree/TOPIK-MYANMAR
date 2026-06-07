@@ -1,8 +1,11 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.lib.email_worker import email_worker_loop
@@ -52,6 +55,36 @@ if settings.cors_allow_localhost:
     _cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
 
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_handler(request: Request, exc: HTTPException):
+    """FO/BO 클라이언트가 기대하는 최상위 `error` 모양으로 통일.
+
+    api_error()는 detail={"error": {...}} 를 사용하므로 그대로 최상위로 노출.
+    그 외 문자열 detail 은 표준 코드로 감싼다.
+    """
+    detail = exc.detail
+    if isinstance(detail, dict) and "error" in detail:
+        body = detail
+    else:
+        body = {"error": {"code": "HTTP_ERROR", "message": detail if isinstance(detail, str) else "요청을 처리할 수 없습니다."}}
+    return JSONResponse(status_code=exc.status_code, content=body, headers=getattr(exc, "headers", None))
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "입력값이 올바르지 않습니다.",
+                "details": jsonable_encoder(exc.errors()),
+            }
+        },
+    )
+
 
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/v1")

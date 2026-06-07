@@ -162,7 +162,7 @@
 <main class="page" role="main">
   <div class="my-wrap">
 
-    <div id="submitBanner" class="submit-banner" role="status">
+    <div id="submitBanner" class="submit-banner" role="status" data-i18n-content="mp.submit_banner">
       접수가 완료되었습니다. 아래에서 접수 내역을 확인해 주세요.
     </div>
 
@@ -173,12 +173,12 @@
         <div class="en" id="meNameEn">—</div>
         <div class="meta" id="meMeta">—</div>
       </div>
-      <a href="mypage-profile.html" class="edit">내정보 수정</a>
+      <a href="mypage-profile.html" class="edit" data-i18n-content="mp.edit_profile">내정보 수정</a>
     </div>
 
     <div class="my-tabs">
-      <button class="active" data-tab="active" type="button">진행 중인 접수 <span class="ct" id="ctActive">0</span></button>
-      <button data-tab="past" type="button">지난 접수 <span class="ct" id="ctPast">0</span></button>
+      <button class="active" data-tab="active" type="button"><span data-i18n-content="mp.tab_active">진행 중인 접수</span> <span class="ct" id="ctActive">0</span></button>
+      <button data-tab="past" type="button"><span data-i18n-content="mp.tab_past">지난 접수</span> <span class="ct" id="ctPast">0</span></button>
     </div>
 
     <section class="tab-pane active" data-tab="active" id="paneActive"></section>
@@ -193,59 +193,117 @@
 <div class="modal-backdrop" id="modalConfirm">
   <div class="modal" style="max-width: 540px;">
     <div class="modal-head" style="display:flex; justify-content:space-between; align-items:center;">
-      <h3>접수 확인증</h3>
-      <button type="button" onclick="printConfirm()" class="btn btn-text btn-sm">인쇄</button>
+      <h3 data-i18n-content="mp.confirm_title">접수 확인증</h3>
+      <button type="button" onclick="printConfirm()" class="btn btn-text btn-sm" data-i18n-content="mp.print">인쇄</button>
     </div>
     <div class="modal-body" id="confirmBody"></div>
     <div class="modal-foot">
-      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalConfirm')">닫기</button>
+      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalConfirm')" data-i18n-content="btn.close">닫기</button>
     </div>
   </div>
 </div>
 
 <div class="modal-backdrop" id="modalCancel">
   <div class="modal">
-    <div class="modal-head"><h3>접수를 취소하시겠습니까?</h3></div>
+    <div class="modal-head"><h3 data-i18n-content="mp.cancel_q">접수를 취소하시겠습니까?</h3></div>
     <div class="modal-body">
-      <p>접수를 취소하시면 사진 심사가 중단되며, 다시 접수하시려면 처음부터 진행해야 합니다.</p>
+      <p data-i18n-content="mp.cancel_desc">접수를 취소하시면 사진 심사가 중단되며, 다시 접수하시려면 처음부터 진행해야 합니다.</p>
       <div class="callout callout-warning" style="margin-top: 14px;">
         <div class="ico"></div>
-        <div>
+        <div data-i18n-content="mp.cancel_note" data-i18n-content-html>
           <strong>취소는 오프라인 수납 전까지만 가능합니다.</strong>
           수납 완료 후에는 <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.
         </div>
       </div>
     </div>
     <div class="modal-foot">
-      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalCancel')">닫기</button>
-      <button type="button" class="btn btn-danger" id="btnConfirmCancel">접수 취소</button>
+      <button type="button" class="btn btn-secondary" onclick="TPKM.closeModal('modalCancel')" data-i18n-content="btn.close">닫기</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmCancel" data-i18n-content="mp.cancel_btn">접수 취소</button>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'mp.submit_banner': { ko: '접수가 완료되었습니다. 아래에서 접수 내역을 확인해 주세요.', my: 'လျှောက်ထားမှု ပြီးဆုံးပါပြီ။ အောက်တွင် လျှောက်ထားမှု အသေးစိတ်ကို စစ်ဆေးပါ။', en: 'Registration complete. Check your application details below.' },
+    'mp.edit_profile': { ko: '내정보 수정', my: 'အချက်အလက် ပြင်ဆင်', en: 'Edit profile' },
+    'mp.tab_active': { ko: '진행 중인 접수', my: 'ဆောင်ရွက်ဆဲ လျှောက်လွှာ', en: 'In-progress' },
+    'mp.tab_past': { ko: '지난 접수', my: 'ပြီးခဲ့သော လျှောက်လွှာ', en: 'Past' },
+    'mp.confirm_title': { ko: '접수 확인증', my: 'လျှောက်ထားမှု အတည်ပြုလက်မှတ်', en: 'Registration confirmation' },
+    'mp.print': { ko: '인쇄', my: 'ပရင့်ထုတ်ရန်', en: 'Print' },
+    'mp.cancel_q': { ko: '접수를 취소하시겠습니까?', my: 'လျှောက်ထားမှု ပယ်ဖျက်မှာ သေချာပါသလား။', en: 'Cancel this registration?' },
+    'mp.cancel_desc': { ko: '접수를 취소하시면 사진 심사가 중단되며, 다시 접수하시려면 처음부터 진행해야 합니다.', my: 'ပယ်ဖျက်ပါက ဓာတ်ပုံစိစစ်မှု ရပ်တန့်မည်ဖြစ်ပြီး၊ ပြန်လျှောက်ရန် အစမှ ပြန်စရမည်။', en: 'Cancelling stops photo review; to re-register you must start over.' },
+    'mp.cancel_note': { ko: '<strong>취소는 오프라인 수납 전까지만 가능합니다.</strong> 수납 완료 후에는 <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.', my: '<strong>ပယ်ဖျက်ခြင်းကို အော့ဖ်လိုင်း ပေးသွင်းမတိုင်မီသာ ပြုလုပ်နိုင်သည်။</strong> ပေးသွင်းပြီးနောက် <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">ငွေပြန်အမ်း·ပြင်ဆင် ဘုတ်</a> ကို အသုံးပြုပါ။', en: '<strong>Cancellation is only possible before offline payment.</strong> After payment, use the <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">Refund/correction board</a>.' },
+    'mp.cancel_btn': { ko: '접수 취소', my: 'လျှောက်လွှာ ပယ်ဖျက်', en: 'Cancel registration' },
+    'mp.btn_confirm': { ko: '접수 확인증', my: 'အတည်ပြုလက်မှတ်', en: 'Confirmation' },
+    'mp.btn_ticket': { ko: '수험표 출력', my: 'ဝင်ခွင့်လက်မှတ် ထုတ်ရန်', en: 'Admit card' },
+    'mp.btn_rephoto': { ko: '사진 재등록', my: 'ဓာတ်ပုံ ပြန်တင်ရန်', en: 'Re-upload photo' },
+    'mp.exam_num_pending': { ko: '부여 전', my: 'မသတ်မှတ်ရသေး', en: 'Not yet assigned' },
+    'mp.photo_pending': { ko: '대기', my: 'စောင့်ဆိုင်း', en: 'Pending' },
+    'mp.photo_approved': { ko: '승인 완료', my: 'အတည်ပြုပြီး', en: 'Approved' },
+    'mp.photo_rejected': { ko: '반려', my: 'ပယ်ချ', en: 'Rejected' },
+    'mp.photo_review': { ko: '심사 중', my: 'စိစစ်နေဆဲ', en: 'Under review' },
+    'mp.pay_unpaid': { ko: '대기', my: 'စောင့်ဆိုင်း', en: 'Pending' },
+    'mp.pay_paid': { ko: '완료', my: 'ပြီးစီး', en: 'Paid' },
+    'mp.pay_refunded': { ko: '환불', my: 'ငွေပြန်အမ်း', en: 'Refunded' },
+    'mp.rj_not_frontal': { ko: '정면 아님', my: 'ရှေ့မဟုတ်', en: 'Not frontal' },
+    'mp.rj_hat_glasses': { ko: '모자·안경', my: 'ဦးထုပ်·မျက်မှန်', en: 'Hat/glasses' },
+    'mp.rj_bw': { ko: '흑백 사진', my: 'အဖြူအမည်း', en: 'B&W photo' },
+    'mp.rj_blurry': { ko: '흐림', my: 'ဝါးဝါး', en: 'Blurry' },
+    'mp.rj_not_self': { ko: '본인 아님', my: 'ကိုယ်တိုင်မဟုတ်', en: 'Not the person' },
+    'mp.rj_other': { ko: '기타', my: 'အခြား', en: 'Other' },
+    'mp.empty_past_t': { ko: '지난 접수가 없습니다', my: 'ပြီးခဲ့သော လျှောက်လွှာ မရှိပါ', en: 'No past applications' },
+    'mp.empty_past_d': { ko: '완료되거나 취소된 회차 접수가 여기에 표시됩니다.', my: 'ပြီးစီး/ပယ်ဖျက်ထားသော လျှောက်လွှာများ ဤနေရာတွင် ပြသမည်။', en: 'Completed or cancelled registrations appear here.' },
+    'mp.empty_active_t': { ko: '진행 중인 접수가 없습니다', my: 'ဆောင်ရွက်ဆဲ လျှောက်လွှာ မရှိပါ', en: 'No in-progress applications' },
+    'mp.empty_active_d': { ko: '시험 접수를 진행해 주세요.', my: 'စာမေးပွဲ လျှောက်ထားပါ။', en: 'Please register for the exam.' },
+    'mp.empty_active_btn': { ko: '시험 접수하기', my: 'စာမေးပွဲ လျှောက်ရန်', en: 'Register for exam' },
+    'mp.load_fail_t': { ko: '접수 내역을 불러올 수 없습니다', my: 'လျှောက်ထားမှု မှတ်တမ်း ဖွင့်၍မရပါ', en: 'Could not load your applications' },
+    'mp.retry': { ko: '다시 시도', my: 'ပြန်စမ်းရန်', en: 'Retry' },
+    'mp.loading': { ko: '접수 내역을 불러오는 중…', my: 'လျှောက်ထားမှု မှတ်တမ်း ဖွင့်နေသည်…', en: 'Loading your applications…' },
+    'mp.api_off': { ko: 'API가 연결되지 않았습니다. 로그인 후 다시 시도해 주세요.', my: 'API ချိတ်ဆက်မထားပါ။ ဝင်ရောက်ပြီး ပြန်စမ်းပါ။', en: 'API not connected. Please sign in and try again.' },
+    'mp.network_err': { ko: '네트워크 오류입니다.', my: 'ကွန်ရက် ချို့ယွင်းမှု ဖြစ်ပွားသည်။', en: 'A network error occurred.' },
+    'mp.processing': { ko: '처리 중…', my: 'ဆောင်ရွက်နေသည်…', en: 'Processing…' },
+    'mp.meta_exam_date': { ko: '시험일', my: 'စာမေးပွဲနေ့', en: 'Exam date' },
+    'mp.apply_no': { ko: '접수번호', my: 'လျှောက်လွှာနံပါတ်', en: 'Application no.' },
+    'mp.col_exam_num': { ko: '수험번호', my: 'ဖြေဆိုသူနံပါတ်', en: 'Exam number' },
+    'mp.col_photo': { ko: '사진 심사', my: 'ဓာတ်ပုံ စိစစ်မှု', en: 'Photo review' },
+    'mp.col_pay': { ko: '응시료 수납', my: 'ဖြေဆိုကြေး ပေးသွင်း', en: 'Fee payment' },
+    'mp.col_date': { ko: '접수일', my: 'လျှောက်ရက်', en: 'Applied on' },
+    'mp.t_round': { ko: '회차', my: 'အကြိမ်ရေ', en: 'Session' },
+    'mp.t_level': { ko: '응시 급수', my: 'ဖြေဆိုအဆင့်', en: 'Level' },
+    'mp.t_applicant': { ko: '응시자', my: 'ဖြေဆိုသူ', en: 'Applicant' },
+    'mp.t_birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
+    'mp.t_pay_status': { ko: '수납 상태', my: 'ပေးသွင်းမှု အခြေအနေ', en: 'Payment status' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script>
 (function () {
   'use strict';
 
+  function bt(key, fallback) {
+    try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
+    return fallback;
+  }
+
   var PHOTO_LABELS = {
-    pending: { text: '대기', color: 'var(--text-3)' },
-    approved: { text: '승인 완료', color: 'var(--success)' },
-    rejected: { text: '반려', color: 'var(--st-rejected)' }
+    pending: { key: 'mp.photo_pending', color: 'var(--text-3)' },
+    approved: { key: 'mp.photo_approved', color: 'var(--success)' },
+    rejected: { key: 'mp.photo_rejected', color: 'var(--st-rejected)' }
   };
   var PAY_LABELS = {
-    unpaid: { text: '대기', color: 'var(--st-pay)' },
-    paid: { text: '완료', color: 'var(--success)' },
-    refunded: { text: '환불', color: 'var(--text-3)' }
+    unpaid: { key: 'mp.pay_unpaid', color: 'var(--st-pay)' },
+    paid: { key: 'mp.pay_paid', color: 'var(--success)' },
+    refunded: { key: 'mp.pay_refunded', color: 'var(--text-3)' }
   };
   var REJECT_CODES = {
-    not_frontal: '정면 아님',
-    hat_glasses: '모자·안경',
-    bw_photo: '흑백 사진',
-    blurry: '흐림',
-    not_self: '본인 아님',
-    other: '기타'
+    not_frontal: 'mp.rj_not_frontal',
+    hat_glasses: 'mp.rj_hat_glasses',
+    bw_photo: 'mp.rj_bw',
+    blurry: 'mp.rj_blurry',
+    not_self: 'mp.rj_not_self',
+    other: 'mp.rj_other'
   };
 
   var currentProfile = null;
@@ -275,19 +333,19 @@
     var pr = PHOTO_LABELS[level.photo_review_status] || PHOTO_LABELS.pending;
     if (level.photo_review_status === 'rejected') {
       var note = level.photo_reject_code
-        ? (REJECT_CODES[level.photo_reject_code] || level.photo_reject_code)
-        : '반려';
-      return '<div class="v" style="color: var(--st-rejected);">반려 (' + esc(note) + ')</div>';
+        ? bt(REJECT_CODES[level.photo_reject_code], level.photo_reject_code)
+        : bt('mp.photo_rejected', '반려');
+      return '<div class="v" style="color: var(--st-rejected);">' + esc(bt('mp.photo_rejected', '반려')) + ' (' + esc(note) + ')</div>';
     }
     if (level.display_status === 'photo_review') {
-      return '<div class="v" style="color: var(--st-photo);">심사 중</div>';
+      return '<div class="v" style="color: var(--st-photo);">' + esc(bt('mp.photo_review', '심사 중')) + '</div>';
     }
-    return '<div class="v" style="color:' + pr.color + ';">' + esc(pr.text) + '</div>';
+    return '<div class="v" style="color:' + pr.color + ';">' + esc(bt(pr.key, '')) + '</div>';
   }
 
   function payCell(level) {
     var p = PAY_LABELS[level.payment_status] || PAY_LABELS.unpaid;
-    return '<div class="v" style="color:' + p.color + ';">' + esc(p.text) + '</div>';
+    return '<div class="v" style="color:' + p.color + ';">' + esc(bt(p.key, '')) + '</div>';
   }
 
   function examNumCell(item) {
@@ -300,7 +358,7 @@
     if (nums.length) {
       return '<div class="v exam-num">' + esc(nums.join(' / ')) + '</div>';
     }
-    return '<div class="v pending">부여 전</div>';
+    return '<div class="v pending">' + esc(bt('mp.exam_num_pending', '부여 전')) + '</div>';
   }
 
   function buildCard(item) {
@@ -309,7 +367,7 @@
     var pl = primaryLevel(item);
     var applyNo = pl.application_no || '';
     var submitted = item.submitted_at_formatted || '';
-    var meta = '시험일 ' + esc(item.exam_date_formatted || '') +
+    var meta = bt('mp.meta_exam_date', '시험일') + ' ' + esc(item.exam_date_formatted || '') +
       (item.venue && item.venue.name_ko ? ' · ' + esc(item.venue.name_ko) : '');
 
     var actions = '';
@@ -320,20 +378,20 @@
 
     if (confirmOk) {
       actions += '<button type="button" class="btn btn-secondary btn-sm" data-act="confirm" data-sub="' +
-        esc(item.submission_id) + '">접수 확인증</button>';
+        esc(item.submission_id) + '">' + esc(bt('mp.btn_confirm', '접수 확인증')) + '</button>';
     }
     if (ticketOk) {
       actions += '<a href="ticket.html?submission=' + encodeURIComponent(item.submission_id) +
-        '" class="btn btn-primary btn-sm" data-act="ticket">수험표 출력</a>';
+        '" class="btn btn-primary btn-sm" data-act="ticket">' + esc(bt('mp.btn_ticket', '수험표 출력')) + '</a>';
     }
     if (beforePay && !rejected) {
       actions +=
         '<button type="button" class="btn btn-ghost btn-sm" data-act="cancel" data-sub="' +
         esc(item.submission_id) +
-        '">접수 취소</button>';
+        '">' + esc(bt('mp.cancel_btn', '접수 취소')) + '</button>';
     }
     if (rejected) {
-      actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="rephoto">사진 재등록</a>';
+      actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="rephoto">' + esc(bt('mp.btn_rephoto', '사진 재등록')) + '</a>';
     }
 
     var statusClass = 'status status-' + st;
@@ -348,14 +406,14 @@
           '</div>' +
           '<div class="rt">' +
             '<span class="' + statusClass + '">' + statusLabel + '</span>' +
-            (applyNo ? '<span class="apply-n">접수번호 ' + esc(applyNo) + '</span>' : '') +
+            (applyNo ? '<span class="apply-n">' + esc(bt('mp.apply_no', '접수번호')) + ' ' + esc(applyNo) + '</span>' : '') +
           '</div>' +
         '</div>' +
         '<div class="app-grid">' +
-          '<div class="it"><div class="l">수험번호</div>' + examNumCell(item) + '</div>' +
-          '<div class="it"><div class="l">사진 심사</div>' + photoCell(pl) + '</div>' +
-          '<div class="it"><div class="l">응시료 수납</div>' + payCell(pl) + '</div>' +
-          '<div class="it"><div class="l">접수일</div><div class="v" style="color:var(--text-2); font-weight:500;">' + esc(submitted) + '</div></div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.col_exam_num', '수험번호')) + '</div>' + examNumCell(item) + '</div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.col_photo', '사진 심사')) + '</div>' + photoCell(pl) + '</div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.col_pay', '응시료 수납')) + '</div>' + payCell(pl) + '</div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.col_date', '접수일')) + '</div><div class="v" style="color:var(--text-2); font-weight:500;">' + esc(submitted) + '</div></div>' +
         '</div>' +
         (actions ? '<div class="app-actions">' + actions + '</div>' : '') +
       '</div>'
@@ -364,13 +422,13 @@
 
   function emptyHtml(tab) {
     if (tab === 'past') {
-      return '<div class="empty"><h3>지난 접수가 없습니다</h3><p>완료되거나 취소된 회차 접수가 여기에 표시됩니다.</p></div>';
+      return '<div class="empty"><h3>' + esc(bt('mp.empty_past_t', '지난 접수가 없습니다')) + '</h3><p>' + esc(bt('mp.empty_past_d', '완료되거나 취소된 회차 접수가 여기에 표시됩니다.')) + '</p></div>';
     }
     return (
       '<div class="empty">' +
-        '<h3>진행 중인 접수가 없습니다</h3>' +
-        '<p>시험 접수를 진행해 주세요.</p>' +
-        '<a href="register.html" class="btn btn-primary">시험 접수하기</a>' +
+        '<h3>' + esc(bt('mp.empty_active_t', '진행 중인 접수가 없습니다')) + '</h3>' +
+        '<p>' + esc(bt('mp.empty_active_d', '시험 접수를 진행해 주세요.')) + '</p>' +
+        '<a href="register.html" class="btn btn-primary">' + esc(bt('mp.empty_active_btn', '시험 접수하기')) + '</a>' +
       '</div>'
     );
   }
@@ -443,16 +501,16 @@
     }
     document.getElementById('confirmBody').innerHTML =
       '<table class="table" style="margin: 0;"><tbody style="font-size: 13.5px;">' +
-        '<tr><th style="width:110px;">회차</th><td>' + roundTitle(item) + '</td></tr>' +
-        '<tr><th>접수번호</th><td style="font-family:Inter,sans-serif;">' + esc(pl.application_no) + '</td></tr>' +
-        '<tr><th>수험번호</th><td style="font-family:Inter,sans-serif;">' +
-          (pl.exam_number_visible && pl.exam_number ? esc(pl.exam_number) : '부여 전') + '</td></tr>' +
-        '<tr><th>응시 급수</th><td>' + esc(levels) + '</td></tr>' +
-        '<tr><th>접수일</th><td>' + esc(item.submitted_at_formatted) + '</td></tr>' +
-        '<tr><th>응시자</th><td>' + esc(u.name_ko || '') + ' / ' + esc(u.name_en || '') + '</td></tr>' +
-        '<tr><th>생년월일</th><td>' + esc(birth || '—') + '</td></tr>' +
-        '<tr><th>수납 상태</th><td><span class="status ' +
-          (payDone ? 'status-approved">완료' : 'status-pay">대기') + '</span></td></tr>' +
+        '<tr><th style="width:110px;">' + esc(bt('mp.t_round', '회차')) + '</th><td>' + roundTitle(item) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.apply_no', '접수번호')) + '</th><td style="font-family:Inter,sans-serif;">' + esc(pl.application_no) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.col_exam_num', '수험번호')) + '</th><td style="font-family:Inter,sans-serif;">' +
+          (pl.exam_number_visible && pl.exam_number ? esc(pl.exam_number) : esc(bt('mp.exam_num_pending', '부여 전'))) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_level', '응시 급수')) + '</th><td>' + esc(levels) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.col_date', '접수일')) + '</th><td>' + esc(item.submitted_at_formatted) + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_applicant', '응시자')) + '</th><td>' + esc(u.name_ko || '') + ' / ' + esc(u.name_en || '') + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_birth', '생년월일')) + '</th><td>' + esc(birth || '—') + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_pay_status', '수납 상태')) + '</th><td><span class="status ' +
+          (payDone ? 'status-approved">' + esc(bt('mp.pay_paid', '완료')) : 'status-pay">' + esc(bt('mp.pay_unpaid', '대기'))) + '</span></td></tr>' +
       '</tbody></table>';
     TPKM.openModal('modalConfirm');
   }
@@ -497,9 +555,9 @@
 
   function showLoadError(msg) {
     var html =
-      '<div class="empty"><h3>접수 내역을 불러올 수 없습니다</h3><p>' +
+      '<div class="empty"><h3>' + esc(bt('mp.load_fail_t', '접수 내역을 불러올 수 없습니다')) + '</h3><p>' +
       esc(msg) +
-      '</p><button type="button" class="btn btn-secondary" onclick="location.reload()">다시 시도</button></div>';
+      '</p><button type="button" class="btn btn-secondary" onclick="location.reload()">' + esc(bt('mp.retry', '다시 시도')) + '</button></div>';
     document.getElementById('paneActive').innerHTML = html;
     document.getElementById('panePast').innerHTML = html;
     document.getElementById('ctActive').textContent = '0';
@@ -515,12 +573,12 @@
         location.href = 'login.html?next=' + encodeURIComponent('mypage.html');
         return;
       }
-      showLoadError('API가 연결되지 않았습니다. 로그인 후 다시 시도해 주세요.');
+      showLoadError(bt('mp.api_off', 'API가 연결되지 않았습니다. 로그인 후 다시 시도해 주세요.'));
       return;
     }
 
     document.getElementById('paneActive').innerHTML =
-      '<p style="text-align:center;padding:32px;color:var(--text-3);">접수 내역을 불러오는 중…</p>';
+      '<p style="text-align:center;padding:32px;color:var(--text-3);">' + esc(bt('mp.loading', '접수 내역을 불러오는 중…')) + '</p>';
 
     TopikApi.getMyApplications().then(function (res) {
       if (res.ok && res.body) {
@@ -529,7 +587,7 @@
       }
       showLoadError(TopikApi.parseError(res));
     }).catch(function () {
-      showLoadError('네트워크 오류입니다.');
+      showLoadError(bt('mp.network_err', '네트워크 오류입니다.'));
     });
   }
 
@@ -540,10 +598,10 @@
       return;
     }
     btn.disabled = true;
-    btn.textContent = '처리 중…';
+    btn.textContent = bt('mp.processing', '처리 중…');
     TopikApi.cancelSubmission(cancelSubmissionId).then(function (res) {
       btn.disabled = false;
-      btn.textContent = '접수 취소';
+      btn.textContent = bt('mp.cancel_btn', '접수 취소');
       TPKM.closeModal('modalCancel');
       if (!res.ok) {
         alert(TopikApi.parseError(res));
@@ -553,9 +611,9 @@
       loadApplications();
     }).catch(function () {
       btn.disabled = false;
-      btn.textContent = '접수 취소';
+      btn.textContent = bt('mp.cancel_btn', '접수 취소');
       TPKM.closeModal('modalCancel');
-      alert('네트워크 오류입니다.');
+      alert(bt('mp.network_err', '네트워크 오류입니다.'));
     });
   });
 

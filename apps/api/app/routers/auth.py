@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db_session
+from app.lib.audit import write_audit
+from app.lib.deps import AuthUser, get_client_ip, get_optional_user
 from app.lib.errors import api_error
 from app.lib.security import (
     create_access_token,
@@ -33,13 +35,18 @@ from app.lib.validation import (
     is_valid_email,
     is_valid_password,
     normalize_birth_date,
+    validate_roster_codes,
 )
 from app.models.admin import AdminUser
 from app.models.auth_tokens import EmailVerificationCode, PasswordResetToken
+from app.models.content import Term, TermConsent
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
+
+LOGIN_MAX_FAIL = 5
+LOGIN_LOCK_MINUTES = 30
 
 
 def _normalize_email(value: str) -> str:
@@ -89,6 +96,8 @@ class RegisterBody(BaseModel):
     photo_base64: str | None = None
     marketing_opt_in: bool = False
     preferred_lang: str = "ko"
+    # 동의한 약관 항목/버전(계약서 6.4). 예: [{"term_type":"service","version":"1.0","agreed":true}]
+    terms_agreed: list[dict] = []
 
 
 class ForgotPasswordBody(BaseModel):
@@ -144,23 +153,82 @@ async def google_config() -> dict:
     return {"enabled": False, "client_id": None}
 
 
+def _is_locked(account) -> bool:
+    return bool(account.login_locked_until) and account.login_locked_until > datetime.now(timezone.utc)
+
+
+def _register_login_failure(account) -> None:
+    account.failed_login_count = (account.failed_login_count or 0) + 1
+    if account.failed_login_count >= LOGIN_MAX_FAIL:
+        account.login_locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOGIN_LOCK_MINUTES)
+        account.failed_login_count = 0
+
+
+def _reset_login_state(account) -> None:
+    account.failed_login_count = 0
+    account.login_locked_until = None
+    account.last_login_at = datetime.now(timezone.utc)
+
+
+_LOCK_MESSAGE = (
+    f"로그인 {LOGIN_MAX_FAIL}회 실패로 계정이 잠겼습니다. "
+    f"{LOGIN_LOCK_MINUTES}분 후 다시 시도해 주세요."
+)
+
+
 @router.post("/login")
-async def login(body: LoginBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def login(
+    body: LoginBody,
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     email = body.email.strip().lower()
     admin_res = await db.execute(select(AdminUser).where(AdminUser.email == email, AdminUser.status == "active"))
     admin = admin_res.scalar_one_or_none()
-    if admin and verify_password(body.password, admin.password_hash):
-        admin.last_login_at = datetime.now(timezone.utc)
+    if admin:
+        if _is_locked(admin):
+            raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
+        if verify_password(body.password, admin.password_hash):
+            _reset_login_state(admin)
+            await write_audit(
+                db, admin_user_id=admin.id, action_type="login",
+                target_type="admin_users", target_id=admin.id, ip_address=ip,
+            )
+            await db.commit()
+            return _admin_token_response(admin)
+        _register_login_failure(admin)
         await db.commit()
-        return _admin_token_response(admin)
+        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
 
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     user = user_res.scalar_one_or_none()
-    if not user or not verify_password(body.password, user.password_hash):
+    if not user:
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
-    user.last_login_at = datetime.now(timezone.utc)
+    if _is_locked(user):
+        raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
+    if not verify_password(body.password, user.password_hash):
+        _register_login_failure(user)
+        await db.commit()
+        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+    _reset_login_state(user)
     await db.commit()
     return _user_token_response(user)
+
+
+@router.post("/logout")
+async def logout(
+    auth: AuthUser | None = Depends(get_optional_user),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    # 토큰 폐기는 클라이언트에서 수행. 관리자 로그아웃은 audit 기록(계약서 7절).
+    if auth and auth.is_admin:
+        await write_audit(
+            db, admin_user_id=auth.id, action_type="logout",
+            target_type="admin_users", target_id=auth.id, ip_address=ip,
+        )
+        await db.commit()
+    return {"logged_out": True}
 
 
 @router.post("/refresh")
@@ -251,8 +319,56 @@ async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_
     return {"verified": True, "verification_token": token}
 
 
+async def _persist_consents(
+    db: AsyncSession, *, user_id: int, terms_agreed: list[dict], marketing_opt_in: bool, ip: str | None
+) -> None:
+    """가입 시 동의 약관 종류/버전 영속화(terms_consents)."""
+    # 현재 게시중 약관의 버전 매핑(버전 미전달 시 보완).
+    pub = await db.execute(select(Term).where(Term.status == "published"))
+    versions: dict[str, tuple[int, str]] = {}
+    for t in pub.scalars().all():
+        versions.setdefault(t.term_type, (t.id, t.version))
+
+    seen_types: set[str] = set()
+    for item in terms_agreed or []:
+        if not isinstance(item, dict):
+            continue
+        ttype = item.get("term_type") or item.get("type")
+        if not ttype:
+            continue
+        seen_types.add(ttype)
+        term_id, ver = versions.get(ttype, (None, ""))
+        db.add(
+            TermConsent(
+                user_id=user_id,
+                term_id=item.get("term_id") or term_id,
+                term_type=ttype,
+                version=str(item.get("version") or ver or ""),
+                agreed=bool(item.get("agreed", True)),
+                ip_address=ip,
+            )
+        )
+    # 마케팅 동의는 별도 항목으로 미전달 시 플래그 기준으로 1건 기록.
+    if "marketing" not in seen_types:
+        term_id, ver = versions.get("marketing", (None, ""))
+        db.add(
+            TermConsent(
+                user_id=user_id,
+                term_id=term_id,
+                term_type="marketing",
+                version=ver,
+                agreed=bool(marketing_opt_in),
+                ip_address=ip,
+            )
+        )
+
+
 @router.post("/register")
-async def register(body: RegisterBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def register(
+    body: RegisterBody,
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     email = decode_email_verify_token(body.verification_token)
     if not email or email != body.email.strip().lower():
         raise api_error("INVALID_TOKEN", "이메일 인증이 필요합니다.", 400)
@@ -265,6 +381,9 @@ async def register(body: RegisterBody, db: AsyncSession = Depends(get_db_session
         raise api_error("VALIDATION_ERROR", "생년월일 형식이 올바르지 않습니다.")
     if is_under_minimum_age(birth):
         raise api_error("AGE_RESTRICTED", f"만 {settings.min_signup_age_years}세 미만은 회원가입할 수 없습니다.", 422)
+    roster_err = validate_roster_codes(body.job_code, body.motive_code, body.purpose_code)
+    if roster_err:
+        raise api_error("VALIDATION_ERROR", roster_err)
 
     exists = await db.execute(select(User.id).where(User.email == email))
     if exists.scalar_one_or_none():
@@ -295,6 +414,13 @@ async def register(body: RegisterBody, db: AsyncSession = Depends(get_db_session
             user.photo_file_id = photo.id
         except ValueError as exc:
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
+    await _persist_consents(
+        db,
+        user_id=user.id,
+        terms_agreed=body.terms_agreed,
+        marketing_opt_in=body.marketing_opt_in,
+        ip=ip,
+    )
     await db.commit()
     await db.refresh(user)
     return _user_token_response(user)

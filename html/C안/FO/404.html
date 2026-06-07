@@ -30,15 +30,34 @@
 <main class="container">
   <div class="err-wrap">
     <div class="err-code">404</div>
-    <h1>요청하신 페이지를 찾을 수 없습니다</h1>
-    <p>주소가 변경되었거나 삭제되었을 수 있습니다. 아래 버튼으로 홈 또는 접수 안내로 이동해 주세요.</p>
+    <h1 data-i18n-content="e404.title">요청하신 페이지를 찾을 수 없습니다</h1>
+    <p data-i18n-content="e404.desc">주소가 변경되었거나 삭제되었을 수 있습니다. 아래 버튼으로 홈 또는 접수 안내로 이동해 주세요.</p>
     <div class="err-actions">
-      <a href="index.html" class="btn btn-primary">홈으로</a>
-      <a href="apply-howto.html" class="btn btn-secondary">접수 방법</a>
+      <a href="index.html" class="btn btn-primary" data-i18n-content="e404.home">홈으로</a>
+      <a href="apply-howto.html" class="btn btn-secondary" data-i18n-content="apply.title">접수 방법</a>
     </div>
   </div>
 </main>
 <div id="site-footer"></div>
+<script>
+window.TPKM_PAGE_I18N = {
+  'e404.title': {
+    ko: '요청하신 페이지를 찾을 수 없습니다',
+    my: 'သင်တောင်းဆိုသော စာမျက်နှာကို ရှာမတွေ့ပါ',
+    en: 'The page you requested could not be found'
+  },
+  'e404.desc': {
+    ko: '주소가 변경되었거나 삭제되었을 수 있습니다. 아래 버튼으로 홈 또는 접수 안내로 이동해 주세요.',
+    my: 'လိပ်စာ ပြောင်းလဲခြင်း သို့မဟုတ် ဖျက်ခြင်း ဖြစ်နိုင်သည်။ အောက်ပါ ခလုတ်များဖြင့် ပင်မ သို့မဟုတ် လျှောက်ထားနည်း လမ်းညွှန်သို့ သွားပါ။',
+    en: 'The address may have changed or been removed. Use the buttons below to go to the home page or the registration guide.'
+  },
+  'e404.home': {
+    ko: '홈으로',
+    my: 'ပင်မသို့',
+    en: 'Home'
+  }
+};
+</script>
 <script src="assets/common.js"></script>
 </body>
 </html>

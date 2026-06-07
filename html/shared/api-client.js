@@ -366,7 +366,9 @@
       var token = getAccessToken();
       if (token) headers.Authorization = "Bearer " + token;
     }
-    if (options.body && !headers["Content-Type"]) {
+    var isFormData =
+      typeof FormData !== "undefined" && options.body instanceof FormData;
+    if (options.body && !headers["Content-Type"] && !isFormData) {
       headers["Content-Type"] = "application/json";
     }
     if (!apiConfigured()) {
@@ -613,6 +615,39 @@
     });
   }
 
+  // 게시판 첨부파일 업로드 (multipart, field `file`) — jpg/png/pdf, ≤5MB (서버 검증)
+  // 성공: { ok, status, body: { file_id, filename, size, content_type } }
+  function uploadBoardAttachment(file) {
+    var fd = new FormData();
+    fd.append("file", file);
+    return apiFetch("/api/v1/board/attachments", {
+      method: "POST",
+      body: fd,
+    });
+  }
+
+  // 비밀글 잠금 해제 — POST /board/posts/{id}/unlock { password }
+  // 성공 시 body = 글 본문(상세 응답), 5회 실패 시 423/locked 응답.
+  function unlockBoardPost(postId, password) {
+    return apiFetch(
+      "/api/v1/board/posts/" + encodeURIComponent(postId) + "/unlock",
+      {
+        method: "POST",
+        body: JSON.stringify({ password: password || "" }),
+      }
+    );
+  }
+
+  // 약관 목록(현행 게시 버전) — 가입/접수 동의 이력 작성용 버전 조회
+  function getTerms(query) {
+    var q = query || {};
+    var parts = [];
+    if (q.lang) parts.push("lang=" + encodeURIComponent(q.lang));
+    if (q.type) parts.push("type=" + encodeURIComponent(q.type));
+    var qs = parts.length ? "?" + parts.join("&") : "";
+    return apiFetch("/api/v1/terms" + qs, { auth: false });
+  }
+
   function getBoardComments(postId) {
     return apiFetch(
       "/api/v1/board/posts/" + encodeURIComponent(postId) + "/comments"
@@ -709,6 +744,9 @@
     getBoardPosts: getBoardPosts,
     getBoardPost: getBoardPost,
     createBoardPost: createBoardPost,
+    uploadBoardAttachment: uploadBoardAttachment,
+    unlockBoardPost: unlockBoardPost,
+    getTerms: getTerms,
     getBoardComments: getBoardComments,
     createBoardComment: createBoardComment,
     parseError: parseError,

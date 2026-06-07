@@ -100,8 +100,22 @@ function PermissionsPanel() {
   };
 
   const exportMatrix = () => {
-    DataStore.addAudit({ type: '관리자계정', targetId: '권한매트릭스', action: '게시', memo: '권한 매트릭스 내보내기(CSV)' });
-    toastOk('권한 매트릭스를 CSV로 내보냈습니다.');
+    const roles = [['super', '최고관리자'], ['general', '일반관리자'], ['viewer', '조회관리자']];
+    const headers = ['구분', '메뉴', '액션', '최고관리자', '일반관리자', '조회관리자'];
+    const rows = [];
+    sections.forEach(sec => sec.menus.forEach(m => m.actions.forEach(a => {
+      rows.push([
+        sec.title, m.label, actLabel(a),
+        ...roles.map(([rk]) => ((state.perms[rk] || {})[m.id] || []).includes(a) ? 'O' : 'X'),
+      ]);
+    })));
+    const fn = '권한매트릭스_' + new Date().toISOString().slice(0, 10) + '.csv';
+    const after = () => {
+      DataStore.addAudit({ type: '관리자계정', targetId: '권한매트릭스', action: '게시', memo: '권한 매트릭스 내보내기(CSV)' });
+      toastOk('권한 매트릭스를 CSV로 내보냈습니다.');
+    };
+    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, rows).then(after); }
+    else after();
   };
 
   const totalOn = useMemo(() => {

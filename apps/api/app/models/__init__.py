@@ -9,7 +9,7 @@ from app.models.application import (
     ApplicationMemo,
     ApplicationSubmission,
 )
-from app.models.content import FaqItem, Notice, Term
+from app.models.content import FaqItem, Notice, Term, TermConsent
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue
 from app.models.system import EmailOutbox, FileAttachment
 from app.models.user import User
@@ -34,5 +34,6 @@ __all__ = [
     "FileAttachment",
     "Notice",
     "Term",
+    "TermConsent",
     "User",
 ]

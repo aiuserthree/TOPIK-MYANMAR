@@ -245,12 +245,18 @@
           goAdmin();
           return;
         }
-        if (res.status === 401) {
-          showError('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');
+        var code = res.body && res.body.error && res.body.error.code;
+        if (res.status === 423 || code === 'ACCOUNT_LOCKED' || code === 'LOGIN_LOCKED') {
+          showError('계정 잠금', TopikBoApi.parseError(res) || '로그인 5회 실패로 계정이 잠겼습니다. 잠시 후 다시 시도하거나 관리자에게 문의하세요.');
+        } else if (res.status === 401) {
+          var msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
+          var remaining = res.body && res.body.error && (res.body.error.remaining_attempts != null ? res.body.error.remaining_attempts : (res.body.error.details && res.body.error.details.remaining_attempts));
+          if (remaining != null) msg += ' (남은 시도 ' + remaining + '회 후 계정 잠금)';
+          showError('로그인 실패', msg);
         } else if (res.status === 403) {
           showError('접근 거부', TopikBoApi.parseError(res));
         } else if (res.status === 0) {
-          showError('연결 실패', 'API에 연결할 수 없습니다. 서버(localhost:8000) 실행 여부를 확인해 주세요.');
+          showError('연결 실패', 'API 서버에 연결할 수 없습니다. 네트워크 또는 서버 상태를 확인해 주세요.');
         } else {
           showError('로그인 실패', TopikBoApi.parseError(res));
         }

@@ -10,95 +10,125 @@
     return '';
   }
 
-  function rosterRow(a, i, venueName) {
+  function birth8(v) {
+    return String(v || '').replace(/[^0-9]/g, '').slice(0, 8);
+  }
+
+  // 「연명부 양식.xlsx」 B~K 컬럼 순서(총 10열, 순번 없음)
+  // 한글성명|영문성명|생년월일|성별|국적|제1언어|직업코드|응시동기코드|응시목적코드|수험번호
+  function rosterRow(a) {
     return [
-      i + 1,
-      a.nameKo || '',
-      a.name || a.nameEn || '',
-      (a.birth || a.dob || '').replace(/\./g, ''),
-      sexCode(a.gender || a.sex),
-      a.nationality || a.nation || '미얀마',
-      a.firstLang || '',
-      a.job || '',
-      a.motive || '',
-      a.purpose || '',
-      a.exam || a.examNo || ''
+      a.nameKo && a.nameKo !== '—' ? a.nameKo : (a.name || a.nameEn || ''),  // 한글성명(없으면 영문)
+      a.name || a.nameEn || '',                                                // 영문성명
+      birth8(a.birth || a.dob),                                                // 생년월일 8자리
+      sexCode(a.gender != null ? a.gender : a.sex),                            // 성별 1/2
+      a.nationality || a.nation || '미얀마',                                    // 국적(명칭)
+      a.firstLang || a.l1 || '',                                               // 제1언어(명칭)
+      a.jobCode != null && a.jobCode !== '' ? a.jobCode : '',                  // 직업코드
+      a.motiveCode != null && a.motiveCode !== '' ? a.motiveCode : '',         // 응시동기코드
+      a.purposeCode != null && a.purposeCode !== '' ? a.purposeCode : '',      // 응시목적코드
+      a.exam || a.examNo || ''                                                 // 수험번호(13자리)
     ];
   }
 
+  // 수험번호(=영문명 정렬) 순. 미부여자는 영문명 보조 정렬.
   function sortByExam(rows) {
     return rows.slice().sort(function (x, y) {
       var ea = (x.exam || x.examNo || '');
       var eb = (y.exam || y.examNo || '');
-      return ea < eb ? -1 : ea > eb ? 1 : 0;
+      if (ea && eb) return ea < eb ? -1 : ea > eb ? 1 : 0;
+      if (ea && !eb) return -1;
+      if (!ea && eb) return 1;
+      var na = (x.nameEn || x.name || '').toLowerCase();
+      var nb = (y.nameEn || y.name || '').toLowerCase();
+      return na < nb ? -1 : na > nb ? 1 : 0;
     });
+  }
+
+  function levelPrefix(level) {
+    var l = String(level || '');
+    if (l.indexOf('동시') >= 0) return 'TOPIK Ⅰ·Ⅱ';
+    if (l.indexOf('Ⅱ') >= 0 || l.toUpperCase().indexOf('II') >= 0) return 'TOPIK Ⅱ';
+    return 'TOPIK Ⅰ';
+  }
+
+  // 지역·시험장·시험수준별 그룹화(각 그룹 = 개별 파일/단일 시트)
+  function buildGroups(rows, state) {
+    var groups = {};
+    rows.forEach(function (a) {
+      var venue = (state.venues || []).find(function (v) { return v.id === a.venueId; });
+      var region = venue ? (venue.region || '미얀마') : '미지정';
+      var vname = venue ? venue.nameKo : '미지정';
+      var lp = levelPrefix(a.level);
+      var key = lp + '|' + region + '|' + vname;
+      if (!groups[key]) groups[key] = { level: lp, region: region, venue: vname, list: [] };
+      groups[key].list.push(a);
+    });
+    return groups;
+  }
+
+  // 파일명: TOPIK Ⅰ_미얀마_{지역}_{시험장}.xlsx
+  function groupFilename(levelPfx, region, venue) {
+    return levelPfx + '_미얀마_' + region + '_' + venue + '.xlsx';
   }
 
   function exportRosterExcel(opts) {
     opts = opts || {};
     if (!g.TOPIKExport) return Promise.reject(new Error('TOPIKExport not loaded'));
     var state = opts.state || {};
-    var rows = sortByExam(opts.rows || []);
     var session = state.sessions && state.sessions.find(function (s) { return s.id === state.activeSessionId; });
-    var sessionNo = session ? session.no : '00';
+    var sessionNo = session ? session.no : '';
     var headers = g.TOPIKExport.ROSTER_HEADERS;
 
-    if (opts.mode === 'full') {
-      var groups = {};
-      rows.forEach(function (a) {
-        var venue = (state.venues || []).find(function (v) { return v.id === a.venueId; });
-        var key = (a.level || 'TOPIK') + '_미얀마_' + (venue ? venue.nameKo : '미지정');
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(a);
-      });
-      var files = Object.keys(groups).map(function (k) {
-        var list = groups[k];
-        return {
-          filename: '제' + sessionNo + '회 TOPIK 지원자 연명부(TOPIK_' + k + ').xlsx',
-          rows: list.map(function (a, i) { return rosterRow(a, i, k); }),
-          headers: headers
-        };
-      });
-      return g.TOPIKExport.downloadRosterXlsxZip({
-        zipName: '제' + sessionNo + '회_TOPIK_연명부_일괄.zip',
-        files: files
+    // full=회차 전체, current=전달된 필터 행
+    var baseRows = opts.mode === 'full'
+      ? (state.applicants || []).filter(function (a) { return a.sessionId === state.activeSessionId; })
+      : (opts.rows || []);
+    var rows = sortByExam(baseRows);
+
+    var groups = buildGroups(rows, state);
+    var files = Object.keys(groups).map(function (k) {
+      var grp = groups[k];
+      var list = sortByExam(grp.list);
+      return {
+        filename: groupFilename(grp.level, grp.region, grp.venue),
+        rows: list.map(function (a) { return rosterRow(a); }),
+        headers: headers
+      };
+    });
+
+    if (files.length === 0) {
+      return Promise.reject(new Error('내보낼 대상이 없습니다.'));
+    }
+    if (files.length === 1) {
+      return g.TOPIKExport.downloadRosterXlsx({
+        filename: files[0].filename, headers: headers, rows: files[0].rows
       });
     }
-
-    return g.TOPIKExport.downloadRosterXlsx({
-      filename: '제' + sessionNo + '회 TOPIK 지원자 연명부(미얀마_혼합).xlsx',
-      headers: headers,
-      rows: rows.map(function (a, i) { return rosterRow(a, i); })
+    return g.TOPIKExport.downloadRosterXlsxZip({
+      zipName: 'TOPIK_미얀마_연명부' + (sessionNo ? '_제' + sessionNo + '회' : '') + '.zip',
+      files: files
     });
   }
 
+  /**
+   * 사진 zip — 서버 엔드포인트(GET /api/v1/admin/applications/photos.zip)에서 실제 사진으로 생성.
+   * 클라이언트 더미(1×1 JPEG) 생성 제거. (계약서 4절)
+   */
   function exportPhotosZip(opts) {
     opts = opts || {};
-    if (!g.TOPIKExport) return Promise.reject(new Error('TOPIKExport not loaded'));
-    var state = opts.state || {};
-    var rows = opts.rows || [];
-    var entries = [];
-    var missing = [];
-    rows.forEach(function (a) {
-      var exam = (a.exam || a.examNo || '').trim();
-      var venue = (state.venues || []).find(function (v) { return v.id === a.venueId; });
-      var region = venue ? (venue.region || '미얀마') : '미얀마';
-      var vname = venue ? venue.nameKo : '미지정';
-      var lvl = (a.level || '').indexOf('Ⅱ') >= 0 ? 'Ⅱ' : 'Ⅰ';
-      if (a.photoOk && exam && a.status !== 'rejected' && a.status !== 'cancelled') {
-        entries.push({
-          path: region + '/' + vname + '/TOPIK_' + lvl + '/' + exam + '.jpg',
-          dataUrl: a.photoUrl || null
-        });
-      } else {
-        missing.push([exam || '—', a.nameKo || '', !a.photoOk ? '사진 미승인' : '수험번호 미부여']);
+    var DS = g.DataStore;
+    if (!DS || !DS.isApiMode || !DS.isApiMode()) {
+      return Promise.reject(new Error('사진 zip 다운로드는 서버 연결(API)이 필요합니다.'));
+    }
+    var query = { round_id: opts.roundId || (DS.state && DS.state.activeSessionId) };
+    if (opts.venueId && opts.venueId !== 'all') query.venue_id = opts.venueId;
+    if (opts.level && opts.level !== 'all') query.level = opts.level;
+    return DS.apiDownloadPhotosZip(query).then(function (res) {
+      if (!res || !res.ok) {
+        throw new Error((res && res.body && res.body.error && res.body.error.message) || '사진 zip 다운로드에 실패했습니다.');
       }
-    });
-    var session = state.sessions && state.sessions.find(function (s) { return s.id === state.activeSessionId; });
-    return g.TOPIKExport.downloadPhotosZip({
-      zipName: 'TOPIK_제' + (session ? session.no : '') + '회_사진.zip',
-      entries: entries,
-      report: missing.length ? { headers: ['수험번호', '한글성명', '사유'], rows: missing } : null
+      return true;
     });
   }
 

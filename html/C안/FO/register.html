@@ -172,20 +172,20 @@
 
     <header style="text-align:center; margin-bottom: 20px;">
       <h1 class="h1" data-i18n-content="reg.title">시험 접수</h1>
-      <p class="body-sm" style="margin-top: 6px;">아래 4단계를 차례로 진행해 주세요.</p>
+      <p class="body-sm" style="margin-top: 6px;" data-i18n-content="reg.subhead">아래 4단계를 차례로 진행해 주세요.</p>
     </header>
 
     <div class="step-sticky">
       <ol class="steps">
-        <li class="step active" data-s="1"><span class="n">1</span><span>회차·급수</span></li>
-        <li class="step" data-s="2"><span class="n">2</span><span>회원정보 확인</span></li>
-        <li class="step" data-s="3"><span class="n">3</span><span>사진 규격 확인</span></li>
-        <li class="step" data-s="4"><span class="n">4</span><span>최종 확인</span></li>
+        <li class="step active" data-s="1"><span class="n">1</span><span data-i18n-content="reg.step1">회차·급수</span></li>
+        <li class="step" data-s="2"><span class="n">2</span><span data-i18n-content="reg.step2">회원정보 확인</span></li>
+        <li class="step" data-s="3"><span class="n">3</span><span data-i18n-content="reg.step3">사진 규격 확인</span></li>
+        <li class="step" data-s="4"><span class="n">4</span><span data-i18n-content="reg.step4">최종 확인</span></li>
       </ol>
     </div>
 
     <div style="display:flex; justify-content:flex-end; margin-bottom: 12px;">
-      <button type="button" class="btn btn-ghost btn-sm" id="btnSaveDraft">저장 후 나가기</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnSaveDraft" data-i18n-content="reg.save_draft">저장 후 나가기</button>
     </div>
 
     <!-- ============ STEP 1: 회차·급수 ============ -->
@@ -194,161 +194,162 @@
       <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s1_desc">접수 가능한 회차 중 하나를 선택해 주세요.</p>
 
       <div class="round-list" id="roundList">
-        <p class="body-sm" id="roundListLoading" style="display:none;">회차 정보를 불러오는 중…</p>
+        <p class="body-sm" id="roundListLoading" style="display:none;" data-i18n-content="reg.round_loading">회차 정보를 불러오는 중…</p>
         <p class="body-sm" id="roundListError" style="display:none; color:var(--danger);"></p>
       </div>
 
-      <h2 class="h3" style="margin: 28px 0 6px;">시험장 선택</h2>
-      <p class="body-sm" style="margin-bottom: 10px;">접수 회차에 배정 가능한 시험장입니다.</p>
+      <h2 class="h3" style="margin: 28px 0 6px;" data-i18n-content="reg.venue_title">시험장 선택</h2>
+      <p class="body-sm" style="margin-bottom: 10px;" data-i18n-content="reg.venue_desc">접수 회차에 배정 가능한 시험장입니다.</p>
       <select class="input" id="venueSelect" style="width:100%; max-width:480px;">
-        <option value="">시험장을 선택해 주세요</option>
+        <option value="" data-i18n-content="reg.venue_ph">시험장을 선택해 주세요</option>
       </select>
 
-      <h2 class="h3" style="margin: 28px 0 6px;">응시 급수 선택 <span style="font-size: 12px; color:var(--text-3); font-weight:400;">(복수 선택 가능)</span></h2>
-      <p class="body-sm" style="margin-bottom: 16px;">TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.</p>
+      <h2 class="h3" style="margin: 28px 0 6px;"><span data-i18n-content="reg.level_title">응시 급수 선택</span> <span style="font-size: 12px; color:var(--text-3); font-weight:400;" data-i18n-content="reg.multi_select">(복수 선택 가능)</span></h2>
+      <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.level_desc">TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.</p>
 
       <div class="lvl-cards">
         <label class="lvl-card">
           <span class="ck-box"></span>
           <input type="checkbox" id="lvl1">
           <div style="flex:1;">
-            <div class="ttl">TOPIK Ⅰ <span style="font-size:12px; color:var(--text-3); font-weight:500;">초급 (1·2급)</span></div>
-            <div class="sub">듣기 30 + 읽기 40 · 100분 · 200점</div>
-            <div class="fee">응시료 50,000 MMK</div>
+            <div class="ttl">TOPIK Ⅰ <span style="font-size:12px; color:var(--text-3); font-weight:500;" data-i18n-content="reg.lvl1_sub">초급 (1·2급)</span></div>
+            <div class="sub" data-i18n-content="reg.lvl1_detail">듣기 30 + 읽기 40 · 100분 · 200점</div>
+            <div class="fee" id="feeLvl1" data-fee-level="I"><span data-i18n-content="reg.fee_label">응시료</span> 50,000 MMK</div>
           </div>
         </label>
         <label class="lvl-card">
           <span class="ck-box"></span>
           <input type="checkbox" id="lvl2">
           <div style="flex:1;">
-            <div class="ttl">TOPIK Ⅱ <span style="font-size:12px; color:var(--text-3); font-weight:500;">중·고급 (3~6급)</span></div>
-            <div class="sub">듣기 50 + 쓰기 4 + 읽기 50 · 180분 · 300점</div>
-            <div class="fee">응시료 75,000 MMK</div>
+            <div class="ttl">TOPIK Ⅱ <span style="font-size:12px; color:var(--text-3); font-weight:500;" data-i18n-content="reg.lvl2_sub">중·고급 (3~6급)</span></div>
+            <div class="sub" data-i18n-content="reg.lvl2_detail">듣기 50 + 쓰기 4 + 읽기 50 · 180분 · 300점</div>
+            <div class="fee" id="feeLvl2" data-fee-level="II"><span data-i18n-content="reg.fee_label">응시료</span> 75,000 MMK</div>
           </div>
         </label>
       </div>
 
       <div class="callout" style="margin-top: 20px;">
         <div class="ico"></div>
-        <div>
+        <div data-i18n-content="reg.fee_callout" data-i18n-content-html>
           <strong>동시 접수 시 응시료는 각 수준별로 개별 오프라인 수납</strong>합니다 (합산 일괄 납부 아님).
           동시 접수 시 시험장은 동일 코드로 부여됩니다.
         </div>
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-primary btn-block btn-lg" data-next>다음</button>
+        <button class="btn btn-primary btn-block btn-lg" data-next data-i18n-content="btn.next">다음</button>
       </div>
     </section>
 
     <!-- ============ STEP 2: 회원정보 확인 ============ -->
     <section class="step-pane" data-s="2">
-      <h2 class="h3" style="margin-bottom: 6px;">회원정보 확인</h2>
-      <p class="body-sm" style="margin-bottom: 16px;">회원가입 시 등록한 정보입니다. 본 단계에서 수정할 수 없습니다.</p>
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="reg.s2_title">회원정보 확인</h2>
+      <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s2_desc">회원가입 시 등록한 정보입니다. 본 단계에서 수정할 수 없습니다.</p>
 
       <div class="callout">
         <div class="ico"></div>
-        <div>
+        <div data-i18n-content="reg.s2_edit" data-i18n-content-html>
           정보 변경이 필요하시면 <a href="mypage-profile.html" class="text-primary" style="text-decoration: underline;">마이페이지 · 내정보 수정</a>에서 수정해 주세요.
         </div>
       </div>
 
-      <h3 class="h4" style="margin: 20px 0 10px;">기본정보</h3>
+      <h3 class="h4" style="margin: 20px 0 10px;" data-i18n-content="reg.basic_info">기본정보</h3>
       <div class="ro-grid" id="profileGrid">
-        <div class="ro-item"><div class="l">한글 성명</div><div class="v" id="profNameKo">—</div></div>
-        <div class="ro-item"><div class="l">영문 성명</div><div class="v" id="profNameEn">—</div></div>
-        <div class="ro-item"><div class="l">생년월일</div><div class="v" id="profBirth">—</div></div>
-        <div class="ro-item"><div class="l">성별</div><div class="v" id="profGender">—</div></div>
-        <div class="ro-item"><div class="l">국적</div><div class="v" id="profNationality">—</div></div>
-        <div class="ro-item"><div class="l">제1언어</div><div class="v" id="profLang">—</div></div>
-        <div class="ro-item"><div class="l">연락처</div><div class="v" id="profPhone">—</div></div>
-        <div class="ro-item"><div class="l">이메일 (아이디)</div><div class="v" id="profEmail">—</div></div>
-        <div class="ro-item"><div class="l">직업</div><div class="v" id="profJob">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.name_ko">한글 성명</div><div class="v" id="profNameKo">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.name_en">영문 성명</div><div class="v" id="profNameEn">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.birth">생년월일</div><div class="v" id="profBirth">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.gender">성별</div><div class="v" id="profGender">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.nationality">국적</div><div class="v" id="profNationality">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.lang1">제1언어</div><div class="v" id="profLang">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.phone">연락처</div><div class="v" id="profPhone">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.email_id">이메일 (아이디)</div><div class="v" id="profEmail">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.job">직업</div><div class="v" id="profJob" data-roster-kind="job">—</div></div>
       </div>
 
-      <h3 class="h4" style="margin: 24px 0 10px;">응시 정보</h3>
+      <h3 class="h4" style="margin: 24px 0 10px;" data-i18n-content="reg.exam_info">응시 정보</h3>
       <div class="ro-grid">
-        <div class="ro-item"><div class="l">응시동기</div><div class="v" id="profMotive">—</div></div>
-        <div class="ro-item"><div class="l">응시목적</div><div class="v" id="profPurpose">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.motive">응시동기</div><div class="v" id="profMotive" data-roster-kind="motive">—</div></div>
+        <div class="ro-item"><div class="l" data-i18n-content="su.purpose">응시목적</div><div class="v" id="profPurpose" data-roster-kind="purpose">—</div></div>
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-secondary" data-back>이전</button>
-        <button class="btn btn-primary" data-next>다음</button>
+        <button class="btn btn-secondary" data-back data-i18n-content="btn.prev">이전</button>
+        <button class="btn btn-primary" data-next data-i18n-content="btn.next">다음</button>
       </div>
     </section>
 
     <!-- ============ STEP 3: 사진 규격 확인 ============ -->
     <section class="step-pane" data-s="3">
-      <h2 class="h3" style="margin-bottom: 6px;">사진 규격 확인</h2>
-      <p class="body-sm" style="margin-bottom: 16px;">회원가입 시 등록한 증명사진입니다. 본 단계에서 사진 업로드·교체는 불가합니다.</p>
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="reg.s3_title">사진 규격 확인</h2>
+      <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s3_desc">회원가입 시 등록한 증명사진입니다. 본 단계에서 사진 업로드·교체는 불가합니다.</p>
 
       <div class="photo-frame">
-        <div class="pf">증명사진<br>미리보기</div>
+        <div class="pf" data-i18n-content="reg.photo_preview" data-i18n-content-html>증명사진<br>미리보기</div>
         <div class="pf-info">
-          <h3>등록된 증명사진</h3>
-          <p class="body-sm">접수 시 자동 사용됩니다. 사진이 규격에 맞지 않거나 변경이 필요한 경우 회원가입 사진을 먼저 교체해 주세요.</p>
-          <a href="mypage-profile.html" class="btn btn-text btn-sm" style="margin-top: 8px;">마이페이지에서 사진 재등록 →</a>
+          <h3 data-i18n-content="reg.photo_registered">등록된 증명사진</h3>
+          <p class="body-sm" data-i18n-content="reg.photo_auto">접수 시 자동 사용됩니다. 사진이 규격에 맞지 않거나 변경이 필요한 경우 회원가입 사진을 먼저 교체해 주세요.</p>
+          <a href="mypage-profile.html" class="btn btn-text btn-sm" style="margin-top: 8px;" data-i18n-content="reg.photo_reupload">마이페이지에서 사진 재등록 →</a>
         </div>
       </div>
 
-      <h3 class="h4" style="margin: 24px 0 10px;">규격 체크리스트 <span style="font-size: 12px; color: var(--danger); font-weight: 500;">(모두 확인 필수)</span></h3>
+      <h3 class="h4" style="margin: 24px 0 10px;"><span data-i18n-content="reg.checklist">규격 체크리스트</span> <span style="font-size: 12px; color: var(--danger); font-weight: 500;" data-i18n-content="reg.checklist_all">(모두 확인 필수)</span></h3>
       <div class="photo-checks">
-        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>여권용 · 정면 촬영 · JPG 형식</span></label>
-        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>6개월 이내 촬영한 사진</span></label>
-        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>흑백이 아닌 컬러 사진</span></label>
-        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>모자·선글라스·앞머리로 얼굴이 가려지지 않음</span></label>
-        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span>연예인·타인 사진이 아닌 본인 사진</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span data-i18n-content="reg.chk1">여권용 정면 컬러 사진(JPG) · 흰색·단색 배경</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span data-i18n-content="reg.chk2">최근 6개월 이내 촬영한 사진</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span data-i18n-content="reg.chk3">흑백·흐릿·불분명한 사진이 아님</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span data-i18n-content="reg.chk4">모자·학사모·선글라스·이어폰·앞머리로 얼굴이 가려지지 않음</span></label>
+        <label class="check check-photo"><input type="checkbox"><span class="box"></span><span data-i18n-content="reg.chk5">위·아래·좌·우가 아닌 정면, 연예인·타인이 아닌 본인 사진</span></label>
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-secondary" data-back>이전</button>
-        <button class="btn btn-primary" data-next id="btnGoStep4" disabled>다음</button>
+        <button class="btn btn-secondary" data-back data-i18n-content="btn.prev">이전</button>
+        <button class="btn btn-primary" data-next id="btnGoStep4" disabled data-i18n-content="btn.next">다음</button>
       </div>
     </section>
 
     <!-- ============ STEP 4: 최종 확인 ============ -->
     <section class="step-pane" data-s="4">
-      <h2 class="h3" style="margin-bottom: 6px;">최종 확인 및 제출</h2>
-      <p class="body-sm" style="margin-bottom: 16px;">아래 내용으로 접수가 진행됩니다. 제출 후에는 수정이 불가합니다.</p>
+      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="reg.s4_title">최종 확인 및 제출</h2>
+      <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s4_desc">아래 내용으로 접수가 진행됩니다. 제출 후에는 수정이 불가합니다.</p>
 
-      <h3 class="h4" style="margin-bottom: 10px;">응시 정보</h3>
+      <h3 class="h4" style="margin-bottom: 10px;" data-i18n-content="reg.exam_info">응시 정보</h3>
       <div class="sum-card">
-        <div class="sum-row"><div class="l">회차</div><div class="v" id="sumRound">—</div></div>
-        <div class="sum-row"><div class="l">응시 급수</div><div class="v" id="sumLevels"><strong>—</strong></div></div>
-        <div class="sum-row"><div class="l">시험장</div><div class="v" id="sumVenue">—</div></div>
-        <div class="sum-row"><div class="l">한글 성명</div><div class="v" id="sumNameKo">—</div></div>
-        <div class="sum-row"><div class="l">영문 성명</div><div class="v" id="sumNameEn">—</div></div>
-        <div class="sum-row"><div class="l">생년월일</div><div class="v" id="sumBirth">—</div></div>
-        <div class="sum-row"><div class="l">연락처</div><div class="v" id="sumPhone">—</div></div>
-        <div class="sum-row"><div class="l">이메일</div><div class="v" id="sumEmail">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="reg.round">회차</div><div class="v" id="sumRound">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="reg.level">응시 급수</div><div class="v" id="sumLevels"><strong>—</strong></div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="reg.venue">시험장</div><div class="v" id="sumVenue">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="su.name_ko">한글 성명</div><div class="v" id="sumNameKo">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="su.name_en">영문 성명</div><div class="v" id="sumNameEn">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="su.birth">생년월일</div><div class="v" id="sumBirth">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="su.phone">연락처</div><div class="v" id="sumPhone">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="reg.email">이메일</div><div class="v" id="sumEmail">—</div></div>
+        <div class="sum-row"><div class="l" data-i18n-content="reg.fee_total">응시료 합계</div><div class="v" id="sumFee">—</div></div>
       </div>
 
-      <h3 class="h4" style="margin: 24px 0 10px;">응시료 안내</h3>
+      <h3 class="h4" style="margin: 24px 0 10px;" data-i18n-content="reg.fee_guide">응시료 안내</h3>
       <div class="callout callout-warning">
         <div class="ico"></div>
-        <div>
+        <div data-i18n-content="reg.fee_offline" data-i18n-content-html>
           응시료는 <strong>오프라인 수납</strong>으로만 가능합니다.
           접수 완료 후 안내되는 수납처에서 직접 납부해 주세요. 동시 접수 시 각 수준별로 개별 납부합니다.
         </div>
       </div>
 
-      <h3 class="h4" style="margin: 24px 0 10px;">환불·취소 안내</h3>
+      <h3 class="h4" style="margin: 24px 0 10px;" data-i18n-content="reg.refund_guide">환불·취소 안내</h3>
       <div class="callout callout-neutral">
         <div class="ico"></div>
-        <div>
+        <div data-i18n-content="reg.refund_desc" data-i18n-content-html>
           오프라인 수납 전까지 마이페이지에서 직접 취소가 가능합니다. 수납 완료 후에는 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>에 따라 환불 신청해 주세요.
         </div>
       </div>
 
       <div style="margin: 20px 0;">
-        <label class="check"><input type="checkbox" id="agreeTerms"><span class="box"></span><span><span class="req" style="color:var(--danger);">[필수]</span> 서비스 이용약관 및 개인정보 처리 방침에 동의합니다.</span></label>
+        <label class="check"><input type="checkbox" id="agreeTerms"><span class="box"></span><span><span class="req" style="color:var(--danger);">[필수]</span> <span data-i18n-content="reg.agree">서비스 이용약관 및 개인정보 처리 방침에 동의합니다.</span></span></label>
       </div>
 
       <p id="submitError" class="body-sm" style="display:none; color:var(--danger); margin-bottom:12px;"></p>
       <div class="form-actions">
-        <button class="btn btn-secondary" data-back>이전</button>
-        <button class="btn btn-primary" id="btnSubmit">접수하기</button>
+        <button class="btn btn-secondary" data-back data-i18n-content="btn.prev">이전</button>
+        <button class="btn btn-primary" id="btnSubmit" data-i18n-content="reg.submit">접수하기</button>
       </div>
     </section>
 
@@ -365,20 +366,90 @@
       <div style="width:64px; height:64px; background:var(--success-50); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px; height:32px; stroke: var(--success);"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
       </div>
-      <h3 style="font-size: 20px; margin-bottom: 8px;">접수가 완료되었습니다</h3>
-      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7;">
+      <h3 style="font-size: 20px; margin-bottom: 8px;" data-i18n-content="reg.done_title">접수가 완료되었습니다</h3>
+      <p style="color: var(--text-2); font-size: 14px; line-height: 1.7;" data-i18n-content="reg.done_desc" data-i18n-content-html>
         사진 심사 및 오프라인 응시료 수납 후 수험번호가 부여됩니다.<br>
         관련 일정 및 유의사항은 공지사항을 참고하시기 바랍니다.<br>
         접수 결과는 마이페이지에서 확인하시기 바랍니다.
       </p>
     </div>
     <div class="modal-foot">
-      <a href="notice.html" class="btn btn-secondary">공지사항 보기</a>
-      <a href="mypage.html" class="btn btn-primary">마이페이지</a>
+      <a href="notice.html" class="btn btn-secondary" data-i18n-content="reg.view_notice">공지사항 보기</a>
+      <a href="mypage.html" class="btn btn-primary" data-i18n-content="menu.mypage">마이페이지</a>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'reg.subhead': { ko: '아래 4단계를 차례로 진행해 주세요.', my: 'အောက်ပါ အဆင့် ၄ ဆင့်ကို အစဉ်လိုက် ဆောင်ရွက်ပါ။', en: 'Please complete the 4 steps below in order.' },
+    'reg.step1': { ko: '회차·급수', my: 'အကြိမ်·အဆင့်', en: 'Session & level' },
+    'reg.step2': { ko: '회원정보 확인', my: 'အချက်အလက် စစ်ဆေး', en: 'Profile check' },
+    'reg.step3': { ko: '사진 규격 확인', my: 'ဓာတ်ပုံ စံ စစ်ဆေး', en: 'Photo check' },
+    'reg.step4': { ko: '최종 확인', my: 'နောက်ဆုံး အတည်ပြု', en: 'Final review' },
+    'reg.save_draft': { ko: '저장 후 나가기', my: 'သိမ်းပြီး ထွက်ရန်', en: 'Save & exit' },
+    'reg.s1_title': { ko: '응시 회차 선택', my: 'ဖြေဆိုမည့် အကြိမ်ရေ ရွေးချယ်ရန်', en: 'Select exam session' },
+    'reg.s1_desc': { ko: '접수 가능한 회차 중 하나를 선택해 주세요.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေတစ်ခု ရွေးချယ်ပါ။', en: 'Choose one of the open sessions.' },
+    'reg.round_loading': { ko: '회차 정보를 불러오는 중…', my: 'အကြိမ်ရေ အချက်အလက် ဖွင့်နေသည်…', en: 'Loading session info…' },
+    'reg.venue_title': { ko: '시험장 선택', my: 'စာစစ်ဌာန ရွေးချယ်ရန်', en: 'Select venue' },
+    'reg.venue_desc': { ko: '접수 회차에 배정 가능한 시험장입니다.', my: 'ဤအကြိမ်ရေအတွက် သတ်မှတ်နိုင်သော စာစစ်ဌာနများ။', en: 'Venues available for this session.' },
+    'reg.venue_ph': { ko: '시험장을 선택해 주세요', my: 'စာစစ်ဌာန ရွေးချယ်ပါ', en: 'Please select a venue' },
+    'reg.level_title': { ko: '응시 급수 선택', my: 'အဆင့် ရွေးချယ်ရန်', en: 'Select level' },
+    'reg.multi_select': { ko: '(복수 선택 가능)', my: '(တစ်ခုထက်ပို ရွေးနိုင်)', en: '(multiple allowed)' },
+    'reg.level_desc': { ko: 'TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.', my: 'TOPIK Ⅰ နှင့် Ⅱ ကို တစ်ပြိုင်တည်း ဖြေဆိုနိုင်သည်။', en: 'You can take TOPIK I and II at the same time.' },
+    'reg.lvl1_sub': { ko: '초급 (1·2급)', my: 'အခြေခံ (အဆင့် ၁·၂)', en: 'Beginner (Lv 1–2)' },
+    'reg.lvl1_detail': { ko: '듣기 30 + 읽기 40 · 100분 · 200점', my: 'နားထောင် ၃၀ + ဖတ် ၄၀ · ၁၀၀ မိနစ် · ၂၀၀ မှတ်', en: 'Listening 30 + Reading 40 · 100 min · 200 pts' },
+    'reg.lvl2_sub': { ko: '중·고급 (3~6급)', my: 'အလယ်·အဆင့်မြင့် (၃–၆)', en: 'Intermediate–Advanced (Lv 3–6)' },
+    'reg.lvl2_detail': { ko: '듣기 50 + 쓰기 4 + 읽기 50 · 180분 · 300점', my: 'နားထောင် ၅၀ + ရေး ၄ + ဖတ် ၅၀ · ၁၈၀ မိနစ် · ၃၀၀ မှတ်', en: 'Listening 50 + Writing 4 + Reading 50 · 180 min · 300 pts' },
+    'reg.fee_label': { ko: '응시료', my: 'ဖြေဆိုကြေး', en: 'Fee' },
+    'reg.fee_callout': { ko: '<strong>동시 접수 시 응시료는 각 수준별로 개별 오프라인 수납</strong>합니다 (합산 일괄 납부 아님). 동시 접수 시 시험장은 동일 코드로 부여됩니다.', my: '<strong>တစ်ပြိုင်တည်း လျှောက်ပါက ဖြေဆိုကြေးကို အဆင့်အလိုက် သီးခြား အော့ဖ်လိုင်း ပေးသွင်းရသည်</strong> (ပေါင်းစည်း တစ်ပြိုင်နက် ပေးသွင်းခြင်း မဟုတ်)။ တစ်ပြိုင်တည်း လျှောက်ပါက စာစစ်ဌာနကို ကုဒ်တူ ပေးအပ်သည်။', en: '<strong>For simultaneous registration, the fee is paid offline per level</strong> (not a single combined payment). The same venue code is assigned for simultaneous registration.' },
+    'reg.s2_title': { ko: '회원정보 확인', my: 'အဖွဲ့ဝင် အချက်အလက် စစ်ဆေးခြင်း', en: 'Confirm member info' },
+    'reg.s2_desc': { ko: '회원가입 시 등록한 정보입니다. 본 단계에서 수정할 수 없습니다.', my: 'မှတ်ပုံတင်စဉ် ဖြည့်ထားသော အချက်အလက်ဖြစ်သည်။ ဤအဆင့်တွင် ပြင်၍မရပါ။', en: 'Info registered at sign-up. It cannot be edited at this step.' },
+    'reg.s2_edit': { ko: '정보 변경이 필요하시면 <a href="mypage-profile.html" class="text-primary" style="text-decoration: underline;">마이페이지 · 내정보 수정</a>에서 수정해 주세요.', my: 'အချက်အလက် ပြောင်းလိုပါက <a href="mypage-profile.html" class="text-primary" style="text-decoration: underline;">ကျွန်ုပ်စာမျက်နှာ · အချက်အလက် ပြင်ဆင်</a> တွင် ပြင်ပါ။', en: 'To change your info, edit it on <a href="mypage-profile.html" class="text-primary" style="text-decoration: underline;">My page · Edit profile</a>.' },
+    'reg.basic_info': { ko: '기본정보', my: 'အခြေခံ အချက်အလက်', en: 'Basic information' },
+    'reg.exam_info': { ko: '응시 정보', my: 'ဖြေဆိုမှု အချက်အလက်', en: 'Exam information' },
+    'reg.s3_title': { ko: '사진 규격 확인', my: 'ဓာတ်ပုံ စံချိန်စံညွှန်း စစ်ဆေးခြင်း', en: 'Check photo requirements' },
+    'reg.s3_desc': { ko: '회원가입 시 등록한 증명사진입니다. 본 단계에서 사진 업로드·교체는 불가합니다.', my: 'မှတ်ပုံတင်စဉ် တင်ထားသော ဓာတ်ပုံဖြစ်သည်။ ဤအဆင့်တွင် ဓာတ်ပုံ တင်/လဲ၍ မရပါ။', en: 'The ID photo registered at sign-up. It cannot be uploaded/replaced at this step.' },
+    'reg.photo_preview': { ko: '증명사진<br>미리보기', my: 'ဓာတ်ပုံ<br>အစမ်းကြည့်', en: 'ID photo<br>preview' },
+    'reg.photo_registered': { ko: '등록된 증명사진', my: 'မှတ်ပုံတင်ထားသော ဓာတ်ပုံ', en: 'Registered ID photo' },
+    'reg.photo_auto': { ko: '접수 시 자동 사용됩니다. 사진이 규격에 맞지 않거나 변경이 필요한 경우 회원가입 사진을 먼저 교체해 주세요.', my: 'လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုသည်။ စံနှင့်မကိုက်ပါက သို့မဟုတ် ပြောင်းလိုပါက မှတ်ပုံတင်ဓာတ်ပုံကို အရင်လဲပါ။', en: 'Used automatically at registration. If it does not meet the requirements or needs changing, replace your sign-up photo first.' },
+    'reg.photo_reupload': { ko: '마이페이지에서 사진 재등록 →', my: 'ကျွန်ုပ်စာမျက်နှာတွင် ဓာတ်ပုံ ပြန်တင်ရန် →', en: 'Re-upload photo on My page →' },
+    'reg.checklist': { ko: '규격 체크리스트', my: 'စံချိန်စံညွှန်း စစ်ဆေးစာရင်း', en: 'Requirement checklist' },
+    'reg.checklist_all': { ko: '(모두 확인 필수)', my: '(အားလုံး အတည်ပြုရန် မဖြစ်မနေ)', en: '(all must be checked)' },
+    'reg.chk1': { ko: '여권용 정면 컬러 사진(JPG) · 흰색·단색 배경', my: 'ပတ်စ်ပို့သုံး ရှေ့မျက်နှာ အရောင်ဓာတ်ပုံ(JPG) · အဖြူ/တစ်ရောင်တည်း နောက်ခံ', en: 'Passport-style frontal color photo (JPG) · white/plain background' },
+    'reg.chk2': { ko: '최근 6개월 이내 촬영한 사진', my: 'လွန်ခဲ့သော ၆ လအတွင်း ရိုက်ထားသော ဓာတ်ပုံ', en: 'Taken within the last 6 months' },
+    'reg.chk3': { ko: '흑백·흐릿·불분명한 사진이 아님', my: 'အဖြူအမည်း·ဝါးဝါး·မရှင်းသော ဓာတ်ပုံ မဟုတ်', en: 'Not black-and-white, blurry, or unclear' },
+    'reg.chk4': { ko: '모자·학사모·선글라스·이어폰·앞머리로 얼굴이 가려지지 않음', my: 'ဦးထုပ်·ဘွဲ့ဦးထုပ်·နေကာမျက်မှန်·နားကြပ်·ရှေ့ဆံပင်ဖြင့် မျက်နှာ မဖုံး', en: 'Face not covered by hat/cap/sunglasses/earphones/bangs' },
+    'reg.chk5': { ko: '위·아래·좌·우가 아닌 정면, 연예인·타인이 아닌 본인 사진', my: 'အပေါ်·အောက်·ဘယ်·ညာ မဟုတ်ဘဲ ရှေ့တည့်တည့်၊ အနုပညာရှင်·သူတစ်ပါး မဟုတ်သော မိမိဓာတ်ပုံ', en: 'Frontal (not angled), and of yourself (not a celebrity/other person)' },
+    'reg.s4_title': { ko: '최종 확인 및 제출', my: 'နောက်ဆုံး အတည်ပြု၍ တင်သွင်းရန်', en: 'Final review & submit' },
+    'reg.s4_desc': { ko: '아래 내용으로 접수가 진행됩니다. 제출 후에는 수정이 불가합니다.', my: 'အောက်ပါအတိုင်း လျှောက်ထားမည်။ တင်ပြီးနောက် ပြင်၍မရပါ။', en: 'Registration proceeds with the details below. No edits after submission.' },
+    'reg.round': { ko: '회차', my: 'အကြိမ်ရေ', en: 'Session' },
+    'reg.level': { ko: '응시 급수', my: 'ဖြေဆိုအဆင့်', en: 'Level' },
+    'reg.venue': { ko: '시험장', my: 'စာစစ်ဌာန', en: 'Venue' },
+    'reg.email': { ko: '이메일', my: 'အီးမေးလ်', en: 'Email' },
+    'reg.fee_total': { ko: '응시료 합계', my: 'ဖြေဆိုကြေး စုစုပေါင်း', en: 'Total fee' },
+    'reg.fee_guide': { ko: '응시료 안내', my: 'ဖြေဆိုကြေး လမ်းညွှန်', en: 'Fee information' },
+    'reg.fee_offline': { ko: '응시료는 <strong>오프라인 수납</strong>으로만 가능합니다. 접수 완료 후 안내되는 수납처에서 직접 납부해 주세요. 동시 접수 시 각 수준별로 개별 납부합니다.', my: 'ဖြေဆိုကြေးကို <strong>အော့ဖ်လိုင်း ပေးသွင်းမှု</strong>ဖြင့်သာ ပေးနိုင်သည်။ လျှောက်ပြီးနောက် အကြောင်းကြားသည့် နေရာတွင် ကိုယ်တိုင် ပေးသွင်းပါ။ တစ်ပြိုင်တည်း လျှောက်ပါက အဆင့်အလိုက် သီးခြား ပေးသွင်းပါ။', en: 'The fee can only be paid <strong>offline</strong>. After registering, pay directly at the location provided. For simultaneous registration, pay per level.' },
+    'reg.refund_guide': { ko: '환불·취소 안내', my: 'ငွေပြန်အမ်း·ပယ်ဖျက် လမ်းညွှန်', en: 'Refund & cancellation' },
+    'reg.refund_desc': { ko: '오프라인 수납 전까지 마이페이지에서 직접 취소가 가능합니다. 수납 완료 후에는 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>에 따라 환불 신청해 주세요.', my: 'အော့ဖ်လိုင်း ပေးသွင်းမတိုင်မီ ကျွန်ုပ်စာမျက်နှာတွင် ကိုယ်တိုင် ပယ်ဖျက်နိုင်သည်။ ပေးသွင်းပြီးနောက် <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">ဖြေဆိုကြေး စည်းမျဉ်း</a> အရ ငွေပြန်အမ်း လျှောက်ပါ။', en: 'You can cancel on My page until you pay offline. After payment, request a refund per the <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">fee policy</a>.' },
+    'reg.agree': { ko: '서비스 이용약관 및 개인정보 처리 방침에 동의합니다.', my: 'ဝန်ဆောင်မှု စည်းကမ်းနှင့် ကိုယ်ရေးအချက်အလက် မူဝါဒကို သဘောတူသည်။', en: 'I agree to the Terms of Service and Privacy Policy.' },
+    'reg.submit': { ko: '접수하기', my: 'လျှောက်ထားရန်', en: 'Submit registration' },
+    'reg.done_title': { ko: '접수가 완료되었습니다', my: 'လျှောက်ထားခြင်း ပြီးဆုံးပါပြီ', en: 'Registration complete' },
+    'reg.done_desc': { ko: '사진 심사 및 오프라인 응시료 수납 후 수험번호가 부여됩니다.<br>관련 일정 및 유의사항은 공지사항을 참고하시기 바랍니다.<br>접수 결과는 마이페이지에서 확인하시기 바랍니다.', my: 'ဓာတ်ပုံစိစစ်ခြင်းနှင့် အော့ဖ်လိုင်း ဖြေဆိုကြေး ပေးသွင်းပြီးမှ ဖြေဆိုသူနံပါတ် ပေးအပ်မည်။<br>သက်ဆိုင်ရာ အချိန်ဇယားနှင့် သတိပြုရန်များကို ကြေညာချက်တွင် ကြည့်ပါ။<br>လျှောက်ထားမှု ရလဒ်ကို ကျွန်ုပ်စာမျက်နှာတွင် စစ်ဆေးပါ။', en: 'Your exam number is assigned after photo review and offline fee payment.<br>See Notices for schedules and important info.<br>Check the result on My page.' },
+    'reg.view_notice': { ko: '공지사항 보기', my: 'ကြေညာချက် ကြည့်ရန်', en: 'View notices' },
+    'su.name_ko': { ko: '한글 성명', my: 'ကိုရီးယား အမည်', en: 'Korean name' },
+    'su.name_en': { ko: '영문 성명', my: 'အင်္ဂလိပ် အမည်', en: 'English name' },
+    'su.birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
+    'su.gender': { ko: '성별', my: 'ကျား/မ', en: 'Gender' },
+    'su.nationality': { ko: '국적', my: 'နိုင်ငံသား', en: 'Nationality' },
+    'su.lang1': { ko: '제1언어', my: 'ပထမ ဘာသာစကား', en: 'First language' },
+    'su.phone': { ko: '연락처', my: 'ဆက်သွယ်ရန်', en: 'Phone' },
+    'su.email_id': { ko: '이메일 (아이디)', my: 'အီးမေးလ် (အိုင်ဒီ)', en: 'Email (ID)' },
+    'su.job': { ko: '직업', my: 'အလုပ်အကိုင်', en: 'Occupation' },
+    'su.motive': { ko: '응시동기', my: 'ဖြေဆိုရခြင်း အကြောင်းရင်း', en: 'Reason for taking' },
+    'su.purpose': { ko: '응시목적', my: 'ဖြေဆိုရခြင်း ရည်ရွယ်ချက်', en: 'Purpose of taking' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="shared/roster-codes.js"></script>
 <script src="assets/common.js"></script>
@@ -390,6 +461,68 @@
     profile: null,
     selectedRoundId: null,
   };
+
+  // ---- 응시료 (회차 데이터 기반, API 무응답 시에만 폴백) ----
+  // 기대 키: round.fees = { "I": <MMK>, "II": <MMK> } (또는 fee_topik_i / fee_topik_ii)
+  var FALLBACK_FEES = { I: 50000, II: 75000 };
+  function feeFor(round, level) {
+    if (round) {
+      if (round.fees && round.fees[level] != null) return Number(round.fees[level]);
+      var alt = level === 'I'
+        ? (round.fee_level_i != null ? round.fee_level_i
+          : round.fee_topik_i != null ? round.fee_topik_i : round.fee_topik_1)
+        : (round.fee_level_ii != null ? round.fee_level_ii
+          : round.fee_topik_ii != null ? round.fee_topik_ii : round.fee_topik_2);
+      if (alt != null) return Number(alt);
+    }
+    return FALLBACK_FEES[level];
+  }
+  function formatMMK(n) {
+    return (Number(n) || 0).toLocaleString('en-US') + ' MMK';
+  }
+  function feeLabelText() {
+    return (window.TPKMLang && TPKMLang.t('reg.fee_label')) || '응시료';
+  }
+  function updateFeeDisplay(round) {
+    [['feeLvl1', 'I'], ['feeLvl2', 'II']].forEach(function (pair) {
+      var el = document.getElementById(pair[0]);
+      if (!el) return;
+      el.innerHTML = '<span data-i18n-content="reg.fee_label">' + feeLabelText() + '</span> ' +
+        formatMMK(feeFor(round, pair[1]));
+    });
+  }
+
+  // ---- 약관 동의 이력 (계약서 6.4) ----
+  var EXAM_TERMS_VERSIONS = {};
+  function normalizeTermsType(raw) {
+    var t = String(raw || '').toLowerCase();
+    if (t.indexOf('privacy') >= 0) return 'privacy';
+    if (t.indexOf('marketing') >= 0) return 'marketing';
+    if (t.indexOf('service') >= 0 || t.indexOf('terms') >= 0 || t === 'tos' || t === 'use') return 'service';
+    return t || '';
+  }
+  function loadExamTermsVersions() {
+    if (!window.TopikApi || !TopikApi.getTerms || !TopikApi.canUseApi()) return;
+    var lang = (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase().slice(0, 2);
+    TopikApi.getTerms({ lang: lang }).then(function (res) {
+      if (!res.ok || !res.body) return;
+      var items = res.body.items || res.body.terms || (Array.isArray(res.body) ? res.body : []);
+      items.forEach(function (it) {
+        var type = normalizeTermsType(it.type || it.code || it.kind || it.slug);
+        if (!type) return;
+        EXAM_TERMS_VERSIONS[type] = it.version || it.current_version || it.published_version || null;
+      });
+    }).catch(function () { /* backend resolves current version */ });
+  }
+  loadExamTermsVersions();
+
+  function buildExamTermsAgreed() {
+    if (!document.getElementById('agreeTerms').checked) return [];
+    var now = new Date().toISOString();
+    return ['service', 'privacy'].map(function (t) {
+      return { type: t, version: EXAM_TERMS_VERSIONS[t] || null, agreed: true, agreed_at: now };
+    });
+  }
 
   function fmtDateYmd(iso) {
     if (!iso) return '—';
@@ -445,6 +578,7 @@
       list.appendChild(card);
     });
     bindRoundCards();
+    updateFeeDisplay(getSelectedRound());
   }
 
   function renderVenueSelect(venues) {
@@ -483,6 +617,14 @@
     set('profJob', codeLabel('job', u.job_code));
     set('profMotive', codeLabel('motive', u.motive_code));
     set('profPurpose', codeLabel('purpose', u.purpose_code));
+    // 언어 전환 시 자동 재번역되도록 코드값을 부착 (roster-codes relocalizeAll)
+    function setRosterCode(id, code) {
+      var el = document.getElementById(id);
+      if (el && code != null && code !== '') el.setAttribute('data-roster-code', String(code));
+    }
+    setRosterCode('profJob', u.job_code);
+    setRosterCode('profMotive', u.motive_code);
+    setRosterCode('profPurpose', u.purpose_code);
     if (u.photo_file_id && window.TopikApi) {
       if (u.photo_unavailable && TopikApi.markFileUnavailable) {
         TopikApi.markFileUnavailable(u.photo_file_id);
@@ -534,6 +676,7 @@
         document.querySelectorAll('.round-card').forEach(function (x) { x.classList.remove('selected'); });
         c.classList.add('selected');
         REG_STATE.selectedRoundId = Number(c.dataset.roundId);
+        updateFeeDisplay(getSelectedRound());
       });
     });
   }
@@ -634,6 +777,13 @@
       document.getElementById('sumPhone').textContent = u.phone || '—';
       document.getElementById('sumEmail').textContent = u.email || '—';
     }
+    var sumFee = document.getElementById('sumFee');
+    if (sumFee) {
+      var total = 0;
+      if (l1) total += feeFor(round, 'I');
+      if (l2) total += feeFor(round, 'II');
+      sumFee.textContent = lvls.length ? formatMMK(total) : '—';
+    }
   }
 
   function buildSubmitPayload() {
@@ -646,7 +796,7 @@
       exam_levels: levels,
       exam_venue_id: Number(document.getElementById('venueSelect').value) || undefined,
       photo_checklist_confirmed: true,
-      terms_agreed: [],
+      terms_agreed: buildExamTermsAgreed(),
     };
   }
 

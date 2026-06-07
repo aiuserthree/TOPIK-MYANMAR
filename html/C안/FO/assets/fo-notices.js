@@ -18,6 +18,16 @@
       .replace(/"/g, '&quot;');
   }
 
+  function nt(key, fallback) {
+    try {
+      if (window.TPKMLang && typeof TPKMLang.t === 'function') {
+        var v = TPKMLang.t(key);
+        if (v) return v;
+      }
+    } catch (e) { /* ignore */ }
+    return fallback;
+  }
+
   function sessionKey() {
     try {
       var k = sessionStorage.getItem('tpkm_notice_sess');
@@ -38,7 +48,8 @@
     if (!container) return;
     if (!items.length) {
       container.innerHTML =
-        '<p style="padding:20px;text-align:center;color:var(--text-3);font-size:14px;">등록된 공지가 없습니다.</p>';
+        '<p style="padding:20px;text-align:center;color:var(--text-3);font-size:14px;">' +
+        esc(nt('nt.empty_home', '등록된 공지가 없습니다.')) + '</p>';
       return;
     }
     container.innerHTML = items
@@ -70,7 +81,8 @@
     if (!tbody) return;
     if (!items.length) {
       tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">공지가 없습니다.</td></tr>';
+        '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">' +
+        esc(nt('nt.none', '공지가 없습니다.')) + '</td></tr>';
       return;
     }
     tbody.innerHTML = items
@@ -146,12 +158,12 @@
     var metaEl = document.getElementById('noticeDetailMeta');
     var bodyEl = document.getElementById('noticeDetailBody');
 
-    if (titleEl) titleEl.textContent = '불러오는 중…';
-    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">로딩 중입니다.</p>';
+    if (titleEl) titleEl.textContent = nt('nt.loading', '불러오는 중…');
+    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">' + esc(nt('nt.detail_loading', '로딩 중입니다.')) + '</p>';
 
     TopikApi.getNotice(id, sessionKey()).then(function (res) {
       if (!res.ok) {
-        if (titleEl) titleEl.textContent = '공지를 불러올 수 없습니다';
+        if (titleEl) titleEl.textContent = nt('nt.load_fail', '공지를 불러올 수 없습니다');
         if (bodyEl) bodyEl.innerHTML = '<p>' + esc(TopikApi.parseError(res)) + '</p>';
         return;
       }
@@ -167,7 +179,7 @@
           '<span>' +
           esc(n.date_formatted) +
           '</span>' +
-          '<span>조회 ' +
+          '<span>' + esc(nt('nt.views', '조회')) + ' ' +
           esc(n.view_count) +
           '</span>';
       }

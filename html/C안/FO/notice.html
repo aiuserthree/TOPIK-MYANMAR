@@ -156,9 +156,9 @@
 
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>게시판</span><span>공지사항</span></div>
-      <h1>공지사항</h1>
-      <p class="lead">TOPIK 미얀마 시행 관련 공식 공지 게시판입니다.</p>
+      <div class="crumb"><span data-i18n-content="menu.board">게시판</span><span data-i18n-content="notice.title">공지사항</span></div>
+      <h1 data-i18n-content="notice.title">공지사항</h1>
+      <p class="lead" data-i18n-content="nt.page_lead">TOPIK 미얀마 시행 관련 공식 공지 게시판입니다.</p>
     </div>
   </header>
 
@@ -168,14 +168,14 @@
     <section class="list-view" id="listView">
       <div class="board-tools">
         <div class="filters">
-          <button class="chip active" data-cat="all">전체</button>
-          <button class="chip" data-cat="imp">중요</button>
-          <button class="chip" data-cat="apply">접수</button>
-          <button class="chip" data-cat="exam">시험</button>
-          <button class="chip" data-cat="result">결과</button>
+          <button class="chip active" data-cat="all" data-i18n-content="nt.cat_all">전체</button>
+          <button class="chip" data-cat="imp" data-i18n-content="nt.cat_imp">중요</button>
+          <button class="chip" data-cat="apply" data-i18n-content="nt.cat_apply">접수</button>
+          <button class="chip" data-cat="exam" data-i18n-content="nt.cat_exam">시험</button>
+          <button class="chip" data-cat="result" data-i18n-content="nt.cat_result">결과</button>
         </div>
         <div class="search">
-          <input type="search" placeholder="제목·내용 검색">
+          <input type="search" placeholder="제목·내용 검색" data-i18n-content="nt.search_ph" data-i18n-content-placeholder>
         </div>
       </div>
 
@@ -184,50 +184,37 @@
         <table class="table">
           <thead>
             <tr>
-              <th class="col-num">번호</th>
-              <th class="col-cat">분류</th>
-              <th>제목</th>
-              <th class="col-date">작성일</th>
+              <th class="col-num" data-i18n-content="tbl.no">번호</th>
+              <th class="col-cat" data-i18n-content="tbl.category">분류</th>
+              <th data-i18n-content="tbl.title">제목</th>
+              <th class="col-date" data-i18n-content="tbl.date">작성일</th>
             </tr>
           </thead>
           <tbody id="noticeTbody">
-            <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">공지를 불러오는 중…</td></tr>
+            <tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);" data-i18n-content="nt.loading">공지를 불러오는 중…</td></tr>
           </tbody>
         </table>
         </div>
       </div>
 
-      <p id="noticeEmpty" style="display:none; text-align:center; padding:32px 16px; color:var(--text-3); font-size:13.5px;">검색 조건에 맞는 공지가 없습니다.</p>
-
-      <nav class="pager" aria-label="페이지">
-        <span class="disabled">‹</span>
-        <span class="current">1</span>
-        <a href="#">2</a>
-        <a href="#">3</a>
-        <a href="#">›</a>
-      </nav>
+      <p id="noticeEmpty" style="display:none; text-align:center; padding:32px 16px; color:var(--text-3); font-size:13.5px;" data-i18n-content="nt.search_none">검색 조건에 맞는 공지가 없습니다.</p>
     </section>
 
     <!-- ============ Detail view ============ -->
     <section class="detail-view" id="detailView">
-      <a href="javascript:void(0)" onclick="closeDetail()" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+      <a href="javascript:void(0)" onclick="closeDetail()" class="btn btn-text" style="margin-bottom: 12px;" data-i18n-content="btn.list">← 목록으로</a>
 
       <article class="detail-card">
         <div class="detail-head">
           <div class="meta" id="noticeDetailMeta" style="margin-bottom:10px;"></div>
-          <h2 id="noticeDetailTitle">공지</h2>
+          <h2 id="noticeDetailTitle" data-i18n-content="notice.title">공지</h2>
         </div>
         <div class="detail-body" id="noticeDetailBody"></div>
         <div class="attach" id="noticeDetailAttach" style="display:none;"></div>
       </article>
 
-      <nav class="nav-prev-next" aria-label="이전·다음 글">
-        <a href="#" class="nav-pn"><span class="l">이전</span><span class="t">2026년 TOPIK 시험 일정 안내 (제107회)</span></a>
-        <a href="#" class="nav-pn disabled"><span class="l">다음</span><span class="t">— 다음 글이 없습니다 —</span></a>
-      </nav>
-
       <div class="detail-actions">
-        <button class="btn btn-secondary btn-block" onclick="closeDetail()">목록으로</button>
+        <button class="btn btn-secondary btn-block" onclick="closeDetail()" data-i18n-content="nt.to_list">목록으로</button>
       </div>
     </section>
   </div>
@@ -236,10 +223,30 @@
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'nt.page_lead': { ko: 'TOPIK 미얀마 시행 관련 공식 공지 게시판입니다.', my: 'TOPIK မြန်မာ ကျင်းပခြင်းဆိုင်ရာ တရားဝင် ကြေညာချက် ဘုတ်ဖြစ်သည်။', en: 'Official notices board for the TOPIK Myanmar administration.' },
+    'nt.cat_all': { ko: '전체', my: 'အားလုံး', en: 'All' },
+    'nt.cat_imp': { ko: '중요', my: 'အရေးကြီး', en: 'Important' },
+    'nt.cat_apply': { ko: '접수', my: 'လျှောက်ထားမှု', en: 'Registration' },
+    'nt.cat_exam': { ko: '시험', my: 'စာမေးပွဲ', en: 'Exam' },
+    'nt.cat_result': { ko: '결과', my: 'ရလဒ်', en: 'Results' },
+    'nt.search_ph': { ko: '제목·내용 검색', my: 'ခေါင်းစဉ်·အကြောင်းအရာ ရှာဖွေ', en: 'Search title / content' },
+    'nt.to_list': { ko: '목록으로', my: 'စာရင်းသို့', en: 'Back to list' },
+    'tbl.no': { ko: '번호', my: 'နံပါတ်', en: 'No.' },
+    'tbl.category': { ko: '분류', my: 'အမျိုးအစား', en: 'Category' },
+    'tbl.title': { ko: '제목', my: 'ခေါင်းစဉ်', en: 'Title' },
+    'tbl.date': { ko: '작성일', my: 'ရက်စွဲ', en: 'Date' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script src="assets/fo-notices.js"></script>
 <script>
+  function bt(key, fallback) {
+    try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
+    return fallback;
+  }
   var activeCat = 'all';
   var searchQ = '';
   var searchInput = document.querySelector('.board-tools .search input');
@@ -292,7 +299,7 @@
   function ntRenderAttachments(el, attachments) {
     if (!el) return;
     if (!attachments || !attachments.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
-    var html = '<div class="l">첨부파일 (' + attachments.length + ')</div>';
+    var html = '<div class="l">' + ntEsc(bt('nt.attachments', '첨부파일')) + ' (' + attachments.length + ')</div>';
     attachments.forEach(function (a) {
       html += '<a href="' + ntEsc(a.download_url) + '" target="_blank" rel="noopener" download>' +
         ntEsc(a.filename) +
@@ -314,15 +321,15 @@
     var bodyEl = document.getElementById('noticeDetailBody');
     var attachEl = document.getElementById('noticeDetailAttach');
 
-    if (titleEl) titleEl.textContent = '불러오는 중…';
-    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">로딩 중입니다.</p>';
+    if (titleEl) titleEl.textContent = bt('nt.loading', '불러오는 중…');
+    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">' + ntEsc(bt('nt.detail_loading', '로딩 중입니다.')) + '</p>';
     if (attachEl) { attachEl.style.display = 'none'; attachEl.innerHTML = ''; }
     if (history.replaceState) history.replaceState(null, '', 'notice.html?id=' + encodeURIComponent(id));
 
     var sk = (window.TPKMNotices && TPKMNotices.sessionKey) ? TPKMNotices.sessionKey() : 'anon';
     TopikApi.getNotice(id, sk).then(function (res) {
       if (!res.ok) {
-        if (titleEl) titleEl.textContent = '공지를 불러올 수 없습니다';
+        if (titleEl) titleEl.textContent = bt('nt.load_fail', '공지를 불러올 수 없습니다');
         if (bodyEl) bodyEl.innerHTML = '<p>' + ntEsc(TopikApi.parseError(res)) + '</p>';
         return;
       }
@@ -332,7 +339,7 @@
         metaEl.innerHTML =
           '<span class="badge ' + ntBadgeClass(nDoc.category) + '">' + ntEsc(nDoc.category_label) + '</span>' +
           '<span>' + ntEsc(nDoc.date_formatted) + '</span>' +
-          '<span>조회 ' + ntEsc(nDoc.view_count) + '</span>';
+          '<span>' + ntEsc(bt('nt.views', '조회')) + ' ' + ntEsc(nDoc.view_count) + '</span>';
       }
       ntRenderBody(bodyEl, nDoc.body_html || '');
       ntRenderAttachments(attachEl, nDoc.attachments || []);
@@ -358,7 +365,8 @@
       },
       onFallback: function () {
         tbody.innerHTML =
-          '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">공지를 불러올 수 없습니다.</td></tr>';
+          '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--text-3);">' +
+          bt('nt.fail', '공지를 불러올 수 없습니다.') + '</td></tr>';
       },
     });
   }

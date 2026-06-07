@@ -1,4 +1,4 @@
-/* FO 게시판(문의·환불) — API 작성 + 목록 + 상세 */
+/* FO 게시판(문의·환불) — API 작성 + 목록 + 상세 + 첨부파일 + 비밀글 잠금해제 */
 (function () {
   'use strict';
 
@@ -13,6 +13,20 @@
 
   function nl2br(s) {
     return esc(s).replace(/\n/g, '<br>');
+  }
+
+  // i18n 헬퍼 — 중앙 사전(TPKMLang.t) 사용, 미정의 시 KO 폴백
+  function bt(key, fallback) {
+    try {
+      if (window.TPKMLang && typeof TPKMLang.t === 'function') {
+        var v = TPKMLang.t(key);
+        if (v) return v;
+      }
+    } catch (e) { /* ignore */ }
+    return fallback;
+  }
+  function btf(key, fallback, n) {
+    return bt(key, fallback).replace('{n}', n);
   }
 
   var STATUS_CLASS = {
@@ -30,10 +44,148 @@
   function currentUserName() {
     try {
       var u = window.TopikApi && TopikApi.getUser && TopikApi.getUser();
-      return (u && (u.name_ko || u.name)) || '본인';
+      return (u && (u.name_ko || u.name)) || bt('board.mine', '본인');
     } catch (e) {
-      return '본인';
+      return bt('board.mine', '본인');
     }
+  }
+
+  function fmtSize(bytes) {
+    bytes = Number(bytes) || 0;
+    if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
+    return bytes + ' B';
+  }
+
+  // -------------------------------------------------------------------------
+  // 첨부파일 (jpg/png/pdf, ≤5MB) — 선택 즉시 업로드, 글 작성 시 file_id 전송
+  // -------------------------------------------------------------------------
+  var ATTACH_MAX_BYTES = 5 * 1024 * 1024;
+  var ATTACH_EXT = /\.(jpe?g|png|pdf)$/i;
+  var ATTACH_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+
+  function validateAttachment(file) {
+    var type = (file.type || '').toLowerCase();
+    if (ATTACH_TYPES.indexOf(type) === -1 && !ATTACH_EXT.test(file.name || '')) {
+      return bt('board.file_type', 'jpg, png, pdf 형식만 첨부할 수 있습니다.');
+    }
+    if (file.size > ATTACH_MAX_BYTES) {
+      return bt('board.file_too_big', '파일 크기는 5MB 이하여야 합니다.');
+    }
+    return '';
+  }
+
+  function bindAttachments(opts) {
+    opts = opts || {};
+    var input = opts.input;
+    var listEl = opts.listEl;
+    var max = opts.max || 5;
+    if (!input || !listEl) return null;
+    var items = []; // { id, file, fileId, status: 'uploading'|'done'|'error', name, size, error }
+    var seq = 0;
+
+    function render() {
+      if (!items.length) { listEl.innerHTML = ''; return; }
+      listEl.innerHTML = items.map(function (it) {
+        var statusHtml = '';
+        if (it.status === 'uploading') {
+          statusHtml = '<span class="att-status att-uploading">' + esc(bt('board.uploading', '업로드 중…')) + '</span>';
+        } else if (it.status === 'error') {
+          statusHtml = '<span class="att-status att-error">' + esc(it.error || bt('board.upload_fail', '업로드 실패')) + '</span>';
+        } else {
+          statusHtml = '<span class="att-status att-done">✓</span>';
+        }
+        return (
+          '<div class="att-chip" data-att-id="' + it.id + '">' +
+            '<span class="att-name">' + esc(it.name) + '</span>' +
+            '<span class="att-size">' + esc(fmtSize(it.size)) + '</span>' +
+            statusHtml +
+            '<button type="button" class="att-remove" data-att-remove="' + it.id +
+            '" aria-label="' + esc(bt('board.file_remove', '삭제')) + '">×</button>' +
+        '</div>'
+        );
+      }).join('');
+      listEl.querySelectorAll('[data-att-remove]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var id = Number(b.getAttribute('data-att-remove'));
+          items = items.filter(function (x) { return x.id !== id; });
+          render();
+        });
+      });
+    }
+
+    function uploadOne(it) {
+      if (!window.TopikApi || !TopikApi.uploadBoardAttachment) {
+        it.status = 'error';
+        it.error = bt('board.server_err', '서버에 연결할 수 없습니다.');
+        render();
+        return;
+      }
+      TopikApi.uploadBoardAttachment(it.file).then(function (res) {
+        if (res.ok && res.body && (res.body.file_id != null)) {
+          it.status = 'done';
+          it.fileId = res.body.file_id;
+        } else {
+          it.status = 'error';
+          it.error = TopikApi.parseError(res) || bt('board.upload_fail', '업로드 실패');
+        }
+        render();
+      }).catch(function () {
+        it.status = 'error';
+        it.error = bt('board.network_err', '네트워크 오류입니다.');
+        render();
+      });
+    }
+
+    input.addEventListener('change', function () {
+      var files = input.files ? Array.prototype.slice.call(input.files) : [];
+      files.forEach(function (file) {
+        if (items.length >= max) {
+          alert(btf('board.max_files', '첨부파일은 최대 {n}개까지 가능합니다.', max));
+          return;
+        }
+        var err = validateAttachment(file);
+        if (err) { alert(err); return; }
+        var it = {
+          id: ++seq, file: file, fileId: null, status: 'uploading',
+          name: file.name || 'file', size: file.size, error: ''
+        };
+        items.push(it);
+        render();
+        uploadOne(it);
+      });
+      input.value = '';
+    });
+
+    return {
+      getFileIds: function () {
+        return items.filter(function (it) { return it.status === 'done' && it.fileId != null; })
+          .map(function (it) { return it.fileId; });
+      },
+      hasPending: function () {
+        return items.some(function (it) { return it.status === 'uploading'; });
+      },
+      count: function () { return items.length; },
+      reset: function () { items = []; render(); }
+    };
+  }
+
+  function attachmentsDetailHtml(attachments) {
+    if (!attachments || !attachments.length) return '';
+    var rows = attachments.map(function (a) {
+      var url = a.url || (window.TopikApi && TopikApi.fileUrl ? TopikApi.fileUrl(a.file_id) : '');
+      var name = esc(a.filename || ('file-' + a.file_id));
+      var size = a.size ? ' <span class="att-size">(' + esc(fmtSize(a.size)) + ')</span>' : '';
+      if (!url) return '<li><span class="att-name">' + name + '</span>' + size + '</li>';
+      return '<li><a href="' + esc(url) + '" target="_blank" rel="noopener" download>' +
+        name + '</a>' + size + '</li>';
+    }).join('');
+    return (
+      '<div class="board-attachments">' +
+        '<h4>' + esc(bt('board.attachments', '첨부파일')) + '</h4>' +
+        '<ul class="att-detail-list">' + rows + '</ul>' +
+      '</div>'
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -41,7 +193,8 @@
   // -------------------------------------------------------------------------
   function adminBadge(isAdmin) {
     return isAdmin
-      ? ' <span class="badge badge-info" style="height:18px; padding:0 6px; font-size:10px;">관리자</span>'
+      ? ' <span class="badge badge-info" style="height:18px; padding:0 6px; font-size:10px;">' +
+        esc(bt('board.admin', '관리자')) + '</span>'
       : '';
   }
 
@@ -65,7 +218,8 @@
       return '<div class="comment reply" data-id="' + c.id + '">' + head + bodyHtml + '</div>';
     }
     var actions =
-      '<div class="c-actions"><a href="javascript:void(0)" data-reply-toggle="' + c.id + '">답글</a></div>';
+      '<div class="c-actions"><a href="javascript:void(0)" data-reply-toggle="' + c.id + '">' +
+      esc(bt('board.reply', '답글')) + '</a></div>';
     var html = '<div class="comment" data-id="' + c.id + '">' + head + bodyHtml + actions + '</div>';
     (c.replies || []).forEach(function (r) {
       html += commentNodeHtml(r, true);
@@ -73,10 +227,12 @@
     html +=
       '<div class="reply-form-wrap" data-for="' + c.id + '">' +
         '<div class="reply-form-inner">' +
-          '<textarea placeholder="답글을 입력하세요"></textarea>' +
+          '<textarea placeholder="' + esc(bt('board.reply_ph', '답글을 입력하세요')) + '"></textarea>' +
           '<div class="btn-wrap">' +
-            '<button class="btn btn-primary btn-sm" data-reply-submit="' + c.id + '">등록</button>' +
-            '<button class="btn btn-secondary btn-sm" data-reply-cancel="' + c.id + '">취소</button>' +
+            '<button class="btn btn-primary btn-sm" data-reply-submit="' + c.id + '">' +
+              esc(bt('board.post', '등록')) + '</button>' +
+            '<button class="btn btn-secondary btn-sm" data-reply-cancel="' + c.id + '">' +
+              esc(bt('btn.cancel', '취소')) + '</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -86,32 +242,35 @@
   function buildCommentsHtml(list) {
     var canWrite = !!(window.TopikApi && TopikApi.isLoggedIn && TopikApi.isLoggedIn());
     var html =
-      '<h4>댓글 <span style="color:var(--text-3);font-weight:500;">' +
+      '<h4>' + esc(bt('board.comments', '댓글')) + ' <span style="color:var(--text-3);font-weight:500;">' +
       countComments(list) + '</span></h4>';
     if (!list || !list.length) {
-      html += '<p style="color:var(--text-3);font-size:13px;padding:8px 0 4px;">아직 등록된 댓글이 없습니다.</p>';
+      html += '<p style="color:var(--text-3);font-size:13px;padding:8px 0 4px;">' +
+        esc(bt('board.no_comments', '아직 등록된 댓글이 없습니다.')) + '</p>';
     } else {
       list.forEach(function (c) { html += commentNodeHtml(c, false); });
     }
     if (canWrite) {
       html +=
         '<div class="comment-write">' +
-          '<textarea placeholder="댓글을 입력하세요" data-comment-input></textarea>' +
-          '<button class="btn btn-primary" data-comment-submit>등록</button>' +
+          '<textarea placeholder="' + esc(bt('board.comment_ph', '댓글을 입력하세요')) +
+          '" data-comment-input></textarea>' +
+          '<button class="btn btn-primary" data-comment-submit>' + esc(bt('board.post', '등록')) + '</button>' +
         '</div>';
     } else {
       html +=
-        '<p style="color:var(--text-3);font-size:13px;padding:8px 0;">댓글을 작성하려면 로그인이 필요합니다.</p>';
+        '<p style="color:var(--text-3);font-size:13px;padding:8px 0;">' +
+        esc(bt('board.login_to_comment', '댓글을 작성하려면 로그인이 필요합니다.')) + '</p>';
     }
     return html;
   }
 
   function postComment(postId, body, parentId, btn, reload) {
     var text = (body || '').trim();
-    if (!text) { alert('댓글 내용을 입력해 주세요.'); return; }
+    if (!text) { alert(bt('board.enter_comment', '댓글 내용을 입력해 주세요.')); return; }
     if (!window.TopikApi || !TopikApi.createBoardComment) return;
     var prev = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = '등록 중…'; }
+    if (btn) { btn.disabled = true; btn.textContent = bt('board.posting', '등록 중…'); }
     TopikApi.createBoardComment(postId, {
       body: text,
       parent_comment_id: parentId != null ? parentId : null,
@@ -121,7 +280,7 @@
       reload();
     }).catch(function () {
       if (btn) { btn.disabled = false; btn.textContent = prev; }
-      alert('네트워크 오류입니다.');
+      alert(bt('board.network_err', '네트워크 오류입니다.'));
     });
   }
 
@@ -172,7 +331,7 @@
 
     btn.addEventListener('click', function () {
       if (!TopikApi.canUseApi()) {
-        alert('서버에 연결할 수 없습니다.');
+        alert(bt('board.server_err', '서버에 연결할 수 없습니다.'));
         return;
       }
       if (!TopikApi.isLoggedIn()) {
@@ -193,46 +352,70 @@
         : (opts.secretRadio ? opts.secretRadio.checked : false);
 
       if (!title || title.length > 100) {
-        alert('제목을 100자 이내로 입력해 주세요.');
+        alert(bt('board.title_len', '제목을 100자 이내로 입력해 주세요.'));
         return;
       }
       if (!body || body.length < 10) {
-        alert('내용을 10자 이상 입력해 주세요.');
+        alert(bt('board.body_len', '내용을 10자 이상 입력해 주세요.'));
         return;
+      }
+
+      // 비밀글 비밀번호 (작성 시) — 페이지가 secretPwEl 을 제공하면 사용
+      var secretPassword = '';
+      if (isSecret && opts.secretPwEl) {
+        secretPassword = (opts.secretPwEl.value || '').trim();
+        if (!secretPassword || secretPassword.length < 4) {
+          alert(bt('board.write_pw', '비밀글 비밀번호를 4자 이상 입력해 주세요.'));
+          return;
+        }
+      }
+
+      // 첨부파일 업로드 진행 중이면 대기
+      var attachmentIds = [];
+      if (opts.attachmentCtrl) {
+        if (opts.attachmentCtrl.hasPending()) {
+          alert(bt('board.upload_wait', '파일 업로드가 끝날 때까지 기다려 주세요.'));
+          return;
+        }
+        attachmentIds = opts.attachmentCtrl.getFileIds();
       }
 
       btn.disabled = true;
       var prev = btn.textContent;
-      btn.textContent = '제출 중…';
+      btn.textContent = bt('board.submitting', '제출 중…');
 
-      TopikApi.createBoardPost({
+      var payload = {
         board_type: opts.boardType,
         title: title,
         body: body,
         category: category || null,
         is_secret: isSecret,
-      }).then(function (res) {
+        attachment_file_ids: attachmentIds,
+      };
+      if (isSecret && secretPassword) payload.secret_password = secretPassword;
+
+      TopikApi.createBoardPost(payload).then(function (res) {
         btn.disabled = false;
         btn.textContent = prev;
         if (!res.ok) {
           alert(TopikApi.parseError(res));
           return;
         }
-        alert(res.body.message || '접수되었습니다.');
+        alert((res.body && res.body.message) || bt('board.submitted', '접수되었습니다.'));
         // 입력값 초기화
         if (opts.titleEl) opts.titleEl.value = '';
         if (opts.bodyEl) opts.bodyEl.value = '';
+        if (opts.secretPwEl) opts.secretPwEl.value = '';
+        if (opts.attachmentCtrl) opts.attachmentCtrl.reset();
         if (opts.onSuccess) opts.onSuccess();
         else if (opts.listPaneId && window.show) window.show(opts.listPaneId);
       }).catch(function () {
         btn.disabled = false;
         btn.textContent = prev;
-        alert('네트워크 오류입니다.');
+        alert(bt('board.network_err', '네트워크 오류입니다.'));
       });
     });
   }
-
-  var LOCKED_ALERT_MSG = '비밀글입니다. 작성자만 열람할 수 있습니다.';
 
   function isPostLocked(p) {
     if (!p) return false;
@@ -266,7 +449,7 @@
   }
 
   // -------------------------------------------------------------------------
-  // 목록 + 상세
+  // 목록 + 상세 + 비밀글 잠금해제
   // -------------------------------------------------------------------------
   function initBoard(opts) {
     var listBody = opts.listBody;
@@ -274,10 +457,12 @@
     var colspan = opts.colspan || 6;
     var d = opts.detail || {};
     var show = opts.show || window.show || function () {};
+    var secretModalId = opts.secretModalId || 'modalSecretLock';
 
     var state = { page: 1, items: [], pagination: null, filter: null };
     var deepLinkConsumed = false;
     var listPaneId = opts.listPaneId || 'listPane';
+    var pendingUnlockId = null;
 
     function findListItem(id) {
       var sid = String(id);
@@ -291,22 +476,17 @@
       show(listPaneId);
     }
 
-    function alertLockedAndStayOnList() {
-      alert(LOCKED_ALERT_MSG);
-      showListPane();
-      clearDetailDeepLink();
-    }
-
     function renderComments(postId) {
       var box = d.comments;
       if (!box) return;
       box.innerHTML =
-        '<h4>댓글</h4><p style="color:var(--text-3);font-size:13px;padding:8px 0;">불러오는 중…</p>';
+        '<h4>' + esc(bt('board.comments', '댓글')) + '</h4><p style="color:var(--text-3);font-size:13px;padding:8px 0;">' +
+        esc(bt('board.loading', '불러오는 중…')) + '</p>';
       if (!window.TopikApi || !TopikApi.getBoardComments) { box.innerHTML = ''; return; }
       TopikApi.getBoardComments(postId).then(function (res) {
         if (!res.ok) {
           box.innerHTML =
-            '<h4>댓글</h4><p style="color:var(--text-3);font-size:13px;padding:8px 0;">' +
+            '<h4>' + esc(bt('board.comments', '댓글')) + '</h4><p style="color:var(--text-3);font-size:13px;padding:8px 0;">' +
             esc(TopikApi.parseError(res)) + '</p>';
           return;
         }
@@ -315,7 +495,8 @@
         wireComments(box, postId, function () { renderComments(postId); });
       }).catch(function () {
         box.innerHTML =
-          '<h4>댓글</h4><p style="color:var(--text-3);font-size:13px;padding:8px 0;">네트워크 오류입니다.</p>';
+          '<h4>' + esc(bt('board.comments', '댓글')) + '</h4><p style="color:var(--text-3);font-size:13px;padding:8px 0;">' +
+          esc(bt('board.network_err', '네트워크 오류입니다.')) + '</p>';
       });
     }
 
@@ -337,7 +518,7 @@
     function renderList() {
       var items = visibleItems();
       if (!items.length) {
-        listBody.innerHTML = emptyRow('등록된 게시글이 없습니다.');
+        listBody.innerHTML = emptyRow(bt('board.empty', '등록된 게시글이 없습니다.'));
         return;
       }
       var total = (state.pagination && state.pagination.total_items) || items.length;
@@ -348,7 +529,7 @@
       listBody.innerHTML = items.map(function (p, idx) {
         var locked = (p.locked != null) ? p.locked : p.is_secret_to_viewer;
         var lock = locked ? '<span class="lock">🔒</span> ' : '';
-        var author = p.is_mine ? '본인' : (p.author_name || '—');
+        var author = p.is_mine ? bt('board.mine', '본인') : (p.author_name || '—');
         return (
           '<tr data-id="' + p.id + '"' + (locked ? ' data-locked="1"' : '') + '>' +
           '<td class="col-num">' + esc(startNo - idx) + '</td>' +
@@ -365,7 +546,7 @@
       listBody.querySelectorAll('tr[data-id]').forEach(function (tr) {
         tr.addEventListener('click', function () {
           if (tr.getAttribute('data-locked') === '1') {
-            alert(LOCKED_ALERT_MSG);
+            openSecretModal(tr.getAttribute('data-id'));
             return;
           }
           openDetail(tr.getAttribute('data-id'));
@@ -399,10 +580,10 @@
 
     function load(page) {
       state.page = page || 1;
-      listBody.innerHTML = emptyRow('불러오는 중…');
+      listBody.innerHTML = emptyRow(bt('board.loading', '불러오는 중…'));
       if (pager) pager.innerHTML = '';
       if (!window.TopikApi || !TopikApi.canUseApi()) {
-        listBody.innerHTML = emptyRow('서버에 연결할 수 없습니다.');
+        listBody.innerHTML = emptyRow(bt('board.server_err', '서버에 연결할 수 없습니다.'));
         return;
       }
       TopikApi.getBoardPosts(opts.boardType, { page: state.page }).then(function (res) {
@@ -422,77 +603,169 @@
         if (!deepLinkConsumed) {
           deepLinkConsumed = true;
           var deepId = getDeepLinkPostId();
-          if (deepId) openDetail(deepId);
+          if (deepId) {
+            var cached = findListItem(deepId);
+            if (cached && isPostLocked(cached)) openSecretModal(deepId);
+            else openDetail(deepId);
+          }
         }
       }).catch(function () {
-        listBody.innerHTML = emptyRow('네트워크 오류입니다.');
+        listBody.innerHTML = emptyRow(bt('board.network_err', '네트워크 오류입니다.'));
       });
     }
 
-    function openDetail(id) {
-      var cached = findListItem(id);
-      if (cached && isPostLocked(cached)) {
-        alertLockedAndStayOnList();
-        return;
-      }
+    // 상세 렌더 — 글 객체(p)를 받아 상세 영역을 채운다. (조회 / 잠금해제 공용)
+    function renderPostDetail(p, id) {
       show(opts.detailPaneId || 'detailPane');
-      if (d.title) d.title.textContent = '불러오는 중…';
-      if (d.body) d.body.innerHTML = '<p style="color:var(--text-3);">로딩 중입니다.</p>';
+      if (d.title) d.title.textContent = p.title;
+      if (d.badge) {
+        var label = p.category || p.post_type || bt('board.qna_default', '문의');
+        d.badge.textContent = label;
+        d.badge.className = opts.detailBadgeClass
+          ? opts.detailBadgeClass(p)
+          : 'badge badge-outline';
+      }
+      if (d.status) {
+        d.status.className = 'status ' + statusClass(p.workflow_status);
+        d.status.textContent = p.status_label || '';
+      }
+      if (d.meta) {
+        var secret = (p.is_secret && !p.is_mine)
+          ? '<span>·</span><span>🔒 ' + esc(bt('board.secret_label', '비밀글')) + '</span>' : '';
+        d.meta.innerHTML =
+          '<span>' + esc(p.author_name || currentUserName()) + '</span>' +
+          '<span>·</span><span>' + esc(p.date_formatted) + '</span>' + secret;
+      }
+      if (d.body) {
+        d.body.innerHTML = '<p>' + nl2br(p.body) + '</p>' + attachmentsDetailHtml(p.attachments);
+      }
+      if (d.reply) {
+        if (p.admin_reply) {
+          d.reply.style.display = '';
+          if (d.replyBody) d.replyBody.innerHTML = nl2br(p.admin_reply);
+          if (d.replyWhen) {
+            d.replyWhen.textContent = p.admin_replied_at
+              ? new Date(p.admin_replied_at).toLocaleDateString('ko-KR')
+              : '';
+          }
+        } else {
+          d.reply.style.display = 'none';
+        }
+      }
+      if (d.comments) renderComments(id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetDetail() {
+      if (d.title) d.title.textContent = bt('board.loading', '불러오는 중…');
+      if (d.body) d.body.innerHTML = '<p style="color:var(--text-3);">' + esc(bt('board.loading', '불러오는 중…')) + '</p>';
       if (d.reply) d.reply.style.display = 'none';
       if (d.badge) d.badge.textContent = '';
       if (d.status) { d.status.textContent = ''; d.status.className = 'status'; }
       if (d.meta) d.meta.innerHTML = '';
       if (d.comments) d.comments.innerHTML = '';
+    }
+
+    function openDetail(id) {
+      var cached = findListItem(id);
+      if (cached && isPostLocked(cached)) {
+        openSecretModal(id);
+        return;
+      }
+      show(opts.detailPaneId || 'detailPane');
+      resetDetail();
 
       TopikApi.getBoardPost(id).then(function (res) {
         if (!res.ok) {
-          if (d.title) d.title.textContent = '게시글을 불러올 수 없습니다';
+          if (d.title) d.title.textContent = bt('board.load_fail', '게시글을 불러올 수 없습니다');
           if (d.body) d.body.innerHTML = '<p>' + esc(TopikApi.parseError(res)) + '</p>';
           return;
         }
         var p = res.body;
         if (p.locked) {
-          alertLockedAndStayOnList();
+          showListPane();
+          openSecretModal(id);
           return;
         }
-        if (d.title) d.title.textContent = p.title;
-        if (d.badge) {
-          var label = p.category || p.post_type || '문의';
-          d.badge.textContent = label;
-          d.badge.className = opts.detailBadgeClass
-            ? opts.detailBadgeClass(p)
-            : 'badge badge-outline';
-        }
-        if (d.status) {
-          d.status.className = 'status ' + statusClass(p.workflow_status);
-          d.status.textContent = p.status_label || '';
-        }
-        if (d.meta) {
-          // 본인 글은 비밀글이어도 잠금 표식을 보이지 않는다.
-          var secret = (p.is_secret && !p.is_mine) ? '<span>·</span><span>🔒 비밀글</span>' : '';
-          d.meta.innerHTML =
-            '<span>' + esc(p.author_name || currentUserName()) + '</span>' +
-            '<span>·</span><span>' + esc(p.date_formatted) + '</span>' + secret;
-        }
-        if (d.body) d.body.innerHTML = '<p>' + nl2br(p.body) + '</p>';
-        if (d.reply) {
-          if (p.admin_reply) {
-            d.reply.style.display = '';
-            if (d.replyBody) d.replyBody.innerHTML = nl2br(p.admin_reply);
-            if (d.replyWhen) {
-              d.replyWhen.textContent = p.admin_replied_at
-                ? new Date(p.admin_replied_at).toLocaleDateString('ko-KR')
-                : '';
-            }
-          } else {
-            d.reply.style.display = 'none';
-          }
-        }
-        if (d.comments) renderComments(id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        renderPostDetail(p, id);
       }).catch(function () {
-        if (d.title) d.title.textContent = '게시글을 불러올 수 없습니다';
-        if (d.body) d.body.innerHTML = '<p>네트워크 오류입니다.</p>';
+        if (d.title) d.title.textContent = bt('board.load_fail', '게시글을 불러올 수 없습니다');
+        if (d.body) d.body.innerHTML = '<p>' + esc(bt('board.network_err', '네트워크 오류입니다.')) + '</p>';
+      });
+    }
+
+    // ---- 비밀글 잠금해제 모달 ----
+    var modal = document.getElementById(secretModalId);
+    var pwInput = modal ? modal.querySelector('#secretPw, input[type="password"]') : null;
+    var pwErr = modal ? modal.querySelector('#secretPwErr') : null;
+    var unlockBtn = modal ? modal.querySelector('#btnSecretUnlock, .modal-foot .btn-primary') : null;
+
+    function setUnlockErr(msg) {
+      if (!pwErr) { if (msg) alert(msg); return; }
+      pwErr.textContent = msg || '';
+      pwErr.style.display = msg ? 'block' : 'none';
+    }
+
+    function openSecretModal(id) {
+      pendingUnlockId = id;
+      clearDetailDeepLink();
+      if (!modal) {
+        alert(bt('board.locked_msg', '비밀글입니다. 작성자·관리자만 열람할 수 있습니다.'));
+        showListPane();
+        return;
+      }
+      if (pwInput) pwInput.value = '';
+      setUnlockErr('');
+      if (window.TPKM && TPKM.openModal) TPKM.openModal(secretModalId);
+      else modal.classList.add('open');
+      if (pwInput) setTimeout(function () { pwInput.focus(); }, 50);
+    }
+
+    function submitUnlock() {
+      if (!pendingUnlockId) { return; }
+      var pw = pwInput ? (pwInput.value || '').trim() : '';
+      if (!pw) { setUnlockErr(bt('board.unlock_enter_pw', '비밀번호를 입력해 주세요.')); return; }
+      if (!window.TopikApi || !TopikApi.unlockBoardPost) {
+        setUnlockErr(bt('board.server_err', '서버에 연결할 수 없습니다.'));
+        return;
+      }
+      var prev = unlockBtn ? unlockBtn.textContent : '';
+      if (unlockBtn) { unlockBtn.disabled = true; unlockBtn.textContent = bt('board.unlocking', '확인 중…'); }
+      TopikApi.unlockBoardPost(pendingUnlockId, pw).then(function (res) {
+        if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = prev; }
+        if (res.ok && res.body) {
+          var id = pendingUnlockId;
+          pendingUnlockId = null;
+          if (window.TPKM && TPKM.closeModal) TPKM.closeModal(secretModalId);
+          else if (modal) modal.classList.remove('open');
+          renderPostDetail(res.body, id);
+          return;
+        }
+        var body = res.body || {};
+        var code = (body.error && body.error.code) || '';
+        if (res.status === 423 || res.status === 429 || code === 'LOCKED' || body.locked) {
+          setUnlockErr(bt('board.unlock_locked', '비밀번호를 여러 번 잘못 입력하여 일시적으로 잠겼습니다. 잠시 후 다시 시도해 주세요.'));
+          return;
+        }
+        var left = (body.attempts_left != null) ? body.attempts_left
+          : (body.error && body.error.attempts_left);
+        if (left != null) {
+          setUnlockErr(btf('board.unlock_wrong_left', '비밀번호가 일치하지 않습니다. (남은 횟수 {n}회)', left));
+        } else {
+          setUnlockErr(bt('board.unlock_wrong', '비밀번호가 일치하지 않습니다.'));
+        }
+      }).catch(function () {
+        if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = prev; }
+        setUnlockErr(bt('board.network_err', '네트워크 오류입니다.'));
+      });
+    }
+
+    if (unlockBtn) {
+      unlockBtn.addEventListener('click', submitUnlock);
+    }
+    if (pwInput) {
+      pwInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitUnlock(); }
       });
     }
 
@@ -513,5 +786,6 @@
     wireSubmit: wireSubmit,
     initBoard: initBoard,
     statusClass: statusClass,
+    bindAttachments: bindAttachments,
   };
 })();

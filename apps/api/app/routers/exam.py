@@ -22,8 +22,10 @@ def serialize_round(r: ExamRound) -> dict:
         "registration_end_at": r.registration_end_at.isoformat(),
         "fee_level_i": r.fee_level_i,
         "fee_level_ii": r.fee_level_ii,
+        "fees": {"I": r.fee_level_i, "II": r.fee_level_ii},
         "capacity": r.capacity,
         "registration_status": r.registration_status,
+        "exam_number_visible_at": r.exam_number_visible_at.isoformat() if r.exam_number_visible_at else None,
         "venue_ids": [link.exam_venue_id for link in r.venue_links],
     }
 

@@ -50,3 +50,20 @@ def gender_to_code(value: str) -> str:
     if v in ("2", "f", "female", "여", "여성"):
         return "2"
     return value[:1] if value else "1"
+
+
+# 연명부 코드(권위 기준: 「연명부 양식.xlsx」 / 계약서 3절)
+JOB_CODES = {1, 2, 3, 4, 5, 6, 7, 8}
+MOTIVE_CODES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+PURPOSE_CODES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15}
+
+
+def validate_roster_codes(job_code: int | None, motive_code: int | None, purpose_code: int | None) -> str | None:
+    """직업/동기/목적 코드가 연명부 권위 코드표에 부합하는지 검증. 위반 시 메시지, 정상 시 None."""
+    if job_code is not None and job_code not in JOB_CODES:
+        return "직업 코드가 올바르지 않습니다."
+    if motive_code is not None and motive_code not in MOTIVE_CODES:
+        return "응시동기 코드가 올바르지 않습니다."
+    if purpose_code is not None and purpose_code not in PURPOSE_CODES:
+        return "응시목적 코드가 올바르지 않습니다."
+    return None

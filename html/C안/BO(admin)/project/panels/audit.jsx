@@ -43,8 +43,15 @@ function AuditPanel() {
   const rows = filtered.slice((page-1)*PER, page*PER);
 
   const exportCSV = () => {
-    DataStore.addAudit({ type: '관리자계정', targetId: '—', action: '게시', memo: `처리 이력 CSV 내보내기(${filtered.length}건)` });
-    toastOk(`${filtered.length}건의 처리 이력 CSV를 생성했습니다.`);
+    const headers = ['시각', '처리자', 'IP', '유형', '대상ID', '액션', '메모'];
+    const rows = filtered.map(l => [l.ts, l.actor, l.ip, l.type, l.targetId, l.action, l.memo || '']);
+    const fn = '처리이력_' + new Date().toISOString().slice(0, 10) + '.csv';
+    const after = () => {
+      DataStore.addAudit({ type: '관리자계정', targetId: '—', action: '게시', memo: `처리 이력 CSV 내보내기(${filtered.length}건)` });
+      toastOk(`${filtered.length}건의 처리 이력 CSV를 생성했습니다.`);
+    };
+    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, rows).then(after); }
+    else after();
   };
 
   return (

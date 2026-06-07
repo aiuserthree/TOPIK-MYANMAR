@@ -51,9 +51,31 @@
     return row.status || "applied";
   }
 
+  // 연명부 양식 권위 코드표(「연명부 양식.xlsx」 / 계약서 3절) — 표시용 라벨
+  var JOB_LABELS = {
+    1: "학생", 2: "공무원(군인)", 3: "회사원", 4: "자영업",
+    5: "주부", 6: "교사", 7: "무직", 8: "기타",
+  };
+  var MOTIVE_LABELS = {
+    1: "방송", 2: "신문", 3: "잡지", 4: "교육기관", 5: "포스터", 6: "친지",
+    7: "친구", 8: "인터넷", 9: "기타", 10: "지인(가족·친구등)", 11: "토픽홈페이지",
+  };
+  var PURPOSE_LABELS = {
+    1: "유학", 2: "취업", 3: "관광", 4: "학술연구", 5: "한국어실력확인",
+    6: "한국문화이해", 7: "기타", 8: "비자(VISA·영주권)", 9: "학점취득",
+    10: "사회통합프로그램", 15: "체류자격관리",
+  };
+  function codeLabel(map, code) {
+    if (code == null || code === "") return "";
+    var n = Number(code);
+    var l = map[n];
+    return l ? l + "(" + n + ")" : String(code);
+  }
+
   function mapApplicant(row, idx) {
     var photoOk = row.photo_review_status === "approved";
     var paid = row.payment_status === "paid";
+    var photoFileId = row.photo_file_id != null ? row.photo_file_id : null;
     return {
       id: String(row.id),
       sessionId: String(row.exam_round_id),
@@ -61,14 +83,20 @@
       nameKo: row.name_ko || "—",
       nameEn: row.name_en || "—",
       dob: row.birth_date || "",
-      sx: row.gender === "2" ? 2 : 1,
-      nation: "미얀마",
-      l1: "미얀마어",
-      job: "미상",
-      motive: "미상",
-      purpose: "미상",
+      sx: String(row.gender) === "2" ? 2 : 1,
+      nation: row.nationality || "미얀마",
+      l1: row.first_language || "미얀마어",
+      // 코드값(연명부 export 용) + 표시 라벨
+      jobCode: row.job_code != null ? row.job_code : "",
+      motiveCode: row.motivation_code != null ? row.motivation_code : (row.motive_code != null ? row.motive_code : ""),
+      purposeCode: row.purpose_code != null ? row.purpose_code : "",
+      job: codeLabel(JOB_LABELS, row.job_code) || "미상",
+      motive: codeLabel(MOTIVE_LABELS, row.motivation_code != null ? row.motivation_code : row.motive_code) || "미상",
+      purpose: codeLabel(PURPOSE_LABELS, row.purpose_code) || "미상",
       level: levelUi(row.exam_level),
       venueId: String(row.exam_venue_id),
+      photoFileId: photoFileId,
+      photoUrl: photoFileId != null ? Api.fileUrl(photoFileId) : "",
       photoOk: photoOk,
       photoStatus: row.photo_review_status || "pending",
       paid: paid,
@@ -81,7 +109,7 @@
       memo: "",
       email: row.email || "",
       tel: row.phone || "",
-      accommodation: false,
+      accommodation: !!row.accommodation_requested,
     };
   }
 
@@ -101,6 +129,7 @@
       venues: (row.venue_ids || []).map(String),
       status: st,
       applicants: applicantCounts[row.id] || 0,
+      examNumberVisibleAt: row.exam_number_visible_at || "",
     };
   }
 
@@ -233,6 +262,41 @@
         ts: isoLocal(row.admin_replied_at),
         kind: "reply",
       }] : [],
+    };
+  }
+
+  // 게시판 댓글/대댓글 — FO 응답 계약(계약서 5절 #3): comments[]{author,is_admin,content,created_at_label,replies[]}
+  function mapComment(c) {
+    return {
+      id: c.id != null ? String(c.id) : undefined,
+      parentId: c.parent_id != null ? String(c.parent_id) : null,
+      author: c.author || c.author_name || (c.is_admin ? "관리자" : (c.author_email || "작성자")),
+      body: c.content || c.body || "",
+      public: c.is_public != null ? !!c.is_public : (c.is_secret != null ? !c.is_secret : true),
+      ts: c.created_at_label || isoLocal(c.created_at),
+      kind: c.is_admin ? "reply" : "comment",
+    };
+  }
+
+  // 중첩(replies) 구조를 BO 표시용 평면 목록으로 — 부모 다음에 자식 배치
+  function flattenComments(items) {
+    var out = [];
+    (items || []).forEach(function (c) {
+      out.push(mapComment(c));
+      (c.replies || []).forEach(function (r) { out.push(mapComment(r)); });
+    });
+    return out;
+  }
+
+  function mapConsent(row) {
+    return {
+      id: row.id != null ? String(row.id) : ("c" + Math.random().toString(36).slice(2, 8)),
+      memberId: row.user_email || row.member_id || (row.user_id != null ? String(row.user_id) : "—"),
+      termsKind: TERM_KIND_UI[row.term_type] || row.term_type || row.terms_kind || "—",
+      version: row.version || "",
+      ts: row.created_at_label || isoLocal(row.agreed_at || row.created_at),
+      ip: row.ip_address || "—",
+      method: row.consent_method || row.method || "체크박스",
     };
   }
 
@@ -427,6 +491,8 @@
       DS.state.members = ((memRes.body && memRes.body.items) || []).map(mapMember);
       DS.state.terms = ((termRes.body && termRes.body.items) || []).map(mapTerm);
       DS.state.admins = ((admRes.body && admRes.body.items) || []).map(mapAdmin);
+      // 약관 동의 이력은 동의 이력 패널 진입 시 실제 API로 지연 로드(목업 제거)
+      DS.state.consents = [];
 
       if (audRes.ok && audRes.body && audRes.body.items) {
         DS.state.audit = audRes.body.items.map(mapAudit);
@@ -704,6 +770,63 @@
       DS.notify();
       return true;
     });
+  };
+
+  // 게시판 댓글/대댓글 — 조회/작성 (계약서 6.3)
+  DS.apiLoadComments = function (id, boardKind) {
+    if (!DS.isApiMode()) return Promise.resolve(null);
+    return Api.getBoardComments(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return null; }
+      var comments = flattenComments((res.body && res.body.comments) || res.body && res.body.items || []);
+      var list = boardKind === "inquiry" ? DS.state.inquiries : DS.state.refunds;
+      var row = list.find(function (x) { return x.id === String(id); });
+      if (row) {
+        row.comments = comments;
+        row.hasAnswer = comments.some(function (c) { return c.kind === "reply"; });
+      }
+      DS.notify();
+      return comments;
+    });
+  };
+
+  DS.apiAddComment = function (id, content, parentId, boardKind, isPublic) {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    var payload = { content: content };
+    if (parentId) payload.parent_id = parentId;
+    if (isPublic != null) payload.is_public = !!isPublic;
+    return Api.createBoardComment(id, payload).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      return DS.apiLoadComments(id, boardKind).then(function () { return true; });
+    });
+  };
+
+  // 약관 동의 이력 (계약서 6.4) — GET /api/v1/admin/terms/consents
+  DS.apiLoadConsents = function (query) {
+    if (!DS.isApiMode()) return Promise.resolve(null);
+    return Api.getTermsConsents(query || {}).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); DS.state.consents = []; DS.notify(); return null; }
+      DS.state.consents = ((res.body && (res.body.items || res.body.consents)) || []).map(mapConsent);
+      DS.notify();
+      return DS.state.consents;
+    });
+  };
+
+  // 수험번호/수험표 노출 시점 저장 (계약서 5절 — exam_number_visible_at)
+  DS.apiSetExamVisibility = function (roundId, visibleAtIso) {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Api.setExamNumberVisibility(roundId, visibleAtIso).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      var s = DS.state.sessions.find(function (x) { return x.id === String(roundId); });
+      if (s) s.examNumberVisibleAt = visibleAtIso || "";
+      DS.notify();
+      return true;
+    });
+  };
+
+  // 사진 zip 서버 다운로드 (계약서 4절) — 클라 더미 제거
+  DS.apiDownloadPhotosZip = function (query) {
+    if (!DS.isApiMode()) return Promise.resolve({ ok: false, body: { error: { message: "API 모드가 아닙니다." } } });
+    return Api.downloadPhotosZip(query || {});
   };
 
   DS.apiSaveMember = function (id, data) {

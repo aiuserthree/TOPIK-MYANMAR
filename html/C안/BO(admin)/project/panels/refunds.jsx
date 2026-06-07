@@ -139,9 +139,12 @@ function RefundDetailLP({ id, onClose }) {
   const [refundAmount, setRefundAmount] = useState('');
   const [refundMethod, setRefundMethod] = useState('계좌이체');
 
-  // 열람 이력 기록 (비밀글)
+  // 열람 이력 기록 (비밀글) — API 모드에서는 서버가 audit 기록. 댓글은 실제 API 조회.
   useEffect(() => {
-    if (DataStore.isApiMode && DataStore.isApiMode()) return;
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      if (DataStore.apiLoadComments) DataStore.apiLoadComments(id, 'refund');
+      return;
+    }
     DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', memo: '비밀글 열람' });
     DataStore.notify();
   }, [id]);
@@ -153,7 +156,7 @@ function RefundDetailLP({ id, onClose }) {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       if (status !== r.status) await DataStore.apiBoardWorkflow(id, status, 'refund');
       const ok = await DataStore.apiBoardReply(id, reply, 'refund', { public: replyPublic, status: status });
-      if (ok) { setReply(''); toastOk('답변이 등록되었습니다. 작성자에게 이메일이 발송됩니다.'); }
+      if (ok) { setReply(''); toastOk('답변이 등록되었습니다. (FO 게시판에 노출)'); }
       return;
     }
     const before = { hasAnswer: r.hasAnswer, status: r.status };
@@ -164,11 +167,16 @@ function RefundDetailLP({ id, onClose }) {
     DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', before, after: { hasAnswer: true, status }, memo: `답변 등록(${replyPublic ? '공개' : '비공개'})` });
     DataStore.notify();
     setReply('');
-    toastOk('답변이 등록되었습니다. 작성자에게 이메일이 발송됩니다.');
+    toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
   };
 
-  const addComment = () => {
+  const addComment = async () => {
     if (!comment.trim()) return;
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiAddComment(id, comment, null, 'refund', false);
+      if (ok) { setComment(''); toastOk('댓글이 등록되었습니다.'); }
+      return;
+    }
     r.comments.push({ author: state.me?.id, body: comment, public: false, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'comment' });
     DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', memo: '댓글 등록(비밀글—자동 비공개)' });
     DataStore.notify();

@@ -71,15 +71,15 @@
 
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>TOPIK 규정</span><span>답안 작성 요령</span></div>
+      <div class="crumb"><span data-i18n-content="rules.title">TOPIK 규정</span><span data-i18n-content="rules.answer">답안 작성 요령</span></div>
       <h1 data-i18n-content="rules.answer">답안 작성 요령</h1>
       <p class="lead" data-i18n-content="ra.lead">OMR 마킹·쓰기 답안지 작성법 및 사용 가능한 필기구 안내입니다.</p>
 
       <nav class="subnav" aria-label="TOPIK 규정 하위 메뉴">
-        <a href="rules-notice.html">유의 사항</a>
-        <a href="rules-answer.html" class="active">답안 작성 요령</a>
-        <a href="rules-fee.html">응시료 규정</a>
-        <a href="rules-id.html">신분증 규정</a>
+        <a href="rules-notice.html" data-i18n-content="rules.notice">유의 사항</a>
+        <a href="rules-answer.html" class="active" data-i18n-content="rules.answer">답안 작성 요령</a>
+        <a href="rules-fee.html" data-i18n-content="rules.fee">응시료 규정</a>
+        <a href="rules-id.html" data-i18n-content="rules.id">신분증 규정</a>
       </nav>
     </div>
   </header>
@@ -92,7 +92,7 @@
         <h2 data-i18n-content="ra.h_tools">사용 가능한 필기구</h2>
         <div class="callout">
           <div class="ico"></div>
-          <div>
+          <div data-i18n-content="ra.tools_desc" data-i18n-content-html>
             <strong>검정색 컴퓨터용 사인펜</strong>만 사용 가능합니다. 시험장에서 제공되며, 응시자 본인 휴대도 가능합니다.
             <strong>수정테이프·수정액·연필·볼펜은 사용 금지</strong>입니다.
           </div>
@@ -111,7 +111,7 @@
             <span class="bubble">③</span>
             <span class="bubble">④</span>
           </div>
-          <p class="body-sm" style="font-size: 12.5px; margin-bottom: 12px;">올바른 예 — 원 안을 완전히 채워 진하게 마킹</p>
+          <p class="body-sm" style="font-size: 12.5px; margin-bottom: 12px;" data-i18n-content="ra.omr_good">올바른 예 — 원 안을 완전히 채워 진하게 마킹</p>
 
           <div class="omr-row" style="margin-bottom: 12px;">
             <span class="num">2.</span>
@@ -120,26 +120,26 @@
             <span class="bubble">③</span>
             <span class="bubble">④</span>
           </div>
-          <p class="body-sm" style="font-size: 12.5px; color: var(--danger);">잘못된 예 — 빗금·점·체크 표시는 인식되지 않습니다</p>
+          <p class="body-sm" style="font-size: 12.5px; color: var(--danger);" data-i18n-content="ra.omr_bad">잘못된 예 — 빗금·점·체크 표시는 인식되지 않습니다</p>
         </div>
 
         <div class="dos-donts">
           <div class="dd-col do">
-            <h3>해야 하는 것</h3>
+            <h3 data-i18n-content="ra.do_title">해야 하는 것</h3>
             <ul>
-              <li>원의 안쪽을 완전히 채워 진하게 마킹</li>
-              <li>검정색 컴퓨터용 사인펜 사용</li>
-              <li>한 문항당 한 개의 답만 마킹</li>
-              <li>응시자 코드·수험번호 정확히 마킹</li>
+              <li data-i18n-content="ra.do_1">원의 안쪽을 완전히 채워 진하게 마킹</li>
+              <li data-i18n-content="ra.do_2">검정색 컴퓨터용 사인펜 사용</li>
+              <li data-i18n-content="ra.do_3">한 문항당 한 개의 답만 마킹</li>
+              <li data-i18n-content="ra.do_4">응시자 코드·수험번호 정확히 마킹</li>
             </ul>
           </div>
           <div class="dd-col dont">
-            <h3>하지 말아야 할 것</h3>
+            <h3 data-i18n-content="ra.dont_title">하지 말아야 할 것</h3>
             <ul>
-              <li>빗금(/), 점(.), 체크(✓) 표시 사용</li>
-              <li>수정테이프·수정액 사용</li>
-              <li>한 문항에 두 개 이상 마킹 (오답 처리)</li>
-              <li>OMR 카드 접거나 구기기</li>
+              <li data-i18n-content="ra.dont_1">빗금(/), 점(.), 체크(✓) 표시 사용</li>
+              <li data-i18n-content="ra.dont_2">수정테이프·수정액 사용</li>
+              <li data-i18n-content="ra.dont_3">한 문항에 두 개 이상 마킹 (오답 처리)</li>
+              <li data-i18n-content="ra.dont_4">OMR 카드 접거나 구기기</li>
             </ul>
           </div>
         </div>
@@ -150,16 +150,16 @@
         <h2 data-i18n-content="ra.h_writing">쓰기 답안지 작성 (TOPIK Ⅱ)</h2>
         <div class="callout callout-neutral">
           <div class="ico"></div>
-          <div>
+          <div data-i18n-content="ra.writing_desc" data-i18n-content-html>
             쓰기 영역은 별도 답안지에 직접 손글씨로 작성합니다. 200~300자 단문(2문항)과 600~700자 작문(2문항)으로 구성되며,
             <strong>한 칸에 한 글자</strong>씩 원고지 규칙에 따라 작성해 주세요.
           </div>
         </div>
         <div class="rule-list" style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); margin-top: 12px; overflow:hidden;">
-          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 문장 부호(., ?, !)는 한 칸을 차지합니다.</div>
-          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 문단을 바꿀 때 첫 칸은 비우고 두 번째 칸부터 작성합니다.</div>
-          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 알파벳·숫자는 한 칸에 두 글자씩 작성합니다.</div>
-          <div style="padding:14px 16px; font-size:14px;">· 글자 수가 부족하거나 초과해도 채점됩니다. 다만 권장 분량 유지를 권합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;" data-i18n-content="ra.writing_1">· 문장 부호(., ?, !)는 한 칸을 차지합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;" data-i18n-content="ra.writing_2">· 문단을 바꿀 때 첫 칸은 비우고 두 번째 칸부터 작성합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;" data-i18n-content="ra.writing_3">· 알파벳·숫자는 한 칸에 두 글자씩 작성합니다.</div>
+          <div style="padding:14px 16px; font-size:14px;" data-i18n-content="ra.writing_4">· 글자 수가 부족하거나 초과해도 채점됩니다. 다만 권장 분량 유지를 권합니다.</div>
         </div>
       </div>
 
@@ -167,9 +167,9 @@
       <div class="rule-block">
         <h2 data-i18n-content="ra.h_code">응시자 코드·수험번호 기재</h2>
         <div class="rule-list" style="background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;">
-          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 수험표에 기재된 <strong>수험번호 8자리</strong>를 OMR 상단 해당 칸에 정확히 마킹합니다.</div>
-          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;">· 응시자 코드는 시험장에서 별도 안내되는 코드를 마킹합니다.</div>
-          <div style="padding:14px 16px; font-size:14px;">· 잘못 마킹된 코드·번호로 인한 채점 오류는 응시자 본인 책임입니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;" data-i18n-content="ra.code_1" data-i18n-content-html>· 수험표에 기재된 <strong>수험번호 8자리</strong>를 OMR 상단 해당 칸에 정확히 마킹합니다.</div>
+          <div style="padding:14px 16px; border-bottom:1px solid var(--border); font-size:14px;" data-i18n-content="ra.code_2">· 응시자 코드는 시험장에서 별도 안내되는 코드를 마킹합니다.</div>
+          <div style="padding:14px 16px; font-size:14px;" data-i18n-content="ra.code_3">· 잘못 마킹된 코드·번호로 인한 채점 오류는 응시자 본인 책임입니다.</div>
         </div>
       </div>
 
@@ -180,6 +180,112 @@
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
 
+<script>
+window.TPKM_PAGE_I18N = {
+  'ra.lead': {
+    ko: 'OMR 마킹·쓰기 답안지 작성법 및 사용 가능한 필기구 안내입니다.',
+    my: 'OMR အမှတ်ခြစ်နည်း၊ ရေးသားဖြေဆိုခြင်း အဖြေလွှာ ဖြည့်နည်းနှင့် အသုံးပြုခွင့်ရှိသော ရေးကိရိယာများကို လမ်းညွှန်ပေးသည်။',
+    en: 'How to mark OMR, complete the writing sheet, and which pens are allowed.'
+  },
+  'ra.tools_desc': {
+    ko: '<strong>검정색 컴퓨터용 사인펜</strong>만 사용 가능합니다. 시험장에서 제공되며, 응시자 본인 휴대도 가능합니다. <strong>수정테이프·수정액·연필·볼펜은 사용 금지</strong>입니다.',
+    my: '<strong>အနက်ရောင် ကွန်ပျူတာသုံး အမှတ်ခြစ်ဘောပင်</strong> ကိုသာ အသုံးပြုနိုင်သည်။ စာစစ်ဌာနတွင် ထောက်ပံ့ပေးပြီး၊ ဖြေဆိုသူ ကိုယ်တိုင် ယူဆောင်လာခြင်းလည်း ရသည်။ <strong>အမှားပြင်တိပ်·အမှားပြင်ဆေး·ခဲတံ·ဘောပင် အသုံးပြုခြင်း တားမြစ်သည်။</strong>',
+    en: 'Only a <strong>black computer marking pen</strong> may be used. It is provided at the test site, and you may also bring your own. <strong>Correction tape, correction fluid, pencils, and ballpoint pens are prohibited.</strong>'
+  },
+  'ra.omr_good': {
+    ko: '올바른 예 — 원 안을 완전히 채워 진하게 마킹',
+    my: 'မှန်ကန်သော ဥပမာ — စက်ဝိုင်းအတွင်းကို ပြည့်အောင် ဖြည့်၍ ရင့်ရင့် အမှတ်ခြစ်ပါ',
+    en: 'Correct example — fill the circle completely and mark it dark'
+  },
+  'ra.omr_bad': {
+    ko: '잘못된 예 — 빗금·점·체크 표시는 인식되지 않습니다',
+    my: 'မှားယွင်းသော ဥပမာ — မျဉ်းစောင်း·အစက်·အမှန်ခြစ် အမှတ်အသားများကို မသိမှတ်ပါ',
+    en: 'Incorrect example — slashes, dots, and checkmarks are not recognized'
+  },
+  'ra.do_title': { ko: '해야 하는 것', my: 'လုပ်ဆောင်ရမည့်အရာ', en: 'What to do' },
+  'ra.do_1': {
+    ko: '원의 안쪽을 완전히 채워 진하게 마킹',
+    my: 'စက်ဝိုင်းအတွင်းကို ပြည့်အောင် ဖြည့်၍ ရင့်ရင့် အမှတ်ခြစ်ခြင်း',
+    en: 'Fill the inside of the circle completely and mark it dark'
+  },
+  'ra.do_2': {
+    ko: '검정색 컴퓨터용 사인펜 사용',
+    my: 'အနက်ရောင် ကွန်ပျူတာသုံး အမှတ်ခြစ်ဘောပင် အသုံးပြုခြင်း',
+    en: 'Use a black computer marking pen'
+  },
+  'ra.do_3': {
+    ko: '한 문항당 한 개의 답만 마킹',
+    my: 'မေးခွန်းတစ်ခုလျှင် အဖြေတစ်ခုသာ အမှတ်ခြစ်ခြင်း',
+    en: 'Mark only one answer per question'
+  },
+  'ra.do_4': {
+    ko: '응시자 코드·수험번호 정확히 마킹',
+    my: 'ဖြေဆိုသူ ကုဒ်·ဖြေဆိုမှတ်ပုံတင်နံပါတ်ကို တိကျစွာ အမှတ်ခြစ်ခြင်း',
+    en: 'Mark the candidate code and exam number accurately'
+  },
+  'ra.dont_title': { ko: '하지 말아야 할 것', my: 'မလုပ်ဆောင်ရမည့်အရာ', en: 'What not to do' },
+  'ra.dont_1': {
+    ko: '빗금(/), 점(.), 체크(✓) 표시 사용',
+    my: 'မျဉ်းစောင်း (/)၊ အစက် (.)၊ အမှန်ခြစ် (✓) အမှတ်အသား အသုံးပြုခြင်း',
+    en: 'Using slash (/), dot (.), or check (✓) marks'
+  },
+  'ra.dont_2': {
+    ko: '수정테이프·수정액 사용',
+    my: 'အမှားပြင်တိပ်·အမှားပြင်ဆေး အသုံးပြုခြင်း',
+    en: 'Using correction tape or correction fluid'
+  },
+  'ra.dont_3': {
+    ko: '한 문항에 두 개 이상 마킹 (오답 처리)',
+    my: 'မေးခွန်းတစ်ခုတွင် နှစ်ခုနှင့်အထက် အမှတ်ခြစ်ခြင်း (အဖြေမှားအဖြစ် သတ်မှတ်)',
+    en: 'Marking two or more answers for one question (counted wrong)'
+  },
+  'ra.dont_4': {
+    ko: 'OMR 카드 접거나 구기기',
+    my: 'OMR ကတ်ကို ခေါက်ခြင်း သို့မဟုတ် ကြေပြဲစေခြင်း',
+    en: 'Folding or crumpling the OMR card'
+  },
+  'ra.writing_desc': {
+    ko: '쓰기 영역은 별도 답안지에 직접 손글씨로 작성합니다. 200~300자 단문(2문항)과 600~700자 작문(2문항)으로 구성되며, <strong>한 칸에 한 글자</strong>씩 원고지 규칙에 따라 작성해 주세요.',
+    my: 'ရေးသားခြင်း အပိုင်းကို သီးခြား အဖြေလွှာတွင် လက်ရေးဖြင့် တိုက်ရိုက် ဖြေဆိုရသည်။ စာလုံး 200~300 ပါ အတိုဖြေ (မေးခွန်း 2 ခု) နှင့် စာလုံး 600~700 ပါ စာစီစာကုံး (မေးခွန်း 2 ခု) ဖြင့် ဖွဲ့စည်းထားပြီး၊ <strong>ကွက်တစ်ကွက်လျှင် စာလုံးတစ်လုံး</strong> နှုန်းဖြင့် မူရင်းစာရွက် စည်းမျဉ်းအတိုင်း ရေးသားပါ။',
+    en: 'The writing section is handwritten directly on a separate answer sheet. It consists of short responses of 200–300 characters (2 questions) and essays of 600–700 characters (2 questions); please write <strong>one character per box</strong> following manuscript-paper rules.'
+  },
+  'ra.writing_1': {
+    ko: '· 문장 부호(., ?, !)는 한 칸을 차지합니다.',
+    my: '· ပုဒ်ဖြတ်ပုဒ်ရပ် သင်္ကေတများ (., ?, !) သည် ကွက်တစ်ကွက်စီ ယူသည်။',
+    en: '· Punctuation marks (., ?, !) each take up one box.'
+  },
+  'ra.writing_2': {
+    ko: '· 문단을 바꿀 때 첫 칸은 비우고 두 번째 칸부터 작성합니다.',
+    my: '· စာပိုဒ်အသစ် စတင်ရာတွင် ပထမကွက်ကို ချန်ထား၍ ဒုတိယကွက်မှ စတင်ရေးသားသည်။',
+    en: '· When starting a new paragraph, leave the first box empty and begin from the second box.'
+  },
+  'ra.writing_3': {
+    ko: '· 알파벳·숫자는 한 칸에 두 글자씩 작성합니다.',
+    my: '· အက္ခရာ·ဂဏန်းများကို ကွက်တစ်ကွက်လျှင် နှစ်လုံးစီ ရေးသားသည်။',
+    en: '· Write alphabet letters and numbers two characters per box.'
+  },
+  'ra.writing_4': {
+    ko: '· 글자 수가 부족하거나 초과해도 채점됩니다. 다만 권장 분량 유지를 권합니다.',
+    my: '· စာလုံးအရေအတွက် လိုအပ်သည်ထက် နည်းသည် သို့မဟုတ် ကျော်လွန်သည့်တိုင် အမှတ်ပေးသည်။ သို့သော် အကြံပြုထားသော အရှည်ကို ထိန်းသိမ်းရန် တိုက်တွန်းသည်။',
+    en: '· Your work is graded even if it is under or over the character count, but keeping the recommended length is advised.'
+  },
+  'ra.code_1': {
+    ko: '· 수험표에 기재된 <strong>수험번호 8자리</strong>를 OMR 상단 해당 칸에 정확히 마킹합니다.',
+    my: '· ဝင်ခွင့်လက်မှတ်တွင် ဖော်ပြထားသော <strong>ဖြေဆိုမှတ်ပုံတင်နံပါတ် 8 လုံး</strong>ကို OMR ၏ အပေါ်ပိုင်း သက်ဆိုင်ရာ ကွက်များတွင် တိကျစွာ အမှတ်ခြစ်သည်။',
+    en: '· Accurately mark the <strong>8-digit exam number</strong> printed on your admission ticket in the corresponding boxes at the top of the OMR.'
+  },
+  'ra.code_2': {
+    ko: '· 응시자 코드는 시험장에서 별도 안내되는 코드를 마킹합니다.',
+    my: '· ဖြေဆိုသူ ကုဒ်အတွက် စာစစ်ဌာနတွင် သီးခြား အသိပေးသော ကုဒ်ကို အမှတ်ခြစ်သည်။',
+    en: '· For the candidate code, mark the code separately provided at the test site.'
+  },
+  'ra.code_3': {
+    ko: '· 잘못 마킹된 코드·번호로 인한 채점 오류는 응시자 본인 책임입니다.',
+    my: '· မှားယွင်းစွာ အမှတ်ခြစ်ထားသော ကုဒ်·နံပါတ်ကြောင့် ဖြစ်ပေါ်သော အမှတ်ပေးမှု အမှားများသည် ဖြေဆိုသူ၏ တာဝန်ဖြစ်သည်။',
+    en: '· Grading errors caused by incorrectly marked codes or numbers are the candidate’s own responsibility.'
+  }
+};
+</script>
 <script src="assets/common.js"></script>
 </body>
 </html>

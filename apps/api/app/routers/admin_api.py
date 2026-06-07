@@ -1,25 +1,40 @@
 from __future__ import annotations
 
+import csv
+import io
+import re
 import secrets
 import string
+import zipfile
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
 from app.lib.audit import write_audit
-from app.lib.deps import AuthUser, require_admin, require_any_admin
+from app.lib.deps import (
+    AuthUser,
+    get_client_ip,
+    require_admin,
+    require_admin_base,
+    require_any_admin,
+)
 from app.lib.errors import api_error
-from app.lib.security import hash_password
+from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
+from app.lib.security import hash_password, verify_password
+from app.lib.storage import read_file_bytes
+from app.lib.validation import is_valid_password
 from app.models.admin import AdminAuditLog, AdminUser
 from app.models.application import Application, ApplicationMemo, ApplicationSubmission
 from app.models.board import BoardComment, BoardPost
-from app.models.content import FaqItem, Notice, Term
+from app.models.content import FaqItem, Notice, Term, TermConsent
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue
+from app.models.system import FileAttachment
 from app.models.user import User
 from app.routers.exam import serialize_round, serialize_venue
 
@@ -154,11 +169,14 @@ def _board_post_dict(post: BoardPost, user: User | None = None) -> dict:
         "title": post.title,
         "body": post.body,
         "is_secret": post.is_secret,
+        "locked": False,  # 관리자는 비밀글도 열람 가능
         "workflow_status": post.workflow_status,
+        "status_label": board_status_label(post.workflow_status),
         "admin_reply": post.admin_reply,
         "admin_replied_at": post.admin_replied_at.isoformat() if post.admin_replied_at else None,
         "admin_replier_id": post.admin_replier_id,
         "created_at": post.created_at.isoformat() if post.created_at else None,
+        "date_formatted": fmt_date(post.created_at),
         "author_email": user.email if user else None,
         "author_name": user.name_ko if user else None,
         "has_admin_reply": bool(post.admin_reply),
@@ -180,7 +198,12 @@ def _term_dict(row: Term) -> dict:
     }
 
 
-def _app_row_dict(app: Application, user: User | None = None) -> dict:
+def _app_row_dict(
+    app: Application,
+    user: User | None = None,
+    venue: ExamVenue | None = None,
+    rnd: ExamRound | None = None,
+) -> dict:
     return {
         "id": app.id,
         "submission_id": app.submission_id,
@@ -191,14 +214,33 @@ def _app_row_dict(app: Application, user: User | None = None) -> dict:
         "status": app.status,
         "payment_status": app.payment_status,
         "photo_review_status": app.photo_review_status,
+        "photo_reject_code": app.photo_reject_code,
+        "photo_reject_note": app.photo_reject_note,
+        "photo_file_id": app.photo_file_id,
         "exam_number": app.exam_number,
+        "exam_number_visible": app.exam_number_visible,
         "application_no": app.application_no,
+        # --- 연명부 10개 컬럼 채울 필드(계약서 3절) ---
         "name_ko": user.name_ko if user else None,
         "name_en": user.name_en if user else None,
-        "email": user.email if user else None,
-        "phone": user.phone if user else None,
         "birth_date": user.birth_date if user else None,
         "gender": user.gender if user else None,
+        "nationality": user.nationality if user else None,
+        "first_language": user.first_language if user else None,
+        "job_code": user.job_code if user else None,
+        "motive_code": user.motive_code if user else None,
+        "purpose_code": user.purpose_code if user else None,
+        # --- 지역/시험장/수준 ---
+        "country_code": venue.country_code if venue else None,
+        "region_code": venue.region_code if venue else None,
+        "venue_code": venue.venue_code if venue else None,
+        "venue_name": venue.name_ko if venue else None,
+        "venue_name_en": venue.name_en if venue else None,
+        "round_no": rnd.round_no if rnd else None,
+        "round_title": rnd.title if rnd else None,
+        # --- 연락/처리 ---
+        "email": user.email if user else None,
+        "phone": user.phone if user else None,
         "reject_reason": app.reject_reason,
         "payment_receipt_no": app.payment_receipt_no,
         "paid_at": app.paid_at.isoformat() if app.paid_at else None,
@@ -206,32 +248,165 @@ def _app_row_dict(app: Application, user: User | None = None) -> dict:
     }
 
 
+async def _load_app_refs(
+    db: AsyncSession, apps: list[Application]
+) -> tuple[dict[int, User], dict[int, ExamVenue], dict[int, ExamRound]]:
+    user_ids = {a.user_id for a in apps}
+    venue_ids = {a.exam_venue_id for a in apps}
+    round_ids = {a.exam_round_id for a in apps}
+    users: dict[int, User] = {}
+    venues: dict[int, ExamVenue] = {}
+    rounds: dict[int, ExamRound] = {}
+    if user_ids:
+        res = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users = {u.id: u for u in res.scalars().all()}
+    if venue_ids:
+        res = await db.execute(select(ExamVenue).where(ExamVenue.id.in_(venue_ids)))
+        venues = {v.id: v for v in res.scalars().all()}
+    if round_ids:
+        res = await db.execute(select(ExamRound).where(ExamRound.id.in_(round_ids)))
+        rounds = {r.id: r for r in res.scalars().all()}
+    return users, venues, rounds
+
+
 @router.get("/applications")
 async def admin_list_applications(
     exam_round_id: int | None = Query(None),
+    exam_venue_id: int | None = Query(None),
+    exam_level: str | None = Query(None),
     status: str | None = Query(None),
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=500),
     _: AuthUser = Depends(require_any_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     stmt = select(Application).order_by(Application.id.desc())
     if exam_round_id:
         stmt = stmt.where(Application.exam_round_id == exam_round_id)
+    if exam_venue_id:
+        stmt = stmt.where(Application.exam_venue_id == exam_venue_id)
+    if exam_level:
+        stmt = stmt.where(Application.exam_level == exam_level)
     if status:
         stmt = stmt.where(Application.status == status)
     stmt = stmt.offset((page - 1) * page_size).limit(page_size)
     apps = (await db.execute(stmt)).scalars().all()
-    user_ids = {a.user_id for a in apps}
-    users = {}
-    if user_ids:
-        res = await db.execute(select(User).where(User.id.in_(user_ids)))
-        users = {u.id: u for u in res.scalars().all()}
+    users, venues, rounds = await _load_app_refs(db, apps)
     return {
-        "items": [_app_row_dict(a, users.get(a.user_id)) for a in apps],
+        "items": [
+            _app_row_dict(a, users.get(a.user_id), venues.get(a.exam_venue_id), rounds.get(a.exam_round_id))
+            for a in apps
+        ],
         "page": page,
         "page_size": page_size,
     }
+
+
+_LEVEL_FOLDER = {"I": "TOPIK Ⅰ", "II": "TOPIK Ⅱ"}
+
+
+def _safe_seg(value: str | None, fallback: str) -> str:
+    """zip 경로 세그먼트 안전화(슬래시 등 제거)."""
+    v = (value or "").strip() or fallback
+    return re.sub(r'[\\/:*?"<>|]+', "_", v)
+
+
+@router.get("/applications/photos.zip")
+async def export_photos_zip(
+    round_id: int | None = Query(None),
+    venue_id: int | None = Query(None),
+    level: str | None = Query(None),
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """실제 사진을 {지역}/{시험장}/{수준}/{수험번호}.jpg 구조로 zip 스트리밍(계약서 4절).
+
+    수험번호 미부여/사진 없음은 _누락리포트.txt 에 기록.
+    """
+    stmt = select(Application).where(Application.status != "cancelled")
+    if round_id:
+        stmt = stmt.where(Application.exam_round_id == round_id)
+    if venue_id:
+        stmt = stmt.where(Application.exam_venue_id == venue_id)
+    if level:
+        stmt = stmt.where(Application.exam_level == level)
+    apps = (await db.execute(stmt)).scalars().all()
+
+    users, venues, _rounds = await _load_app_refs(db, apps)
+
+    # 지역명(한글) 조회.
+    region_names: dict[tuple[str, str], str] = {}
+    if venues:
+        rres = await db.execute(select(CountryRegionCode))
+        for rc in rres.scalars().all():
+            region_names[(rc.country_code, rc.region_code)] = rc.name_ko
+
+    # file_attachments 조회.
+    file_ids = {a.photo_file_id for a in apps if a.photo_file_id}
+    files: dict[int, FileAttachment] = {}
+    if file_ids:
+        fres = await db.execute(select(FileAttachment).where(FileAttachment.id.in_(file_ids)))
+        files = {f.id: f for f in fres.scalars().all()}
+
+    buf = io.BytesIO()
+    included = 0
+    missing: list[str] = []
+    seen_names: set[str] = set()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for app in apps:
+            user = users.get(app.user_id)
+            venue = venues.get(app.exam_venue_id)
+            who = (user.name_en if user else None) or (user.name_ko if user else None) or f"app#{app.id}"
+            if not app.exam_number:
+                missing.append(f"[수험번호 미부여] {who} (app_id={app.id}, level={app.exam_level})")
+                continue
+            f = files.get(app.photo_file_id) if app.photo_file_id else None
+            data = read_file_bytes(f.storage_key) if f else None
+            if not data:
+                missing.append(f"[사진 없음] {app.exam_number} {who} (app_id={app.id})")
+                continue
+            region = _safe_seg(
+                region_names.get((venue.country_code, venue.region_code)) if venue else None,
+                venue.region_code if venue else "지역",
+            )
+            venue_seg = _safe_seg(venue.name_ko if venue else None, venue.venue_code if venue else "시험장")
+            level_seg = _safe_seg(_LEVEL_FOLDER.get(app.exam_level, app.exam_level), app.exam_level)
+            arcname = f"{region}/{venue_seg}/{level_seg}/{app.exam_number}.jpg"
+            if arcname in seen_names:
+                arcname = f"{region}/{venue_seg}/{level_seg}/{app.exam_number}_{app.id}.jpg"
+            seen_names.add(arcname)
+            zf.writestr(arcname, data)
+            included += 1
+
+        report = [
+            "TOPIK Myanmar 사진 제출 zip — 누락 리포트",
+            f"생성: {datetime.now(timezone.utc).isoformat()}",
+            f"필터: round_id={round_id}, venue_id={venue_id}, level={level}",
+            f"포함 사진: {included}건 / 누락: {len(missing)}건",
+            "",
+        ]
+        report.extend(missing if missing else ["(누락 없음)"])
+        zf.writestr("_누락리포트.txt", "\n".join(report).encode("utf-8"))
+
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="photos_export",
+        target_type="exam_rounds",
+        target_id=round_id or 0,
+        after_data={"included": included, "missing": len(missing)},
+        ip_address=ip,
+    )
+    await db.commit()
+
+    buf.seek(0)
+    fname = f"topik_photos_round{round_id or 'all'}.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 
 @router.get("/applications/{app_id}")
@@ -248,13 +423,21 @@ async def admin_get_application(
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     user_res = await db.execute(select(User).where(User.id == app.user_id))
     user = user_res.scalar_one_or_none()
+    venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == app.exam_venue_id))).scalar_one_or_none()
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
     return {
-        "application": _app_row_dict(app, user),
+        "application": _app_row_dict(app, user, venue, rnd),
         "user": {
             "email": user.email,
             "phone": user.phone,
             "birth_date": user.birth_date,
             "gender": user.gender,
+            "nationality": user.nationality,
+            "first_language": user.first_language,
+            "job_code": user.job_code,
+            "motive_code": user.motive_code,
+            "purpose_code": user.purpose_code,
+            "photo_file_id": user.photo_file_id,
         }
         if user
         else None,
@@ -358,53 +541,160 @@ async def photo_review(
     return {"photo_review_status": app.photo_review_status}
 
 
+def _assign_group_serials(apps_sorted: list[Application], accommodation_ids: set[int]) -> dict[int, int]:
+    """(지역,시험장,수준) 묶음 내 응시자코드(4자리) 일련번호 배정.
+
+    - 일반 신청자: 영문명 오름차순 1번부터.
+    - 편의지원 신청자: 해당 수준의 '마지막 홀수' 번호부터 내림차순(9,7,5,…) 배정.
+    반환: {application_id: serial(int)}
+    """
+    n = len(apps_sorted)
+    accom = [a for a in apps_sorted if a.id in accommodation_ids]
+    regular = [a for a in apps_sorted if a.id not in accommodation_ids]
+
+    largest_odd = n if n % 2 == 1 else n - 1
+    odd_seats = list(range(largest_odd, 0, -2)) if largest_odd >= 1 else []
+
+    result: dict[int, int] = {}
+    used: set[int] = set()
+    for i, a in enumerate(accom):
+        if i < len(odd_seats):
+            seat = odd_seats[i]
+            result[a.id] = seat
+            used.add(seat)
+
+    remaining = [s for s in range(1, n + 1) if s not in used]
+    ri = 0
+    for a in regular:
+        result[a.id] = remaining[ri]
+        ri += 1
+    # 편의지원자가 홀수 좌석보다 많은 예외: 남은 좌석에서 채움
+    for a in accom:
+        if a.id not in result:
+            result[a.id] = remaining[ri]
+            ri += 1
+    return result
+
+
 @router.post("/exam-rounds/{round_id}/assign-exam-numbers")
 async def assign_exam_numbers(
     round_id: int,
     body: AssignNumbersBody,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    # RBAC: 수험번호 부여는 최고관리자만(계약서 7절).
+    _require_super(admin)
+
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    # 이미 부여·공개된 수험번호의 재배정 방지(최초 부여는 허용).
+    if (
+        not body.dry_run
+        and rnd.exam_numbers_assigned_at
+        and rnd.exam_number_visible_at
+        and rnd.exam_number_visible_at <= datetime.now(timezone.utc)
+    ):
+        raise api_error("ALREADY_VISIBLE", "이미 공개된 수험번호는 재배정할 수 없습니다.", 409)
+
+    # 납부 완료·미취소 접수만 대상.
     result = await db.execute(
         select(Application, User)
         .join(User, User.id == Application.user_id)
         .where(
             Application.exam_round_id == round_id,
             Application.payment_status == "paid",
-            Application.exam_number.is_(None),
             Application.status != "cancelled",
         )
-        .order_by(User.name_en.asc())
     )
     rows = result.all()
+    if not rows:
+        return {"dry_run": body.dry_run, "assigned": 0, "preview": [], "groups": []}
+
+    # 편의지원 신청 submission 집합.
+    sub_res = await db.execute(
+        select(ApplicationSubmission.id).where(
+            ApplicationSubmission.exam_round_id == round_id,
+            ApplicationSubmission.accommodation_requested.is_(True),
+        )
+    )
+    accommodation_subs = {sid for (sid,) in sub_res.all()}
+
+    venue_cache: dict[int, ExamVenue] = {}
+
+    async def _venue(vid: int) -> ExamVenue | None:
+        if vid not in venue_cache:
+            v = (await db.execute(select(ExamVenue).where(ExamVenue.id == vid))).scalar_one_or_none()
+            venue_cache[vid] = v
+        return venue_cache[vid]
+
+    # (venue_id, level) 그룹핑.
+    groups: dict[tuple[int, str], list[tuple[Application, User]]] = {}
+    for app, user in rows:
+        groups.setdefault((app.exam_venue_id, app.exam_level), []).append((app, user))
+
     assigned = 0
     preview: list[str] = []
-    venue_cache: dict[int, ExamVenue] = {}
-    for app, user in rows:
-        if app.exam_venue_id not in venue_cache:
-            v = (await db.execute(select(ExamVenue).where(ExamVenue.id == app.exam_venue_id))).scalar_one_or_none()
-            if not v:
-                continue
-            venue_cache[app.exam_venue_id] = v
-        venue = venue_cache[app.exam_venue_id]
-        level_code = "7" if app.exam_level == "I" else "8"
-        serial = assigned + 1
-        exam_number = f"{venue.country_code}{venue.region_code}{level_code}{venue.venue_code}{serial:04d}"
-        preview.append(exam_number)
-        if not body.dry_run:
-            app.exam_number = exam_number
-            app.status = "exam_number_assigned"
-            app.exam_number_visible = False
-            assigned += 1
+    group_summ: list[dict] = []
+    for (venue_id, level), pairs in groups.items():
+        venue = await _venue(venue_id)
+        if not venue:
+            continue
+        # 영문명 오름차순(동명 시 id 안정 정렬).
+        pairs.sort(key=lambda pu: ((pu[1].name_en or "").upper(), pu[0].id))
+        apps_sorted = [app for app, _ in pairs]
+        accommodation_ids = {a.id for a in apps_sorted if a.submission_id in accommodation_subs}
+        serials = _assign_group_serials(apps_sorted, accommodation_ids)
+
+        level_code = "7" if level == "I" else "8"
+        country = (venue.country_code or "025").zfill(3)
+        region = (venue.region_code or "001").zfill(3)
+        venue_code = (venue.venue_code or "01").zfill(2)
+
+        for app in apps_sorted:
+            serial = serials[app.id]
+            exam_number = f"{country}{region}{level_code}{venue_code}{serial:04d}"
+            preview.append(exam_number)
+            if not body.dry_run:
+                app.exam_number = exam_number
+                app.status = "exam_number_assigned"
+                app.exam_number_visible = False
+                assigned += 1
+        group_summ.append(
+            {
+                "venue_id": venue_id,
+                "venue_name": venue.name_ko,
+                "region_code": region,
+                "venue_code": venue_code,
+                "level": level,
+                "count": len(apps_sorted),
+                "accommodation": len(accommodation_ids),
+            }
+        )
+
+    preview.sort()
     if not body.dry_run:
-        rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
-        if rnd:
-            rnd.exam_numbers_assigned_at = datetime.now(timezone.utc)
-            if body.visible_at:
-                rnd.exam_number_visible_at = body.visible_at
-        await write_audit(db, admin_user_id=admin.id, action_type="exam_number_assign", target_type="exam_rounds", target_id=round_id, after_data={"count": assigned})
+        rnd.exam_numbers_assigned_at = datetime.now(timezone.utc)
+        if body.visible_at:
+            rnd.exam_number_visible_at = body.visible_at
+        await write_audit(
+            db,
+            admin_user_id=admin.id,
+            action_type="exam_number_assign",
+            target_type="exam_rounds",
+            target_id=round_id,
+            after_data={"count": assigned, "groups": len(group_summ)},
+            ip_address=ip,
+        )
         await db.commit()
-    return {"dry_run": body.dry_run, "assigned": assigned, "preview": preview[:20]}
+    return {
+        "dry_run": body.dry_run,
+        "assigned": assigned if not body.dry_run else len(preview),
+        "preview": preview[:50],
+        "groups": group_summ,
+    }
 
 
 @router.get("/exam-rounds")
@@ -414,7 +704,13 @@ async def admin_exam_rounds(_: AuthUser = Depends(require_any_admin), db: AsyncS
 
 
 @router.post("/exam-rounds")
-async def create_round(body: RoundBody, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def create_round(
+    body: RoundBody,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)  # RBAC: 회차 생성/수정 = 최고관리자(계약서 7절)
     rnd = ExamRound(
         round_no=body.round_no,
         title=body.title,
@@ -429,7 +725,10 @@ async def create_round(body: RoundBody, admin: AuthUser = Depends(require_admin)
     await db.flush()
     for vid in body.venue_ids:
         db.add(ExamRoundVenue(exam_round_id=rnd.id, exam_venue_id=vid))
-    await write_audit(db, admin_user_id=admin.id, action_type="exam_round_create", target_type="exam_rounds", target_id=rnd.id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_round_create",
+        target_type="exam_rounds", target_id=rnd.id, after_data={"round_no": body.round_no}, ip_address=ip,
+    )
     await db.commit()
     return {"id": rnd.id}
 
@@ -439,18 +738,35 @@ async def update_round(
     round_id: int,
     body: dict,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    _require_super(admin)  # RBAC: 회차 수정 = 최고관리자
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
     if not rnd:
         raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
-    for key in ("title", "exam_date", "registration_start_at", "registration_end_at", "fee_level_i", "fee_level_ii", "capacity", "registration_status"):
+    before = {"title": rnd.title, "registration_status": rnd.registration_status}
+    for key in (
+        "title",
+        "exam_date",
+        "registration_start_at",
+        "registration_end_at",
+        "fee_level_i",
+        "fee_level_ii",
+        "capacity",
+        "registration_status",
+        "exam_number_visible_at",
+    ):
         if key in body:
             setattr(rnd, key, body[key])
     if "venue_ids" in body:
         await db.execute(delete(ExamRoundVenue).where(ExamRoundVenue.exam_round_id == round_id))
         for vid in body["venue_ids"]:
             db.add(ExamRoundVenue(exam_round_id=round_id, exam_venue_id=vid))
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_round_update",
+        target_type="exam_rounds", target_id=round_id, before_data=before, after_data=body, ip_address=ip,
+    )
     await db.commit()
     return {"updated": True}
 
@@ -460,15 +776,23 @@ async def round_status(
     round_id: int,
     body: dict,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    _require_super(admin)  # RBAC: 회차 상태변경 = 최고관리자
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
     if not rnd:
         raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
     status = body.get("registration_status")
     if status not in ("scheduled", "open", "closed"):
         raise api_error("VALIDATION_ERROR", "registration_status가 올바르지 않습니다.")
+    before = rnd.registration_status
     rnd.registration_status = status
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_round_status",
+        target_type="exam_rounds", target_id=round_id,
+        before_data={"registration_status": before}, after_data={"registration_status": status}, ip_address=ip,
+    )
     await db.commit()
     return {"registration_status": status}
 
@@ -484,21 +808,32 @@ async def update_venue(
     venue_id: int,
     body: dict,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    _require_super(admin)  # RBAC: 시험장 수정 = 최고관리자
     venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == venue_id))).scalar_one_or_none()
     if not venue:
         raise api_error("NOT_FOUND", "시험장을 찾을 수 없습니다.", 404)
     for key in ("venue_code", "name_ko", "name_en", "address", "region_code", "capacity", "memo", "is_active"):
         if key in body:
             setattr(venue, key, body[key])
-    await write_audit(db, admin_user_id=admin.id, action_type="exam_venue_update", target_type="exam_venues", target_id=venue_id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_venue_update",
+        target_type="exam_venues", target_id=venue_id, after_data=body, ip_address=ip,
+    )
     await db.commit()
     return {"updated": True}
 
 
 @router.post("/exam-venues")
-async def create_venue(body: VenueBody, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def create_venue(
+    body: VenueBody,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)  # RBAC: 시험장 생성 = 최고관리자
     region = await db.execute(
         select(CountryRegionCode).where(
             CountryRegionCode.country_code == body.country_code,
@@ -518,6 +853,12 @@ async def create_venue(body: VenueBody, admin: AuthUser = Depends(require_admin)
         memo=body.memo,
     )
     db.add(venue)
+    await db.flush()
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="exam_venue_create",
+        target_type="exam_venues", target_id=venue.id,
+        after_data={"venue_code": body.venue_code, "region_code": body.region_code}, ip_address=ip,
+    )
     await db.commit()
     return {"id": venue.id}
 
@@ -544,7 +885,12 @@ async def admin_notices(_: AuthUser = Depends(require_any_admin), db: AsyncSessi
 
 
 @router.post("/notices")
-async def create_notice(body: NoticeBody, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def create_notice(
+    body: NoticeBody,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     notice = Notice(
         category=body.category,
         title=body.title,
@@ -555,6 +901,12 @@ async def create_notice(body: NoticeBody, admin: AuthUser = Depends(require_admi
         published_at=datetime.now(timezone.utc) if body.is_published else None,
     )
     db.add(notice)
+    await db.flush()
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="notice_create",
+        target_type="notices", target_id=notice.id,
+        after_data={"title": body.title, "is_published": body.is_published}, ip_address=ip,
+    )
     await db.commit()
     return {"id": notice.id}
 
@@ -564,6 +916,7 @@ async def update_notice(
     notice_id: int,
     body: dict,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     notice = (await db.execute(select(Notice).where(Notice.id == notice_id))).scalar_one_or_none()
@@ -574,6 +927,10 @@ async def update_notice(
             setattr(notice, key, body[key])
     if body.get("is_published") and not notice.published_at:
         notice.published_at = datetime.now(timezone.utc)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="notice_update",
+        target_type="notices", target_id=notice_id, after_data=body, ip_address=ip,
+    )
     await db.commit()
     return {"updated": True}
 
@@ -601,9 +958,19 @@ async def admin_faq(_: AuthUser = Depends(require_any_admin), db: AsyncSession =
 
 
 @router.post("/faq")
-async def create_faq(body: FaqBody, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def create_faq(
+    body: FaqBody,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     row = FaqItem(**body.model_dump())
     db.add(row)
+    await db.flush()
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="faq_create",
+        target_type="faq", target_id=row.id, after_data={"category": body.category}, ip_address=ip,
+    )
     await db.commit()
     return {"id": row.id}
 
@@ -613,6 +980,7 @@ async def update_faq(
     faq_id: int,
     body: dict,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     row = (await db.execute(select(FaqItem).where(FaqItem.id == faq_id))).scalar_one_or_none()
@@ -631,6 +999,10 @@ async def update_faq(
     ):
         if key in body:
             setattr(row, key, body[key])
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="faq_update",
+        target_type="faq", target_id=faq_id, after_data=body, ip_address=ip,
+    )
     await db.commit()
     return {"updated": True}
 
@@ -639,6 +1011,77 @@ async def update_faq(
 async def admin_terms(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
     result = await db.execute(select(Term).order_by(Term.term_type, Term.id.desc()))
     return {"items": [_term_dict(t) for t in result.scalars().all()]}
+
+
+@router.get("/terms/consents")
+async def terms_consents(
+    term_type: str | None = Query(None),
+    user_id: int | None = Query(None),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    format: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(200, ge=1, le=2000),
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """약관 동의 이력 조회(필터: 약관종류/기간/회원) + CSV(format=csv)."""
+    stmt = select(TermConsent).order_by(TermConsent.created_at.desc(), TermConsent.id.desc())
+    if term_type:
+        stmt = stmt.where(TermConsent.term_type == term_type)
+    if user_id:
+        stmt = stmt.where(TermConsent.user_id == user_id)
+    if date_from:
+        stmt = stmt.where(TermConsent.created_at >= datetime(date_from.year, date_from.month, date_from.day, tzinfo=timezone.utc))
+    if date_to:
+        end = datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=timezone.utc)
+        stmt = stmt.where(TermConsent.created_at <= end)
+
+    total = 0
+    if format != "csv":
+        total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+    rows = (await db.execute(stmt)).scalars().all()
+
+    uids = {r.user_id for r in rows if r.user_id}
+    users: dict[int, User] = {}
+    if uids:
+        ures = await db.execute(select(User).where(User.id.in_(uids)))
+        users = {u.id: u for u in ures.scalars().all()}
+
+    def _item(r: TermConsent) -> dict:
+        u = users.get(r.user_id) if r.user_id else None
+        return {
+            "id": r.id,
+            "user_id": r.user_id,
+            "user_email": u.email if u else None,
+            "user_name": u.name_ko if u else None,
+            "term_type": r.term_type,
+            "version": r.version,
+            "agreed": r.agreed,
+            "ip_address": r.ip_address,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "created_at_label": fmt_datetime(r.created_at),
+        }
+
+    if format == "csv":
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(["id", "user_id", "user_email", "user_name", "term_type", "version", "agreed", "ip_address", "created_at"])
+        for r in rows:
+            it = _item(r)
+            writer.writerow([
+                it["id"], it["user_id"], it["user_email"], it["user_name"],
+                it["term_type"], it["version"], it["agreed"], it["ip_address"], it["created_at"],
+            ])
+        data = out.getvalue().encode("utf-8-sig")
+        return StreamingResponse(
+            io.BytesIO(data),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="terms_consents.csv"'},
+        )
+
+    return {"items": [_item(r) for r in rows], "page": page, "page_size": page_size, "total_items": total}
 
 
 @router.get("/terms/{term_id}")
@@ -684,27 +1127,39 @@ async def update_term(
 
 
 @router.post("/terms/{term_id}/retire")
-async def retire_term(term_id: int, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def retire_term(
+    term_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)  # RBAC: 약관 게시/폐지 = 최고관리자
     row = (await db.execute(select(Term).where(Term.id == term_id))).scalar_one_or_none()
     if not row:
         raise api_error("NOT_FOUND", "약관을 찾을 수 없습니다.", 404)
     if row.status != "published":
         raise api_error("VALIDATION_ERROR", "게시 중인 약관만 폐지할 수 있습니다.", 400)
     row.status = "retired"
-    await write_audit(db, admin_user_id=admin.id, action_type="term_retire", target_type="terms", target_id=term_id)
+    await write_audit(db, admin_user_id=admin.id, action_type="term_retire", target_type="terms", target_id=term_id, ip_address=ip)
     await db.commit()
     return {"retired": True}
 
 
 @router.post("/terms/{term_id}/publish")
-async def publish_term(term_id: int, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def publish_term(
+    term_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)  # RBAC: 약관 게시 = 최고관리자
     row = (await db.execute(select(Term).where(Term.id == term_id))).scalar_one_or_none()
     if not row:
         raise api_error("NOT_FOUND", "약관을 찾을 수 없습니다.", 404)
     await db.execute(update(Term).where(Term.term_type == row.term_type, Term.status == "published").values(status="retired"))
     row.status = "published"
     row.published_at = datetime.now(timezone.utc)
-    await write_audit(db, admin_user_id=admin.id, action_type="term_publish", target_type="terms", target_id=term_id)
+    await write_audit(db, admin_user_id=admin.id, action_type="term_publish", target_type="terms", target_id=term_id, ip_address=ip)
     await db.commit()
     return {"published": True}
 
@@ -736,7 +1191,8 @@ async def admin_list_board_posts(
 @router.get("/board/posts/{post_id}")
 async def admin_get_board_post(
     post_id: int,
-    _: AuthUser = Depends(require_any_admin),
+    admin: AuthUser = Depends(require_any_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     result = await db.execute(
@@ -751,22 +1207,73 @@ async def admin_get_board_post(
     comments_res = await db.execute(
         select(BoardComment)
         .where(BoardComment.board_post_id == post_id, BoardComment.is_deleted.is_(False))
-        .order_by(BoardComment.created_at)
+        .order_by(BoardComment.created_at, BoardComment.id)
     )
     comments = [
         {
             "id": c.id,
             "body": c.body,
+            "parent_comment_id": c.parent_comment_id,
             "author_admin_id": c.author_admin_id,
             "author_user_id": c.author_user_id,
+            "is_admin": c.author_admin_id is not None,
             "is_secret": c.is_secret,
             "created_at": c.created_at.isoformat(),
+            "created_at_label": fmt_datetime(c.created_at),
         }
         for c in comments_res.scalars().all()
     ]
+    att_res = await db.execute(
+        select(FileAttachment).where(
+            FileAttachment.owner_type == "board_post", FileAttachment.owner_id == post_id
+        )
+    )
+    attachments = [
+        {"file_id": f.id, "filename": f.original_filename or "file", "size": f.size_bytes, "url": f"/api/v1/files/{f.id}"}
+        for f in att_res.scalars().all()
+    ]
     data = _board_post_dict(post, user)
     data["comments"] = comments
+    data["attachments"] = attachments
+    # 관리자가 비밀글 열람 시 audit 기록(계약서 6.2).
+    if post.is_secret:
+        await write_audit(
+            db, admin_user_id=admin.id, action_type="board_secret_view",
+            target_type="board_posts", target_id=post_id, ip_address=ip,
+        )
+        await db.commit()
     return {"post": data}
+
+
+@router.post("/board/posts/{post_id}/comments")
+async def admin_create_board_comment(
+    post_id: int,
+    body: dict,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    post = (await db.execute(select(BoardPost).where(BoardPost.id == post_id))).scalar_one_or_none()
+    if not post:
+        raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+    content = (body.get("content") or body.get("body") or "").strip()
+    if not content:
+        raise api_error("VALIDATION_ERROR", "댓글 내용을 입력해 주세요.")
+    parent_id = body.get("parent_id") or body.get("parent_comment_id")
+    comment = BoardComment(
+        board_post_id=post_id,
+        author_admin_id=admin.id,
+        body=content,
+        parent_comment_id=parent_id,
+    )
+    db.add(comment)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="board_comment",
+        target_type="board_posts", target_id=post_id, ip_address=ip,
+    )
+    await db.commit()
+    await db.refresh(comment)
+    return {"id": comment.id, "created_at": comment.created_at.isoformat()}
 
 
 @router.delete("/board/posts/{post_id}")
@@ -863,6 +1370,7 @@ async def update_user(
     user_id: int,
     body: UserPatchBody,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
@@ -872,10 +1380,25 @@ async def update_user(
     data = body.model_dump(exclude_unset=True)
     if "status" in data and data["status"] not in ("active", "suspended", "withdrawn"):
         raise api_error("VALIDATION_ERROR", "status가 올바르지 않습니다.", 400)
+    # RBAC: 회원 정지/탈퇴는 최고관리자(계약서 7절).
+    if data.get("status") in ("suspended", "withdrawn"):
+        _require_super(admin)
     for key, val in data.items():
         setattr(user, key, val)
     if data.get("status") == "withdrawn":
-        user.withdrawn_at = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+        user.withdrawn_at = now
+        # 탈퇴 시 진행중(미취소) 접수 자동 취소 cascade.
+        await db.execute(
+            update(ApplicationSubmission)
+            .where(ApplicationSubmission.user_id == user_id, ApplicationSubmission.cancelled_at.is_(None))
+            .values(cancelled_at=now, cancel_reason="관리자 회원 탈퇴", status="cancelled")
+        )
+        await db.execute(
+            update(Application)
+            .where(Application.user_id == user_id, Application.cancelled_at.is_(None))
+            .values(cancelled_at=now, cancel_reason="관리자 회원 탈퇴", status="cancelled")
+        )
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -884,6 +1407,7 @@ async def update_user(
         target_id=user_id,
         before_data=before,
         after_data=data,
+        ip_address=ip,
     )
     await db.commit()
     return {"updated": True}
@@ -1037,6 +1561,36 @@ async def audit_logs(_: AuthUser = Depends(require_any_admin), db: AsyncSession 
             for l in logs
         ]
     }
+
+
+class AdminChangePasswordBody(BaseModel):
+    current_password: str
+    new_password: str
+    new_password_confirm: str
+
+
+@router.post("/me/change-password")
+async def admin_change_password(
+    body: AdminChangePasswordBody,
+    admin: AuthUser = Depends(require_admin_base),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """관리자 본인 비밀번호 변경(첫 로그인 must_change_password 해제 포함)."""
+    row = (await db.execute(select(AdminUser).where(AdminUser.id == admin.id))).scalar_one_or_none()
+    if not row or not verify_password(body.current_password, row.password_hash):
+        raise api_error("INVALID_CREDENTIALS", "현재 비밀번호가 올바르지 않습니다.", 400)
+    if not is_valid_password(body.new_password) or body.new_password != body.new_password_confirm:
+        raise api_error("VALIDATION_ERROR", "새 비밀번호 규칙을 확인해 주세요.")
+    row.password_hash = hash_password(body.new_password)
+    row.password_changed_at = datetime.now(timezone.utc)
+    row.must_change_password = False
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="admin_change_password",
+        target_type="admin_users", target_id=admin.id, ip_address=ip,
+    )
+    await db.commit()
+    return {"changed": True}
 
 
 @router.get("/region-codes")

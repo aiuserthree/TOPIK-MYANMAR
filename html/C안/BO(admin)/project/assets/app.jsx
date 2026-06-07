@@ -46,11 +46,69 @@ const CRUMB = {
   audit:      ['시스템', '처리 이력'],
 };
 
+// ===== 첫 로그인 비밀번호 변경 강제 (must_change_password) =====
+function ChangePasswordGate({ onDone }) {
+  const [cur, setCur] = useState('');
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const valid = pw.length >= 8 && pw === pw2;
+
+  const submit = (e) => {
+    e.preventDefault();
+    setErr('');
+    if (pw.length < 8) { setErr('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (pw !== pw2) { setErr('새 비밀번호가 일치하지 않습니다.'); return; }
+    if (!window.TopikBoApi || !TopikBoApi.changeMyPassword) { setErr('API 클라이언트를 불러오지 못했습니다.'); return; }
+    setBusy(true);
+    TopikBoApi.changeMyPassword(cur, pw).then(function (res) {
+      setBusy(false);
+      if (res.ok) {
+        try {
+          const raw = TopikBoApi.getSessionRaw();
+          const s = JSON.parse(raw); s.must_change_password = false;
+          sessionStorage.setItem('bo_session', JSON.stringify(s));
+        } catch (e) {}
+        onDone();
+        return;
+      }
+      setErr(TopikBoApi.parseError(res) || '비밀번호 변경에 실패했습니다.');
+    }).catch(function () { setBusy(false); setErr('요청 중 오류가 발생했습니다.'); });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'linear-gradient(180deg,#F6F8FB,#EDF1F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <form onSubmit={submit} style={{ width: '100%', maxWidth: 420, background: '#fff', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 20px 60px rgba(15,27,45,.10)', padding: 28 }}>
+        <h2 style={{ fontSize: 19, marginBottom: 6 }}>비밀번호 변경이 필요합니다</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 18 }}>첫 로그인(또는 비밀번호 초기화) 후에는 보안을 위해 비밀번호를 변경해야 합니다. 변경 전에는 다른 기능을 사용할 수 없습니다.</p>
+        {err && <div style={{ padding: '9px 12px', background: 'var(--danger-50)', border: '1px solid #f5c8ce', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5, marginBottom: 12 }}>{err}</div>}
+        <div className="form-row">
+          <label className="label">현재(임시) 비밀번호</label>
+          <input className="input" type="password" value={cur} onChange={e => setCur(e.target.value)} autoComplete="current-password"/>
+        </div>
+        <div className="form-row">
+          <label className="label">새 비밀번호 <span className="req">*</span></label>
+          <input className="input" type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="8자 이상" autoComplete="new-password"/>
+        </div>
+        <div className="form-row">
+          <label className="label">새 비밀번호 확인 <span className="req">*</span></label>
+          <input className="input" type="password" value={pw2} onChange={e => setPw2(e.target.value)} autoComplete="new-password"/>
+        </div>
+        <button className="btn btn-primary btn-block" style={{ marginTop: 16, height: 44 }} type="submit" disabled={!valid || busy}>
+          {busy ? '변경 중…' : '비밀번호 변경'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function App() {
   // hash-based router (?#applicants)
   const initial = () => (location.hash.replace('#', '') || 'dashboard');
   const [route, setRoute] = useState(initial);
   const [sbOpen, setSbOpen] = useState(false);
+  const [mustChange, setMustChange] = useState(false);
   const state = useStore();
 
   // Boot: token + session check + load me into store + API data
@@ -70,6 +128,7 @@ function App() {
     }
     DataStore.state.me = me;
     DataStore.notify();
+    setMustChange(!!me.must_change_password);
     try { sessionStorage.setItem('tpkm_bo_admin', JSON.stringify({ role: me.role || 'super', name: me.name || me.id })); } catch (e) {}
     if (window.TOPIKBoCore) TOPIKBoCore.startSessionHeartbeat(me.id || me.name, me.name);
     if (DataStore.initFromApi) DataStore.initFromApi();
@@ -114,6 +173,10 @@ function App() {
     audit:      window.AuditPanel,
   };
   const Panel = PanelByRoute[route] || PanelByRoute.dashboard;
+
+  if (mustChange) {
+    return <ChangePasswordGate onDone={() => setMustChange(false)}/>;
+  }
 
   return (
     <>

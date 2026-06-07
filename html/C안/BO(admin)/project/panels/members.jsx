@@ -41,9 +41,17 @@ function MembersPanel() {
     withdrawn: state.members.filter(m => m.status === 'withdrawn').length,
   }), [state.members]);
 
+  const statusKo = (s) => s === 'active' ? '활성' : s === 'inactive' ? '정지' : '탈퇴';
   const exportCSV = () => {
-    DataStore.addAudit({ type: '회원', targetId: '—', action: '게시', memo: `회원 CSV 내보내기(${filtered.length}건) · 개인정보 마스킹 적용` });
-    toastOk(`${filtered.length}건의 회원 CSV가 생성되었습니다.`);
+    const headers = ['번호', '한글성명', '영문성명', '이메일', '연락처', '국적', '가입일', '마지막 로그인', '상태', '마케팅수신'];
+    const rows = filtered.map(m => [m.no, m.nameKo, m.nameEn, m.email, m.tel, m.nation, m.joinedAt, m.lastLogin, statusKo(m.status), m.marketing ? '동의' : '미동의']);
+    const fn = '회원목록_' + new Date().toISOString().slice(0, 10) + '.csv';
+    const after = () => {
+      DataStore.addAudit({ type: '회원', targetId: '—', action: '게시', memo: `회원 CSV 내보내기(${filtered.length}건)` });
+      toastOk(`${filtered.length}건의 회원 CSV가 생성되었습니다.`);
+    };
+    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, rows).then(after); }
+    else after();
   };
 
   return (
@@ -211,7 +219,7 @@ function MemberEditLP({ id, onClose }) {
     if (!reason.trim()) { toastErr('수정 사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       const ok = await DataStore.apiSaveMember(id, f);
-      if (ok) { toastOk('회원 정보가 수정되었습니다. 회원에게 이메일 통지가 발송됩니다.'); onClose(); }
+      if (ok) { toastOk('회원 정보가 수정되었습니다.'); onClose(); }
       return;
     }
     const before = { ...m };

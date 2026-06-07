@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,18 @@ class AuthUser:
     email: str
     role: str | None = None
     is_admin: bool = False
+    must_change_password: bool = False
+
+
+def get_client_ip(request: Request) -> str | None:
+    """X-Forwarded-For(프록시) → request.client 순으로 클라이언트 IP 추출."""
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    real = request.headers.get("x-real-ip")
+    if real:
+        return real.strip()
+    return request.client.host if request.client else None
 
 
 async def get_optional_user(
@@ -60,7 +72,13 @@ async def get_optional_user(
         admin = result.scalar_one_or_none()
         if not admin:
             return None
-        return AuthUser(id=admin.id, email=admin.email, role=admin.role, is_admin=True)
+        return AuthUser(
+            id=admin.id,
+            email=admin.email,
+            role=admin.role,
+            is_admin=True,
+            must_change_password=admin.must_change_password,
+        )
     return None
 
 
@@ -70,15 +88,42 @@ async def require_user(user: Annotated[AuthUser | None, Depends(get_optional_use
     return user
 
 
+def _guard_must_change(user: AuthUser) -> None:
+    # 첫 로그인 비밀번호 변경 강제: 변경 전 다른 기능 차단(계약서 7절).
+    if user.must_change_password:
+        raise api_error(
+            "PASSWORD_CHANGE_REQUIRED",
+            "최초 로그인 시 비밀번호를 변경해야 합니다.",
+            403,
+        )
+
+
+async def require_admin_base(
+    user: Annotated[AuthUser | None, Depends(get_optional_user)],
+) -> AuthUser:
+    """관리자 인증만 확인(권한등급·비번변경 게이팅 없음). 비밀번호 변경 엔드포인트 전용."""
+    if not user or not user.is_admin:
+        raise api_error("UNAUTHORIZED", "관리자 로그인이 필요합니다.", 401)
+    return user
+
+
 async def require_admin(user: Annotated[AuthUser | None, Depends(get_optional_user)]) -> AuthUser:
     if not user or not user.is_admin:
         raise api_error("UNAUTHORIZED", "관리자 로그인이 필요합니다.", 401)
     if user.role == "readonly":
         raise api_error("FORBIDDEN", "읽기 전용 계정입니다.", 403)
+    _guard_must_change(user)
     return user
 
 
 async def require_any_admin(user: Annotated[AuthUser | None, Depends(get_optional_user)]) -> AuthUser:
     if not user or not user.is_admin:
         raise api_error("UNAUTHORIZED", "관리자 로그인이 필요합니다.", 401)
+    _guard_must_change(user)
+    return user
+
+
+async def require_super(user: Annotated[AuthUser | None, Depends(require_admin)]) -> AuthUser:
+    if user.role != "super":
+        raise api_error("FORBIDDEN", "최고관리자만 수행할 수 있습니다.", 403)
     return user

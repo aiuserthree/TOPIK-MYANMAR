@@ -188,9 +188,9 @@
           <span class="avatar">${(user.name || 'U').slice(0,1)}</span>
           <span>${user.name || 'My'}</span>
         </a>
-        <button class="btn btn-secondary btn-sm" id="btnLogout">로그아웃</button>`
-      : `<a href="login.html" class="btn btn-secondary btn-sm">로그인</a>
-         <a href="signup.html" class="btn btn-primary btn-sm">회원가입</a>`;
+        <button class="btn btn-secondary btn-sm" id="btnLogout">${Lang.t('menu.logout') || '로그아웃'}</button>`
+      : `<a href="login.html" class="btn btn-secondary btn-sm">${Lang.t('menu.login') || '로그인'}</a>
+         <a href="signup.html" class="btn btn-primary btn-sm">${Lang.t('menu.signup') || '회원가입'}</a>`;
 
     wrap.innerHTML = `
       <header class="gnb" role="banner">
@@ -199,7 +199,7 @@
             <span class="mark">T</span>
             <span class="name">
               TOPIK Myanmar
-              <small>주미얀마 대한민국 대사관</small>
+              <small>${Lang.t('brand.sub') || '주미얀마 대한민국 대사관'}</small>
             </span>
           </a>
 
@@ -235,23 +235,23 @@
         <div class="drawer-body">
           <div class="drawer-auth">
             ${user
-              ? `<a href="mypage.html" class="btn btn-secondary">마이페이지</a>
-                 <button class="btn btn-ghost" id="btnLogoutMobile">로그아웃</button>`
-              : `<a href="login.html" class="btn btn-secondary">로그인</a>
-                 <a href="signup.html" class="btn btn-primary">회원가입</a>`
+              ? `<a href="mypage.html" class="btn btn-secondary">${Lang.t('menu.mypage') || '마이페이지'}</a>
+                 <button class="btn btn-ghost" id="btnLogoutMobile">${Lang.t('menu.logout') || '로그아웃'}</button>`
+              : `<a href="login.html" class="btn btn-secondary">${Lang.t('menu.login') || '로그인'}</a>
+                 <a href="signup.html" class="btn btn-primary">${Lang.t('menu.signup') || '회원가입'}</a>`
             }
           </div>
           <nav class="drawer-menu" aria-label="모바일 주 메뉴">
             ${MENU.map(m => `
               <details ${m.key === ak ? 'open' : ''}>
                 <summary>
-                  ${m.label}
+                  ${Lang.t(MENU_I18N[m.key]) || m.label}
                   <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
                 </summary>
                 <div class="submenu">
                   ${m.children.map(c => `
                     <a href="${c.href}" ${c.href === currentFile() ? 'class="active"' : ''}>
-                      ${c.label}
+                      ${Lang.t(SUB_I18N[c.href]) || c.label}
                     </a>
                   `).join('')}
                 </div>
@@ -297,7 +297,7 @@
 
     // Logout
     const onLogout = () => {
-      if (confirm('로그아웃 하시겠습니까?')) {
+      if (confirm(Lang.t('msg.logout_confirm') || '로그아웃 하시겠습니까?')) {
         Auth.logout();
         location.href = 'index.html';
       }
@@ -329,7 +329,7 @@
         ${TAB.map(t => `
           <a href="${t.href}" class="${t.key === ak ? 'active' : ''}">
             ${t.svg.replace('<svg', '<svg fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"')}
-            <span>${t.label}</span>
+            <span>${Lang.t('tab.' + (t.key === 'me' ? 'my' : t.key)) || t.label}</span>
           </a>
         `).join('')}
       </nav>
@@ -390,11 +390,11 @@
             <div>
               <div class="ft-col-ttl" data-i18n-content="foot.menu">바로가기</div>
               <div class="links ft-links-col">
-                <a href="guide-overview.html">TOPIK 안내</a>
-                <a href="rules-notice.html">TOPIK 규정</a>
-                <a href="apply-howto.html">TOPIK 접수</a>
-                <a href="notice.html">공지사항</a>
-                <a href="faq.html">FAQ</a>
+                <a href="guide-overview.html" data-i18n-content="menu.guide">TOPIK 안내</a>
+                <a href="rules-notice.html" data-i18n-content="menu.rules">TOPIK 규정</a>
+                <a href="apply-howto.html" data-i18n-content="menu.apply">TOPIK 접수</a>
+                <a href="notice.html" data-i18n-content="notice.title">공지사항</a>
+                <a href="faq.html" data-i18n-content="faq.title">FAQ</a>
               </div>
             </div>
             <div>

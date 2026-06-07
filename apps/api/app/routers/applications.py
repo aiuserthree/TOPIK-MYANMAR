@@ -11,11 +11,20 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db_session
 from app.lib.deps import AuthUser, require_user
 from app.lib.errors import api_error
+from app.lib.formatting import (
+    card_status_label,
+    derive_card_status,
+    exam_number_visible as _exam_number_visible,
+    fmt_date,
+    fmt_date_only,
+)
 from app.models.application import Application, ApplicationDraft, ApplicationSubmission
 from app.models.exam import ExamRound, ExamVenue
 from app.models.user import User
 
 router = APIRouter(tags=["applications"])
+
+_LEVEL_TEXT = {"I": "TOPIK Ⅰ", "II": "TOPIK Ⅱ"}
 
 
 class DraftBody(BaseModel):
@@ -153,6 +162,91 @@ async def submit_application(
     }
 
 
+def _serialize_submission(
+    sub: ApplicationSubmission,
+    rounds: dict[int, ExamRound],
+    venues: dict[int, ExamVenue],
+) -> dict:
+    """FO 마이페이지(mypage.html)·수험표(ticket.html)가 기대하는 풍부한 item 모양."""
+    rnd = rounds.get(sub.exam_round_id)
+    venue = venues.get(sub.exam_venue_id)
+    round_visible_at = rnd.exam_number_visible_at if rnd else None
+
+    # 급수 정렬: TOPIK Ⅰ → Ⅱ
+    apps_sorted = sorted(sub.applications, key=lambda a: 0 if a.exam_level == "I" else 1)
+
+    levels = []
+    for a in apps_sorted:
+        visible = _exam_number_visible(a.exam_number, round_visible_at)
+        levels.append(
+            {
+                "id": a.id,
+                "exam_level": a.exam_level,
+                "level_text": _LEVEL_TEXT.get(a.exam_level, a.exam_level),
+                "application_no": a.application_no,
+                "status": a.status,
+                "display_status": a.status,
+                "photo_review_status": a.photo_review_status,
+                "photo_reject_code": a.photo_reject_code,
+                "photo_reject_note": a.photo_reject_note,
+                "payment_status": a.payment_status,
+                "exam_number": a.exam_number if visible else None,
+                "exam_number_visible": visible,
+            }
+        )
+
+    card_status = derive_card_status(sub.applications)
+    levels_text = " · ".join(
+        _LEVEL_TEXT.get(a.exam_level, a.exam_level) for a in apps_sorted
+    )
+    is_past = bool(sub.cancelled_at) or sub.status == "cancelled" or card_status == "cancelled"
+
+    return {
+        "submission_id": sub.id,
+        "exam_round_id": sub.exam_round_id,
+        "exam_venue_id": sub.exam_venue_id,
+        "status": sub.status,
+        "tab": "past" if is_past else "active",
+        "fo_card_status": card_status,
+        "card_status_label": card_status_label(card_status),
+        "levels": levels,
+        "levels_text": levels_text,
+        "accommodation_requested": sub.accommodation_requested,
+        "exam_round": {
+            "id": rnd.id if rnd else None,
+            "round_no": rnd.round_no if rnd else None,
+            "title": rnd.title if rnd else None,
+            "exam_date": rnd.exam_date.isoformat() if rnd and rnd.exam_date else None,
+        }
+        if rnd
+        else None,
+        "venue": {
+            "id": venue.id if venue else None,
+            "name_ko": venue.name_ko if venue else None,
+            "name_en": venue.name_en if venue else None,
+        }
+        if venue
+        else None,
+        "exam_date_formatted": fmt_date_only(rnd.exam_date) if rnd else "",
+        "submitted_at": sub.submitted_at.isoformat() if sub.submitted_at else None,
+        "submitted_at_formatted": fmt_date(sub.submitted_at),
+        "cancelled_at": sub.cancelled_at.isoformat() if sub.cancelled_at else None,
+        # 하위호환: 기존 키
+        "applications": [
+            {
+                "id": a.id,
+                "exam_level": a.exam_level,
+                "status": a.status,
+                "payment_status": a.payment_status,
+                "photo_review_status": a.photo_review_status,
+                "exam_number": a.exam_number if _exam_number_visible(a.exam_number, round_visible_at) else None,
+                "application_no": a.application_no,
+            }
+            for a in apps_sorted
+        ],
+    }
+
+
 @router.get("/applications")
 async def my_applications(auth: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db_session)) -> dict:
     result = await db.execute(
@@ -162,31 +256,22 @@ async def my_applications(auth: AuthUser = Depends(require_user), db: AsyncSessi
         .order_by(ApplicationSubmission.submitted_at.desc())
     )
     submissions = result.scalars().all()
-    items = []
-    for sub in submissions:
-        items.append(
-            {
-                "submission_id": sub.id,
-                "exam_round_id": sub.exam_round_id,
-                "exam_venue_id": sub.exam_venue_id,
-                "status": sub.status,
-                "submitted_at": sub.submitted_at.isoformat() if sub.submitted_at else None,
-                "cancelled_at": sub.cancelled_at.isoformat() if sub.cancelled_at else None,
-                "applications": [
-                    {
-                        "id": a.id,
-                        "exam_level": a.exam_level,
-                        "status": a.status,
-                        "payment_status": a.payment_status,
-                        "photo_review_status": a.photo_review_status,
-                        "exam_number": a.exam_number if a.exam_number_visible else None,
-                        "application_no": a.application_no,
-                    }
-                    for a in sub.applications
-                ],
-            }
-        )
-    return {"items": items}
+
+    round_ids = {s.exam_round_id for s in submissions}
+    venue_ids = {s.exam_venue_id for s in submissions}
+    rounds: dict[int, ExamRound] = {}
+    venues: dict[int, ExamVenue] = {}
+    if round_ids:
+        rres = await db.execute(select(ExamRound).where(ExamRound.id.in_(round_ids)))
+        rounds = {r.id: r for r in rres.scalars().all()}
+    if venue_ids:
+        vres = await db.execute(select(ExamVenue).where(ExamVenue.id.in_(venue_ids)))
+        venues = {v.id: v for v in vres.scalars().all()}
+
+    items = [_serialize_submission(s, rounds, venues) for s in submissions]
+    active = [i for i in items if i["tab"] == "active"]
+    past = [i for i in items if i["tab"] == "past"]
+    return {"items": items, "active": active, "past": past}
 
 
 @router.post("/application-submissions/{submission_id}/cancel")

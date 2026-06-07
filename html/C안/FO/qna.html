@@ -191,9 +191,9 @@
 
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>게시판</span><span>문의게시판</span></div>
-      <h1>문의게시판</h1>
-      <p class="lead">접수·시험·기타 운영 관련 문의를 작성해 주세요. 일반/비밀 글로 작성 가능합니다.</p>
+      <div class="crumb"><span data-i18n-content="menu.board">게시판</span><span data-i18n-content="board.qna_title">문의게시판</span></div>
+      <h1 data-i18n-content="board.qna_title">문의게시판</h1>
+      <p class="lead" data-i18n-content="qna.lead">접수·시험·기타 운영 관련 문의를 작성해 주세요. 일반/비밀 글로 작성 가능합니다.</p>
     </div>
   </header>
 
@@ -202,22 +202,22 @@
     <!-- ============ List ============ -->
     <section class="pane list-view active" id="listPane">
       <div class="qna-tabs">
-        <button class="active">전체</button>
-        <button>일반</button>
-        <button>비밀</button>
+        <button class="active" data-i18n-content="qna.tab_all">전체</button>
+        <button data-i18n-content="qna.tab_normal">일반</button>
+        <button data-i18n-content="qna.tab_secret">비밀</button>
       </div>
 
       <div class="board-tools">
         <div class="left">
           <select class="select cat-select">
-            <option>전체 카테고리</option>
-            <option>접수</option>
-            <option>시험</option>
-            <option>기타</option>
+            <option data-i18n-content="qna.cat_all">전체 카테고리</option>
+            <option data-i18n-content="qna.cat_apply">접수</option>
+            <option data-i18n-content="qna.cat_exam">시험</option>
+            <option data-i18n-content="qna.cat_etc">기타</option>
           </select>
-          <div class="search"><input type="search" placeholder="제목·작성자 검색"></div>
+          <div class="search"><input type="search" placeholder="제목·작성자 검색" data-i18n-content="qna.search_ph" data-i18n-content-placeholder></div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="show('writePane')">문의하기</button>
+        <button class="btn btn-primary btn-sm" onclick="show('writePane')" data-i18n-content="qna.write_btn">문의하기</button>
       </div>
 
       <div class="card" style="padding: 0; overflow: hidden;">
@@ -225,16 +225,16 @@
         <table class="table">
           <thead>
             <tr>
-              <th class="col-num">번호</th>
-              <th class="col-cat">분류</th>
-              <th>제목</th>
-              <th class="col-author">작성자</th>
-              <th class="col-date">작성일</th>
-              <th class="col-status">상태</th>
+              <th class="col-num" data-i18n-content="tbl.no">번호</th>
+              <th class="col-cat" data-i18n-content="tbl.category">분류</th>
+              <th data-i18n-content="tbl.title">제목</th>
+              <th class="col-author" data-i18n-content="tbl.author">작성자</th>
+              <th class="col-date" data-i18n-content="tbl.date">작성일</th>
+              <th class="col-status" data-i18n-content="tbl.status">상태</th>
             </tr>
           </thead>
           <tbody id="qnaListBody">
-            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);">불러오는 중…</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);" data-i18n-content="board.loading">불러오는 중…</td></tr>
           </tbody>
         </table>
         </div>
@@ -245,47 +245,57 @@
 
     <!-- ============ Write ============ -->
     <section class="pane write-form" id="writePane">
-      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
-      <h2 class="h2" style="margin-bottom: 18px;">문의 작성</h2>
+      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;" data-i18n-content="btn.list">← 목록으로</a>
+      <h2 class="h2" style="margin-bottom: 18px;" data-i18n-content="qna.write_title">문의 작성</h2>
 
       <div class="form-row">
-        <label class="label">카테고리 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="qna.f_category">카테고리</span> <span class="req">*</span></label>
         <select class="select" id="qnaCategory">
-          <option value="">선택</option>
-          <option>접수</option><option>시험</option><option>기타</option>
+          <option value="" data-i18n-content="form.select">선택</option>
+          <option data-i18n-content="qna.cat_apply">접수</option><option data-i18n-content="qna.cat_exam">시험</option><option data-i18n-content="qna.cat_etc">기타</option>
         </select>
       </div>
 
       <div class="form-row">
-        <label class="label">공개 범위 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="qna.f_visibility">공개 범위</span> <span class="req">*</span></label>
         <div style="display: flex; gap: 16px;">
-          <label class="radio"><input type="radio" name="vis" checked><span class="box"></span><span>일반 (누구나 열람)</span></label>
-          <label class="radio"><input type="radio" name="vis" id="visSecret"><span class="box"></span><span>비밀 (작성자·관리자만)</span></label>
+          <label class="radio"><input type="radio" name="vis" id="visNormal" checked><span class="box"></span><span data-i18n-content="qna.vis_normal">일반 (누구나 열람)</span></label>
+          <label class="radio"><input type="radio" name="vis" id="visSecret"><span class="box"></span><span data-i18n-content="qna.vis_secret">비밀 (작성자·관리자만)</span></label>
         </div>
-        <span class="hint">비밀글은 작성자 본인과 관리자만 내용·댓글을 열람할 수 있습니다.</span>
+        <span class="hint" data-i18n-content="qna.vis_hint">비밀글은 작성자 본인과 관리자만 내용·댓글을 열람할 수 있습니다.</span>
+      </div>
+
+      <div class="form-row hidden" id="secretPwRow">
+        <label class="label"><span data-i18n-content="qna.f_secret_pw">비밀글 비밀번호</span> <span class="req">*</span></label>
+        <input class="input" type="password" id="qnaSecretPw" placeholder="4자 이상 (열람 시 필요)" maxlength="20" autocomplete="new-password" data-i18n-content="qna.secret_pw_ph" data-i18n-content-placeholder>
+        <span class="hint" data-i18n-content="qna.secret_pw_hint">다른 사용자가 이 글을 열람할 때 입력해야 하는 비밀번호입니다.</span>
       </div>
 
       <div class="form-row">
-        <label class="label">제목 <span class="req">*</span></label>
-        <input class="input" id="qnaTitle" placeholder="제목 (100자 이내)" maxlength="100">
+        <label class="label"><span data-i18n-content="form.title">제목</span> <span class="req">*</span></label>
+        <input class="input" id="qnaTitle" placeholder="제목 (100자 이내)" maxlength="100" data-i18n-content="qna.title_ph" data-i18n-content-placeholder>
       </div>
 
       <div class="form-row">
-        <label class="label">내용 <span class="req">*</span></label>
-        <textarea class="textarea" id="qnaBody" rows="8" placeholder="문의 내용을 자세히 작성해 주세요."></textarea>
+        <label class="label"><span data-i18n-content="form.content">내용</span> <span class="req">*</span></label>
+        <textarea class="textarea" id="qnaBody" rows="8" placeholder="문의 내용을 자세히 작성해 주세요." data-i18n-content="qna.body_ph" data-i18n-content-placeholder></textarea>
       </div>
 
       <div class="form-row">
-        <label class="label">첨부파일</label>
-        <div style="padding: 12px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-2); font-size: 12.5px; color: var(--text-3); text-align: center;">
-          jpg, png, pdf · 5MB 이하 · 최대 3개
-          <div style="margin-top: 8px;"><button type="button" class="btn btn-secondary btn-sm">파일 선택</button></div>
+        <label class="label" data-i18n-content="board.attachments">첨부파일</label>
+        <div class="attach-zone">
+          <div class="attach-hint" data-i18n-content="qna.attach_hint">jpg, png, pdf · 5MB 이하 · 최대 3개</div>
+          <div class="attach-actions">
+            <input type="file" id="qnaFileInput" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" multiple hidden>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('qnaFileInput').click()" data-i18n-content="board.file_select">파일 선택</button>
+          </div>
+          <div class="attach-list" id="qnaFileList"></div>
         </div>
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 20px;">
-        <button class="btn btn-secondary" onclick="show('listPane')">취소</button>
-        <button class="btn btn-primary" style="flex:1;" id="btnQnaSubmit">제출</button>
+        <button class="btn btn-secondary" onclick="show('listPane')" data-i18n-content="btn.cancel">취소</button>
+        <button class="btn btn-primary" style="flex:1;" id="btnQnaSubmit" data-i18n-content="btn.submit">제출</button>
       </div>
     </section>
 
@@ -322,25 +332,63 @@
 <!-- 비밀글 잠금 해제 -->
 <div class="modal-backdrop" id="modalSecretLock">
   <div class="modal">
-    <div class="modal-head"><h3>비밀글</h3></div>
+    <div class="modal-head"><h3 data-i18n-content="board.secret_label">비밀글</h3></div>
     <div class="modal-body">
       <div class="secret-lock">
         <div class="ico-lock">🔒</div>
-        <p>비밀글입니다. 작성자만 열람할 수 있습니다.</p>
-        <p class="body-sm" style="margin-top: 6px;">비밀번호를 입력해 주세요.</p>
+        <p data-i18n-content="board.locked_msg">비밀글입니다. 작성자·관리자만 열람할 수 있습니다.</p>
+        <p class="body-sm" style="margin-top: 6px;" data-i18n-content="board.unlock_enter_pw">비밀번호를 입력해 주세요.</p>
       </div>
       <div class="form-row" style="margin-top: 12px;">
-        <input class="input" type="password" placeholder="비밀번호">
+        <input class="input" type="password" id="secretPw" placeholder="비밀번호" data-i18n-content="form.password_ph" data-i18n-content-placeholder>
+        <span class="hint" id="secretPwErr" style="display:none; color: var(--danger);"></span>
       </div>
-      <p class="body-sm" style="text-align: center; font-size: 11.5px;">최대 5회 실패 시 30분간 잠깁니다.</p>
+      <p class="body-sm" style="text-align: center; font-size: 11.5px;" data-i18n-content="board.unlock_warn">최대 5회 실패 시 일시적으로 잠깁니다.</p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalSecretLock')">닫기</button>
-      <button class="btn btn-primary">확인</button>
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalSecretLock')" data-i18n-content="btn.close">닫기</button>
+      <button class="btn btn-primary" id="btnSecretUnlock" data-i18n-content="btn.confirm">확인</button>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'qna.lead': { ko: '접수·시험·기타 운영 관련 문의를 작성해 주세요. 일반/비밀 글로 작성 가능합니다.', my: 'လျှောက်ထားမှု၊ စာမေးပွဲ နှင့် အခြားလုပ်ငန်းဆိုင်ရာ စုံစမ်းချက်များကို ရေးသားပါ။ သာမန်/လျှို့ဝှက် ပို့စ်အဖြစ် ရေးနိုင်သည်။', en: 'Ask about registration, the exam, or other operations. You can post publicly or as a secret post.' },
+    'qna.tab_all': { ko: '전체', my: 'အားလုံး', en: 'All' },
+    'qna.tab_normal': { ko: '일반', my: 'သာမန်', en: 'Public' },
+    'qna.tab_secret': { ko: '비밀', my: 'လျှို့ဝှက်', en: 'Secret' },
+    'qna.cat_all': { ko: '전체 카테고리', my: 'အမျိုးအစား အားလုံး', en: 'All categories' },
+    'qna.cat_apply': { ko: '접수', my: 'လျှောက်ထားမှု', en: 'Registration' },
+    'qna.cat_exam': { ko: '시험', my: 'စာမေးပွဲ', en: 'Exam' },
+    'qna.cat_etc': { ko: '기타', my: 'အခြား', en: 'Other' },
+    'qna.search_ph': { ko: '제목·작성자 검색', my: 'ခေါင်းစဉ်·ရေးသားသူ ရှာဖွေ', en: 'Search title / author' },
+    'qna.write_btn': { ko: '문의하기', my: 'စုံစမ်းရန်', en: 'Ask a question' },
+    'qna.write_title': { ko: '문의 작성', my: 'စုံစမ်းချက် ရေးသားရန်', en: 'New inquiry' },
+    'qna.f_category': { ko: '카테고리', my: 'အမျိုးအစား', en: 'Category' },
+    'qna.f_visibility': { ko: '공개 범위', my: 'ဖော်ပြမှု အတိုင်းအတာ', en: 'Visibility' },
+    'qna.vis_normal': { ko: '일반 (누구나 열람)', my: 'သာမန် (မည်သူမဆို ကြည့်ရှုနိုင်)', en: 'Public (anyone can view)' },
+    'qna.vis_secret': { ko: '비밀 (작성자·관리자만)', my: 'လျှို့ဝှက် (ရေးသားသူ·စီမံခန့်ခွဲသူသာ)', en: 'Secret (author & admin only)' },
+    'qna.vis_hint': { ko: '비밀글은 작성자 본인과 관리자만 내용·댓글을 열람할 수 있습니다.', my: 'လျှို့ဝှက်ပို့စ်ကို ရေးသားသူနှင့် စီမံခန့်ခွဲသူသာ အကြောင်းအရာ·မှတ်ချက်များ ကြည့်ရှုနိုင်သည်။', en: 'Only the author and admin can view a secret post and its comments.' },
+    'qna.f_secret_pw': { ko: '비밀글 비밀번호', my: 'လျှို့ဝှက်ပို့စ် စကားဝှက်', en: 'Secret-post password' },
+    'qna.secret_pw_ph': { ko: '4자 이상 (열람 시 필요)', my: 'အနည်းဆုံး ၄ လုံး (ကြည့်ရှုရန် လို)', en: 'At least 4 chars (needed to view)' },
+    'qna.secret_pw_hint': { ko: '다른 사용자가 이 글을 열람할 때 입력해야 하는 비밀번호입니다.', my: 'အခြားသူများ ဤပို့စ်ကို ကြည့်ရှုသည့်အခါ ထည့်ရမည့် စကားဝှက်ဖြစ်သည်။', en: 'Others must enter this password to view the post.' },
+    'qna.title_ph': { ko: '제목 (100자 이내)', my: 'ခေါင်းစဉ် (၁၀၀ လုံးအတွင်း)', en: 'Title (within 100 chars)' },
+    'qna.body_ph': { ko: '문의 내용을 자세히 작성해 주세요.', my: 'စုံစမ်းချက် အကြောင်းအရာကို အသေးစိတ် ရေးပါ။', en: 'Please describe your inquiry in detail.' },
+    'qna.attach_hint': { ko: 'jpg, png, pdf · 5MB 이하 · 최대 3개', my: 'jpg, png, pdf · 5MB အောက် · အများဆုံး ၃ ခု', en: 'jpg, png, pdf · ≤ 5MB · up to 3 files' },
+    'form.select': { ko: '선택', my: 'ရွေးချယ်ပါ', en: 'Select' },
+    'form.title': { ko: '제목', my: 'ခေါင်းစဉ်', en: 'Title' },
+    'form.content': { ko: '내용', my: 'အကြောင်းအရာ', en: 'Content' },
+    'form.password_ph': { ko: '비밀번호', my: 'စကားဝှက်', en: 'Password' },
+    'tbl.no': { ko: '번호', my: 'နံပါတ်', en: 'No.' },
+    'tbl.category': { ko: '분류', my: 'အမျိုးအစား', en: 'Category' },
+    'tbl.title': { ko: '제목', my: 'ခေါင်းစဉ်', en: 'Title' },
+    'tbl.author': { ko: '작성자', my: 'ရေးသားသူ', en: 'Author' },
+    'tbl.date': { ko: '작성일', my: 'ရက်စွဲ', en: 'Date' },
+    'tbl.status': { ko: '상태', my: 'အခြေအနေ', en: 'Status' },
+    'board.unlock_warn': { ko: '최대 5회 실패 시 일시적으로 잠깁니다.', my: 'အကြိမ် ၅ ကြိမ် မှားပါက ယာယီ ပိတ်သွားမည်။', en: 'After 5 failed attempts it locks temporarily.' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script src="assets/fo-board.js"></script>
@@ -400,6 +448,24 @@
   document.querySelector('.cat-select').addEventListener('change', applyFilters);
   document.querySelector('.board-tools .search input').addEventListener('input', applyFilters);
 
+  // 비밀글 선택 시 비밀번호 입력 표시
+  var secretPwRow = document.getElementById('secretPwRow');
+  function toggleSecretPwRow() {
+    var secret = document.getElementById('visSecret').checked;
+    secretPwRow.classList.toggle('hidden', !secret);
+  }
+  Array.prototype.forEach.call(document.getElementsByName('vis'), function (r) {
+    r.addEventListener('change', toggleSecretPwRow);
+  });
+  toggleSecretPwRow();
+
+  // 첨부파일 (선택 즉시 업로드)
+  var qnaAttach = TPKMBoard.bindAttachments({
+    input: document.getElementById('qnaFileInput'),
+    listEl: document.getElementById('qnaFileList'),
+    max: 3,
+  });
+
   TPKMBoard.wireSubmit({
     boardType: 'inquiry',
     submitBtn: document.getElementById('btnQnaSubmit'),
@@ -407,6 +473,8 @@
     bodyEl: document.getElementById('qnaBody'),
     categoryEl: document.getElementById('qnaCategory'),
     secretRadio: document.getElementById('visSecret'),
+    secretPwEl: document.getElementById('qnaSecretPw'),
+    attachmentCtrl: qnaAttach,
     onSuccess: function () { show('listPane'); board.load(1); },
   });
 

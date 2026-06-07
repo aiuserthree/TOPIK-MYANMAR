@@ -139,8 +139,115 @@
     'ri.h_accepted': { ko: '인정 신분증', my: 'လက်ခံသော အထောက်အထား', en: 'Accepted ID' },
     'ri.h_unaccepted': { ko: '불인정 신분증', my: 'လက်မခံသော အထောက်အထား', en: 'Unaccepted ID' },
     'ri.h_missing': { ko: '신분증 미소지 시', my: 'အထောက်အထား မပါပါက', en: 'If you have no ID' },
-    'ri.h_match': { ko: '신분증 사진과 응시자 일치 확인', my: 'အထောက်အထားဓာတ်ပုံနှင့် ဖြေဆိုသူ ကိုက်ညီမှု စစ်ဆေးခြင်း', en: 'Matching ID photo with the candidate' }
+    'ri.h_match': { ko: '신분증 사진과 응시자 일치 확인', my: 'အထောက်အထားဓာတ်ပုံနှင့် ဖြေဆိုသူ ကိုက်ညီမှု စစ်ဆေးခြင်း', en: 'Matching ID photo with the candidate' },
+
+    /* ── 공통 GNB/드로어/탭바 (common.js Lang.t 렌더 — ko/my/en 모두 필요) ── */
+    'brand.sub': { ko: '주미얀마 대한민국 대사관', my: 'မြန်မာနိုင်ငံရှိ ကိုရီးယားသံရုံး', en: 'Embassy of the Republic of Korea in Myanmar' },
+    'menu.all': { ko: '전체 메뉴', my: 'မီနူးအားလုံး', en: 'All menu' },
+    'tab.home': { ko: '홈', my: 'ပင်မ', en: 'Home' },
+    'tab.apply': { ko: '접수', my: 'လျှောက်ရန်', en: 'Apply' },
+    'tab.board': { ko: '게시판', my: 'ဘုတ်', en: 'Board' },
+    'tab.my': { ko: '마이', my: 'ကျွန်ုပ်', en: 'My' },
+    'msg.logout_confirm': { ko: '로그아웃 하시겠습니까?', my: 'ထွက်ရန် သေချာပါသလား။', en: 'Do you want to sign out?' },
+
+    /* ── 공통 버튼/라벨 (여러 페이지 공유) ── */
+    'btn.next': { ko: '다음', my: 'ရှေ့သို့', en: 'Next' },
+    'btn.prev': { ko: '이전', my: 'နောက်သို့', en: 'Previous' },
+    'btn.cancel': { ko: '취소', my: 'ပယ်ဖျက်', en: 'Cancel' },
+    'btn.submit': { ko: '제출', my: 'တင်သွင်းရန်', en: 'Submit' },
+    'btn.confirm': { ko: '확인', my: 'အတည်ပြု', en: 'Confirm' },
+    'btn.close': { ko: '닫기', my: 'ပိတ်ရန်', en: 'Close' },
+    'btn.save': { ko: '저장', my: 'သိမ်းရန်', en: 'Save' },
+    'btn.list': { ko: '← 목록으로', my: '← စာရင်းသို့', en: '← Back to list' },
+    'btn.write': { ko: '글쓰기', my: 'ရေးသားရန်', en: 'Write' },
+    'btn.search': { ko: '검색', my: 'ရှာဖွေ', en: 'Search' },
+    'lbl.required_mark': { ko: '필수', my: 'မဖြစ်မနေ', en: 'Required' },
+
+    /* ── 게시판(fo-board.js 동적 렌더 — TPKMLang.t 사용, ko/my/en 필요) ── */
+    'board.comments': { ko: '댓글', my: 'မှတ်ချက်များ', en: 'Comments' },
+    'board.no_comments': { ko: '아직 등록된 댓글이 없습니다.', my: 'မှတ်ချက် မရှိသေးပါ။', en: 'No comments yet.' },
+    'board.comment_ph': { ko: '댓글을 입력하세요', my: 'မှတ်ချက် ရေးသားပါ', en: 'Write a comment' },
+    'board.reply_ph': { ko: '답글을 입력하세요', my: 'ပြန်ကြားချက် ရေးသားပါ', en: 'Write a reply' },
+    'board.post': { ko: '등록', my: 'တင်ရန်', en: 'Post' },
+    'board.reply': { ko: '답글', my: 'ပြန်ကြားရန်', en: 'Reply' },
+    'board.posting': { ko: '등록 중…', my: 'တင်နေသည်…', en: 'Posting…' },
+    'board.login_to_comment': { ko: '댓글을 작성하려면 로그인이 필요합니다.', my: 'မှတ်ချက်ရေးရန် အကောင့်ဝင်ရန် လိုအပ်သည်။', en: 'Sign in to write a comment.' },
+    'board.admin': { ko: '관리자', my: 'စီမံခန့်ခွဲသူ', en: 'Admin' },
+    'board.admin_reply': { ko: '답변', my: 'အဖြေ', en: 'Reply' },
+    'board.loading': { ko: '불러오는 중…', my: 'ဖွင့်နေသည်…', en: 'Loading…' },
+    'board.empty': { ko: '등록된 게시글이 없습니다.', my: 'ပို့စ် မရှိသေးပါ။', en: 'No posts yet.' },
+    'board.network_err': { ko: '네트워크 오류입니다.', my: 'ကွန်ရက် ချို့ယွင်းမှု ဖြစ်ပွားသည်။', en: 'A network error occurred.' },
+    'board.locked_msg': { ko: '비밀글입니다. 작성자·관리자만 열람할 수 있습니다.', my: 'လျှို့ဝှက်ပို့စ်ဖြစ်သည်။ ရေးသားသူ/စီမံခန့်ခွဲသူသာ ကြည့်ရှုနိုင်သည်။', en: 'Secret post. Only the author/admin can view it.' },
+    'board.secret_label': { ko: '비밀글', my: 'လျှို့ဝှက်ပို့စ်', en: 'Secret post' },
+    'board.mine': { ko: '본인', my: 'ကိုယ်တိုင်', en: 'Me' },
+    'board.enter_comment': { ko: '댓글 내용을 입력해 주세요.', my: 'မှတ်ချက် အကြောင်းအရာ ထည့်ပါ။', en: 'Please enter your comment.' },
+    'board.load_fail': { ko: '게시글을 불러올 수 없습니다', my: 'ပို့စ်ကို ဖွင့်၍မရပါ', en: 'Could not load the post' },
+    'board.submitting': { ko: '제출 중…', my: 'တင်သွင်းနေသည်…', en: 'Submitting…' },
+    'board.server_err': { ko: '서버에 연결할 수 없습니다.', my: 'ဆာဗာသို့ ချိတ်ဆက်၍မရပါ။', en: 'Cannot connect to the server.' },
+    'board.submitted': { ko: '접수되었습니다.', my: 'တင်သွင်းပြီးပါပြီ။', en: 'Submitted.' },
+    'board.title_len': { ko: '제목을 100자 이내로 입력해 주세요.', my: 'ခေါင်းစဉ်ကို စာလုံး ၁၀၀ အတွင်း ထည့်ပါ။', en: 'Please enter a title within 100 characters.' },
+    'board.body_len': { ko: '내용을 10자 이상 입력해 주세요.', my: 'အကြောင်းအရာကို စာလုံး ၁၀ လုံးအထက် ထည့်ပါ။', en: 'Please enter at least 10 characters.' },
+    'board.qna_default': { ko: '문의', my: 'စုံစမ်းမေးမြန်းရန်', en: 'Inquiry' },
+    'board.write_pw': { ko: '비밀글 비밀번호를 4자 이상 입력해 주세요.', my: 'လျှို့ဝှက်ပို့စ် စကားဝှက်ကို စာလုံး ၄ လုံးအထက် ထည့်ပါ။', en: 'Enter a secret-post password of at least 4 characters.' },
+    'board.max_files': { ko: '첨부파일은 최대 {n}개까지 첨부할 수 있습니다.', my: 'ပူးတွဲဖိုင် အများဆုံး {n} ခုအထိ တွဲနိုင်သည်။', en: 'You can attach up to {n} files.' },
+
+    /* 게시판 첨부파일 */
+    'board.attachments': { ko: '첨부파일', my: 'ပူးတွဲဖိုင်များ', en: 'Attachments' },
+    'board.uploading': { ko: '업로드 중…', my: 'အပ်လုဒ်တင်နေသည်…', en: 'Uploading…' },
+    'board.upload_fail': { ko: '업로드 실패', my: 'အပ်လုဒ်မအောင်မြင်ပါ', en: 'Upload failed' },
+    'board.upload_wait': { ko: '파일 업로드가 끝날 때까지 기다려 주세요.', my: 'ဖိုင်တင်ပြီးသည်အထိ စောင့်ပါ။', en: 'Please wait until the upload finishes.' },
+    'board.file_too_big': { ko: '파일 크기는 5MB 이하여야 합니다.', my: 'ဖိုင်အရွယ်အစား 5MB အောက် ဖြစ်ရမည်။', en: 'Each file must be 5MB or smaller.' },
+    'board.file_type': { ko: 'jpg, png, pdf 형식만 첨부할 수 있습니다.', my: 'jpg, png, pdf ဖိုင်အမျိုးအစားသာ ပူးတွဲနိုင်သည်။', en: 'Only jpg, png, and pdf files are allowed.' },
+    'board.file_select': { ko: '파일 선택', my: 'ဖိုင်ရွေးရန်', en: 'Choose files' },
+    'board.file_remove': { ko: '삭제', my: 'ဖျက်ရန်', en: 'Remove' },
+    'board.download': { ko: '다운로드', my: 'ဒေါင်းလုဒ်', en: 'Download' },
+
+    /* 게시판 비밀글 잠금 해제 */
+    'board.unlock_enter_pw': { ko: '비밀번호를 입력해 주세요.', my: 'စကားဝှက် ထည့်ပါ။', en: 'Please enter the password.' },
+    'board.unlock_wrong': { ko: '비밀번호가 일치하지 않습니다.', my: 'စကားဝှက် မကိုက်ညီပါ။', en: 'The password is incorrect.' },
+    'board.unlock_wrong_left': { ko: '비밀번호가 일치하지 않습니다. (남은 횟수 {n}회)', my: 'စကားဝှက် မကိုက်ညီပါ။ (ကျန် {n} ကြိမ်)', en: 'Incorrect password. ({n} attempts left)' },
+    'board.unlock_locked': { ko: '비밀번호를 여러 번 잘못 입력하여 일시적으로 잠겼습니다. 잠시 후 다시 시도해 주세요.', my: 'စကားဝှက် အကြိမ်များစွာ မှားယွင်းသဖြင့် ယာယီ ပိတ်ထားသည်။ ခဏအကြာတွင် ပြန်စမ်းပါ။', en: 'Locked due to repeated incorrect passwords. Please try again later.' },
+    'board.unlocking': { ko: '확인 중…', my: 'စစ်ဆေးနေသည်…', en: 'Checking…' },
+
+    /* ── 증명사진 규격 (photo-upload.js · signup/register) ── */
+    'photo.spec_title': { ko: '증명사진 규격 안내', my: 'သက်သေခံ ဓာတ်ပုံ စံချိန်စံညွှန်း', en: 'ID photo requirements' },
+    'photo.spec_1': { ko: '여권용 정면 컬러 사진 (JPG) · 흰색·단색 배경', my: 'ပတ်စ်ပို့သုံး ရှေ့မျက်နှာ အရောင်ဓာတ်ပုံ (JPG) · အဖြူ/တစ်ရောင်တည်း နောက်ခံ', en: 'Passport-style frontal color photo (JPG) · white/plain background' },
+    'photo.spec_2': { ko: '최근 6개월 이내 촬영한 사진', my: 'လွန်ခဲ့သော ၆ လအတွင်း ရိုက်ထားသော ဓာတ်ပုံ', en: 'Taken within the last 6 months' },
+    'photo.spec_3': { ko: '모자·학사모·선글라스·이어폰 착용 금지', my: 'ဦးထုပ်·ဘွဲ့ဦးထုပ်·နေကာမျက်မှန်·နားကြပ် တပ်ဆင်ခြင်း မပြုရ', en: 'No hats/caps, sunglasses, or earphones' },
+    'photo.spec_4': { ko: '앞머리로 얼굴(눈썹·눈)을 가리지 않음', my: 'ရှေ့ဆံပင်ဖြင့် မျက်နှာ (မျက်ခုံး·မျက်လုံး) ကို မဖုံးအုပ်ရ', en: 'Bangs must not cover the face (eyebrows/eyes)' },
+    'photo.spec_5': { ko: '위·아래·좌·우가 아닌 정면 사진', my: 'အပေါ်·အောက်·ဘယ်·ညာ မဟုတ်ဘဲ ရှေ့မျက်နှာ တည့်တည့်', en: 'A frontal photo, not tilted up/down/left/right' },
+    'photo.spec_6': { ko: '흑백·흐릿·불분명한 사진 불가', my: 'အဖြူအမည်း·ဝါးဝါး·မရှင်းသော ဓာတ်ပုံ မရ', en: 'No black-and-white, blurry, or unclear photos' },
+    'photo.spec_7': { ko: '연예인·타인 등 본인이 아닌 사진 불가', my: 'အနုပညာရှင်·သူတစ်ပါး စသည့် မိမိမဟုတ်သော ဓာတ်ပုံ မရ', en: 'No photos of celebrities or other people' },
+    'photo.spec_filename': { ko: '파일명은 접수 후 시스템이 수험번호로 자동 관리합니다.', my: 'ဖိုင်အမည်ကို လျှောက်ထားပြီးနောက် စနစ်က ဖြေဆိုသူနံပါတ်ဖြင့် အလိုအလျောက် စီမံသည်။', en: 'The file name is managed automatically by the system using your exam number.' },
+    'photo.spec_note': { ko: '부적합 사진은 사진 심사에서 반려되어 응시·성적 처리가 불가할 수 있습니다. 접수 단계에서는 사진 변경이 불가하므로 가입·수정 시 신중히 등록해 주세요.', my: 'မသင့်လျော်သော ဓာတ်ပုံများကို ဓာတ်ပုံစိစစ်ရာတွင် ပယ်ချနိုင်ပြီး ဖြေဆိုခွင့်·ရမှတ်ဆောင်ရွက်မှု မရနိုင်ပါ။ လျှောက်ထားဆဲအဆင့်တွင် ဓာတ်ပုံ ပြောင်းလဲ၍မရသဖြင့် မှတ်ပုံတင်/ပြင်ဆင်စဉ် ဂရုတစိုက် တင်ပါ။', en: 'Unsuitable photos may be rejected in review, making the exam/score processing impossible. Photos cannot be changed during registration, so upload carefully at sign-up.' },
+    'photo.err_select': { ko: '파일을 선택해 주세요.', my: 'ဖိုင် ရွေးချယ်ပါ။', en: 'Please select a file.' },
+    'photo.err_type': { ko: 'JPG·PNG 형식만 업로드할 수 있습니다.', my: 'JPG·PNG ဖိုင်အမျိုးအစားသာ တင်နိုင်သည်။', en: 'Only JPG/PNG files can be uploaded.' },
+    'photo.err_size': { ko: '파일 크기는 2MB 이하여야 합니다.', my: 'ဖိုင်အရွယ်အစား 2MB အောက် ဖြစ်ရမည်။', en: 'The file must be 2MB or smaller.' },
+    'photo.preview': { ko: '사진<br>미리보기', my: 'ဓာတ်ပုံ<br>အစမ်းကြည့်', en: 'Photo<br>preview' },
+
+    /* ── 공지/FAQ (fo-notices.js 등 공용 동적 렌더 — ko/my/en) ── */
+    'nt.loading': { ko: '공지를 불러오는 중…', my: 'ကြေညာချက် ဖွင့်နေသည်…', en: 'Loading notices…' },
+    'nt.fail': { ko: '공지를 불러올 수 없습니다.', my: 'ကြေညာချက် ဖွင့်၍မရပါ။', en: 'Could not load notices.' },
+    'nt.none': { ko: '공지가 없습니다.', my: 'ကြေညာချက် မရှိပါ။', en: 'No notices.' },
+    'nt.empty_home': { ko: '등록된 공지가 없습니다.', my: 'ကြေညာချက် မရှိသေးပါ။', en: 'No notices yet.' },
+    'nt.search_none': { ko: '검색 조건에 맞는 공지가 없습니다.', my: 'ရှာဖွေမှုနှင့် ကိုက်ညီသော ကြေညာချက် မရှိပါ။', en: 'No notices match your search.' },
+    'nt.views': { ko: '조회', my: 'ကြည့်ရှုမှု', en: 'Views' },
+    'nt.attachments': { ko: '첨부파일', my: 'ပူးတွဲဖိုင်များ', en: 'Attachments' },
+    'nt.detail_loading': { ko: '로딩 중입니다.', my: 'ဖွင့်နေသည်…', en: 'Loading…' },
+    'nt.load_fail': { ko: '공지를 불러올 수 없습니다', my: 'ကြေညာချက် ဖွင့်၍မရပါ', en: 'Could not load the notice' }
   };
+
+  /* 페이지별 사전(window.TPKM_PAGE_I18N)을 중앙 사전(T)에 병합. 페이지 HTML 안에서
+     <script>로 정의해두면 빈 화면/충돌 없이 페이지 단위 번역을 추가할 수 있다. */
+  function mergePageDict() {
+    var pd = g.TPKM_PAGE_I18N;
+    if (!pd) return;
+    if (Array.isArray(pd)) {
+      pd.forEach(function (d) { if (d) Object.assign(T, d); });
+    } else {
+      Object.assign(T, pd);
+    }
+  }
 
   /* 언어별 폴백 순서. 요청 언어 값이 누락/빈문자열이면 다음 순서로 폴백. */
   var FALLBACK = {
@@ -184,6 +291,12 @@
     }
   }
 
+  function dispatchLangChange(lang) {
+    try {
+      document.dispatchEvent(new CustomEvent('tpkm:langchange', { detail: { lang: lang } }));
+    } catch (e) { /* old browsers */ }
+  }
+
   function apply(lang) {
     lang = normLang(lang);
     if (lang === 'ko') {
@@ -193,6 +306,7 @@
         else if (el.hasAttribute('data-i18n-content-placeholder')) el.placeholder = orig;
         else el.textContent = orig;
       });
+      dispatchLangChange(lang);
       return;
     }
     document.querySelectorAll('[data-i18n-content]').forEach(function (el) {
@@ -211,6 +325,7 @@
       else if (el.hasAttribute('data-i18n-content-placeholder')) el.placeholder = val;
       else el.textContent = val;
     });
+    dispatchLangChange(lang);
   }
 
   function hookExistingI18n() {
@@ -239,6 +354,7 @@
   }
 
   function boot() {
+    mergePageDict();
     hookExistingI18n();
     var lang = 'ko';
     if (g.TMI18N && g.TMI18N.getLang) lang = g.TMI18N.getLang();
@@ -247,7 +363,7 @@
     apply(lang);
   }
 
-  g.TOPIKPageI18n = { T: T, text: text, apply: apply, normLang: normLang, boot: boot };
+  g.TOPIKPageI18n = { T: T, text: text, apply: apply, normLang: normLang, boot: boot, mergePageDict: mergePageDict };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {

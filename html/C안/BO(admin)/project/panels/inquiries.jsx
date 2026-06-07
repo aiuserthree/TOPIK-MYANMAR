@@ -123,7 +123,11 @@ function InquiryDetailLP({ id, onClose }) {
   const [commentPublic, setCommentPublic] = useState(!q.secret);
 
   useEffect(() => {
-    if (DataStore.isApiMode && DataStore.isApiMode()) return;
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      // 댓글/대댓글은 실제 API로 조회. 비밀글 열람 audit는 서버가 기록.
+      if (DataStore.apiLoadComments) DataStore.apiLoadComments(id, 'inquiry');
+      return;
+    }
     if (q.secret) {
       DataStore.addAudit({ type: '문의', targetId: id, action: '수정', memo: '비밀글 본문 열람' });
       DataStore.notify();
@@ -136,7 +140,7 @@ function InquiryDetailLP({ id, onClose }) {
     if (!reply.trim()) { toastErr('답변을 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       const ok = await DataStore.apiBoardReply(id, reply, 'inquiry', { markDone: done, public: !q.secret });
-      if (ok) { setReply(''); toastOk('답변이 등록되었습니다. 작성자에게 이메일이 발송됩니다.'); }
+      if (ok) { setReply(''); toastOk('답변이 등록되었습니다. (FO 게시판에 노출)'); }
       return;
     }
     const before = { status: q.status };
@@ -146,13 +150,18 @@ function InquiryDetailLP({ id, onClose }) {
     DataStore.addAudit({ type: '문의', targetId: id, action: '수정', before, after: { status: q.status }, memo: `답변 등록${done ? '+답변완료 처리' : ''}` });
     DataStore.notify();
     setReply('');
-    toastOk('답변이 등록되었습니다. 작성자에게 이메일이 발송됩니다.');
+    toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
   };
 
-  const addComment = () => {
+  const addComment = async () => {
     if (!comment.trim()) return;
     // 비밀글의 댓글·대댓글은 자동 비밀글 (강제)
     const isPub = q.secret ? false : commentPublic;
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiAddComment(id, comment, null, 'inquiry', isPub);
+      if (ok) { setComment(''); toastOk('댓글이 등록되었습니다.'); }
+      return;
+    }
     q.comments.push({ author: state.me?.id, body: comment, public: isPub, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'comment' });
     DataStore.addAudit({ type: '문의', targetId: id, action: '수정', memo: `댓글 등록(${isPub ? '공개' : '비공개'})` });
     DataStore.notify();
@@ -178,7 +187,7 @@ function InquiryDetailLP({ id, onClose }) {
         <FormRow>
           <label style={{ fontSize: 13, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
             <input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)}/>
-            답변 완료 처리 (상태를 '답변완료'로 전환 + 작성자 이메일 통지)
+            답변 완료 처리 (상태를 '답변완료'로 전환)
           </label>
         </FormRow>
       </FieldSet>

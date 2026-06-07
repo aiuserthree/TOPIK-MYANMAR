@@ -12,7 +12,12 @@ from app.lib.deps import AuthUser, require_user
 from app.lib.errors import api_error
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_photo
-from app.lib.validation import gender_to_code, is_valid_password, normalize_birth_date
+from app.lib.validation import (
+    gender_to_code,
+    is_valid_password,
+    normalize_birth_date,
+    validate_roster_codes,
+)
 from app.models.application import Application, ApplicationSubmission
 from app.models.user import User
 
@@ -94,6 +99,11 @@ async def update_me(
         data["birth_date"] = birth
     if "gender" in data and data["gender"]:
         data["gender"] = gender_to_code(data["gender"])
+    roster_err = validate_roster_codes(
+        data.get("job_code"), data.get("motive_code"), data.get("purpose_code")
+    )
+    if roster_err:
+        raise api_error("VALIDATION_ERROR", roster_err)
     photo_base64 = data.pop("photo_base64", None)
     for key, value in data.items():
         setattr(user, key, value)

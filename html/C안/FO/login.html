@@ -107,27 +107,27 @@
 <main class="page" role="main">
   <div class="auth-wrap">
     <div class="auth-head">
-      <h1>로그인</h1>
-      <p>TOPIK 미얀마 시행 공식 접수 서비스</p>
+      <h1 data-i18n-content="login.title">로그인</h1>
+      <p data-i18n-content="login.subtitle">TOPIK 미얀마 시행 공식 접수 서비스</p>
     </div>
 
     <div class="err-banner" id="resetOkBanner" style="display:none;background:var(--success-50, #e8f5e9);border-color:#a7d7b5;color:var(--success,#0d7a3e)">
-      <span>비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.</span>
+      <span data-i18n-content="login.reset_ok">비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.</span>
     </div>
     <div class="err-banner" id="errBanner">
-      <span>이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.</span>
+      <span data-i18n-content="login.err_invalid">이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.</span>
     </div>
 
     <form id="loginForm" novalidate>
       <div class="form-row">
-        <label class="label" for="email">이메일 (아이디)</label>
+        <label class="label" for="email" data-i18n-content="su.email_id">이메일 (아이디)</label>
         <input id="email" name="email" type="email" class="input" placeholder="example@email.com" autocomplete="username">
       </div>
 
       <div class="form-row">
-        <label class="label" for="password">비밀번호</label>
+        <label class="label" for="password" data-i18n-content="su.pw">비밀번호</label>
         <div class="pw-wrap">
-          <input id="password" name="password" type="password" class="input" placeholder="비밀번호 입력" autocomplete="current-password">
+          <input id="password" name="password" type="password" class="input" placeholder="비밀번호 입력" data-i18n-content="login.pw_ph" data-i18n-content-placeholder autocomplete="current-password">
           <button type="button" class="pw-toggle" id="pwToggle">표시</button>
         </div>
       </div>
@@ -135,20 +135,20 @@
       <label class="check" style="margin-bottom: 18px;">
         <input type="checkbox" id="remember">
         <span class="box"></span>
-        <span>로그인 상태 유지</span>
+        <span data-i18n-content="login.remember">로그인 상태 유지</span>
       </label>
 
-      <button type="submit" class="btn btn-primary btn-block btn-lg">로그인</button>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" data-i18n-content="login.btn_login">로그인</button>
 
       <div class="auth-options">
-        <a href="javascript:void(0)" onclick="TPKM.openModal('modalFindId')">아이디(이메일) 찾기</a>
+        <a href="javascript:void(0)" onclick="TPKM.openModal('modalFindId')" data-i18n-content="login.find_id">아이디(이메일) 찾기</a>
         <span>
-          <a href="javascript:void(0)" onclick="TPKM.openModal('modalFindPw')">비밀번호 찾기</a>
+          <a href="javascript:void(0)" onclick="TPKM.openModal('modalFindPw')" data-i18n-content="login.find_pw">비밀번호 찾기</a>
         </span>
       </div>
     </form>
 
-    <div class="auth-divider">또는</div>
+    <div class="auth-divider" data-i18n-content="common.or">또는</div>
 
     <div id="googleArea">
       <!-- Google Identity Services renders its own button here when OAuth is configured -->
@@ -162,8 +162,8 @@
     </div>
 
     <div class="auth-foot">
-      아직 회원이 아니신가요?
-      <a href="signup.html">회원가입</a>
+      <span data-i18n-content="login.no_account">아직 회원이 아니신가요?</span>
+      <a href="signup.html" data-i18n-content="signup.title">회원가입</a>
     </div>
   </div>
 </main>
@@ -174,21 +174,21 @@
 <!-- ============ 아이디(이메일) 찾기 모달 ============ -->
 <div class="modal-backdrop" id="modalFindId">
   <div class="modal">
-    <div class="modal-head"><h3>아이디(이메일) 찾기</h3></div>
+    <div class="modal-head"><h3 data-i18n-content="login.find_id">아이디(이메일) 찾기</h3></div>
     <div class="modal-body">
-      <p style="font-size:13.5px; color:var(--text-3); margin-bottom: 14px;">가입 시 입력한 정보와 일치하는 이메일(=로그인 아이디)을 안내해 드립니다.</p>
+      <p style="font-size:13.5px; color:var(--text-3); margin-bottom: 14px;" data-i18n-content="login.find_id_desc">가입 시 입력한 정보와 일치하는 이메일(=로그인 아이디)을 안내해 드립니다.</p>
 
       <div id="findIdForm">
         <div class="form-row">
-          <label class="label">한글 성명 <span class="req">*</span></label>
-          <input class="input" placeholder="홍길동" id="fi-name">
+          <label class="label"><span data-i18n-content="su.name_ko">한글 성명</span> <span class="req">*</span></label>
+          <input class="input" placeholder="홍길동" data-i18n-content="su.name_ko_ph" data-i18n-content-placeholder id="fi-name">
         </div>
         <div class="form-row">
-          <label class="label">생년월일 (8자리) <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="login.birth8">생년월일 (8자리)</span> <span class="req">*</span></label>
           <input class="input" placeholder="19960101" maxlength="8" id="fi-bd">
         </div>
         <div class="form-row">
-          <label class="label">연락처 <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.phone">연락처</span> <span class="req">*</span></label>
           <input class="input" placeholder="+95 ..." id="fi-tel">
         </div>
       </div>
@@ -198,8 +198,8 @@
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalFindId'); resetFindId();">닫기</button>
-      <button class="btn btn-primary" id="btnFindId">아이디 확인</button>
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalFindId'); resetFindId();" data-i18n-content="btn.close">닫기</button>
+      <button class="btn btn-primary" id="btnFindId" data-i18n-content="login.confirm_id">아이디 확인</button>
     </div>
   </div>
 </div>
@@ -207,13 +207,13 @@
 <!-- ============ 비밀번호 찾기 모달 ============ -->
 <div class="modal-backdrop" id="modalFindPw">
   <div class="modal">
-    <div class="modal-head"><h3>비밀번호 찾기</h3></div>
+    <div class="modal-head"><h3 data-i18n-content="login.find_pw">비밀번호 찾기</h3></div>
     <div class="modal-body">
-      <p style="font-size:13.5px; color:var(--text-3); margin-bottom: 14px;">가입하신 이메일을 입력하시면 인증코드를 받아 새 비밀번호를 설정합니다. (유효시간 30분)</p>
+      <p style="font-size:13.5px; color:var(--text-3); margin-bottom: 14px;" data-i18n-content="login.find_pw_desc">가입하신 이메일을 입력하시면 인증코드를 받아 새 비밀번호를 설정합니다. (유효시간 30분)</p>
 
       <div id="findPwForm">
         <div class="form-row">
-          <label class="label">이메일 <span class="req">*</span></label>
+          <label class="label"><span data-i18n-content="su.email">이메일</span> <span class="req">*</span></label>
           <input class="input" type="email" placeholder="example@email.com" id="fp-email">
         </div>
       </div>
@@ -222,8 +222,8 @@
         <div class="callout">
           <div class="ico"></div>
           <div>
-            <strong>인증코드를 발송했습니다.</strong><br>
-            <span id="find-pw-sent-email" style="font-family:'Inter',sans-serif;">example@email.com</span> 주소로 6자리 인증코드를 발송했습니다. 다음 화면에서 코드와 새 비밀번호를 입력해 주세요. (유효시간 30분)
+            <strong data-i18n-content="login.code_sent">인증코드를 발송했습니다.</strong><br>
+            <span id="find-pw-sent-email" style="font-family:'Inter',sans-serif;">example@email.com</span> <span data-i18n-content="login.sent_suffix">주소로 6자리 인증코드를 발송했습니다. 다음 화면에서 코드와 새 비밀번호를 입력해 주세요. (유효시간 30분)</span>
           </div>
         </div>
       </div>
@@ -231,12 +231,42 @@
       <p id="findPwErr" style="display:none; color:var(--danger); font-size:13px; margin-top:10px;"></p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalFindPw'); resetFindPw();">닫기</button>
-      <button class="btn btn-primary" id="btnFindPw">인증코드 발송</button>
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalFindPw'); resetFindPw();" data-i18n-content="btn.close">닫기</button>
+      <button class="btn btn-primary" id="btnFindPw" data-i18n-content="login.send_code">인증코드 발송</button>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'login.title': { ko: '로그인', my: 'ဝင်ရောက်ရန်', en: 'Sign in' },
+    'login.subtitle': { ko: 'TOPIK 미얀마 시행 공식 접수 서비스', my: 'TOPIK မြန်မာ တရားဝင် လျှောက်လွှာ ဝန်ဆောင်မှု', en: 'Official TOPIK Myanmar registration service' },
+    'login.reset_ok': { ko: '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.', my: 'စကားဝှက် ပြောင်းလဲပြီးပါပြီ။ စကားဝှက်အသစ်ဖြင့် ဝင်ရောက်ပါ။', en: 'Your password has been changed. Please sign in with the new password.' },
+    'login.err_invalid': { ko: '이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.', my: 'အီးမေးလ် သို့မဟုတ် စကားဝှက် မကိုက်ညီပါ။ ပြန်စစ်ဆေးပါ။', en: 'The email or password is incorrect. Please check again.' },
+    'su.email_id': { ko: '이메일 (아이디)', my: 'အီးမေးလ် (အိုင်ဒီ)', en: 'Email (ID)' },
+    'su.pw': { ko: '비밀번호', my: 'စကားဝှက်', en: 'Password' },
+    'login.pw_ph': { ko: '비밀번호 입력', my: 'စကားဝှက် ထည့်ပါ', en: 'Enter password' },
+    'login.remember': { ko: '로그인 상태 유지', my: 'ဝင်ရောက်မှု ဆက်ထားရန်', en: 'Keep me signed in' },
+    'login.btn_login': { ko: '로그인', my: 'ဝင်ရောက်ရန်', en: 'Sign in' },
+    'login.find_id': { ko: '아이디(이메일) 찾기', my: 'အိုင်ဒီ (အီးမေးလ်) ရှာရန်', en: 'Find ID (email)' },
+    'login.find_pw': { ko: '비밀번호 찾기', my: 'စကားဝှက် ရှာရန်', en: 'Find password' },
+    'common.or': { ko: '또는', my: 'သို့မဟုတ်', en: 'or' },
+    'login.no_account': { ko: '아직 회원이 아니신가요?', my: 'အကောင့် မရှိသေးဘူးလား။', en: "Don't have an account yet?" },
+    'signup.title': { ko: '회원가입', my: 'အကောင့်ဖွင့်ရန်', en: 'Create account' },
+    'login.find_id_desc': { ko: '가입 시 입력한 정보와 일치하는 이메일(=로그인 아이디)을 안내해 드립니다.', my: 'မှတ်ပုံတင်စဉ် ထည့်ထားသော အချက်အလက်နှင့် ကိုက်ညီသော အီးမေးလ် (=ဝင်ရောက်ရန် အိုင်ဒီ) ကို အသိပေးပါမည်။', en: 'We will show the email (=login ID) that matches the information you provided at sign-up.' },
+    'su.name_ko': { ko: '한글 성명', my: 'ကိုရီးယား အမည်', en: 'Korean name' },
+    'su.name_ko_ph': { ko: '홍길동', my: 'ဥပမာ - 홍길동', en: 'e.g. 홍길동' },
+    'login.birth8': { ko: '생년월일 (8자리)', my: 'မွေးနေ့ (၈ လုံး)', en: 'Date of birth (8 digits)' },
+    'su.phone': { ko: '연락처', my: 'ဆက်သွယ်ရန်', en: 'Phone' },
+    'btn.close': { ko: '닫기', my: 'ပိတ်ရန်', en: 'Close' },
+    'login.confirm_id': { ko: '아이디 확인', my: 'အိုင်ဒီ စစ်ဆေးရန်', en: 'Find ID' },
+    'login.find_pw_desc': { ko: '가입하신 이메일을 입력하시면 인증코드를 받아 새 비밀번호를 설정합니다. (유효시간 30분)', my: 'မှတ်ပုံတင်ထားသော အီးမေးလ်ကို ထည့်ပါက အတည်ပြုကုဒ် ရရှိပြီး စကားဝှက်အသစ် သတ်မှတ်နိုင်ပါသည်။ (သက်တမ်း ၃၀ မိနစ်)', en: 'Enter your registered email to receive a verification code and set a new password. (valid 30 min)' },
+    'su.email': { ko: '이메일', my: 'အီးမေးလ်', en: 'Email' },
+    'login.code_sent': { ko: '인증코드를 발송했습니다.', my: 'အတည်ပြုကုဒ် ပို့ပြီးပါပြီ။', en: 'A verification code has been sent.' },
+    'login.sent_suffix': { ko: '주소로 6자리 인증코드를 발송했습니다. 다음 화면에서 코드와 새 비밀번호를 입력해 주세요. (유효시간 30분)', my: 'လိပ်စာသို့ ၆ လုံး အတည်ပြုကုဒ် ပို့ပြီးပါပြီ။ နောက်စာမျက်နှာတွင် ကုဒ်နှင့် စကားဝှက်အသစ် ထည့်ပါ။ (သက်တမ်း ၃၀ မိနစ်)', en: 'A 6-digit verification code was sent to this address. Enter the code and a new password on the next screen. (valid 30 min)' },
+    'login.send_code': { ko: '인증코드 발송', my: 'အတည်ပြုကုဒ် ပို့ရန်', en: 'Send code' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script>

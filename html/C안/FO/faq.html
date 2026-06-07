@@ -64,31 +64,31 @@
 
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>게시판</span><span>FAQ</span></div>
-      <h1>자주 묻는 질문</h1>
-      <p class="lead">접수·시험·결과 관련 자주 묻는 질문을 분류별로 모아두었습니다.</p>
+      <div class="crumb"><span data-i18n-content="menu.board">게시판</span><span data-i18n-content="faq.title">FAQ</span></div>
+      <h1 data-i18n-content="faq.title">자주 묻는 질문</h1>
+      <p class="lead" data-i18n-content="fq.lead">접수·시험·결과 관련 자주 묻는 질문을 분류별로 모아두었습니다.</p>
     </div>
   </header>
 
   <div class="faq-wrap">
 
     <div class="faq-tools">
-      <div class="faq-search"><input type="search" id="faqSearch" placeholder="질문 검색 (예: 응시료, 수험번호, 환불…)"></div>
+      <div class="faq-search"><input type="search" id="faqSearch" placeholder="질문 검색 (예: 응시료, 수험번호, 환불…)" data-i18n-content="fq.search_ph" data-i18n-content-placeholder></div>
       <div class="faq-tabs">
-        <button class="chip active" data-cat="all">전체</button>
-        <button class="chip" data-cat="account">계정</button>
-        <button class="chip" data-cat="apply">접수</button>
-        <button class="chip" data-cat="exam">시험</button>
-        <button class="chip" data-cat="result">결과</button>
-        <button class="chip" data-cat="other">기타</button>
+        <button class="chip active" data-cat="all" data-i18n-content="nt.cat_all">전체</button>
+        <button class="chip" data-cat="account" data-i18n-content="fq.cat_account">계정</button>
+        <button class="chip" data-cat="apply" data-i18n-content="nt.cat_apply">접수</button>
+        <button class="chip" data-cat="exam" data-i18n-content="nt.cat_exam">시험</button>
+        <button class="chip" data-cat="result" data-i18n-content="nt.cat_result">결과</button>
+        <button class="chip" data-cat="other" data-i18n-content="qna.cat_etc">기타</button>
       </div>
     </div>
 
     <div id="faqGroups">
-      <p style="text-align:center; padding:40px 16px; color:var(--text-3); font-size:14px;">FAQ를 불러오는 중…</p>
+      <p style="text-align:center; padding:40px 16px; color:var(--text-3); font-size:14px;" data-i18n-content="fq.loading">FAQ를 불러오는 중…</p>
     </div>
 
-    <p id="faqEmpty" style="display:none; text-align:center; padding:40px 16px; color:var(--text-3); font-size:14px;">검색 조건에 맞는 질문이 없습니다.</p>
+    <p id="faqEmpty" style="display:none; text-align:center; padding:40px 16px; color:var(--text-3); font-size:14px;" data-i18n-content="fq.search_none">검색 조건에 맞는 질문이 없습니다.</p>
 
   </div>
 </main>
@@ -96,12 +96,32 @@
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'fq.lead': { ko: '접수·시험·결과 관련 자주 묻는 질문을 분류별로 모아두었습니다.', my: 'လျှောက်ထားမှု·စာမေးပွဲ·ရလဒ်ဆိုင်ရာ မေးလေ့ရှိသော မေးခွန်းများကို အမျိုးအစားအလိုက် စုစည်းထားသည်။', en: 'Frequently asked questions about registration, the exam, and results, grouped by category.' },
+    'fq.search_ph': { ko: '질문 검색 (예: 응시료, 수험번호, 환불…)', my: 'မေးခွန်း ရှာဖွေ (ဥပမာ - ဖြေဆိုကြေး၊ ဖြေဆိုသူနံပါတ်၊ ငွေပြန်အမ်း…)', en: 'Search questions (e.g. fee, exam number, refund…)' },
+    'fq.cat_account': { ko: '계정', my: 'အကောင့်', en: 'Account' },
+    'fq.loading': { ko: 'FAQ를 불러오는 중…', my: 'FAQ ဖွင့်နေသည်…', en: 'Loading FAQ…' },
+    'fq.fail': { ko: 'FAQ를 불러올 수 없습니다.', my: 'FAQ ဖွင့်၍မရပါ။', en: 'Could not load FAQ.' },
+    'fq.network_err': { ko: '네트워크 오류입니다.', my: 'ကွန်ရက် ချို့ယွင်းမှု ဖြစ်ပွားသည်။', en: 'A network error occurred.' },
+    'fq.search_none': { ko: '검색 조건에 맞는 질문이 없습니다.', my: 'ရှာဖွေမှုနှင့် ကိုက်ညီသော မေးခွန်း မရှိပါ။', en: 'No questions match your search.' },
+    'nt.cat_all': { ko: '전체', my: 'အားလုံး', en: 'All' },
+    'nt.cat_apply': { ko: '접수', my: 'လျှောက်ထားမှု', en: 'Registration' },
+    'nt.cat_exam': { ko: '시험', my: 'စာမေးပွဲ', en: 'Exam' },
+    'nt.cat_result': { ko: '결과', my: 'ရလဒ်', en: 'Results' },
+    'qna.cat_etc': { ko: '기타', my: 'အခြား', en: 'Other' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script>
 (function () {
   'use strict';
 
+  function bt(key, fallback) {
+    try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
+    return fallback;
+  }
   var groupsEl = document.getElementById('faqGroups');
   var emptyEl = document.getElementById('faqEmpty');
   var searchEl = document.getElementById('faqSearch');
@@ -155,10 +175,10 @@
 
   function load() {
     if (!window.TopikApi || !TopikApi.canUseApi()) {
-      groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--text-3);">FAQ를 불러올 수 없습니다.</p>';
+      groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--text-3);">' + esc(bt('fq.fail', 'FAQ를 불러올 수 없습니다.')) + '</p>';
       return;
     }
-    groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--text-3);">FAQ를 불러오는 중…</p>';
+    groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--text-3);">' + esc(bt('fq.loading', 'FAQ를 불러오는 중…')) + '</p>';
     TopikApi.getFaq({ lang: currentLang() }).then(function (res) {
       if (!res.ok) {
         groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--danger);">' +
@@ -168,7 +188,7 @@
       allGroups = (res.body && res.body.groups) || [];
       render();
     }).catch(function () {
-      groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--danger);">네트워크 오류입니다.</p>';
+      groupsEl.innerHTML = '<p style="text-align:center; padding:40px 16px; color:var(--danger);">' + esc(bt('fq.network_err', '네트워크 오류입니다.')) + '</p>';
     });
   }
 

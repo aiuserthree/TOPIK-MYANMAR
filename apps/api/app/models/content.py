@@ -55,3 +55,24 @@ class Term(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="draft")
     effective_at: Mapped[Optional[date]] = mapped_column(Date)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class TermConsent(Base):
+    """가입 시 동의한 약관 종류/버전 영속화 — db/migrations/V006 terms_consents."""
+
+    __tablename__ = "terms_consents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    term_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("terms.id", ondelete="SET NULL")
+    )
+    term_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    version: Mapped[str] = mapped_column(String(20), nullable=False, server_default="")
+    agreed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

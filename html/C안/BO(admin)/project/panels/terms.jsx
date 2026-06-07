@@ -221,6 +221,16 @@ function ConsentLogLP({ onClose }) {
   const state = useStore();
   const [memberF, setMemberF] = useState('all');
   const [kindF, setKindF] = useState('all');
+  const [loading, setLoading] = useState(false);
+
+  // 동의 이력은 진입 시 실제 API(GET /api/v1/admin/terms/consents)로 로드 — 목업 제거
+  useEffect(() => {
+    if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.apiLoadConsents) {
+      setLoading(true);
+      DataStore.apiLoadConsents({}).then(() => setLoading(false));
+    }
+  }, []);
+
   const filtered = useMemo(() => {
     let r = state.consents.slice();
     if (memberF !== 'all') r = r.filter(c => c.memberId === memberF);
@@ -229,16 +239,24 @@ function ConsentLogLP({ onClose }) {
   }, [state.consents, memberF, kindF]);
 
   const exportCSV = () => {
-    DataStore.addAudit({ type: '약관', targetId: '—', action: '게시', memo: `약관 동의 이력 CSV 내보내기(${filtered.length}건) — 감사 자료` });
-    toastOk('동의 이력 CSV를 생성했습니다.');
+    const headers = ['시각', '회원ID', '약관', '버전', 'IP', '방식'];
+    const rows = filtered.map(c => [c.ts, c.memberId, c.termsKind, c.version, c.ip, c.method]);
+    const fn = '약관동의이력_' + new Date().toISOString().slice(0, 10) + '.csv';
+    const after = () => {
+      DataStore.addAudit({ type: '약관', targetId: '—', action: '게시', memo: `약관 동의 이력 CSV 내보내기(${filtered.length}건) — 감사 자료` });
+      toastOk(`동의 이력 CSV(${filtered.length}건)를 생성했습니다.`);
+    };
+    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, rows).then(after); }
+    else after();
   };
 
   return (
     <LP open size="wide" title="약관 동의 이력" sub="회원·버전별 동의 시점/IP/방식 (감사 자료)" onClose={onClose}
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        <button className="btn btn-primary" onClick={exportCSV}><I.Download style={{ width: 12, height: 12 }}/> CSV 내보내기</button>
+        <button className="btn btn-primary" onClick={exportCSV} disabled={!filtered.length}><I.Download style={{ width: 12, height: 12 }}/> CSV 내보내기</button>
       </>}>
+      {loading && <div style={{ padding: 10, fontSize: 12.5, color: 'var(--text-3)' }}>동의 이력 로딩 중…</div>}
       <div className="filterbar">
         <div className="controls">
           <select className="select" value={memberF} onChange={e => setMemberF(e.target.value)} style={{ minWidth: 180 }}>
@@ -266,6 +284,9 @@ function ConsentLogLP({ onClose }) {
                   <td><span className="tag">{c.method}</span></td>
                 </tr>
               ))}
+              {!filtered.length && !loading && (
+                <tr><td colSpan="6"><div className="empty" style={{ padding: '20px 0' }}>동의 이력이 없습니다</div></td></tr>
+              )}
             </tbody>
           </table>
         </div>

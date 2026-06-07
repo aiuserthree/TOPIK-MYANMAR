@@ -54,9 +54,9 @@
 <main class="page" role="main">
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>마이페이지</span><span>내정보 수정</span></div>
-      <h1>내정보 수정</h1>
-      <p class="lead">가입 정보를 직접 수정하실 수 있습니다. 사진 변경 시 진행 중인 접수 건에도 즉시 반영됩니다.</p>
+      <div class="crumb"><span data-i18n-content="menu.mypage">마이페이지</span><span data-i18n-content="mpp.title">내정보 수정</span></div>
+      <h1 data-i18n-content="mpp.title">내정보 수정</h1>
+      <p class="lead" data-i18n-content="mpp.lead">가입 정보를 직접 수정하실 수 있습니다. 사진 변경 시 진행 중인 접수 건에도 즉시 반영됩니다.</p>
     </div>
   </header>
 
@@ -65,130 +65,130 @@
     <div class="callout" style="margin-bottom: 20px;">
       <div class="ico"></div>
       <div>
-        <strong>비밀번호 변경 안내</strong> — 계정 관리 및 대리접수 방지를 위해 비밀번호는 6개월마다 변경을 권장합니다.
-        마지막 변경일: <strong id="pf-pw-changed">—</strong>
+        <strong data-i18n-content="mpp.pw_notice_title">비밀번호 변경 안내</strong> <span data-i18n-content="mpp.pw_notice_body">— 계정 관리 및 대리접수 방지를 위해 비밀번호는 6개월마다 변경을 권장합니다.</span>
+        <span data-i18n-content="mpp.pw_last_changed">마지막 변경일:</span> <strong id="pf-pw-changed">—</strong>
       </div>
     </div>
 
     <div class="profile-tabs">
-      <button class="active" data-tab="basic">기본정보·사진</button>
-      <button data-tab="account">계정·비밀번호</button>
+      <button class="active" data-tab="basic" data-i18n-content="mpp.tab_basic">기본정보·사진</button>
+      <button data-tab="account" data-i18n-content="mpp.tab_account">계정·비밀번호</button>
     </div>
 
     <!-- ============ 기본정보 + 사진 ============ -->
     <section class="tab-pane active" data-tab="basic">
 
-      <h2 class="h3" style="margin-bottom: 12px;">증명사진</h2>
+      <h2 class="h3" style="margin-bottom: 12px;" data-i18n-content="mpp.photo_title">증명사진</h2>
       <div class="photo-section" id="profilePhotoZone">
         <div class="ph-prev">현재 사진</div>
         <div style="flex:1;">
-          <p style="font-size: 13.5px; color: var(--text-2);">시험 접수 시 자동 사용됩니다.</p>
-          <p class="body-sm" style="margin-top: 4px;">새 사진 등록 시 <strong>진행 중인 접수 건에도 즉시 반영</strong>되며, <strong>BO 사진 심사가 자동으로 재실행(재심사)</strong>됩니다. (0527 정책)</p>
+          <p style="font-size: 13.5px; color: var(--text-2);" data-i18n-content="mpp.photo_desc1">시험 접수 시 자동 사용됩니다.</p>
+          <p class="body-sm" style="margin-top: 4px;" data-i18n-content="mpp.photo_desc2" data-i18n-content-html>새 사진 등록 시 <strong>진행 중인 접수 건에도 즉시 반영</strong>되며, <strong>BO 사진 심사가 자동으로 재실행(재심사)</strong>됩니다. (0527 정책)</p>
           <div style="margin-top: 10px; display:flex; gap: 6px;">
-            <button class="btn btn-secondary btn-sm" type="button" data-photo-select>파일 선택</button>
-            <button class="btn btn-text btn-sm" type="button" data-photo-spec>규격 안내</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-photo-select data-i18n-content="mpp.photo_select">파일 선택</button>
+            <button class="btn btn-text btn-sm" type="button" data-photo-spec data-i18n-content="mpp.photo_spec">규격 안내</button>
           </div>
         </div>
       </div>
 
-      <h2 class="h3" style="margin: 24px 0 12px;">기본정보</h2>
+      <h2 class="h3" style="margin: 24px 0 12px;" data-i18n-content="mpp.basic_info">기본정보</h2>
       <div class="row-2">
         <div class="form-row">
-          <label class="label">한글 성명</label>
+          <label class="label" data-i18n-content="su.name_ko">한글 성명</label>
           <input class="input" id="pf-name-ko" value="">
         </div>
         <div class="form-row">
-          <label class="label">영문 성명 (여권 표기)</label>
+          <label class="label" data-i18n-content="su.name_en">영문 성명 (여권 표기)</label>
           <input class="input" id="pf-name-en" value="">
         </div>
       </div>
       <div class="row-2">
         <div class="form-row">
-          <label class="label">생년월일</label>
+          <label class="label" data-i18n-content="su.birth">생년월일</label>
           <input class="input" id="pf-birth" value="" maxlength="8" placeholder="YYYYMMDD">
         </div>
         <div class="form-row">
-          <label class="label">성별</label>
+          <label class="label" data-i18n-content="su.gender">성별</label>
           <select class="select" id="pf-gender">
-            <option value="1">남</option>
-            <option value="2">여</option>
+            <option value="1" data-i18n-content="su.male">남</option>
+            <option value="2" data-i18n-content="su.female">여</option>
           </select>
         </div>
       </div>
       <div class="row-2">
         <div class="form-row">
-          <label class="label">국적</label>
+          <label class="label" data-i18n-content="su.nationality">국적</label>
           <select class="select" id="pf-nationality">
-            <option value="미얀마">미얀마 (Myanmar)</option>
-            <option value="대한민국">대한민국</option>
-            <option value="기타">기타</option>
+            <option value="미얀마" data-i18n-content="mpp.nat_mm">미얀마 (Myanmar)</option>
+            <option value="대한민국" data-i18n-content="nat.kr">대한민국</option>
+            <option value="기타" data-i18n-content="mpp.etc">기타</option>
           </select>
         </div>
         <div class="form-row">
-          <label class="label">제1언어</label>
+          <label class="label" data-i18n-content="su.lang1">제1언어</label>
           <select class="select" id="pf-lang1">
-            <option value="미얀마어">미얀마어 (Burmese)</option>
-            <option value="한국어">한국어</option>
-            <option value="영어">영어</option>
-            <option value="기타">기타</option>
+            <option value="미얀마어" data-i18n-content="mpp.lang_my">미얀마어 (Burmese)</option>
+            <option value="한국어" data-i18n-content="lang.ko">한국어</option>
+            <option value="영어" data-i18n-content="lang.en">영어</option>
+            <option value="기타" data-i18n-content="mpp.etc">기타</option>
           </select>
         </div>
       </div>
       <div class="form-row">
-        <label class="label">연락처</label>
+        <label class="label" data-i18n-content="su.phone">연락처</label>
         <input class="input" id="pf-phone" value="">
       </div>
       <div class="row-2">
         <div class="form-row">
-          <label class="label">직업</label>
-          <select class="select" id="pf-job"><option value="">선택</option></select>
+          <label class="label" data-i18n-content="su.job">직업</label>
+          <select class="select" id="pf-job"><option value="" data-i18n-content="form.select">선택</option></select>
         </div>
         <div class="form-row">
-          <label class="label">응시동기</label>
-          <select class="select" id="pf-motive"><option value="">선택</option></select>
+          <label class="label" data-i18n-content="su.motive">응시동기</label>
+          <select class="select" id="pf-motive"><option value="" data-i18n-content="form.select">선택</option></select>
         </div>
       </div>
       <div class="form-row">
-        <label class="label">응시목적</label>
-        <select class="select" id="pf-purpose"><option value="">선택</option></select>
+        <label class="label" data-i18n-content="su.purpose">응시목적</label>
+        <select class="select" id="pf-purpose"><option value="" data-i18n-content="form.select">선택</option></select>
       </div>
 
-      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-basic">기본정보 저장</button>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-basic" data-i18n-content="mpp.save_basic">기본정보 저장</button>
     </section>
 
     <!-- ============ 계정·비밀번호 ============ -->
     <section class="tab-pane" data-tab="account">
 
-      <h2 class="h3" style="margin-bottom: 12px;">이메일 (로그인 ID)</h2>
+      <h2 class="h3" style="margin-bottom: 12px;" data-i18n-content="mpp.email_login_id">이메일 (로그인 ID)</h2>
       <div class="form-row">
         <input class="input" id="pf-email" value="" readonly>
-        <span class="hint">이메일 변경 시 변경된 주소로 재인증이 필요합니다.</span>
+        <span class="hint" data-i18n-content="mpp.email_hint">이메일 변경 시 변경된 주소로 재인증이 필요합니다.</span>
       </div>
 
-      <h2 class="h3" style="margin: 24px 0 12px;">비밀번호 변경</h2>
+      <h2 class="h3" style="margin: 24px 0 12px;" data-i18n-content="mpp.pw_change">비밀번호 변경</h2>
       <div class="form-row">
-        <label class="label">현재 비밀번호</label>
+        <label class="label" data-i18n-content="mpp.cur_pw">현재 비밀번호</label>
         <input class="input" type="password" id="pf-cur-pw" autocomplete="current-password">
       </div>
       <div class="form-row">
-        <label class="label">새 비밀번호</label>
-        <input class="input" type="password" id="pf-new-pw" placeholder="영문+숫자+특수문자 8자 이상" autocomplete="new-password">
+        <label class="label" data-i18n-content="mpp.new_pw">새 비밀번호</label>
+        <input class="input" type="password" id="pf-new-pw" placeholder="영문+숫자+특수문자 8자 이상" data-i18n-content="mpp.pw_ph" data-i18n-content-placeholder autocomplete="new-password">
       </div>
       <div class="form-row">
-        <label class="label">새 비밀번호 확인</label>
+        <label class="label" data-i18n-content="mpp.new_pw2">새 비밀번호 확인</label>
         <input class="input" type="password" id="pf-new-pw2" autocomplete="new-password">
       </div>
 
-      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-account">계정정보 저장</button>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-account" data-i18n-content="mpp.save_account">계정정보 저장</button>
 
       <!-- 탈퇴 -->
       <div class="danger-zone">
-        <h3>회원 탈퇴</h3>
-        <p>
+        <h3 data-i18n-content="mpp.withdraw_title">회원 탈퇴</h3>
+        <p data-i18n-content="mpp.withdraw_desc" data-i18n-content-html>
           탈퇴 시 진행 중인 접수 내역이 <strong>모두 취소</strong>됩니다.
           탈퇴 후 동일 이메일로 재가입은 일정 기간 제한될 수 있습니다.
         </p>
-        <button class="btn btn-danger btn-sm" onclick="TPKM.openModal('modalLeave')">회원 탈퇴</button>
+        <button class="btn btn-danger btn-sm" onclick="TPKM.openModal('modalLeave')" data-i18n-content="mpp.withdraw_title">회원 탈퇴</button>
       </div>
     </section>
   </div>
@@ -199,19 +199,70 @@
 
 <div class="modal-backdrop" id="modalLeave">
   <div class="modal">
-    <div class="modal-head"><h3>회원 탈퇴</h3></div>
+    <div class="modal-head"><h3 data-i18n-content="mpp.withdraw_title">회원 탈퇴</h3></div>
     <div class="modal-body">
-      <p>정말 탈퇴하시겠습니까?<br><br>
+      <p data-i18n-content="mpp.leave_modal_body" data-i18n-content-html>정말 탈퇴하시겠습니까?<br><br>
       <strong>탈퇴 시 진행 중인 접수 내역이 모두 취소</strong>됩니다.
       취소된 접수에 대한 환불은 응시료 규정에 따라 처리됩니다.</p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalLeave')">취소</button>
-      <button class="btn btn-danger" id="btnLeaveConfirm">탈퇴 진행</button>
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalLeave')" data-i18n-content="btn.cancel">취소</button>
+      <button class="btn btn-danger" id="btnLeaveConfirm" data-i18n-content="mpp.leave_confirm">탈퇴 진행</button>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'menu.mypage': { ko: '마이페이지', my: 'ကျွန်ုပ်စာမျက်နှာ', en: 'My page' },
+    'mpp.title': { ko: '내정보 수정', my: 'ကျွန်ုပ်အချက်အလက် ပြင်ဆင်ခြင်း', en: 'Edit my profile' },
+    'mpp.lead': { ko: '가입 정보를 직접 수정하실 수 있습니다. 사진 변경 시 진행 중인 접수 건에도 즉시 반영됩니다.', my: 'မှတ်ပုံတင်အချက်အလက်များကို ကိုယ်တိုင် ပြင်ဆင်နိုင်ပါသည်။ ဓာတ်ပုံ ပြောင်းလဲပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများတွင်လည်း ချက်ချင်း သက်ရောက်ပါသည်။', en: 'You can edit your sign-up information directly. Changing your photo is also applied immediately to applications in progress.' },
+    'mpp.pw_notice_title': { ko: '비밀번호 변경 안내', my: 'စကားဝှက် ပြောင်းလဲခြင်း အသိပေးချက်', en: 'Password change notice' },
+    'mpp.pw_notice_body': { ko: '— 계정 관리 및 대리접수 방지를 위해 비밀번호는 6개월마다 변경을 권장합니다.', my: '— အကောင့် စီမံခန့်ခွဲမှုနှင့် ကိုယ်စား လျှောက်ထားမှု ကာကွယ်ရန် စကားဝှက်ကို ၆ လတစ်ကြိမ် ပြောင်းလဲရန် အကြံပြုပါသည်။', en: '— To manage your account and prevent proxy applications, we recommend changing your password every 6 months.' },
+    'mpp.pw_last_changed': { ko: '마지막 변경일:', my: 'နောက်ဆုံး ပြောင်းလဲသည့်နေ့-', en: 'Last changed:' },
+    'mpp.tab_basic': { ko: '기본정보·사진', my: 'အချက်အလက် · ဓာတ်ပုံ', en: 'Basic info & photo' },
+    'mpp.tab_account': { ko: '계정·비밀번호', my: 'အကောင့် · စကားဝှက်', en: 'Account & password' },
+    'mpp.photo_title': { ko: '증명사진', my: 'သက်သေခံ ဓာတ်ပုံ', en: 'ID photo' },
+    'mpp.photo_desc1': { ko: '시험 접수 시 자동 사용됩니다.', my: 'စာမေးပွဲ လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုသည်။', en: 'It is used automatically when you register for the exam.' },
+    'mpp.photo_desc2': { ko: '새 사진 등록 시 <strong>진행 중인 접수 건에도 즉시 반영</strong>되며, <strong>BO 사진 심사가 자동으로 재실행(재심사)</strong>됩니다. (0527 정책)', my: 'ဓာတ်ပုံအသစ် တင်ပါက <strong>ဆောင်ရွက်ဆဲ လျှောက်လွှာများတွင်လည်း ချက်ချင်း သက်ရောက်</strong>ပြီး၊ <strong>BO ဓာတ်ပုံစိစစ်မှု အလိုအလျောက် ပြန်လည်စစ်ဆေး</strong>ပါမည်။ (0527 မူဝါဒ)', en: 'When you upload a new photo, it is <strong>immediately applied to applications in progress</strong>, and the <strong>BO photo review runs again automatically (re-review)</strong>. (0527 policy)' },
+    'mpp.photo_select': { ko: '파일 선택', my: 'ဖိုင်ရွေးရန်', en: 'Choose file' },
+    'mpp.photo_spec': { ko: '규격 안내', my: 'စံချိန်စံညွှန်း', en: 'Requirements' },
+    'mpp.basic_info': { ko: '기본정보', my: 'အချက်အလက်', en: 'Basic information' },
+    'su.name_ko': { ko: '한글 성명', my: 'ကိုရီးယား အမည်', en: 'Korean name' },
+    'su.name_en': { ko: '영문 성명 (여권 표기)', my: 'အင်္ဂလိပ် အမည် (ပတ်စ်ပို့အတိုင်း)', en: 'English name (as in passport)' },
+    'su.birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
+    'su.gender': { ko: '성별', my: 'ကျား/မ', en: 'Gender' },
+    'su.male': { ko: '남', my: 'ကျား', en: 'Male' },
+    'su.female': { ko: '여', my: 'မ', en: 'Female' },
+    'su.nationality': { ko: '국적', my: 'နိုင်ငံသား', en: 'Nationality' },
+    'mpp.nat_mm': { ko: '미얀마 (Myanmar)', my: 'မြန်မာ (Myanmar)', en: 'Myanmar' },
+    'nat.kr': { ko: '대한민국', my: 'ကိုရီးယား', en: 'Republic of Korea' },
+    'mpp.etc': { ko: '기타', my: 'အခြား', en: 'Other' },
+    'su.lang1': { ko: '제1언어', my: 'ပထမ ဘာသာစကား', en: 'First language' },
+    'mpp.lang_my': { ko: '미얀마어 (Burmese)', my: 'မြန်မာဘာသာ (Burmese)', en: 'Burmese' },
+    'lang.ko': { ko: '한국어', my: 'ကိုရီးယားဘာသာ', en: 'Korean' },
+    'lang.en': { ko: '영어', my: 'အင်္ဂလိပ်ဘာသာ', en: 'English' },
+    'su.phone': { ko: '연락처', my: 'ဆက်သွယ်ရန်', en: 'Phone' },
+    'su.job': { ko: '직업', my: 'အလုပ်အကိုင်', en: 'Occupation' },
+    'form.select': { ko: '선택', my: 'ရွေးချယ်ပါ', en: 'Select' },
+    'su.motive': { ko: '응시동기', my: 'ဖြေဆိုရခြင်း အကြောင်းရင်း', en: 'Reason for taking' },
+    'su.purpose': { ko: '응시목적', my: 'ဖြေဆိုရခြင်း ရည်ရွယ်ချက်', en: 'Purpose of taking' },
+    'mpp.save_basic': { ko: '기본정보 저장', my: 'အချက်အလက် သိမ်းရန်', en: 'Save basic info' },
+    'mpp.email_login_id': { ko: '이메일 (로그인 ID)', my: 'အီးမေးလ် (ဝင်ရောက်ရန် ID)', en: 'Email (login ID)' },
+    'mpp.email_hint': { ko: '이메일 변경 시 변경된 주소로 재인증이 필요합니다.', my: 'အီးမေးလ် ပြောင်းလဲပါက ပြောင်းထားသော လိပ်စာဖြင့် ပြန်လည်အတည်ပြုရန် လိုအပ်ပါသည်။', en: 'If you change your email, re-verification is required at the new address.' },
+    'mpp.pw_change': { ko: '비밀번호 변경', my: 'စကားဝှက် ပြောင်းလဲခြင်း', en: 'Change password' },
+    'mpp.cur_pw': { ko: '현재 비밀번호', my: 'လက်ရှိ စကားဝှက်', en: 'Current password' },
+    'mpp.new_pw': { ko: '새 비밀번호', my: 'စကားဝှက်အသစ်', en: 'New password' },
+    'mpp.pw_ph': { ko: '영문+숫자+특수문자 8자 이상', my: 'အက္ခရာ+ဂဏန်း+သင်္ကေတ ၈ လုံးအထက်', en: 'Letters + numbers + symbols, 8+ chars' },
+    'mpp.new_pw2': { ko: '새 비밀번호 확인', my: 'စကားဝှက်အသစ် အတည်ပြုခြင်း', en: 'Confirm new password' },
+    'mpp.save_account': { ko: '계정정보 저장', my: 'အကောင့်အချက်အလက် သိမ်းရန်', en: 'Save account info' },
+    'mpp.withdraw_title': { ko: '회원 탈퇴', my: 'အကောင့် ပိတ်ရန်', en: 'Delete account' },
+    'mpp.withdraw_desc': { ko: '탈퇴 시 진행 중인 접수 내역이 <strong>모두 취소</strong>됩니다. 탈퇴 후 동일 이메일로 재가입은 일정 기간 제한될 수 있습니다.', my: 'အကောင့်ပိတ်ပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများ <strong>အားလုံး ပယ်ဖျက်</strong>ခံရပါမည်။ ပိတ်ပြီးနောက် တူညီသော အီးမေးလ်ဖြင့် ပြန်လည်မှတ်ပုံတင်ခြင်းကို ကာလအတိုင်းအတာတစ်ခု ကန့်သတ်နိုင်ပါသည်။', en: 'When you delete your account, all applications in progress are <strong>cancelled</strong>. Re-registration with the same email may be restricted for a certain period.' },
+    'mpp.leave_modal_body': { ko: '정말 탈퇴하시겠습니까?<br><br><strong>탈퇴 시 진행 중인 접수 내역이 모두 취소</strong>됩니다. 취소된 접수에 대한 환불은 응시료 규정에 따라 처리됩니다.', my: 'အကောင့်ကို တကယ် ပိတ်မှာ သေချာပါသလား။<br><br><strong>အကောင့်ပိတ်ပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများ အားလုံး ပယ်ဖျက်</strong>ခံရပါမည်။ ပယ်ဖျက်ခံရသော လျှောက်လွှာများ၏ ငွေပြန်အမ်းမှုကို ဖြေဆိုကြေး စည်းမျဉ်းအတိုင်း ဆောင်ရွက်ပါမည်။', en: 'Are you sure you want to delete your account?<br><br><strong>All applications in progress will be cancelled</strong> when you delete your account. Refunds for cancelled applications are handled according to the test fee policy.' },
+    'btn.cancel': { ko: '취소', my: 'ပယ်ဖျက်', en: 'Cancel' },
+    'mpp.leave_confirm': { ko: '탈퇴 진행', my: 'ပိတ်ရန် ဆက်လုပ်မည်', en: 'Proceed to delete' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="shared/roster-codes.js"></script>
 <script src="assets/common.js"></script>

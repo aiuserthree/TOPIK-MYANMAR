@@ -25,6 +25,8 @@ class AdminUser(TimestampMixin, Base):
         Boolean, nullable=False, server_default="false"
     )
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    failed_login_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    login_locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class AdminAuditLog(Base):

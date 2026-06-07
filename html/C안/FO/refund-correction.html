@@ -213,9 +213,9 @@
 
   <header class="page-head">
     <div class="container">
-      <div class="crumb"><span>게시판</span><span>환불·정보정정신청</span></div>
-      <h1>환불·정보정정신청</h1>
-      <p class="lead">응시료 환불 또는 회원 본인 정보 정정을 신청하는 게시판입니다.</p>
+      <div class="crumb"><span data-i18n-content="menu.board">게시판</span><span data-i18n-content="board.refund_title">환불·정보정정신청</span></div>
+      <h1 data-i18n-content="board.refund_title">환불·정보정정신청</h1>
+      <p class="lead" data-i18n-content="rfd.lead">응시료 환불 또는 회원 본인 정보 정정을 신청하는 게시판입니다.</p>
     </div>
   </header>
 
@@ -225,12 +225,12 @@
     <section class="pane list-view active" id="listPane">
       <div class="board-tools">
         <div class="filters">
-          <button class="chip active">전체</button>
-          <button class="chip">환불</button>
-          <button class="chip">정보정정</button>
+          <button class="chip active" data-i18n-content="qna.tab_all">전체</button>
+          <button class="chip" data-i18n-content="rfd.type_refund">환불</button>
+          <button class="chip" data-i18n-content="rfd.type_correction">정보정정</button>
         </div>
-        <div class="search"><input type="search" placeholder="제목·작성자 검색"></div>
-        <button class="btn btn-primary btn-sm write" onclick="show('writePane')">글쓰기</button>
+        <div class="search"><input type="search" placeholder="제목·작성자 검색" data-i18n-content="qna.search_ph" data-i18n-content-placeholder></div>
+        <button class="btn btn-primary btn-sm write" onclick="show('writePane')" data-i18n-content="btn.write">글쓰기</button>
       </div>
 
       <div class="card" style="padding: 0; overflow: hidden;">
@@ -238,16 +238,16 @@
         <table class="table">
           <thead>
             <tr>
-              <th class="col-num">번호</th>
-              <th class="col-type">유형</th>
-              <th>제목</th>
-              <th class="col-author">작성자</th>
-              <th class="col-date">작성일</th>
-              <th class="col-status">상태</th>
+              <th class="col-num" data-i18n-content="tbl.no">번호</th>
+              <th class="col-type" data-i18n-content="rfd.col_type">유형</th>
+              <th data-i18n-content="tbl.title">제목</th>
+              <th class="col-author" data-i18n-content="tbl.author">작성자</th>
+              <th class="col-date" data-i18n-content="tbl.date">작성일</th>
+              <th class="col-status" data-i18n-content="tbl.status">상태</th>
             </tr>
           </thead>
           <tbody id="rfdListBody">
-            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);">불러오는 중…</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);" data-i18n-content="board.loading">불러오는 중…</td></tr>
           </tbody>
         </table>
         </div>
@@ -258,50 +258,60 @@
 
     <!-- ============ Write ============ -->
     <section class="pane write-form" id="writePane">
-      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;">← 목록으로</a>
+      <a href="javascript:void(0)" onclick="show('listPane')" class="btn btn-text" style="margin-bottom: 12px;" data-i18n-content="btn.list">← 목록으로</a>
 
-      <h2 class="h2" style="margin-bottom: 18px;">새 글 작성</h2>
+      <h2 class="h2" style="margin-bottom: 18px;" data-i18n-content="rfd.write_title">새 글 작성</h2>
 
       <div class="form-row">
-        <label class="label">유형 <span class="req">*</span></label>
+        <label class="label"><span data-i18n-content="rfd.col_type">유형</span> <span class="req">*</span></label>
         <div style="display: flex; gap: 16px;">
-          <label class="radio"><input type="radio" name="type" checked><span class="box"></span><span>환불</span></label>
-          <label class="radio"><input type="radio" name="type"><span class="box"></span><span>정보정정</span></label>
+          <label class="radio"><input type="radio" name="type" checked><span class="box"></span><span data-i18n-content="rfd.type_refund">환불</span></label>
+          <label class="radio"><input type="radio" name="type"><span class="box"></span><span data-i18n-content="rfd.type_correction">정보정정</span></label>
         </div>
       </div>
 
       <div class="form-row">
-        <label class="label">제목 <span class="req">*</span></label>
-        <input class="input" id="rfdTitle" placeholder="제목 (100자 이내)" maxlength="100">
+        <label class="label"><span data-i18n-content="form.title">제목</span> <span class="req">*</span></label>
+        <input class="input" id="rfdTitle" placeholder="제목 (100자 이내)" maxlength="100" data-i18n-content="qna.title_ph" data-i18n-content-placeholder>
       </div>
 
       <div class="form-row">
-        <label class="label">내용 <span class="req">*</span></label>
-        <textarea class="textarea" id="rfdBody" rows="8" placeholder="환불·정정 사유, 접수번호, 회차 등을 자세히 작성해 주세요."></textarea>
+        <label class="label"><span data-i18n-content="form.content">내용</span> <span class="req">*</span></label>
+        <textarea class="textarea" id="rfdBody" rows="8" placeholder="환불·정정 사유, 접수번호, 회차 등을 자세히 작성해 주세요." data-i18n-content="rfd.body_ph" data-i18n-content-placeholder></textarea>
       </div>
 
       <div class="form-row">
-        <label class="label">첨부파일</label>
-        <div class="file-list">
-          영수증·신분증 사본 등 (jpg, png, pdf · 5MB 이하 · 최대 5개)
-          <div style="margin-top: 8px;"><button type="button" class="btn btn-secondary btn-sm">파일 선택</button></div>
+        <label class="label"><span data-i18n-content="rfd.f_secret_pw">비밀글 비밀번호</span> <span class="req">*</span></label>
+        <input class="input" type="password" id="rfdSecretPw" placeholder="4자 이상 (열람 시 필요)" maxlength="20" autocomplete="new-password" data-i18n-content="qna.secret_pw_ph" data-i18n-content-placeholder>
+        <span class="hint" data-i18n-content="qna.secret_pw_hint">다른 사용자가 이 글을 열람할 때 입력해야 하는 비밀번호입니다.</span>
+      </div>
+
+      <div class="form-row">
+        <label class="label" data-i18n-content="board.attachments">첨부파일</label>
+        <div class="attach-zone">
+          <div class="attach-hint" data-i18n-content="rfd.attach_hint">영수증·신분증 사본 등 (jpg, png, pdf · 5MB 이하 · 최대 5개)</div>
+          <div class="attach-actions">
+            <input type="file" id="rfdFileInput" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" multiple hidden>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('rfdFileInput').click()" data-i18n-content="board.file_select">파일 선택</button>
+          </div>
+          <div class="attach-list" id="rfdFileList"></div>
         </div>
       </div>
 
       <div class="form-row">
-        <div class="file-list" style="text-align:left;">
+        <div class="file-list" style="text-align:left;" data-i18n-content="rfd.secret_notice" data-i18n-content-html>
           🔒 환불·정보정정 신청 글은 모두 <strong>비밀글</strong>로 등록됩니다.
           작성자 본인과 관리자만 내용·댓글을 열람할 수 있습니다.
         </div>
       </div>
 
       <div class="form-row">
-        <label class="check"><input type="checkbox"><span class="box"></span><span><span class="req">[필수]</span> 개인정보 처리에 동의합니다 (정정 신청 시 신원 식별 정보 처리 동의)</span></label>
+        <label class="check"><input type="checkbox" id="rfdAgree"><span class="box"></span><span><span class="req">[필수]</span> <span data-i18n-content="rfd.agree">개인정보 처리에 동의합니다 (정정 신청 시 신원 식별 정보 처리 동의)</span></span></label>
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 20px;">
-        <button class="btn btn-secondary" onclick="show('listPane')">취소</button>
-        <button class="btn btn-primary" style="flex:1;" id="btnRefundSubmit">제출</button>
+        <button class="btn btn-secondary" onclick="show('listPane')" data-i18n-content="btn.cancel">취소</button>
+        <button class="btn btn-primary" style="flex:1;" id="btnRefundSubmit" data-i18n-content="btn.submit">제출</button>
       </div>
     </section>
 
@@ -343,26 +353,55 @@
 <!-- 비밀글 잠금 해제 -->
 <div class="modal-backdrop" id="modalSecretLock">
   <div class="modal">
-    <div class="modal-head"><h3>비밀글</h3></div>
+    <div class="modal-head"><h3 data-i18n-content="board.secret_label">비밀글</h3></div>
     <div class="modal-body">
       <div class="secret-lock">
         <div class="ico-lock">🔒</div>
-        <p>비밀글입니다. 작성자·관리자만 열람할 수 있습니다.</p>
-        <p class="body-sm" style="margin-top: 6px;">비밀번호를 입력해 주세요.</p>
+        <p data-i18n-content="board.locked_msg">비밀글입니다. 작성자·관리자만 열람할 수 있습니다.</p>
+        <p class="body-sm" style="margin-top: 6px;" data-i18n-content="board.unlock_enter_pw">비밀번호를 입력해 주세요.</p>
       </div>
       <div class="form-row" style="margin-top: 12px;">
-        <input class="input" type="password" id="secretPw" placeholder="비밀번호">
+        <input class="input" type="password" id="secretPw" placeholder="비밀번호" data-i18n-content="form.password_ph" data-i18n-content-placeholder>
         <span class="hint" id="secretPwErr" style="display:none; color: var(--danger);"></span>
       </div>
-      <p class="body-sm" style="text-align: center; font-size: 11.5px;">최대 5회 실패 시 30분간 잠깁니다.</p>
+      <p class="body-sm" style="text-align: center; font-size: 11.5px;" data-i18n-content="board.unlock_warn">최대 5회 실패 시 일시적으로 잠깁니다.</p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalSecretLock')">닫기</button>
-      <button class="btn btn-primary" id="btnSecretUnlock">확인</button>
+      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalSecretLock')" data-i18n-content="btn.close">닫기</button>
+      <button class="btn btn-primary" id="btnSecretUnlock" data-i18n-content="btn.confirm">확인</button>
     </div>
   </div>
 </div>
 
+<script>
+  window.TPKM_PAGE_I18N = {
+    'rfd.lead': { ko: '응시료 환불 또는 회원 본인 정보 정정을 신청하는 게시판입니다.', my: 'ဖြေဆိုကြေး ပြန်အမ်းခြင်း သို့မဟုတ် အဖွဲ့ဝင် ကိုယ်ရေးအချက်အလက် ပြင်ဆင်ခြင်း လျှောက်ထားရန် ဘုတ်ဖြစ်သည်။', en: 'Board for requesting a fee refund or correcting your member information.' },
+    'rfd.type_refund': { ko: '환불', my: 'ငွေပြန်အမ်း', en: 'Refund' },
+    'rfd.type_correction': { ko: '정보정정', my: 'အချက်အလက်ပြင်ဆင်', en: 'Correction' },
+    'rfd.col_type': { ko: '유형', my: 'အမျိုးအစား', en: 'Type' },
+    'rfd.write_title': { ko: '새 글 작성', my: 'ပို့စ်အသစ် ရေးသားရန်', en: 'New request' },
+    'rfd.body_ph': { ko: '환불·정정 사유, 접수번호, 회차 등을 자세히 작성해 주세요.', my: 'ငွေပြန်အမ်း·ပြင်ဆင်ရသည့် အကြောင်းရင်း၊ လျှောက်လွှာနံပါတ်၊ အကြိမ်ရေ စသည်တို့ကို အသေးစိတ် ရေးပါ။', en: 'Describe the refund/correction reason, application number, session, etc.' },
+    'rfd.f_secret_pw': { ko: '비밀글 비밀번호', my: 'လျှို့ဝှက်ပို့စ် စကားဝှက်', en: 'Secret-post password' },
+    'rfd.attach_hint': { ko: '영수증·신분증 사본 등 (jpg, png, pdf · 5MB 이하 · 최대 5개)', my: 'ပြေစာ·မှတ်ပုံတင် မိတ္တူ စသည် (jpg, png, pdf · 5MB အောက် · အများဆုံး ၅ ခု)', en: 'Receipt / ID copy, etc. (jpg, png, pdf · ≤ 5MB · up to 5 files)' },
+    'rfd.secret_notice': { ko: '🔒 환불·정보정정 신청 글은 모두 <strong>비밀글</strong>로 등록됩니다. 작성자 본인과 관리자만 내용·댓글을 열람할 수 있습니다.', my: '🔒 ငွေပြန်အမ်း·အချက်အလက်ပြင်ဆင် လျှောက်လွှာများအားလုံးကို <strong>လျှို့ဝှက်ပို့စ်</strong>အဖြစ် မှတ်တမ်းတင်သည်။ ရေးသားသူနှင့် စီမံခန့်ခွဲသူသာ ကြည့်ရှုနိုင်သည်။', en: '🔒 All refund/correction requests are saved as <strong>secret posts</strong>. Only the author and admin can view the content and comments.' },
+    'rfd.agree': { ko: '개인정보 처리에 동의합니다 (정정 신청 시 신원 식별 정보 처리 동의)', my: 'ကိုယ်ရေးအချက်အလက် ကိုင်တွယ်ခြင်းကို သဘောတူသည် (ပြင်ဆင်ရာတွင် အထောက်အထား စိစစ်ခြင်း သဘောတူ)', en: 'I agree to the processing of personal data (identity verification for corrections).' },
+    'rfd.agree_required': { ko: '개인정보 처리에 동의해 주세요.', my: 'ကိုယ်ရေးအချက်အလက် ကိုင်တွယ်ခြင်းကို သဘောတူပါ။', en: 'Please agree to the processing of personal data.' },
+    'qna.search_ph': { ko: '제목·작성자 검색', my: 'ခေါင်းစဉ်·ရေးသားသူ ရှာဖွေ', en: 'Search title / author' },
+    'qna.tab_all': { ko: '전체', my: 'အားလုံး', en: 'All' },
+    'qna.title_ph': { ko: '제목 (100자 이내)', my: 'ခေါင်းစဉ် (၁၀၀ လုံးအတွင်း)', en: 'Title (within 100 chars)' },
+    'qna.secret_pw_ph': { ko: '4자 이상 (열람 시 필요)', my: 'အနည်းဆုံး ၄ လုံး (ကြည့်ရှုရန် လို)', en: 'At least 4 chars (needed to view)' },
+    'qna.secret_pw_hint': { ko: '다른 사용자가 이 글을 열람할 때 입력해야 하는 비밀번호입니다.', my: 'အခြားသူများ ဤပို့စ်ကို ကြည့်ရှုသည့်အခါ ထည့်ရမည့် စကားဝှက်ဖြစ်သည်။', en: 'Others must enter this password to view the post.' },
+    'form.title': { ko: '제목', my: 'ခေါင်းစဉ်', en: 'Title' },
+    'form.content': { ko: '내용', my: 'အကြောင်းအရာ', en: 'Content' },
+    'form.password_ph': { ko: '비밀번호', my: 'စကားဝှက်', en: 'Password' },
+    'tbl.no': { ko: '번호', my: 'နံပါတ်', en: 'No.' },
+    'tbl.title': { ko: '제목', my: 'ခေါင်းစဉ်', en: 'Title' },
+    'tbl.author': { ko: '작성자', my: 'ရေးသားသူ', en: 'Author' },
+    'tbl.date': { ko: '작성일', my: 'ရက်စွဲ', en: 'Date' },
+    'tbl.status': { ko: '상태', my: 'အခြေအနေ', en: 'Status' },
+    'board.unlock_warn': { ko: '최대 5회 실패 시 일시적으로 잠깁니다.', my: 'အကြိမ် ၅ ကြိမ် မှားပါက ယာယီ ပိတ်သွားမည်။', en: 'After 5 failed attempts it locks temporarily.' }
+  };
+</script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script src="assets/fo-board.js"></script>
@@ -425,12 +464,32 @@
   });
   document.querySelector('.board-tools .search input').addEventListener('input', applyFilters);
 
+  // 첨부파일 (선택 즉시 업로드)
+  var rfdAttach = TPKMBoard.bindAttachments({
+    input: document.getElementById('rfdFileInput'),
+    listEl: document.getElementById('rfdFileList'),
+    max: 5,
+  });
+
+  var rfdSubmit = document.getElementById('btnRefundSubmit');
+  // 개인정보 처리 동의 확인 (제출 전 가드) — wireSubmit 실행 전에 가로채기
+  rfdSubmit.addEventListener('click', function (e) {
+    var agree = document.getElementById('rfdAgree');
+    if (agree && !agree.checked) {
+      e.stopImmediatePropagation();
+      var msg = (window.TPKMLang && TPKMLang.t('rfd.agree_required')) || '개인정보 처리에 동의해 주세요.';
+      alert(msg);
+    }
+  }, true);
+
   TPKMBoard.wireSubmit({
     boardType: 'refund_correction',
-    submitBtn: document.getElementById('btnRefundSubmit'),
+    submitBtn: rfdSubmit,
     titleEl: document.getElementById('rfdTitle'),
     bodyEl: document.getElementById('rfdBody'),
     forceSecret: true,
+    secretPwEl: document.getElementById('rfdSecretPw'),
+    attachmentCtrl: rfdAttach,
     resolveCategory: function () {
       var radios = document.getElementsByName('type');
       return (radios[0] && radios[0].checked) ? '환불' : '정보정정';

@@ -24,6 +24,8 @@ class BoardPost(TimestampMixin, Base):
     body: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     secret_password_hash: Mapped[Optional[str]] = mapped_column(String(255))
+    secret_fail_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    secret_locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     workflow_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="received")
     admin_reply: Mapped[Optional[str]] = mapped_column(Text)
     admin_replied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
