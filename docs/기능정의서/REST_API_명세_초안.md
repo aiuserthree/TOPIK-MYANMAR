@@ -289,7 +289,7 @@ HTTP 상태 + JSON 본문 (스택 트레이스·내부 SQL 미노출).
   "items": [
     {
       "submission_id": 500,
-      "exam_round": { "id": 98, "title": "제98회", "exam_date": "2026-10-18" },
+      "exam_round": { "id": 107, "title": "제107회", "exam_date": "2026-10-18" },
       "venue": { "id": 3, "name_ko": "양곤..." },
       "levels": [
         {

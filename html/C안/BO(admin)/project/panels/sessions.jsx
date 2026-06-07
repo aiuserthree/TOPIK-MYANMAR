@@ -83,7 +83,7 @@ function SessionsPanel() {
                     <td><b>{s.name}</b></td>
                     <td className="code">{s.applyStart} ~ {s.applyEnd}</td>
                     <td className="code">{s.examDate}</td>
-                    <td className="code muted">{s.resultDate}</td>
+                    <td className="code muted">{DataStore.fmtResultDate(s.resultDate)}</td>
                     <td className="num">{DataStore.fmtNum(s.cap)}</td>
                     <td className="num">{DataStore.fmtNum(s.applicants || 0)}</td>
                     <td className="code">{DataStore.fmtNum(s.feeI)}/{DataStore.fmtNum(s.feeII)}</td>
@@ -132,8 +132,9 @@ function SessionEditLP({ edit, onClose, onSave }) {
 
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
   const toggleVenue = (vid) => set('venues', f.venues.includes(vid) ? f.venues.filter(x => x !== vid) : [...f.venues, vid]);
-  const valid = f.name && f.applyStart && f.applyEnd && f.examDate && f.resultDate && f.cap > 0 && f.feeI > 0 && f.feeII > 0 && f.venues.length > 0
-    && f.applyStart < f.applyEnd && f.applyEnd < f.examDate && f.examDate < f.resultDate;
+  const valid = f.name && f.applyStart && f.applyEnd && f.examDate && f.cap > 0 && f.feeI > 0 && f.feeII > 0 && f.venues.length > 0
+    && f.applyStart < f.applyEnd && f.applyEnd < f.examDate
+    && (!f.resultDate || f.examDate < f.resultDate);
 
   return (
     <LP open title={existing ? `회차 수정 — ${existing.name}` : '회차 등록'} sub={existing ? `회차 ID ${existing.id}` : '신규 회차'}
@@ -165,7 +166,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
         <FormRow label="접수 시작일" required><input type="date" className="input" value={f.applyStart} onChange={e => set('applyStart', e.target.value)}/></FormRow>
         <FormRow label="접수 마감일" required><input type="date" className="input" value={f.applyEnd} onChange={e => set('applyEnd', e.target.value)}/></FormRow>
         <FormRow label="시험일" required><input type="date" className="input" value={f.examDate} onChange={e => set('examDate', e.target.value)}/></FormRow>
-        <FormRow label="합격발표일" required><input type="date" className="input" value={f.resultDate} onChange={e => set('resultDate', e.target.value)}/></FormRow>
+        <FormRow label="합격발표일"><input type="date" className="input" value={f.resultDate} onChange={e => set('resultDate', e.target.value)} placeholder="미정 시 비워두기"/></FormRow>
       </FieldSet>
 
       <FieldSet legend="응시료(MMK)" cols={2}>
@@ -190,7 +191,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
 
       {!valid && (
         <div style={{ padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
-          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 &lt; 접수마감 &lt; 시험일 &lt; 발표일) + 시험장 1개 이상 선택이 필요합니다.
+          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 &lt; 접수마감 &lt; 시험일) + 시험장 1개 이상 선택이 필요합니다. 합격발표일은 미정 시 비워두세요.
         </div>
       )}
     </LP>

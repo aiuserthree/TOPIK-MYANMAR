@@ -28,10 +28,10 @@
   ];
 
   const SESSIONS = [
-    { id: 's106', no: 106, name: '제106회 TOPIK', applyStart: '2026-06-01', applyEnd: '2026-07-26', examDate: '2026-09-19', resultDate: '2026-10-20', cap: 1200, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03','v04'], status: 'open', applicants: 0 },
+    { id: 's107', no: 107, name: '제107회 TOPIK', applyStart: '2026-07-17', applyEnd: '2026-07-21', examDate: '2026-10-18', resultDate: '', cap: 1200, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03','v04'], status: 'open', applicants: 0 },
+    { id: 's106', no: 106, name: '제106회 TOPIK', applyStart: '2026-06-01', applyEnd: '2026-07-21', examDate: '2026-09-19', resultDate: '2026-10-20', cap: 1200, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03','v04'], status: 'closed', applicants: 0 },
     { id: 's105', no: 105, name: '제105회 TOPIK', applyStart: '2026-02-10', applyEnd: '2026-03-15', examDate: '2026-05-09', resultDate: '2026-06-10', cap: 1000, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03'], status: 'closed', applicants: 942 },
     { id: 's104', no: 104, name: '제104회 TOPIK', applyStart: '2025-10-01', applyEnd: '2025-10-31', examDate: '2025-12-14', resultDate: '2026-01-15', cap: 1000, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03'], status: 'closed', applicants: 887 },
-    { id: 's107', no: 107, name: '제107회 TOPIK(예정)', applyStart: '2026-10-15', applyEnd: '2026-11-30', examDate: '2027-01-23', resultDate: '2027-02-25', cap: 1200, feeI: 12000, feeII: 15000, venues: ['v01','v02','v03','v04'], status: 'planned', applicants: 0 },
   ];
 
   // ---- Applicants ----
@@ -48,8 +48,8 @@
   const STATUSES = ['applied','photo','pay','approved','rejected','cancel','refund'];
 
   const APPLICANTS = [];
-  let seq106 = 1, seq105 = 1;
-  // current open session (106) applicants
+  let seq107 = 1, seq105 = 1;
+  // current open session (107) applicants
   for (let i = 1; i <= 78; i++) {
     const lvl = pick(['Ⅰ','Ⅱ','동시']);
     const dual = lvl === '동시';
@@ -74,12 +74,12 @@
     let exam = '';
     if ((st === 'approved' || st === 'refund') && paid) {
       const lvlCode = (lvl === 'Ⅱ' ? '8' : '7'); // 동시면 두 번호 부여(여기선 Ⅰ만 표기)
-      exam = `025001${lvlCode}${ven.code}${pad(seq106++, 4)}`;
+      exam = `025001${lvlCode}${ven.code}${pad(seq107++, 4)}`;
     }
 
     APPLICANTS.push({
       id: 'a' + pad(i, 4),
-      sessionId: 's106',
+      sessionId: 's107',
       no: i,
       nameKo, nameEn,
       dob,
@@ -94,11 +94,11 @@
       photoOk,
       photoStatus: photoOk ? 'approved' : (st === 'rejected' ? 'rejected' : 'pending'),
       paid,
-      paidAt: paid ? `2026-07-${pad(rint(1, 26), 2)} ${pad(rint(9,17),2)}:${pad(rint(0,59),2)}` : '',
+      paidAt: paid ? `2026-07-${pad(rint(24, 26), 2)} ${pad(rint(9,17),2)}:${pad(rint(0,59),2)}` : '',
       receipt: paid ? `R-${pad(rint(10000, 99999), 5)}` : '',
       exam,
       status: st,
-      appliedAt: `2026-06-${pad(rint(1, 30), 2)} ${pad(rint(9,18), 2)}:${pad(rint(0,59),2)}`,
+      appliedAt: `2026-07-${pad(rint(17, 21), 2)} ${pad(rint(9,18), 2)}:${pad(rint(0,59),2)}`,
       rejectReason: st === 'rejected' ? pick(['사진 부적합','정보 불일치','중복 접수','기타']) : '',
       memo: '',
       email: `applicant${i}@example.com`,
@@ -135,7 +135,7 @@
       accommodation: false,
     });
   }
-  SESSIONS[0].applicants = APPLICANTS.filter(a => a.sessionId === 's106').length;
+  SESSIONS.find(s => s.id === 's107').applicants = APPLICANTS.filter(a => a.sessionId === 's107').length;
 
   // Update SESSIONS[0] applicants count was set above
 
@@ -162,7 +162,7 @@
 
   // ---- Notices ----
   const NOTICES = [
-    { id: 'n1', no: 1, cat: '중요', title: '제106회 TOPIK 접수 안내(2026.06.01 ~ 07.26)', author: 'admin01', createdAt: '2026-06-01 09:00', views: 5234, public: true, pin: true, body: '<p>제106회 TOPIK 접수가 시작되었습니다. 접수 기간 및 시험 정보는 다음과 같습니다.</p>' },
+    { id: 'n1', no: 1, cat: '중요', title: '제107회 TOPIK 접수 안내(2026.07.17 ~ 07.21)', author: 'admin01', createdAt: '2026-07-17 09:00', views: 5234, public: true, pin: true, body: '<p>제107회 TOPIK 접수가 시작되었습니다. 접수 기간 및 시험 정보는 다음과 같습니다.</p><ul><li>접수: 2026.07.17(금) ~ 07.21(화)</li><li>응시료 납부(오프라인): 2026.07.24(금) ~ 07.26(일)</li><li>시험일: 2026.10.18(일)</li><li>합격자 발표: 추후 공지</li></ul>' },
     { id: 'n2', no: 2, cat: '접수', title: '응시료 납부 안내 — 양곤 한국문화원 1층', author: 'admin01', createdAt: '2026-06-02 14:00', views: 2812, public: true, pin: true, body: '' },
     { id: 'n3', no: 3, cat: '시험', title: '시험 당일 준비물 안내(신분증·필기구·수험표)', author: 'editor01', createdAt: '2026-06-10 10:15', views: 1455, public: true, pin: false, body: '' },
     { id: 'n4', no: 4, cat: '결과', title: '제105회 TOPIK 합격자 발표 안내', author: 'admin01', createdAt: '2026-06-08 11:00', views: 8932, public: true, pin: false, body: '' },
@@ -383,7 +383,7 @@
     perms: PERMS,
     audit: AUDIT,
     consents: CONSENTS,
-    activeSessionId: 's106', // 현재 회차
+    activeSessionId: 's107', // 현재 회차
     me: null, // 로그인 사용자 - set on boot
     apiError: null,
     apiLoading: false,
@@ -424,6 +424,7 @@
 
   // ---- Format helpers (Korean text mostly) ----
   function fmtNum(n) { return new Intl.NumberFormat('ko-KR').format(n); }
+  function fmtResultDate(d) { return d || '미정'; }
   function fmtCurrency(n) { return fmtNum(n) + ' MMK'; }
   function statusLabel(s) {
     return ({
@@ -447,7 +448,7 @@
 
   window.DataStore = {
     state, subscribe, notify, addAudit, setSession, getAdminSession,
-    badges, fmtNum, fmtCurrency, statusLabel, levelLabel, roleLabel, venueName, pad,
+    badges, fmtNum, fmtResultDate, fmtCurrency, statusLabel, levelLabel, roleLabel, venueName, pad,
     permSections: PERM_SECTIONS, permActions: PERM_ACTIONS, recommendedPerms,
   };
 })();

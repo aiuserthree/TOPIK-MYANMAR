@@ -200,7 +200,7 @@ function DashboardPanel() {
           <div className="acard-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="kv"><span className="k">접수 기간</span><span className="v" style={{ fontSize: 13 }}>{session?.applyStart} ~ {session?.applyEnd}</span></div>
             <div className="kv"><span className="k">시험일</span><span className="v">{session?.examDate}</span></div>
-            <div className="kv"><span className="k">합격자 발표</span><span className="v">{session?.resultDate}</span></div>
+            <div className="kv"><span className="k">합격자 발표</span><span className="v">{DataStore.fmtResultDate(session?.resultDate)}</span></div>
             <div className="kv"><span className="k">정원</span><span className="v">{DataStore.fmtNum(session?.cap || 0)}명</span></div>
             <div className="kv"><span className="k">응시료 (Ⅰ / Ⅱ)</span><span className="v" style={{ fontSize: 13 }}>{DataStore.fmtCurrency(session?.feeI || 0)} / {DataStore.fmtCurrency(session?.feeII || 0)}</span></div>
             <div style={{ marginTop: 6 }}>

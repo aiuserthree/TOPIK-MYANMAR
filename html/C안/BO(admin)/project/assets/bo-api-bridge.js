@@ -122,7 +122,7 @@
       applyStart: isoDate(row.registration_start_at),
       applyEnd: isoDate(row.registration_end_at),
       examDate: isoDate(row.exam_date),
-      resultDate: isoDate(row.result_date),
+      resultDate: isoDate(row.result_date), // null/empty → BO UI에서 '미정'
       cap: row.capacity,
       feeI: row.fee_level_i,
       feeII: row.fee_level_ii,

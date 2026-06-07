@@ -149,7 +149,7 @@ function NoticeEditLP({ edit, onClose, onSave }) {
   const [lang, setLang] = useState('KO');
   const titleKey = lang === 'KO' ? 'title' : lang === 'MY' ? 'titleMy' : 'titleEn';
   const bodyKey  = lang === 'KO' ? 'body'  : lang === 'MY' ? 'bodyMy'  : 'bodyEn';
-  const titlePh  = lang === 'KO' ? '예) 제106회 TOPIK 접수 안내' : lang === 'MY' ? 'ဥပမာ - ၁၀၆ ကြိမ်မြောက် TOPIK လျှောက်ထားရန်' : 'e.g. 106th TOPIK Application Guide';
+  const titlePh  = lang === 'KO' ? '예) 제107회 TOPIK 접수 안내' : lang === 'MY' ? 'ဥပမာ - ၁၀၇ ကြိမ်မြောက် TOPIK လျှောက်ထားရန်' : 'e.g. 107th TOPIK Application Guide';
   const marketingTargets = state.members.filter(m => m.marketing && m.status === 'active').length;
 
   return (
