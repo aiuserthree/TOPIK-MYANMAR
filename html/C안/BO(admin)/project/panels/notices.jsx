@@ -139,7 +139,7 @@ function NoticeEditLP({ edit, onClose, onSave }) {
   const n = edit.id ? state.notices.find(x => x.id === edit.id) : null;
   const [f, setF] = useState(n ? { ...n } : {
     cat: '접수', title: '', body: '', titleMy: '', titleEn: '', bodyMy: '', bodyEn: '',
-    public: true, pin: false, showStart: '', showEnd: ''
+    public: true, pin: false, showStart: '', showEnd: '', attachments: []
   });
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
   const valid = f.title.trim();
@@ -152,11 +152,102 @@ function NoticeEditLP({ edit, onClose, onSave }) {
   const titlePh  = lang === 'KO' ? '예) 제107회 TOPIK 접수 안내' : lang === 'MY' ? 'ဥပမာ - ၁၀၇ ကြိမ်မြောက် TOPIK လျှောက်ထားရန်' : 'e.g. 107th TOPIK Application Guide';
   const marketingTargets = state.members.filter(m => m.marketing && m.status === 'active').length;
 
+  const editorHostRef = useRef(null);
+  const editorRef = useRef(null);
+  const attachInputRef = useRef(null);
+  const attachListRef = useRef(null);
+  const attachCtrlRef = useRef(null);
+  const fRef = useRef(f);
+  fRef.current = f;
+
+  const switchLang = (l) => {
+    if (l === lang) return;
+    if (editorRef.current) {
+      const html = editorRef.current.getHtml();
+      setF(s => {
+        const next = { ...s, [bodyKey]: html };
+        const nextBodyKey = l === 'KO' ? 'body' : l === 'MY' ? 'bodyMy' : 'bodyEn';
+        if (editorRef.current) {
+          editorRef.current.setHtml(next[nextBodyKey] || '');
+        }
+        return next;
+      });
+    }
+    setLang(l);
+  };
+
+  useEffect(() => {
+    if (!editorHostRef.current || !window.BoNoticeEditor) return;
+    const useApi = DataStore.isApiMode && DataStore.isApiMode();
+    editorRef.current = BoNoticeEditor.mountRichEditor(
+      editorHostRef.current,
+      fRef.current[bodyKey] || '',
+      {
+        uploadImageFn: useApi && window.TopikBoApi && TopikBoApi.uploadNoticeAttachment
+          ? (file) => TopikBoApi.uploadNoticeAttachment(file)
+          : null,
+      }
+    );
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.destroy();
+        editorRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!attachInputRef.current || !attachListRef.current || !window.BoNoticeEditor) return;
+    const useApi = DataStore.isApiMode && DataStore.isApiMode();
+    attachCtrlRef.current = BoNoticeEditor.bindNoticeAttachments({
+      input: attachInputRef.current,
+      listEl: attachListRef.current,
+      existing: n && n.attachments ? n.attachments : [],
+      uploadFn: useApi && window.TopikBoApi && TopikBoApi.uploadNoticeAttachment
+        ? (file) => TopikBoApi.uploadNoticeAttachment(file)
+        : null,
+    });
+    return () => { attachCtrlRef.current = null; };
+  }, [n && n.id]);
+
+  const handleSave = () => {
+    const ctrl = attachCtrlRef.current;
+    if (ctrl && ctrl.hasPending()) {
+      toastErr('첨부파일 업로드가 완료될 때까지 기다려 주세요.');
+      return;
+    }
+    const bodyHtml = editorRef.current ? editorRef.current.getHtml() : (f[bodyKey] || '');
+    const bodies = {
+      body: bodyKey === 'body' ? bodyHtml : (f.body || ''),
+      bodyMy: bodyKey === 'bodyMy' ? bodyHtml : (f.bodyMy || ''),
+      bodyEn: bodyKey === 'bodyEn' ? bodyHtml : (f.bodyEn || ''),
+    };
+    const inlineIds = [];
+    if (window.BoNoticeEditor && BoNoticeEditor.collectInlineFileIds) {
+      ['body', 'bodyMy', 'bodyEn'].forEach(k => {
+        BoNoticeEditor.collectInlineFileIds(bodies[k]).forEach(id => {
+          if (inlineIds.indexOf(id) === -1) inlineIds.push(id);
+        });
+      });
+    }
+    const attachIds = ctrl ? ctrl.getNewFileIds() : [];
+    const mergedAttachIds = attachIds.concat(
+      inlineIds.filter(id => attachIds.indexOf(id) === -1)
+    );
+    onSave({
+      ...f,
+      [bodyKey]: bodyHtml,
+      body: bodyKey === 'body' ? bodyHtml : f.body,
+      attachmentFileIds: mergedAttachIds,
+      removeAttachmentFileIds: ctrl ? ctrl.getRemoveFileIds() : [],
+    });
+  };
+
   return (
     <LP open title={n ? `공지 수정 — ${n.title}` : '공지 작성'} onClose={onClose} size="wide"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" disabled={!valid} onClick={() => onSave(f)}>{n ? '저장' : '게시'}</button>
+        <button className="btn btn-primary" disabled={!valid} onClick={handleSave}>{n ? '저장' : '게시'}</button>
       </>}>
       <FieldSet legend="기본 정보" cols={2}>
         <FormRow label="카테고리" required>
@@ -186,7 +277,7 @@ function NoticeEditLP({ edit, onClose, onSave }) {
         <FormRow label="언어 선택">
           <div className="seg">
             {['KO','MY','EN'].map(l => (
-              <button key={l} type="button" className={lang === l ? 'active' : ''} onClick={() => setLang(l)}>
+              <button key={l} type="button" className={lang === l ? 'active' : ''} onClick={() => switchLang(l)}>
                 {l}{l === 'KO' ? ' · 필수' : ''}
               </button>
             ))}
@@ -196,7 +287,21 @@ function NoticeEditLP({ edit, onClose, onSave }) {
           <input className="input" value={f[titleKey] || ''} onChange={e => set(titleKey, e.target.value)} maxLength={80} placeholder={titlePh}/>
         </FormRow>
         <FormRow label={`본문 (${lang})`} required={lang === 'KO'}>
-          <textarea className="textarea" rows="10" value={f[bodyKey] || ''} onChange={e => set(bodyKey, e.target.value)} placeholder="본문을 입력하세요. HTML 서식 가능."/>
+          <div className="bo-rich-editor">
+            <div ref={editorHostRef} className="bo-quill-host"/>
+          </div>
+        </FormRow>
+      </FieldSet>
+
+      <FieldSet legend="첨부파일" cols={1}>
+        <FormRow label="파일 업로드">
+          <div className="bo-att-zone">
+            <input ref={attachInputRef} type="file" multiple className="bo-att-input" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.hwpx,.txt,.zip,.csv"/>
+            <div className="bo-att-help">
+              최대 5개 · 파일당 10MB · 이미지(jpg, png, gif, webp 등) 및 문서(pdf, doc, docx, xls, xlsx, ppt, pptx, hwp, txt, zip 등)
+            </div>
+            <div ref={attachListRef} className="bo-att-list"/>
+          </div>
         </FormRow>
       </FieldSet>
 

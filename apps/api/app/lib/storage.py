@@ -162,11 +162,13 @@ async def save_upload(
     data: bytes,
     mime_type: str,
     original_filename: str | None = None,
+    max_bytes: int | None = None,
 ) -> FileAttachment:
     """원시 바이트(멀티파트 업로드)를 파일로 저장하고 FileAttachment 행 반환."""
     if not data:
         raise ValueError("empty_file")
-    if len(data) > settings.upload_max_bytes:
+    limit = max_bytes if max_bytes is not None else settings.upload_max_bytes
+    if len(data) > limit:
         raise ValueError("file_too_large")
     checksum = hashlib.sha256(data).hexdigest()
     storage_key = _write_bytes(data=data, mime_type=mime_type, category="uploads")

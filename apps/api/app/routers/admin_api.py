@@ -9,7 +9,7 @@ import zipfile
 from urllib.parse import quote
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, Query, Request
+from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -43,7 +43,7 @@ from app.lib.mail import enqueue_email
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.roster_export import build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
-from app.lib.storage import read_file_bytes
+from app.lib.storage import delete_file, read_file_bytes, save_upload
 from app.lib.validation import is_valid_password
 from app.models.admin import AdminAuditLog, AdminUser
 from app.models.application import Application, ApplicationMemo, ApplicationSubmission
@@ -58,6 +58,37 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 settings = get_settings()
 
 MARKETING_BATCH_LIMIT = 500
+
+_NOTICE_ATTACH_MAX_COUNT = 5
+_NOTICE_ATTACH_MAX_BYTES = 10 * 1024 * 1024
+_NOTICE_ATTACH_OWNER = "notice"
+_NOTICE_ATTACH_PENDING = "notice_attachment_pending"
+_NOTICE_ATTACH_EXT = re.compile(
+    r"\.(jpe?g|png|gif|webp|bmp|pdf|docx?|xlsx?|pptx?|hwp|hwpx|txt|zip|csv)$",
+    re.IGNORECASE,
+)
+_ALLOWED_NOTICE_ATTACH: dict[str, tuple[str, ...]] = {
+    "image/jpeg": (".jpg", ".jpeg"),
+    "image/png": (".png",),
+    "image/gif": (".gif",),
+    "image/webp": (".webp",),
+    "image/bmp": (".bmp",),
+    "application/pdf": (".pdf",),
+    "application/msword": (".doc",),
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (".docx",),
+    "application/vnd.ms-excel": (".xls",),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (".xlsx",),
+    "application/vnd.ms-powerpoint": (".ppt",),
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": (".pptx",),
+    "application/x-hwp": (".hwp",),
+    "application/haansofthwp": (".hwp",),
+    "application/vnd.hancom.hwp": (".hwp",),
+    "application/vnd.hancom.hwpx": (".hwpx",),
+    "text/plain": (".txt",),
+    "application/zip": (".zip",),
+    "application/x-zip-compressed": (".zip",),
+    "text/csv": (".csv",),
+}
 
 
 def _attachment_disposition(filename: str) -> str:
@@ -99,6 +130,92 @@ class NoticeBody(BaseModel):
     body_html: str = ""
     is_pinned: bool = False
     is_published: bool = False
+    attachment_file_ids: list[int] = []
+    remove_attachment_file_ids: list[int] = []
+
+
+def _notice_attachment_dict(row: FileAttachment) -> dict:
+    return {
+        "file_id": row.id,
+        "filename": row.original_filename or "file",
+        "size": row.size_bytes,
+        "url": f"/api/v1/files/{row.id}",
+    }
+
+
+async def _attachments_for_notice(db: AsyncSession, notice_id: int) -> list[dict]:
+    res = await db.execute(
+        select(FileAttachment).where(
+            FileAttachment.owner_type == _NOTICE_ATTACH_OWNER,
+            FileAttachment.owner_id == notice_id,
+        )
+    )
+    return [_notice_attachment_dict(f) for f in res.scalars().all()]
+
+
+def _notice_attachment_allowed(content_type: str, filename: str) -> bool:
+    ct = (content_type or "").lower()
+    if ct in _ALLOWED_NOTICE_ATTACH:
+        return True
+    return bool(_NOTICE_ATTACH_EXT.search(filename or ""))
+
+
+def _guess_notice_mime(filename: str) -> str:
+    lower = (filename or "").lower()
+    for mime, exts in _ALLOWED_NOTICE_ATTACH.items():
+        if any(lower.endswith(ext) for ext in exts):
+            return mime
+    return "application/octet-stream"
+
+
+async def _apply_notice_attachments(
+    db: AsyncSession,
+    *,
+    notice_id: int,
+    admin_id: int,
+    add_ids: list[int],
+    remove_ids: list[int],
+) -> None:
+    if remove_ids:
+        res = await db.execute(
+            select(FileAttachment).where(
+                FileAttachment.id.in_(remove_ids),
+                FileAttachment.owner_type == _NOTICE_ATTACH_OWNER,
+                FileAttachment.owner_id == notice_id,
+            )
+        )
+        for row in res.scalars().all():
+            delete_file(row.storage_key)
+            await db.delete(row)
+
+    if add_ids:
+        res = await db.execute(
+            select(FileAttachment).where(
+                FileAttachment.id.in_(add_ids),
+                FileAttachment.owner_type == _NOTICE_ATTACH_PENDING,
+                FileAttachment.owner_id == admin_id,
+            )
+        )
+        for row in res.scalars().all():
+            row.owner_type = _NOTICE_ATTACH_OWNER
+            row.owner_id = notice_id
+
+    total = (
+        await db.execute(
+            select(func.count())
+            .select_from(FileAttachment)
+            .where(
+                FileAttachment.owner_type == _NOTICE_ATTACH_OWNER,
+                FileAttachment.owner_id == notice_id,
+            )
+        )
+    ).scalar() or 0
+    if total > _NOTICE_ATTACH_MAX_COUNT:
+        raise api_error(
+            "VALIDATION_ERROR",
+            f"첨부파일은 최대 {_NOTICE_ATTACH_MAX_COUNT}개까지 등록할 수 있습니다.",
+            400,
+        )
 
 
 class FaqBody(BaseModel):
@@ -1093,6 +1210,18 @@ async def create_venue(
 @router.get("/notices")
 async def admin_notices(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
     result = await db.execute(select(Notice).order_by(Notice.id.desc()))
+    notices = result.scalars().all()
+    notice_ids = [n.id for n in notices]
+    att_map: dict[int, list[dict]] = {nid: [] for nid in notice_ids}
+    if notice_ids:
+        att_res = await db.execute(
+            select(FileAttachment).where(
+                FileAttachment.owner_type == _NOTICE_ATTACH_OWNER,
+                FileAttachment.owner_id.in_(notice_ids),
+            )
+        )
+        for row in att_res.scalars().all():
+            att_map.setdefault(row.owner_id, []).append(_notice_attachment_dict(row))
     return {
         "items": [
             {
@@ -1105,8 +1234,9 @@ async def admin_notices(_: AuthUser = Depends(require_any_admin), db: AsyncSessi
                 "published_at": n.published_at.isoformat() if n.published_at else None,
                 "created_at": n.created_at.isoformat() if n.created_at else None,
                 "view_count": n.view_count,
+                "attachments": att_map.get(n.id, []),
             }
-            for n in result.scalars().all()
+            for n in notices
         ]
     }
 
@@ -1129,6 +1259,14 @@ async def create_notice(
     )
     db.add(notice)
     await db.flush()
+    if body.attachment_file_ids:
+        await _apply_notice_attachments(
+            db,
+            notice_id=notice.id,
+            admin_id=admin.id,
+            add_ids=body.attachment_file_ids,
+            remove_ids=[],
+        )
     await write_audit(
         db, admin_user_id=admin.id, action_type="notice_create",
         target_type="notices", target_id=notice.id,
@@ -1136,6 +1274,46 @@ async def create_notice(
     )
     await db.commit()
     return {"id": notice.id}
+
+
+@router.post("/notices/attachments")
+async def upload_notice_attachment(
+    file: UploadFile = File(...),
+    admin: AuthUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    content_type = (file.content_type or "").lower()
+    filename = file.filename or "file"
+    if not _notice_attachment_allowed(content_type, filename):
+        raise api_error(
+            "INVALID_FILE_TYPE",
+            "이미지(jpg, png, gif, webp 등) 또는 문서(pdf, doc, docx, xls, xlsx, ppt, pptx, hwp, txt, zip 등)만 업로드할 수 있습니다.",
+        )
+    data = await file.read()
+    if len(data) > _NOTICE_ATTACH_MAX_BYTES:
+        raise api_error("FILE_TOO_LARGE", "10MB 이하의 파일만 업로드할 수 있습니다.")
+    if content_type not in _ALLOWED_NOTICE_ATTACH:
+        content_type = _guess_notice_mime(filename)
+    try:
+        row = await save_upload(
+            db,
+            owner_type=_NOTICE_ATTACH_PENDING,
+            owner_id=admin.id,
+            data=data,
+            mime_type=content_type,
+            original_filename=filename,
+            max_bytes=_NOTICE_ATTACH_MAX_BYTES,
+        )
+    except ValueError as exc:
+        msg = "10MB 이하의 파일만 업로드할 수 있습니다." if str(exc) == "file_too_large" else "파일을 업로드할 수 없습니다."
+        raise api_error("FILE_TOO_LARGE", msg) from exc
+    await db.commit()
+    return {
+        "file_id": row.id,
+        "filename": row.original_filename,
+        "size": row.size_bytes,
+        "content_type": row.mime_type,
+    }
 
 
 @router.post("/notices/{notice_id}/send-marketing")
@@ -1209,6 +1387,16 @@ async def update_notice(
             setattr(notice, key, body[key])
     if body.get("is_published") and not notice.published_at:
         notice.published_at = datetime.now(timezone.utc)
+    add_ids = body.get("attachment_file_ids") or []
+    remove_ids = body.get("remove_attachment_file_ids") or []
+    if add_ids or remove_ids:
+        await _apply_notice_attachments(
+            db,
+            notice_id=notice_id,
+            admin_id=admin.id,
+            add_ids=add_ids,
+            remove_ids=remove_ids,
+        )
     await write_audit(
         db, admin_user_id=admin.id, action_type="notice_update",
         target_type="notices", target_id=notice_id, after_data=body, ip_address=ip,

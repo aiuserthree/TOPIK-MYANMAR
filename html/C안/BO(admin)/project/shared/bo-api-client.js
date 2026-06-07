@@ -111,7 +111,8 @@
     var headers = Object.assign({ Accept: "application/json" }, options.headers || {});
     var token = getAccessToken();
     if (token && options.auth !== false) headers.Authorization = "Bearer " + token;
-    if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+    var isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+    if (options.body && !headers["Content-Type"] && !isFormData) headers["Content-Type"] = "application/json";
     return fetch(apiUrl(path), {
       method: options.method || "GET",
       headers: headers,
@@ -383,6 +384,14 @@
       return apiFetch("/api/v1/admin/notices/" + encodeURIComponent(noticeId) + "/send-marketing", {
         method: "POST",
         body: "{}",
+      });
+    },
+    uploadNoticeAttachment: function (file) {
+      var fd = new FormData();
+      fd.append("file", file);
+      return apiFetch("/api/v1/admin/notices/attachments", {
+        method: "POST",
+        body: fd,
       });
     },
     downloadRosterZip: function (roundId) {

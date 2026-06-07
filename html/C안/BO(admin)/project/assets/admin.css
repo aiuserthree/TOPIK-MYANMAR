@@ -740,6 +740,77 @@ img.photo-lg {
 .barchart .fill { height: 100%; background: var(--primary); border-radius: 99px; }
 .barchart .val { text-align: right; font-family: 'Inter', sans-serif; font-weight: 600; color: var(--text); }
 
+/* 공지사항 — Quill 리치 에디터 */
+.bo-rich-editor {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.bo-rich-editor .ql-toolbar {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.bo-quill-host {
+  min-height: 180px;
+  border: 0;
+}
+.bo-rich-editor .ql-container {
+  border: 0;
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.bo-rich-editor .ql-editor { min-height: 180px; }
+.bo-rich-editor .ql-editor img { max-width: 100%; height: auto; }
+
+/* 공지사항 — 첨부파일 */
+.bo-att-zone { width: 100%; }
+.bo-att-input { font-size: 12.5px; max-width: 100%; }
+.bo-att-help {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.45;
+}
+.bo-att-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.bo-att-hint { font-size: 12px; color: var(--text-4); }
+.bo-att-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+.bo-att-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.bo-att-size { color: var(--text-4); font-size: 11.5px; white-space: nowrap; }
+.bo-att-status { font-size: 11.5px; white-space: nowrap; }
+.bo-att-status.uploading { color: var(--text-3); }
+.bo-att-status.error { color: var(--accent); }
+.bo-att-status.done { color: var(--success); }
+.bo-att-remove,
+.bo-att-dl {
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.bo-att-remove:hover { color: var(--accent); }
+.bo-att-dl:hover { color: var(--primary); }
+
 /* mini-section for grouped form fields */
 .fs {
   border: 1px solid var(--border); border-radius: 8px;

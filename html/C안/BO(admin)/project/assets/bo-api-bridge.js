@@ -161,6 +161,14 @@
       views: row.view_count || 0,
       public: !!row.is_published,
       pin: !!row.is_pinned,
+      attachments: (row.attachments || []).map(function (a) {
+        return {
+          file_id: a.file_id,
+          filename: a.filename,
+          size: a.size,
+          url: a.url,
+        };
+      }),
     };
   }
 
@@ -676,6 +684,8 @@
       body_html: data.body || "",
       is_pinned: !!data.pin,
       is_published: !!data.public,
+      attachment_file_ids: data.attachmentFileIds || [],
+      remove_attachment_file_ids: data.removeAttachmentFileIds || [],
     };
     var isNew = !data.id || data._isNew;
     var p = !isNew
