@@ -430,6 +430,13 @@ async def register(
 @router.post("/forgot-password")
 async def forgot_password(body: ForgotPasswordBody, db: AsyncSession = Depends(get_db_session)) -> dict:
     email = body.email.strip().lower()
+    user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
+    user = user_res.scalar_one_or_none()
+    if not user:
+        return {"sent": False, "registered": False}
+    if user.signup_provider != "email" or not user.password_hash:
+        return {"sent": False, "registered": True, "provider": user.signup_provider}
+
     code = f"{random.randint(100000, 999999)}"
     await db.execute(delete(PasswordResetToken).where(PasswordResetToken.email == email))
     db.add(
@@ -452,7 +459,13 @@ async def forgot_password(body: ForgotPasswordBody, db: AsyncSession = Depends(g
     )
     await db.commit()
     mail_delivered = is_mailer_live() and mail_result["sent"]
-    out: dict = {"sent": True, "mail_delivered": mail_delivered}
+    out: dict = {
+        "sent": True,
+        "registered": True,
+        "provider": "email",
+        "mail_delivered": mail_delivered,
+        "expires_in_seconds": 1800,
+    }
     if settings.is_development:
         out["dev_code"] = code
     return out

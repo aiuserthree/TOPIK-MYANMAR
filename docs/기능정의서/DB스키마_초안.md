@@ -438,7 +438,7 @@ erDiagram
 | 테이블 | 용도 |
 | --- | --- |
 | `email_verification_codes` | 회원가입 6자리, 5분 TTL |
-| `password_reset_tokens` | 재설정 링크, 30분 TTL |
+| `password_reset_tokens` | 재설정 인증코드 및 검증 후 토큰, 30분 TTL |
 | `user_sessions` | httpOnly 세션 또는 refresh token |
 | `notice_view_logs` | 공지 조회수 1회/세션 (FO 63) |
 | `exam_number_sequences` | 채번 원자성 (§4.8) |

@@ -72,6 +72,11 @@ def _sub(text: str, variables: dict[str, Any]) -> str:
     return out
 
 
+def _compact_verification_code(value: Any) -> str:
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    return digits if len(digits) == 6 else str(value or "")
+
+
 def _eyebrow(tpl: EmailLayout) -> str:
     t = THEME_C
     txt = tpl.eyebrow_en
@@ -309,7 +314,7 @@ SIGNUP_VERIFY_LAYOUTS: dict[str, EmailLayout] = {
             },
             {"type": "notice", "tone": "info", "text": "본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다."},
         ],
-        ctas=[Cta("회원가입 계속하기", "{signupUrl}")],
+        ctas=[],
     ),
     "my": EmailLayout(
         subject="[TOPIK Myanmar] အီးမေးလ် အတည်ပြုကုဒ်",
@@ -327,7 +332,7 @@ SIGNUP_VERIFY_LAYOUTS: dict[str, EmailLayout] = {
             },
             {"type": "notice", "tone": "info", "text": "သင်တောင်းဆိုခြင်းမဟုတ်ပါက ဤအီးမေးလ်ကို လျစ်လျူရှုပါ။"},
         ],
-        ctas=[Cta("အကောင့်ဖွင့်ဆက်လုပ်ရန်", "{signupUrl}")],
+        ctas=[],
     ),
     "en": EmailLayout(
         subject="[TOPIK Myanmar] Email verification code",
@@ -345,7 +350,7 @@ SIGNUP_VERIFY_LAYOUTS: dict[str, EmailLayout] = {
             },
             {"type": "notice", "tone": "info", "text": "If you did not request this, you may ignore this email."},
         ],
-        ctas=[Cta("Continue signup", "{signupUrl}")],
+        ctas=[],
     ),
 }
 
@@ -357,7 +362,7 @@ PASSWORD_RESET_LAYOUTS: dict[str, EmailLayout] = {
         eyebrow_en="PASSWORD RESET",
         index_no="02",
         h1="비밀번호 재설정 인증코드",
-        intro="{userName} 님, 비밀번호 재설정 요청을 접수했습니다. 아래 인증코드를 입력해 새 비밀번호를 설정해 주세요.",
+        intro="{userName} 님, 비밀번호 재설정 요청을 접수했습니다. 아래 인증코드를 FO 비밀번호 찾기 화면에 입력한 뒤 새 비밀번호를 설정해 주세요.",
         blocks=[
             {"type": "code", "label": "인증코드", "value": "{verificationCode}", "sub": "유효시간 {expiresMinutes}분"},
             {"type": "notice", "tone": "warn", "text": "이 코드는 발송 후 {expiresMinutes}분간만 유효하며, 한 번만 사용할 수 있습니다."},
@@ -366,7 +371,7 @@ PASSWORD_RESET_LAYOUTS: dict[str, EmailLayout] = {
                 "text": "본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 변경되지 않습니다.",
             },
         ],
-        ctas=[Cta("비밀번호 재설정", "{resetUrl}")],
+        ctas=[],
     ),
     "my": EmailLayout(
         subject="[TOPIK Myanmar] စကားဝှက် ပြန်လည်သတ်မှတ်ရန် ကုဒ်",
@@ -381,7 +386,7 @@ PASSWORD_RESET_LAYOUTS: dict[str, EmailLayout] = {
             {"type": "notice", "tone": "warn", "text": "ဤကုဒ်သည် ပို့ချိန်မှ {expiresMinutes} မိနစ်သာ သက်တမ်းရှိပြီး တစ်ကြိမ်သာ အသုံးပြုနိုင်ပါသည်။"},
             {"type": "paragraph", "text": "သင်တောင်းဆိုခြင်းမဟုတ်ပါက ဤအီးမေးလ်ကို လျစ်လျူရှုပါ။ စကားဝှက်ကို မပြောင်းလဲပါ။"},
         ],
-        ctas=[Cta("စကားဝှက်ပြန်လည်သတ်မှတ်", "{resetUrl}")],
+        ctas=[],
     ),
     "en": EmailLayout(
         subject="[TOPIK Myanmar] Password reset code",
@@ -396,7 +401,7 @@ PASSWORD_RESET_LAYOUTS: dict[str, EmailLayout] = {
             {"type": "notice", "tone": "warn", "text": "This code is valid for {expiresMinutes} minutes and can be used only once."},
             {"type": "paragraph", "text": "If you did not request this, ignore this email. Your password will not change."},
         ],
-        ctas=[Cta("Reset password", "{resetUrl}")],
+        ctas=[],
     ),
 }
 
@@ -409,9 +414,10 @@ def render_signup_verify_code(locale: str, variables: dict[str, Any], public_fo_
     merged = _base_variables(
         {
             "userName": variables.get("userName") or variables.get("user_name") or "",
-            "verificationCode": variables.get("verificationCode") or variables.get("verification_code") or "",
+            "verificationCode": _compact_verification_code(
+                variables.get("verificationCode") or variables.get("verification_code") or ""
+            ),
             "expiresMinutes": str(variables.get("expiresMinutes") or variables.get("expires_minutes") or "5"),
-            "signupUrl": f"{public_fo_base.rstrip('/')}/signup.html",
         },
         public_fo_base,
     )
@@ -434,12 +440,11 @@ def render_password_reset(locale: str, variables: dict[str, Any], public_fo_base
     merged = _base_variables(
         {
             "userName": variables.get("userName") or variables.get("user_name") or "",
-            "verificationCode": variables.get("verificationCode") or variables.get("verification_code") or "",
+            "verificationCode": _compact_verification_code(
+                variables.get("verificationCode") or variables.get("verification_code") or ""
+            ),
             "expiresMinutes": str(variables.get("expiresMinutes") or variables.get("expires_minutes") or "30"),
             "email": email,
-            "resetUrl": variables.get("resetUrl")
-            or variables.get("reset_url")
-            or f"{public_fo_base.rstrip('/')}/password-reset.html",
         },
         public_fo_base,
     )

@@ -35,7 +35,7 @@ class RenderedEmail:
 def format_verification_code(code: str) -> str:
     digits = "".join(ch for ch in code if ch.isdigit())
     if len(digits) == 6:
-        return f"{digits[:3]} {digits[3:]}"
+        return digits
     return code
 
 

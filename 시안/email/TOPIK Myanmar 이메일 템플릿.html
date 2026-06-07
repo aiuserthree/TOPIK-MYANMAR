@@ -216,10 +216,16 @@ function renderMeta(){
   const spec = tpl.specRef ? `<section><h2>기능정의서</h2><div class="kv">${tpl.specRef}</div></section>` : '';
   const tk = tpl.templateKey ? `<section><h2>template_key</h2><div class="kv"><code>${tpl.templateKey}</code> · locale <b>${state.locale.toUpperCase()}</b></div></section>` : '';
   const locNote = tpl.i18n ? '<section><h2>다국어</h2><div class="note">갭 3종 — KO/MY/EN 본문. 발송 시 <code>email_outbox.locale</code> 과 일치.</div></section>' : '';
+  const authPolicy = tpl.key === "signup-verify"
+    ? '<section><h2>인증 정책</h2><div class="note">버튼/링크 없이 6자리 인증코드를 회원가입 화면에 입력합니다. 코드는 공백 없이 붙여 표시합니다.</div></section>'
+    : tpl.key === "password-reset"
+      ? '<section><h2>인증 정책</h2><div class="note">버튼/링크 없이 6자리 인증코드를 비밀번호 찾기 화면에 입력한 뒤 새 비밀번호를 설정합니다. 코드는 공백 없이 붙여 표시합니다.</div></section>'
+      : '';
   meta.innerHTML = `
     ${spec}
     ${tk}
     ${locNote}
+    ${authPolicy}
     <section><h2>트리거</h2><div class="kv">${tpl.trigger}</div></section>
     <section><h2>제목</h2><div class="kv"><b>${subjPreview}</b></div></section>
     <section><h2>프리헤더</h2><div class="pre">${tpl.preheader.replace(/\{(\w+)\}/g,(m,k)=>SAMPLE[k]!=null?SAMPLE[k]:m)}</div></section>

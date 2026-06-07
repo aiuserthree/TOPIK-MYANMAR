@@ -26,7 +26,7 @@
 | **BO** | Admin Access JWT + Admin Refresh | **경로 prefix 분리**: `/api/v1/admin/*` — FO 토큰으로 접근 불가 |
 | **Google OAuth** | `GET /auth/oauth/google` → redirect → `GET /auth/oauth/google/callback` | `id_token` 서버 검증, `users.provider_uid` 저장 |
 | **이메일 인증** | `POST /auth/email/verify/send`, `POST /auth/email/verify/confirm` | 6자리, TTL 5분 — `email_verification_codes` |
-| **비밀번호 재설정** | `POST /auth/password/forgot`, `POST /auth/password/reset` | 링크 토큰 30분 — `password_reset_tokens` |
+| **비밀번호 재설정** | `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/verify-reset-code`, `POST /api/v1/auth/reset-password` | 6자리 인증코드 30분 → 검증 후 재설정 토큰 — `password_reset_tokens` |
 
 **세션 대안**: 동일 스키마로 `user_sessions` 테이블 + `Set-Cookie` 세션 ID도 가능. 본 명세는 JWT 예시를 기본으로 서술.
 
@@ -185,8 +185,9 @@ HTTP 상태 + JSON 본문 (스택 트레이스·내부 SQL 미노출).
 | POST | `/auth/refresh` | refresh | `user_sessions` | access 재발급 |
 | GET | `/auth/oauth/google` | — | — | OAuth redirect |
 | GET | `/auth/oauth/google/callback` | — | `users` | 가입/로그인, JWT 발급 |
-| POST | `/auth/password/forgot` | — | `password_reset_tokens`, `email_outbox` | 재설정 링크 |
-| POST | `/auth/password/reset` | token | `users` | 새 비밀번호 |
+| POST | `/api/v1/auth/forgot-password` | — | `password_reset_tokens`, `email_outbox` | 6자리 재설정 인증코드 발송 |
+| POST | `/api/v1/auth/verify-reset-code` | code | `password_reset_tokens` | 인증코드 확인 후 재설정 토큰 발급 |
+| POST | `/api/v1/auth/reset-password` | token | `users` | 새 비밀번호 저장 |
 | POST | `/auth/find-email` | — | `users` | 아이디 찾기(마스킹 응답) |
 | GET | `/me` | 🔒 | `users`, `file_attachments` | 프로필 + `rev` |
 | PATCH | `/me` | 🔒 | `users`, `applications` | 연락처·이메일·신원정보·코드·`rev` 필수. 사진 변경 시 진행 중 `applications` 연동 |

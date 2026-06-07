@@ -29,6 +29,7 @@ python3 -m http.server 8765
 ## `email_outbox.template_key` (14종)
 
 프로덕션 키는 **snake_case**. 미리보기 `key`는 kebab-case.
+회원가입 인증과 비밀번호 재설정은 버튼/링크 없이 이메일의 **6자리 인증코드**를 FO 화면에 입력하는 방식입니다. 코드는 공백 없이 붙여 표시합니다.
 
 | template_key | 한글명 | preview `key` | locale |
 |--------------|--------|---------------|--------|

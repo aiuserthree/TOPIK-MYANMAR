@@ -25,12 +25,10 @@
     supportBoardUrl: "https://topik-myanmar.example/qna",
     year: "2026",
     // signup
-    verificationCode: "482 915",
+    verificationCode: "482915",
     expiresMinutes: "5",
-    signupUrl: "https://topik-myanmar.example/signup?step=2",
     // password
     email: "m****@gmail.com",
-    resetLink: "https://topik-myanmar.example/reset?token=••••",
     // approve / reject
     applicantNo: "MMR-098-00471",
     roundName: "제98회",
@@ -189,37 +187,37 @@
       eyebrowKo: "이메일 인증", eyebrowEn: "EMAIL VERIFICATION", indexNo: "01",
       h1: "이메일 인증코드",
       intro:
-        "{userName} 님, TOPIK Myanmar 회원가입을 진행하고 있습니다. 아래 인증코드를 입력해 이메일 인증을 완료해 주세요.",
+        "{userName} 님, TOPIK Myanmar 회원가입을 진행하고 있습니다. 아래 인증코드를 회원가입 화면에 입력해 이메일 인증을 완료해 주세요.",
       blocks: [
         { type: "code", label: "인증코드", value: "{verificationCode}", sub: "유효시간 {expiresMinutes}분" },
         { type: "paragraph", text: "인증코드는 발송 시점부터 {expiresMinutes}분간 유효합니다. 시간이 지났다면 인증코드를 다시 요청해 주세요." },
         { type: "notice", tone: "info", text: "본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다." },
       ],
-      ctas: [{ label: "회원가입 계속하기", href: "{signupUrl}", kind: "primary" }],
-      variables: ["userName", "verificationCode", "expiresMinutes", "signupUrl"],
+      ctas: [],
+      variables: ["userName", "verificationCode", "expiresMinutes"],
     },
 
     {
       key: "password-reset",
       templateKey: "password_reset",
-      specRef: "FO/06 TPKM_FO_6_1_3 — 비밀번호 찾기(일반 가입, 링크 30분)",
+      specRef: "FO/06 TPKM_FO_6_1_3 — 비밀번호 찾기(일반 가입, 인증코드 30분)",
       nav: "비밀번호 재설정",
       navNo: "02",
       group: "인증·계정",
       trigger: "FO 비밀번호 찾기 — 일반 가입 계정 (구글 가입 미발송)",
       subject: "[TOPIK Myanmar] 비밀번호 재설정 안내",
-      preheader: "아래 버튼을 눌러 30분 안에 비밀번호를 재설정하세요.",
+      preheader: "아래 인증코드를 비밀번호 찾기 화면에 입력하고 30분 안에 새 비밀번호를 설정하세요.",
       eyebrowKo: "비밀번호 재설정", eyebrowEn: "PASSWORD RESET", indexNo: "02",
-      h1: "비밀번호를 재설정하세요",
+      h1: "비밀번호 재설정 인증코드",
       intro:
-        "{userName} 님, 비밀번호 재설정 요청을 접수했습니다. 아래 버튼을 눌러 새 비밀번호를 설정해 주세요.",
+        "{userName} 님, 비밀번호 재설정 요청을 접수했습니다. 아래 인증코드를 비밀번호 찾기 화면에 입력한 뒤 새 비밀번호를 설정해 주세요.",
       blocks: [
-        { type: "infoTable", rows: [["요청 계정", "{email}"]] },
-        { type: "notice", tone: "warn", text: "이 링크는 발송 후 30분간만 유효하며, 한 번만 사용할 수 있습니다." },
-        { type: "paragraph", text: "보안을 위해 링크를 직접 복사하기보다 버튼을 눌러 접속하시길 권장합니다. 본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 변경되지 않습니다." },
+        { type: "code", label: "인증코드", value: "{verificationCode}", sub: "유효시간 30분" },
+        { type: "notice", tone: "warn", text: "이 코드는 발송 후 30분간만 유효하며, 한 번만 사용할 수 있습니다." },
+        { type: "paragraph", text: "본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 변경되지 않습니다." },
       ],
-      ctas: [{ label: "비밀번호 재설정", href: "{resetLink}", kind: "primary" }],
-      variables: ["userName", "email", "resetLink"],
+      ctas: [],
+      variables: ["userName", "verificationCode"],
     },
 
     {
