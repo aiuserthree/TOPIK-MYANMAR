@@ -13,6 +13,9 @@ dependencies = [
     "passlib[bcrypt]",
     "bcrypt",
     "alembic",
+    "python-multipart",
+    "email-validator",
+    "boto3",
 ]
 
 [project.optional-dependencies]

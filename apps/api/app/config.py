@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     def cors_allow_localhost(self) -> bool:
         return self.is_development or self.debug
 
+    @property
+    def s3_enabled(self) -> bool:
+        return self.storage_provider.lower() == "s3"
+
+    @property
+    def s3_configured(self) -> bool:
+        return bool(self.s3_bucket and self.s3_access_key and self.s3_secret)
+
 
 @lru_cache
 def get_settings() -> Settings:

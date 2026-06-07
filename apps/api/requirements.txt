@@ -10,3 +10,4 @@ alembic
 python-multipart
 email-validator
 eval_type_backport
+boto3

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
+
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +11,7 @@ from app.database import get_db_session
 from app.lib.deps import AuthUser, get_optional_user, require_any_admin
 from app.lib.errors import api_error
 from app.lib.security import decode_access_token
-from app.lib.storage import get_file_row, resolve_local_path
+from app.lib.storage import get_file_row, read_file_bytes, resolve_local_path
 from app.models.application import Application
 from app.models.user import User
 
@@ -51,6 +53,21 @@ async def _authorize_file(
     raise api_error("FORBIDDEN", "파일 접근 권한이 없습니다.", 403)
 
 
+def _file_response(row) -> FileResponse | StreamingResponse:
+    path = resolve_local_path(row.storage_key)
+    if path:
+        return FileResponse(path, media_type=row.mime_type, filename=row.original_filename or "file")
+
+    data = read_file_bytes(row.storage_key)
+    if not data:
+        raise api_error("FILE_UNAVAILABLE", "파일을 사용할 수 없습니다.", 404)
+
+    headers = {}
+    if row.original_filename:
+        headers["Content-Disposition"] = f'inline; filename="{row.original_filename}"'
+    return StreamingResponse(io.BytesIO(data), media_type=row.mime_type, headers=headers)
+
+
 @router.get("/files/{file_id}")
 async def get_file(
     file_id: int,
@@ -59,10 +76,7 @@ async def get_file(
     db: AsyncSession = Depends(get_db_session),
 ):
     row, _ = await _authorize_file(file_id, user, token, db)
-    path = resolve_local_path(row.storage_key)
-    if not path:
-        raise api_error("FILE_UNAVAILABLE", "파일을 사용할 수 없습니다.", 404)
-    return FileResponse(path, media_type=row.mime_type, filename=row.original_filename or "file")
+    return _file_response(row)
 
 
 @router.get("/admin/files/{file_id}")
@@ -73,7 +87,4 @@ async def get_admin_file(
     db: AsyncSession = Depends(get_db_session),
 ):
     row, _ = await _authorize_file(file_id, admin, token, db)
-    path = resolve_local_path(row.storage_key)
-    if not path:
-        raise api_error("FILE_UNAVAILABLE", "파일을 사용할 수 없습니다.", 404)
-    return FileResponse(path, media_type=row.mime_type, filename=row.original_filename or "file")
+    return _file_response(row)

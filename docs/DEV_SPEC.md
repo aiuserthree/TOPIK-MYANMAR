@@ -336,7 +336,8 @@ README·DEPLOY.md에서 언급하는 `bo-api-client.js`, `bo-common.js`, `html/C
 ### 7.4 오브젝트 스토리지
 
 - 엔드포인트: `https://kr.object.iwinv.kr`, 리전: `kr-standard`
-- 운영 시 `STORAGE_PROVIDER=s3` + Private 버킷 (API가 파일 프록시)
+- 운영 시 `STORAGE_PROVIDER=s3` + Private 버킷 (공개 URL 없음, `GET /files/:id`·`/admin/files/:id` API 프록시)
+- `apps/api/app/lib/storage.py`: `local`(`var/uploads`) / `s3`(boto3, IwinV S3 호환) read·write·delete 구현
 - 변수: `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET`, `S3_ENDPOINT`, `S3_PREFIX`
 
 ### 7.5 앱 배치 경로
