@@ -176,9 +176,28 @@ npm run build
 
 ```bash
 cat > /opt/myanmar-v2/apps/api/.env <<'EOF'
+APP_ENV=production
+DEBUG=false
 DATABASE_URL=postgresql+asyncpg://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar
-JWT_SECRET=CHANGE_ME_LONG_RANDOM_SECRET
+JWT_SECRET=CHANGE_ME_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS
+JWT_REFRESH_SECRET=CHANGE_ME_ANOTHER_LONG_RANDOM_SECRET
 CORS_ORIGINS=https://www.topik-myanmar.com,https://admin.topik-myanmar.com
+STORAGE_PROVIDER=s3
+S3_BUCKET=topik-myanmar-photos
+S3_REGION=kr-standard
+S3_ACCESS_KEY=발급받은_Access_Key_ID
+S3_SECRET=발급받은_Secret_Key
+S3_ENDPOINT=https://kr.object.iwinv.kr
+S3_PREFIX=photos
+MAIL_PROVIDER=smtp
+MAIL_FROM=TOPIK Myanmar <noreply@topik-myanmar.com>
+SMTP_HOST=mail.topik-myanmar.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=noreply@topik-myanmar.com
+SMTP_PASS=테라웹메일_noreply_계정_비밀번호
+ENABLE_EMAIL_WORKER=true
+PUBLIC_FO_BASE=https://www.topik-myanmar.com
 EOF
 chmod 600 /opt/myanmar-v2/apps/api/.env
 ```
@@ -290,44 +309,75 @@ sudo certbot --nginx -d www.topik-myanmar.com -d admin.topik-myanmar.com
 sudo certbot renew --dry-run
 ```
 
-### 1.11 레거시 BO (임시 정적 제공)
+### 1.11 레거시 BO (handoff 정적 + admin 서브도메인)
 
-신규 BO는 최종적으로 `apps/web`에 통합합니다. 그 전까지 **화면 디자인 handoff**는 `html/C안/BO(admin)/project/`에 있습니다 (`admin-login.html`, `admin.html`, 패널 14개). 운영 API 연동 stub은 `html/C안/BO/`(HTML 없음, JS 4개)이며, 루트의 `build-bo.py`도 **`BO/`만 복사**하므로 handoff UI를 그대로 배포하려면 스크립트 수정 또는 경로 정리가 필요합니다.
+신규 BO는 최종적으로 `apps/web`에 통합합니다. 그 전까지 **운영 BO**는 `html/C안/BO(admin)/project/` handoff UI를 `build-bo.py`로 빌드해 `public-bo/`에 배치합니다.
 
-**FO vs BO 경로 분리**
-
-| 구분 | 경로 | 비고 |
-| --- | --- | --- |
-| FO (신규) | `/` → `apps/web/dist/` | §1.9 nginx 설정 |
-| BO (임시) | `/admin/` (권장) | handoff 정적 파일. FO SPA와 분리 |
-
-**임시 nginx 예시** — handoff를 Web 서버에 두고 `/admin/`으로 제공합니다. 원본 경로에 한글·괄호(`BO(admin)`)가 있으므로 **ASCII 심볼릭 링크** 사용을 권장합니다.
+**빌드 (Web 서버, 저장소 루트):**
 
 ```bash
-sudo ln -sf "/opt/myanmar-v2/html/C안/BO(admin)/project" /opt/myanmar-v2/bo-handoff
+cd /opt/myanmar-v2
+# 운영: TOPIK_API_BASE 생략 → same-origin /api (nginx 프록시)
+python3 build-bo.py
+# 로컬 API 연동 미리보기만: TOPIK_API_BASE=http://127.0.0.1:8000 python3 build-bo.py
 ```
 
-nginx `server` 블록(§1.9)에 추가:
+| 구분 | 경로 | nginx root |
+| --- | --- | --- |
+| FO (레거시 C안) | `python3 build.py` → `public/` | `www.topik-myanmar.com` |
+| FO (신규 Vite) | `apps/web/dist/` | 동일 (배포 시 하나 선택) |
+| BO (handoff) | `public-bo/` | `admin.topik-myanmar.com` |
 
-```nginx
-    location /admin/ {
-        alias /opt/myanmar-v2/bo-handoff/;
-        index admin-login.html;
-        try_files $uri $uri/ /admin/admin-login.html;
+**BO 서브도메인 nginx** — FO와 **별도 `server` 블록**이며, BO origin에서도 `/api/`를 FastAPI로 프록시해야 `bo-api-client.js` same-origin 호출이 동작합니다.
+
+```bash
+sudo tee /etc/nginx/sites-available/myanmar-bo > /dev/null <<'EOF'
+server {
+    listen 80;
+    server_name admin.topik-myanmar.com;
+
+    client_max_body_size 20m;
+
+    root /opt/myanmar-v2/public-bo;
+    index admin-login.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    location / {
+        try_files $uri $uri/ /admin-login.html;
+    }
+}
+EOF
+
+sudo ln -sf /etc/nginx/sites-available/myanmar-bo /etc/nginx/sites-enabled/myanmar-bo
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-로컬 미리보기: `admin-login.html` 또는 `admin.html`을 정적 서버로 열면 됩니다 (React/Babel은 CDN 로드).
+**주의:** `admin-login.html`·`admin.html`에 `127.0.0.1` meta를 넣지 마세요. 운영은 meta 없이 same-origin `/api`를 사용합니다. 로컬 개발만 `TOPIK_API_BASE=http://127.0.0.1:8000 python3 build-bo.py` 또는 HTML `<meta name="topik-api-base" content="http://127.0.0.1:8000">`를 사용합니다.
 
-**CORS:** 운영 확정 도메인은 FO `https://www.topik-myanmar.com`, BO `https://admin.topik-myanmar.com`(별도 서브도메인)입니다. `apps/api/.env`의 `CORS_ORIGINS`에 **양쪽 origin**을 포함합니다.
+**CORS:** `apps/api/.env`의 `CORS_ORIGINS`에 FO·BO origin **양쪽** 포함.
 
 ```env
 CORS_ORIGINS=https://www.topik-myanmar.com,https://admin.topik-myanmar.com
 ```
 
-BO를 FO와 **같은 도메인**(`/admin/` 경로)으로만 둘 경우 BO origin은 생략할 수 있으나, 현재 확정 구성은 서브도메인 분리입니다.
+**운영 DB 시드 (데모 계정 금지):**
 
-레거시 Fastify `api/.env`의 `PUBLIC_BO_BASE`도 실제 BO URL과 일치시킵니다.
+```bash
+cd /opt/myanmar-v2
+# migration V001~V006 적용 후
+CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py   # 제107회 + 지역코드 (demo 계정 없음)
+ADMIN_EMAIL=admin@topik-myanmar.com ADMIN_PASSWORD='강한비밀번호' python3 scripts/create_admin.py
+```
+
+`scripts/seed_dev.py`는 **운영에서 실행 금지** — `demo@topik-mm.local` / `admin-dev@topik-mm.local`이 생성됩니다.
 
 ## 2. DB 서버 설정
 
@@ -458,6 +508,7 @@ psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_m
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V003__bo_integration.sql
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V004__user_last_login.sql
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V005__application_drafts.sql
+psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V006__fo_contract_and_security.sql
 ```
 
 DB 서버에서 로컬로 적용한다면 host를 `127.0.0.1`로 바꿀 수 있습니다.
@@ -504,6 +555,8 @@ sudo systemctl status nginx --no-pager
 curl -i http://127.0.0.1:8000/health
 curl -i http://www.topik-myanmar.com/
 curl -i https://www.topik-myanmar.com/api/health
+curl -i https://admin.topik-myanmar.com/api/health
+curl -i https://admin.topik-myanmar.com/admin-login.html
 ```
 
 ### 3.2 로그 확인
@@ -527,10 +580,34 @@ sudo systemctl restart myanmar-api
 cd /opt/myanmar-v2/apps/web
 npm ci
 npm run build
+
+cd /opt/myanmar-v2
+python3 build.py
+python3 build-bo.py
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
 DB migration이 추가되면 `db/migrations`의 새 파일을 순서대로 적용한 뒤 API를 재시작합니다.
+
+### 3.4 운영 스모크 테스트 (스테이징 없이 단일 배포 후)
+
+아래 순서로 **한 번에** 검증합니다. 실패 시 해당 단계 로그를 확인한 뒤 다음 단계로 진행하지 마세요.
+
+| # | 단계 | 확인 방법 | 기대 결과 |
+| --- | --- | --- | --- |
+| 1 | API 기동 | `curl -s https://www.topik-myanmar.com/api/health` | `{"status":"ok"}` |
+| 2 | S3 연결 | FO 가입 또는 프로필 사진 업로드 | 500 없음, DB `file_attachments` 행 생성 |
+| 3 | 사진 조회 | 브라우저 `<img>` / `GET /api/v1/files/:id?token=` | 이미지 표시 (S3 프록시) |
+| 4 | FO 회원가입 | `signup.html` → 인증 메일 | `email_outbox.status=sent` (SMTP 미준비 시 `mail_delivered:false`) |
+| 5 | 접수 | `register.html` 제107회 접수 | `applications` 행, 사진 스냅샷 `file_id` |
+| 6 | BO 로그인 | `https://admin.topik-myanmar.com/admin-login.html` | `create_admin.py` 계정으로 로그인, Network 탭 API가 **same-origin `/api`** |
+| 7 | BO 사진 | 접수 상세 패널 | `TopikBoApi.fileUrl` 이미지 표시 |
+| 8 | BO 승인/반려 | 테스트 접수 처리 | `email_outbox` 트랜잭션 메일 enqueue |
+| 9 | BO zip | 사진 zip / 연명부 다운로드 | zip/xlsx 수신 |
+
+**S3 스모크 (CLI, Web 서버):** §5.6 AWS CLI put/list 후 3~7번으로 API 경유 최종 확인.
+
+**SMTP 미완(DNS 대기) 시:** 가입은 가능하나 `mail_delivered:false` — DNS·테라웹메일 확정 후 §6.6 9~11번 재검.
 
 ## 4. 보안 체크리스트
 

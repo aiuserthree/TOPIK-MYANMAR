@@ -6,17 +6,30 @@
 
   var STORAGE = { access: "bo_access_token", admin: "bo_admin_user" };
 
+  function readMetaApiBase() {
+    if (typeof document === "undefined") return null;
+    var meta = document.querySelector('meta[name="topik-api-base"]');
+    if (!meta || !meta.content || !meta.content.trim()) return null;
+    var val = meta.content.trim();
+    var loc = global.location;
+    if (loc && loc.hostname) {
+      var host = loc.hostname;
+      if (host !== "localhost" && host !== "127.0.0.1") {
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(val)) return null;
+      }
+    }
+    return val;
+  }
+
   function resolveBaseUrl() {
     // 우선순위: window.TOPIK_API_BASE > <meta topik-api-base> > 동일 오리진("")
-    // 도메인 미확정이므로 미설정 시 같은 오리진의 /api 를 사용한다(localhost 하드코딩 제거).
-    // 로컬 개발에서 API가 다른 포트(:8000)에 있으면 meta 또는 window.TOPIK_API_BASE 로 지정.
+    // 운영(nginx /api 프록시): meta·TOPIK_API_BASE 미설정 시 same-origin.
+    // 로컬 개발(API :8000): TOPIK_API_BASE=http://127.0.0.1:8000 또는 meta 주입.
     if (typeof global.TOPIK_API_BASE === "string" && global.TOPIK_API_BASE.trim()) {
       return global.TOPIK_API_BASE.trim();
     }
-    if (typeof document !== "undefined") {
-      var meta = document.querySelector('meta[name="topik-api-base"]');
-      if (meta && meta.content && meta.content.trim()) return meta.content.trim();
-    }
+    var metaBase = readMetaApiBase();
+    if (metaBase) return metaBase;
     return "";
   }
 

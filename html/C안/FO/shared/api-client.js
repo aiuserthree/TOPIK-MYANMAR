@@ -12,6 +12,21 @@
     user: "topik_user",
   };
 
+  function readMetaApiBase() {
+    if (typeof document === "undefined") return null;
+    var meta = document.querySelector('meta[name="topik-api-base"]');
+    if (!meta || !meta.content || !meta.content.trim()) return null;
+    var val = meta.content.trim();
+    var loc = global.location;
+    if (loc && loc.hostname) {
+      var host = loc.hostname;
+      if (host !== "localhost" && host !== "127.0.0.1") {
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(val)) return null;
+      }
+    }
+    return val;
+  }
+
   function resolveBaseUrl() {
     if (typeof global.TOPIK_API_BASE === "string" && global.TOPIK_API_BASE.trim()) {
       return global.TOPIK_API_BASE.trim();
@@ -19,12 +34,8 @@
     if (typeof global.API_BASE_URL === "string" && global.API_BASE_URL.trim()) {
       return global.API_BASE_URL.trim();
     }
-    if (typeof document !== "undefined") {
-      var meta = document.querySelector('meta[name="topik-api-base"]');
-      if (meta && meta.content && meta.content.trim()) {
-        return meta.content.trim();
-      }
-    }
+    var metaBase = readMetaApiBase();
+    if (metaBase) return metaBase;
     var loc = global.location;
     if (!loc || !loc.hostname) return "http://localhost:8000";
     var host = loc.hostname;

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Copy C안 FO + html/shared into public/ for static deploy (IwinV / Vercel)."""
 import os
+import re
 import shutil
 import pathlib
 
@@ -66,12 +67,19 @@ _DEFAULT_API_BASE = ""
 API_BASE = os.environ.get("TOPIK_API_BASE", _DEFAULT_API_BASE).rstrip("/")
 API_META = f'<meta name="topik-api-base" content="{API_BASE}">' if API_BASE else ""
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+API_META_RE = re.compile(r'\s*<meta name="topik-api-base"[^>]*>\n?', re.IGNORECASE)
+
+
+def patch_html_api_meta(text: str) -> str:
+    """Remove stale topik-api-base meta; inject TOPIK_API_BASE when set."""
+    patched = API_META_RE.sub("", text)
+    if API_META and VIEWPORT_META in patched:
+        patched = patched.replace(VIEWPORT_META, VIEWPORT_META + "\n" + API_META, 1)
+    return patched
 
 for html in DST.glob("*.html"):
     text = html.read_text(encoding="utf-8")
-    patched = text.replace("../../shared/", "shared/")
-    if API_META and '<meta name="topik-api-base"' not in patched and VIEWPORT_META in patched:
-        patched = patched.replace(VIEWPORT_META, VIEWPORT_META + "\n" + API_META, 1)
+    patched = patch_html_api_meta(text.replace("../../shared/", "shared/"))
     if patched != text:
         html.write_text(patched, encoding="utf-8")
 
