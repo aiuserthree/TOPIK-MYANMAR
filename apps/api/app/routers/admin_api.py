@@ -375,6 +375,7 @@ def _app_row_dict(
         "exam_venue_id": app.exam_venue_id,
         "exam_level": app.exam_level,
         "status": app.status,
+        "approved_at": app.approved_at.isoformat() if app.approved_at else None,
         "payment_status": app.payment_status,
         "photo_review_status": app.photo_review_status,
         "photo_reject_code": app.photo_reject_code,
@@ -747,7 +748,9 @@ async def payment_application(
     if app.photo_review_status != "approved":
         raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 수납할 수 있습니다.", 400)
     app.payment_status = "paid"
-    app.status = "approved"
+    # 수납 완료 ≠ 승인처리 완료 — 승인은 별도 /approve 엔드포인트에서만 반영
+    if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
+        app.status = "payment_pending"
     app.paid_at = datetime.now(timezone.utc)
     app.payment_receipt_no = body.receipt_no
     app.payment_memo = body.payment_memo
@@ -868,14 +871,16 @@ async def assign_exam_numbers(
     ):
         raise api_error("ALREADY_VISIBLE", "이미 공개된 수험번호는 재배정할 수 없습니다.", 409)
 
-    # 납부 완료·미취소 접수만 대상.
+    # 대상: 수납 완료 + 사진 승인 + 비반려 + 수험번호 미부여
     result = await db.execute(
         select(Application, User)
         .join(User, User.id == Application.user_id)
         .where(
             Application.exam_round_id == round_id,
             Application.payment_status == "paid",
-            Application.status != "cancelled",
+            Application.photo_review_status == "approved",
+            Application.status.notin_(("cancelled", "rejected")),
+            Application.exam_number.is_(None),
         )
     )
     rows = result.all()

@@ -254,6 +254,8 @@
     'mp.status_photo_rejected': { ko: '사진 반려', my: 'ဓာတ်ပုံ ပယ်ချ', en: 'Photo rejected' },
     'mp.status_app_rejected': { ko: '반려', my: 'ပယ်ချ', en: 'Rejected' },
     'mp.exam_num_pending': { ko: '부여 전', my: 'မသတ်မှတ်ရသေး', en: 'Not yet assigned' },
+    'mp.exam_num_awaiting': { ko: '공개 예정', my: 'ထုတ်ပြန်ရက် စောင့်ဆိုင်း', en: 'Awaiting release' },
+    'mp.exam_num_awaiting_hint': { ko: '수험번호는 부여되었으나 공개일 전입니다. 공개일 이후 확인할 수 있습니다.', my: 'ဖြေဆိုသူနံပါတ် ပေးအပ်ပြီးဖြစ်သော်လည်း ထုတ်ပြန်ရက် မရောက်သေးပါ။ ထုတ်ပြန်ရက်နောက်ပိုင်း ကြည့်နိုင်သည်။', en: 'Your exam number is assigned but not yet published. It will appear after the release date.' },
     'mp.photo_pending': { ko: '대기', my: 'စောင့်ဆိုင်း', en: 'Pending' },
     'mp.photo_approved': { ko: '승인 완료', my: 'အတည်ပြုပြီး', en: 'Approved' },
     'mp.photo_rejected': { ko: '반려', my: 'ပယ်ချ', en: 'Rejected' },
@@ -386,9 +388,27 @@
     return '<div class="v" style="color:' + p.color + ';">' + esc(bt(p.key, '')) + '</div>';
   }
 
-  function examNumCell(level) {
+  function isExamNumberAssigned(level, item) {
+    return level.status === 'exam_number_assigned' ||
+      (item && item.fo_card_status === 'number');
+  }
+
+  function examNumberAwaitingText(item) {
+    var at = item && item.exam_round && item.exam_round.exam_number_visible_at;
+    var base = bt('mp.exam_num_awaiting', '공개 예정');
+    if (!at) return base;
+    var d = at.slice(0, 10).replace(/-/g, '.');
+    return base + ' (' + d + ')';
+  }
+
+  function examNumCell(level, item) {
     if (level.exam_number_visible && level.exam_number) {
       return '<div class="v exam-num">' + esc(level.exam_number) + '</div>';
+    }
+    if (isExamNumberAssigned(level, item)) {
+      return '<div class="v pending" style="color:var(--st-number);" title="' +
+        esc(bt('mp.exam_num_awaiting_hint', '수험번호는 부여되었으나 공개일 전입니다. 공개일 이후 확인할 수 있습니다.')) + '">' +
+        esc(examNumberAwaitingText(item)) + '</div>';
     }
     return '<div class="v pending">' + esc(bt('mp.exam_num_pending', '부여 전')) + '</div>';
   }
@@ -493,7 +513,7 @@
           '</div>' +
         '</div>' +
         '<div class="app-grid">' +
-          '<div class="it"><div class="l">' + esc(bt('mp.col_exam_num', '수험번호')) + '</div>' + examNumCell(pl) + '</div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.col_exam_num', '수험번호')) + '</div>' + examNumCell(pl, item) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_photo', '사진 심사')) + '</div>' + photoCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_pay', '응시료 수납')) + '</div>' + payCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_date', '접수일')) + '</div><div class="v" style="color:var(--text-2); font-weight:500;">' + esc(submitted) + '</div></div>' +
@@ -585,7 +605,11 @@
         '<tr><th style="width:110px;">' + esc(bt('mp.t_round', '회차')) + '</th><td>' + roundTitle(item) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.apply_no', '접수번호')) + '</th><td style="font-family:Inter,sans-serif;">' + esc(pl.application_no) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.col_exam_num', '수험번호')) + '</th><td style="font-family:Inter,sans-serif;">' +
-          (pl.exam_number_visible && pl.exam_number ? esc(pl.exam_number) : esc(bt('mp.exam_num_pending', '부여 전'))) + '</td></tr>' +
+          (pl.exam_number_visible && pl.exam_number
+            ? esc(pl.exam_number)
+            : isExamNumberAssigned(pl, item)
+              ? esc(examNumberAwaitingText(item))
+              : esc(bt('mp.exam_num_pending', '부여 전'))) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_level', '응시 급수')) + '</th><td>' + esc(levelText) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_fee', '응시료')) + '</th><td style="font-family:Inter,sans-serif; font-weight:600; color:var(--primary);">' +
           esc(feeDisplayForItem(item)) + '</td></tr>' +
@@ -754,6 +778,12 @@
   };
   window.addEventListener('afterprint', function () {
     document.body.classList.remove('printing-confirm');
+  });
+
+  document.addEventListener('tpkm:langchange', function () {
+    if (currentItems.active.length || currentItems.past.length) {
+      renderLists();
+    }
   });
 
   loadMe();

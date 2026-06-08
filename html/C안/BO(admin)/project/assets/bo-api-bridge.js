@@ -22,9 +22,29 @@
     return String(v).slice(0, 10);
   }
 
-  function isoLocal(v) {
+  /** UTC ISO → BO 관리자 표시용 한국시간(KST, UTC+9) 'YYYY-MM-DD HH:MM' */
+  function fmtKst(v) {
     if (!v) return "";
-    return String(v).replace("T", " ").slice(0, 16);
+    var d = new Date(String(v));
+    if (isNaN(d.getTime())) return String(v).replace("T", " ").slice(0, 16);
+    try {
+      var parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(d);
+      var pick = function (t) {
+        var p = parts.find(function (x) { return x.type === t; });
+        return p ? p.value : "";
+      };
+      return pick("year") + "-" + pick("month") + "-" + pick("day") + " " + pick("hour") + ":" + pick("minute");
+    } catch (e) {
+      return String(v).replace("T", " ").slice(0, 16);
+    }
   }
 
   function levelUi(lv) {
@@ -45,9 +65,17 @@
     if (row.status === "cancelled") return "cancel";
     if (row.payment_status === "refunded") return "refund";
     if (row.status === "rejected" || row.photo_review_status === "rejected") return "rejected";
-    if (row.status === "approved" || row.status === "exam_number_assigned") return "approved";
-    if (row.photo_review_status === "pending" || row.status === "photo_review") return row.status === "submitted" ? "applied" : "photo";
-    if (row.status === "payment_pending" || (row.photo_review_status === "approved" && row.payment_status !== "paid")) return "pay";
+    if (row.status === "exam_number_assigned") return "approved";
+    if (row.status === "approved" && row.approved_at) return "approved";
+    if (row.status === "approved" && !row.approved_at) return "applied";
+    if (row.photo_review_status === "pending" || row.status === "photo_review") {
+      return row.status === "submitted" ? "applied" : "photo";
+    }
+    // 사진 승인 + 수납 완료, 승인처리 전 → 접수완료
+    if (row.photo_review_status === "approved" && row.payment_status === "paid") return "applied";
+    if (row.status === "payment_pending" || (row.photo_review_status === "approved" && row.payment_status !== "paid")) {
+      return "pay";
+    }
     if (row.status === "submitted") return "applied";
     return row.status || "applied";
   }
@@ -85,6 +113,7 @@
       nameEn: row.name_en || "—",
       dob: row.birth_date || "",
       sx: String(row.gender) === "2" ? 2 : 1,
+      genderCode: row.gender ? (String(row.gender) === "2" ? "2" : "1") : "",
       nation: row.nationality || "미얀마",
       l1: row.first_language || "미얀마어",
       // 코드값(연명부 export 용) + 표시 라벨
@@ -101,11 +130,11 @@
       photoOk: photoOk,
       photoStatus: row.photo_review_status || "pending",
       paid: paid,
-      paidAt: isoLocal(row.paid_at),
+      paidAt: fmtKst(row.paid_at),
       receipt: row.payment_receipt_no || "",
       exam: row.exam_number || "",
       status: mapApplicantStatus(row),
-      appliedAt: isoLocal(row.created_at),
+      appliedAt: fmtKst(row.created_at),
       rejectReason: row.reject_reason || "",
       memo: "",
       email: row.email || "",
@@ -157,7 +186,7 @@
       title: row.title,
       body: row.body_html || "",
       author: author || "admin",
-      createdAt: isoLocal(row.created_at || row.published_at),
+      createdAt: fmtKst(row.created_at || row.published_at),
       views: row.view_count || 0,
       public: !!row.is_published,
       pin: !!row.is_pinned,
@@ -236,7 +265,7 @@
       type: row.category || row.post_type || "환불",
       title: row.title,
       author: row.author_email || row.author_name || ("user" + row.user_id),
-      createdAt: isoLocal(row.created_at),
+      createdAt: fmtKst(row.created_at),
       status: REFUND_STATUS_UI[row.workflow_status] || "접수",
       hasAnswer: !!row.has_admin_reply || !!row.admin_reply,
       assignee: row.admin_replier_id ? String(row.admin_replier_id) : "",
@@ -246,7 +275,7 @@
         author: String(row.admin_replier_id || "admin"),
         body: row.admin_reply,
         public: false,
-        ts: isoLocal(row.admin_replied_at),
+        ts: fmtKst(row.admin_replied_at),
         kind: "reply",
       }] : [],
     };
@@ -261,7 +290,7 @@
       secret: !!row.is_secret,
       title: row.title,
       author: row.author_email || row.author_name || ("user" + row.user_id),
-      createdAt: isoLocal(row.created_at),
+      createdAt: fmtKst(row.created_at),
       status: done ? "done" : "wait",
       assignee: row.admin_replier_id ? String(row.admin_replier_id) : "",
       body: row.body || "",
@@ -269,7 +298,7 @@
         author: String(row.admin_replier_id || "admin"),
         body: row.admin_reply,
         public: !row.is_secret,
-        ts: isoLocal(row.admin_replied_at),
+        ts: fmtKst(row.admin_replied_at),
         kind: "reply",
       }] : [],
     };
@@ -283,7 +312,7 @@
       author: c.author || c.author_name || (c.is_admin ? "관리자" : (c.author_email || "작성자")),
       body: c.content || c.body || "",
       public: c.is_public != null ? !!c.is_public : (c.is_secret != null ? !c.is_secret : true),
-      ts: c.created_at_label || isoLocal(c.created_at),
+      ts: c.created_at_label || fmtKst(c.created_at),
       kind: c.is_admin ? "reply" : "comment",
     };
   }
@@ -304,7 +333,7 @@
       memberId: row.user_email || row.member_id || (row.user_id != null ? String(row.user_id) : "—"),
       termsKind: TERM_KIND_UI[row.term_type] || row.term_type || row.terms_kind || "—",
       version: row.version || "",
-      ts: row.created_at_label || isoLocal(row.agreed_at || row.created_at),
+      ts: row.created_at_label || fmtKst(row.agreed_at || row.created_at),
       ip: row.ip_address || "—",
       method: row.consent_method || row.method || "체크박스",
     };
@@ -320,7 +349,7 @@
       tel: row.phone || "",
       nation: row.nationality || "—",
       joinedAt: isoDate(row.created_at),
-      lastLogin: isoLocal(row.last_login_at) || "—",
+      lastLogin: fmtKst(row.last_login_at) || "—",
       status: memberStatusUi(row.status || "active"),
       marketing: !!row.marketing_opt_in,
       reason: "",
@@ -333,6 +362,8 @@
       kind: TERM_KIND_UI[row.term_type] || row.term_type,
       version: row.version,
       body: row.body_ko || "",
+      bodyMy: row.body_my || "",
+      bodyEn: row.body_en || "",
       publishedAt: row.published_at ? isoDate(row.published_at) : "",
       retiredAt: row.status === "retired" && row.published_at ? isoDate(row.published_at) : "",
       status: TERM_STATUS_UI[row.status] || row.status,
@@ -348,7 +379,7 @@
       email: row.email,
       role: roleUi(row.role),
       status: row.status === "inactive" ? "inactive" : "active",
-      lastLogin: isoLocal(row.last_login_at) || "—",
+      lastLogin: fmtKst(row.last_login_at) || "—",
       lastIp: "—",
       note: "",
     };
@@ -357,7 +388,7 @@
   function mapAudit(row) {
     return {
       id: "log" + row.id,
-      ts: isoLocal(row.created_at),
+      ts: fmtKst(row.created_at),
       actor: row.admin_email || (row.admin_user_id ? String(row.admin_user_id) : "admin"),
       ip: row.ip_address || "—",
       type: AUDIT_TYPE_UI[row.target_type] || row.target_type || "—",
@@ -550,7 +581,12 @@
   DS.apiPhotoApprove = function (id) {
     return Api.photoReview(id, { action: "approve" }).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      applyLocalApplicant(id, { photoStatus: "approved", photoOk: true, status: "pay" });
+      var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
+      applyLocalApplicant(id, {
+        photoStatus: "approved",
+        photoOk: true,
+        status: a && a.paid ? "applied" : "pay",
+      });
       return true;
     });
   };
@@ -564,11 +600,11 @@
   };
 
   DS.apiApprove = function (ids) {
+    var sessionId = DS.state.activeSessionId;
     return Promise.all(ids.map(function (id) { return Api.approveApplication(id); })).then(function (ress) {
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      ids.forEach(function (id) { applyLocalApplicant(id, { status: "approved" }); });
-      return ids.length;
+      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
     });
   };
 
@@ -590,9 +626,9 @@
       ids.forEach(function (id) {
         applyLocalApplicant(id, {
           paid: true,
-          paidAt: new Date().toISOString().replace("T", " ").slice(0, 16),
+          paidAt: fmtKst(new Date().toISOString()),
           receipt: info.receipt || "",
-          status: "approved",
+          status: "applied",
         });
       });
       return ids.length;
@@ -898,6 +934,8 @@
       version: data.version,
       title: (TERM_KIND_UI[TERM_KIND_API[data.kind]] || data.kind) + " " + data.version,
       body_ko: data.body || "",
+      body_my: data.bodyMy || null,
+      body_en: data.bodyEn || null,
       effective_at: data.scheduledAt || null,
     };
     var p = data.id && !data._isNew
@@ -978,6 +1016,7 @@
   };
 
   DS.staticPermissions = true;
+  DS.fmtKst = fmtKst;
 
   var origSetSession = DS.setSession;
   DS.setSession = function (sessionId) {

@@ -93,6 +93,7 @@
     if (!container) return;
     var parent = container.parentNode;
     container.innerHTML = "";
+    container.style.display = "";
     if (parent) {
       Array.prototype.slice.call(parent.childNodes).forEach(function (node) {
         if (node !== container && node.nodeType === 1 && node.classList && node.classList.contains("ql-toolbar")) {
@@ -100,6 +101,111 @@
         }
       });
     }
+  }
+
+  function clearEditorWrapper(parent) {
+    if (!parent || !parent.classList || !parent.classList.contains("bo-rich-editor")) return;
+    var modeBar = parent.querySelector(".bo-editor-mode-bar");
+    if (modeBar) parent.removeChild(modeBar);
+    var source = parent.querySelector(".bo-html-source");
+    if (source) parent.removeChild(source);
+  }
+
+  function normalizeQuillHtml(html) {
+    if (!html || html === "<p><br></p>") return "";
+    return htmlForSave(html);
+  }
+
+  function setupEditorModeToggle(parent, container, quill, getQuillRawHtml, setQuillHtml) {
+    if (!parent || !parent.classList.contains("bo-rich-editor")) {
+      return {
+        isSourceMode: function () { return false; },
+        getSourceHtml: getQuillRawHtml,
+        setSourceHtml: function () {},
+        getInlineHtml: function () { return quill.root.innerHTML; },
+        switchToWysiwyg: function () {},
+        destroyExtras: function () {},
+      };
+    }
+
+    var isSourceMode = false;
+    var sourceTextarea = document.createElement("textarea");
+    sourceTextarea.className = "bo-html-source";
+    sourceTextarea.setAttribute("spellcheck", "false");
+    sourceTextarea.placeholder = "HTML 소스를 입력하세요.";
+    sourceTextarea.hidden = true;
+    parent.appendChild(sourceTextarea);
+
+    var modeBar = document.createElement("div");
+    modeBar.className = "bo-editor-mode-bar";
+    modeBar.innerHTML =
+      '<div class="seg bo-editor-mode-seg" role="tablist" aria-label="에디터 모드">' +
+        '<button type="button" class="active" data-mode="wysiwyg" role="tab" aria-selected="true">에디터</button>' +
+        '<button type="button" data-mode="source" role="tab" aria-selected="false">HTML 소스</button>' +
+      "</div>";
+    parent.insertBefore(modeBar, container);
+
+    function qlToolbar() {
+      return parent.querySelector(".ql-toolbar");
+    }
+
+    function updateModeButtons() {
+      modeBar.querySelectorAll("[data-mode]").forEach(function (btn) {
+        var active = btn.getAttribute("data-mode") === (isSourceMode ? "source" : "wysiwyg");
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+      });
+    }
+
+    function showWysiwyg() {
+      container.style.display = "";
+      var toolbar = qlToolbar();
+      if (toolbar) toolbar.style.display = "";
+      sourceTextarea.hidden = true;
+    }
+
+    function showSource() {
+      container.style.display = "none";
+      var toolbar = qlToolbar();
+      if (toolbar) toolbar.style.display = "none";
+      sourceTextarea.hidden = false;
+    }
+
+    function switchToSource() {
+      if (isSourceMode) return;
+      sourceTextarea.value = getQuillRawHtml();
+      isSourceMode = true;
+      showSource();
+      updateModeButtons();
+      sourceTextarea.focus();
+    }
+
+    function switchToWysiwyg() {
+      if (!isSourceMode) return;
+      setQuillHtml(sourceTextarea.value);
+      isSourceMode = false;
+      showWysiwyg();
+      updateModeButtons();
+    }
+
+    modeBar.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-mode]");
+      if (!btn) return;
+      var mode = btn.getAttribute("data-mode");
+      if (mode === "source") switchToSource();
+      else switchToWysiwyg();
+    });
+
+    return {
+      isSourceMode: function () { return isSourceMode; },
+      getSourceHtml: function () { return normalizeQuillHtml(sourceTextarea.value); },
+      setSourceHtml: function (html) { sourceTextarea.value = html || ""; },
+      getInlineHtml: function () {
+        return isSourceMode ? sourceTextarea.value : quill.root.innerHTML;
+      },
+      switchToWysiwyg: switchToWysiwyg,
+      destroyExtras: function () { clearEditorWrapper(parent); },
+    };
   }
 
   /**
@@ -113,6 +219,10 @@
     if (!global.Quill) {
       container.innerHTML = '<p style="color:var(--text-3);font-size:12.5px">에디터를 불러오지 못했습니다.</p>';
       return null;
+    }
+    var parent = container.parentNode;
+    if (parent && parent.classList.contains("bo-rich-editor")) {
+      clearEditorWrapper(parent);
     }
     clearQuillHost(container);
     var quill = new global.Quill(container, {
@@ -175,23 +285,42 @@
       });
     }
 
-    if (initialHtml) {
-      quill.clipboard.dangerouslyPasteHTML(htmlForEditor(initialHtml));
+    function getQuillRawHtml() {
+      return normalizeQuillHtml(quill.root.innerHTML);
     }
+
+    function setQuillHtml(html) {
+      quill.clipboard.dangerouslyPasteHTML(htmlForEditor(html || ""));
+    }
+
+    var modeCtrl = setupEditorModeToggle(parent, container, quill, getQuillRawHtml, setQuillHtml);
+
+    if (initialHtml) {
+      setQuillHtml(initialHtml);
+    }
+
     return {
       getHtml: function () {
-        var html = quill.root.innerHTML;
-        if (html === "<p><br></p>") return "";
-        return htmlForSave(html);
+        if (modeCtrl.isSourceMode()) return modeCtrl.getSourceHtml();
+        return getQuillRawHtml();
       },
       setHtml: function (html) {
-        quill.clipboard.dangerouslyPasteHTML(htmlForEditor(html || ""));
+        var prepared = htmlForEditor(html || "");
+        if (modeCtrl.isSourceMode()) {
+          modeCtrl.setSourceHtml(prepared);
+        } else {
+          setQuillHtml(html);
+        }
       },
       getInlineImageFileIds: function () {
-        return collectInlineFileIds(quill.root.innerHTML);
+        return collectInlineFileIds(modeCtrl.getInlineHtml());
       },
       destroy: function () {
+        if (modeCtrl.isSourceMode()) {
+          modeCtrl.switchToWysiwyg();
+        }
         clearQuillHost(container);
+        modeCtrl.destroyExtras();
       },
     };
   }

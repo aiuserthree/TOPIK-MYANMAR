@@ -4,6 +4,17 @@
 
 const TERM_KINDS = ['이용약관','개인정보','마케팅'];
 
+/** 게시 버전 기준 다음 초안 버전 제안 (v1.0 → v1.1, v2 → v2.1) */
+function bumpVersion(ver) {
+  if (!ver) return 'v1.0';
+  const s = String(ver).trim();
+  const m = s.match(/^([vV]?)(\d+)\.(\d+)$/);
+  if (m) return `${m[1] || 'v'}${m[2]}.${parseInt(m[3], 10) + 1}`;
+  const m2 = s.match(/^([vV]?)(\d+)$/);
+  if (m2) return `${m2[1] || 'v'}${m2[2]}.1`;
+  return s + '.1';
+}
+
 function TermsPanel() {
   const state = useStore();
   const [kindF, setKindF] = useState('all');
@@ -20,27 +31,44 @@ function TermsPanel() {
   }, [state.terms, kindF]);
 
   const save = async (data) => {
+    const { _fromPublished, _sourceVersion, ...payload } = data;
+    if (_fromPublished) {
+      delete payload.id;
+      delete payload.status;
+      delete payload.publishedAt;
+      delete payload.retiredAt;
+      delete payload.author;
+    }
+    const isNewDraft = !payload.id;
+
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const ok = await DataStore.apiSaveTerm({ ...data, _isNew: !data.id });
+      const ok = await DataStore.apiSaveTerm({ ...payload, _isNew: isNewDraft });
       if (ok) {
-        toastOk(data.id ? '약관 초안이 수정되었습니다.' : '약관 초안이 등록되었습니다.');
+        toastOk(
+          isNewDraft
+            ? (_fromPublished ? '신규 버전 초안이 등록되었습니다. 목록에서 «게시»로 교체 게시하세요.' : '약관 초안이 등록되었습니다.')
+            : '약관 초안이 수정되었습니다.'
+        );
         setEdit(null);
       }
       return;
     }
-    if (data.id) {
-      const t = state.terms.find(x => x.id === data.id);
+    if (payload.id) {
+      const t = state.terms.find(x => x.id === payload.id);
       if (t.status !== 'draft') { toastErr('게시된 약관은 수정할 수 없습니다. 신규 버전을 등록해주세요.'); return; }
       const before = { ...t };
-      Object.assign(t, data);
+      Object.assign(t, payload);
       DataStore.addAudit({ type: '약관', targetId: t.id, action: '수정', before, after: { ...t }, memo: '' });
       toastOk('약관 초안이 수정되었습니다.');
     } else {
       const id = 't' + (state.terms.length + 1);
-      const nw = { id, status: 'draft', author: state.me?.id || 'admin01', publishedAt: '', retiredAt: '', ...data };
+      const nw = { id, status: 'draft', author: state.me?.id || 'admin01', publishedAt: '', retiredAt: '', ...payload };
       state.terms.push(nw);
-      DataStore.addAudit({ type: '약관', targetId: id, action: '생성', after: { ...nw }, memo: '초안 등록' });
-      toastOk('약관 초안이 등록되었습니다.');
+      const memo = _fromPublished
+        ? `게시본 ${_sourceVersion || ''} 기반 신규 버전 초안`
+        : '초안 등록';
+      DataStore.addAudit({ type: '약관', targetId: id, action: '생성', after: { ...nw }, memo });
+      toastOk(_fromPublished ? '신규 버전 초안이 등록되었습니다. 목록에서 «게시»로 교체 게시하세요.' : '약관 초안이 등록되었습니다.');
     }
     DataStore.notify();
     setEdit(null);
@@ -95,7 +123,7 @@ function TermsPanel() {
       <div className="panel-head">
         <div>
           <h1>약관 관리</h1>
-          <div className="sub">이용약관 / 개인정보 / 마케팅 · 버전 보존 + 동의 이력 영구 보관</div>
+          <div className="sub">이용약관 / 개인정보 / 마케팅 · 게시본은 «신규 버전»으로만 수정 · 동의 이력 영구 보관</div>
         </div>
         <div className="actions">
           <button className="btn btn-secondary" onClick={() => setConsent(true)}><I.History style={{ width: 14, height: 14 }}/> 동의 이력</button>
@@ -125,13 +153,21 @@ function TermsPanel() {
                   <td className="code"><b>{t.version}</b></td>
                   <td className="code muted">{t.publishedAt || '—'}</td>
                   <td className="code muted">{t.retiredAt || '—'}</td>
-                  <td><Pill kind={t.status === 'pub' ? 'pub' : t.status === 'draft' ? 'draft' : 'retired'}>{t.status === 'pub' ? '게시' : t.status === 'draft' ? '초안' : '폐지'}</Pill></td>
+                  <td>
+                    <Pill kind={t.status === 'pub' ? 'pub' : t.status === 'draft' ? 'draft' : 'retired'}>{t.status === 'pub' ? '게시' : t.status === 'draft' ? '초안' : '폐지'}</Pill>
+                    {t.status === 'pub' && (
+                      <div className="muted" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.4, maxWidth: 200 }}>
+                        본문 수정 시 «신규 버전»으로 초안 생성 후 게시
+                      </div>
+                    )}
+                  </td>
                   <td className="muted">{t.author}</td>
                   <td>
                     <div className="row-actions">
                       <button className="ibtn" onClick={() => setPreview(t.id)}><I.Eye style={{ width: 12, height: 12 }}/> 미리보기</button>
                       {t.status === 'draft' && <button className="ibtn" onClick={() => setEdit({ id: t.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>}
                       {t.status === 'draft' && <button className="ibtn primary" onClick={() => setPublish(t.id)}>게시</button>}
+                      {t.status === 'pub' && <button className="ibtn" onClick={() => setEdit({ fromPublishedId: t.id })}><I.Edit style={{ width: 12, height: 12 }}/> 신규 버전</button>}
                       {t.status === 'pub' && <button className="ibtn danger" onClick={() => setRetire(t.id)}>폐지</button>}
                     </div>
                   </td>
@@ -169,32 +205,128 @@ function TermsPanel() {
 
 function TermEditLP({ edit, onClose, onSave }) {
   const state = useStore();
+  const fromPub = edit.fromPublishedId ? state.terms.find(x => x.id === edit.fromPublishedId) : null;
   const t0 = edit.id ? state.terms.find(x => x.id === edit.id) : null;
-  const [f, setF] = useState(t0 ? { ...t0 } : { kind: '이용약관', version: 'v1.0', body: '', scheduledAt: '' });
+  const initFromPublished = fromPub ? {
+    kind: fromPub.kind,
+    version: bumpVersion(fromPub.version),
+    body: fromPub.body || '',
+    bodyMy: fromPub.bodyMy || '',
+    bodyEn: fromPub.bodyEn || '',
+    scheduledAt: fromPub.scheduledAt || '',
+  } : null;
+  const [f, setF] = useState(
+    initFromPublished || (t0 ? { ...t0 } : { kind: '이용약관', version: 'v1.0', body: '', bodyMy: '', bodyEn: '', scheduledAt: '' })
+  );
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
   const valid = f.kind && f.version && true;
+
+  const lpTitle = fromPub
+    ? `신규 버전 작성 — ${fromPub.kind} ${fromPub.version}`
+    : (t0 ? `약관 수정 — ${t0.kind} ${t0.version}` : '약관 등록 (신규)');
+  const lpSub = fromPub
+    ? `게시 중인 약관은 직접 수정할 수 없습니다. 현재 게시본(${fromPub.version})을 복사한 신규 초안입니다. 저장 후 목록에서 «게시»하면 기존 게시 버전은 자동 폐지되고 회원 재동의가 요청됩니다.`
+    : (t0 ? '초안만 본문·버전 수정 가능 · 게시된 약관은 «신규 버전»으로 새 초안을 만드세요' : '신규 약관 초안 등록 · 저장 후 목록에서 «게시»');
+
+  const [lang, setLang] = useState('KO');
+  const bodyKey = lang === 'KO' ? 'body' : lang === 'MY' ? 'bodyMy' : 'bodyEn';
+
+  const editorHostRef = useRef(null);
+  const editorRef = useRef(null);
+  const fRef = useRef(f);
+  fRef.current = f;
+
+  const switchLang = (l) => {
+    if (l === lang) return;
+    if (editorRef.current) {
+      const html = editorRef.current.getHtml();
+      setF(s => {
+        const next = { ...s, [bodyKey]: html };
+        const nextBodyKey = l === 'KO' ? 'body' : l === 'MY' ? 'bodyMy' : 'bodyEn';
+        if (editorRef.current) {
+          editorRef.current.setHtml(next[nextBodyKey] || '');
+        }
+        return next;
+      });
+    }
+    setLang(l);
+  };
+
+  useEffect(() => {
+    if (!editorHostRef.current || !window.BoNoticeEditor) return;
+    const useApi = DataStore.isApiMode && DataStore.isApiMode();
+    editorRef.current = BoNoticeEditor.mountRichEditor(
+      editorHostRef.current,
+      fRef.current[bodyKey] || '',
+      {
+        uploadImageFn: useApi && window.TopikBoApi && TopikBoApi.uploadNoticeAttachment
+          ? (file) => TopikBoApi.uploadNoticeAttachment(file)
+          : null,
+      }
+    );
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.destroy();
+        editorRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleSave = () => {
+    const bodyHtml = editorRef.current ? editorRef.current.getHtml() : (f[bodyKey] || '');
+    const bodies = {
+      body: bodyKey === 'body' ? bodyHtml : (f.body || ''),
+      bodyMy: bodyKey === 'bodyMy' ? bodyHtml : (f.bodyMy || ''),
+      bodyEn: bodyKey === 'bodyEn' ? bodyHtml : (f.bodyEn || ''),
+    };
+    const base = { ...f, [bodyKey]: bodyHtml, ...bodies };
+    if (fromPub) {
+      onSave({ ...base, _fromPublished: true, _sourceVersion: fromPub.version });
+    } else {
+      onSave(base);
+    }
+  };
+
   return (
-    <LP open title={t0 ? `약관 수정 — ${t0.kind} ${t0.version}` : '약관 등록'} sub="게시 전에만 본문 수정 가능 · 게시 후에는 신규 버전 등록" onClose={onClose}
+    <LP open title={lpTitle} sub={lpSub} onClose={onClose} size="wide"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" disabled={!valid} onClick={() => onSave(f)}>{t0 ? '저장' : '등록'}</button>
+        <button className="btn btn-primary" disabled={!valid} onClick={handleSave}>
+          {fromPub ? '초안 저장' : (t0 ? '저장' : '등록')}
+        </button>
       </>}>
+      {fromPub && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', fontSize: 13, lineHeight: 1.55, background: 'var(--bg-2)', borderRadius: 8, border: '1px solid var(--border)', color: 'var(--text-2)' }}>
+          <b style={{ color: 'var(--text)' }}>신규 버전 흐름</b> — ① 현재 게시본 복사 → ② 본문·버전 수정 후 «초안 저장» → ③ 목록에서 «게시»로 교체 게시 (기존 {fromPub.version} 자동 폐지)
+        </div>
+      )}
       <FieldSet legend="기본" cols={2}>
         <FormRow label="약관 종류" required>
-          <select className="select" value={f.kind} onChange={e => set('kind', e.target.value)}>
+          <select className="select" value={f.kind} disabled={!!fromPub} onChange={e => set('kind', e.target.value)}>
             {TERM_KINDS.map(k => <option key={k}>{k}</option>)}
           </select>
         </FormRow>
-        <FormRow label="버전 (시맨틱)" required hint="예: v2.0, v2.1">
+        <FormRow label="버전 (시맨틱)" required hint={fromPub ? `이전 게시: ${fromPub.version} · 필요 시 직접 수정` : '예: v2.0, v2.1'}>
           <input className="input" value={f.version} onChange={e => set('version', e.target.value)}/>
         </FormRow>
         <FormRow label="게시 예정일">
           <input type="date" className="input" value={f.scheduledAt || ''} onChange={e => set('scheduledAt', e.target.value)}/>
         </FormRow>
       </FieldSet>
-      <FieldSet legend="본문 (KO 필수 · MY/EN 선택 — 데모는 KO만)" cols={1}>
-        <FormRow label="본문(KO)" required>
-          <textarea className="textarea" rows="14" value={f.body || ''} onChange={e => set('body', e.target.value)} placeholder="제1조 (목적) ..."/>
+      <FieldSet legend="본문 (KO 필수 · MY/EN 선택)" cols={1}>
+        <FormRow label="언어 선택">
+          <div className="seg">
+            {['KO','MY','EN'].map(l => (
+              <button key={l} type="button" className={lang === l ? 'active' : ''} onClick={() => switchLang(l)}>
+                {l}{l === 'KO' ? ' · 필수' : ''}
+              </button>
+            ))}
+          </div>
+        </FormRow>
+        <FormRow label={`본문 (${lang})`} required={lang === 'KO'}>
+          <div className="bo-rich-editor">
+            <div ref={editorHostRef} className="bo-quill-host"/>
+          </div>
         </FormRow>
       </FieldSet>
     </LP>
@@ -211,7 +343,11 @@ function TermPreviewLP({ id, onClose }) {
       <article style={{ background: 'var(--bg)', padding: 20, borderRadius: 8, border: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: 20, marginBottom: 8 }}>{t.kind} ({t.version})</h2>
         <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>게시일: {t.publishedAt || '미게시'}</div>
-        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7 }}>{t.body || '— 본문 미입력 —'}</pre>
+        <div
+          className="bo-term-preview-body"
+          style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7 }}
+          dangerouslySetInnerHTML={{ __html: t.body || '<p style="color:var(--text-3)">— 본문 미입력 —</p>' }}
+        />
       </article>
     </LP>
   );

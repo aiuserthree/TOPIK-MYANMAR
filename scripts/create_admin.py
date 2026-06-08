@@ -18,8 +18,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "apps" / "api"))
+API_DIR = ROOT / "apps" / "api"
+sys.path.insert(0, str(API_DIR))
+os.chdir(API_DIR)
 
+from app.config import get_settings  # noqa: E402
 from app.models.admin import AdminUser  # noqa: E402
 
 
@@ -38,10 +41,7 @@ async def main() -> None:
         print("ADMIN_PASSWORD must be at least 12 characters.", file=sys.stderr)
         sys.exit(1)
 
-    url = os.environ.get(
-        "DATABASE_URL",
-        "postgresql+asyncpg://topik_app:change_me@127.0.0.1:5432/topik_myanmar",
-    )
+    url = os.environ.get("DATABASE_URL") or get_settings().database_url
     engine = create_async_engine(url)
     Session = async_sessionmaker(engine, expire_on_commit=False)
 

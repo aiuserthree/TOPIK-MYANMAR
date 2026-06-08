@@ -124,7 +124,7 @@ function ApplicantsPanel() {
     a.photoStatus = 'approved';
     a.photoOk = true;
     // 사진 승인으로 후속 상태 진행
-    if (a.status === 'photo') a.status = a.paid ? 'approved' : 'pay';
+    if (a.status === 'photo') a.status = a.paid ? 'applied' : 'pay';
     DataStore.addAudit({ type: '사진', targetId: id, action: '승인', before, after: { photoStatus: 'approved', status: a.status }, memo: '' });
     DataStore.notify();
     toastOk('사진이 승인되었습니다.', { title: '사진 심사', type: 'success' });
@@ -164,7 +164,7 @@ function ApplicantsPanel() {
       const before = { photoStatus: a.photoStatus, status: a.status };
       a.photoStatus = 'approved';
       a.photoOk = true;
-      if (a.status === 'photo') a.status = a.paid ? 'approved' : 'pay';
+      if (a.status === 'photo') a.status = a.paid ? 'applied' : 'pay';
       n++;
       DataStore.addAudit({ type: '사진', targetId: id, action: '승인', before, after: { photoStatus: 'approved', status: a.status }, memo: '일괄 사진 승인' });
     });
@@ -247,9 +247,9 @@ function ApplicantsPanel() {
       a.paidAt = new Date().toISOString().replace('T', ' ').slice(0, 16);
       a.receipt = info.receipt || `R-${Math.floor(10000 + Math.random() * 89999)}`;
       a.memo = (a.memo || '') + (info.memo ? `[수납] ${info.memo}\n` : '');
-      // 사진 OK 이면 자동 승인 후보, 아닐 시 photo 상태 유지
-      if (a.photoOk && a.status === 'pay') a.status = 'approved';
-      else if (a.status === 'applied') a.status = a.photoOk ? 'approved' : 'photo';
+      // 사진·수납 완료 시 접수완료(승인처리는 별도)
+      if (a.photoOk && (a.status === 'pay' || a.status === 'photo')) a.status = 'applied';
+      else if (a.status === 'applied' && !a.photoOk) a.status = 'photo';
       n++;
       DataStore.addAudit({ type: '접수자', targetId: id, action: '수납', before, after: { paid: true, status: a.status }, memo: info.memo || '' });
     });
@@ -1023,9 +1023,34 @@ function RejectModal({ modal, onClose, onConfirm }) {
 // ===== 수험번호 일괄 부여 (TPKM_BO_2_1_7) =====
 function ExamAssignModal({ onClose, doAssign }) {
   const [preview, setPreview] = useState(null);
-  useEffect(() => { setPreview(doAssign(true)); }, []);
-  if (!preview) return null;
-  const confirm = () => { doAssign(false); onClose(); };
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(doAssign(true)).then((data) => {
+      if (!cancelled) {
+        setPreview(data || { result: [], targets: 0, skipped: 0 });
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setPreview({ result: [], targets: 0, skipped: 0 });
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [doAssign]);
+  if (loading || !preview) {
+    return (
+      <Modal open onClose={onClose} title="수험번호 13자리 일괄 부여"
+        footer={<button className="btn btn-secondary" onClick={onClose}>취소</button>}>
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>미리보기를 불러오는 중…</div>
+      </Modal>
+    );
+  }
+  const confirm = async () => {
+    await doAssign(false);
+    onClose();
+  };
   return (
     <Modal open onClose={onClose} title="수험번호 13자리 일괄 부여"
       footer={<>

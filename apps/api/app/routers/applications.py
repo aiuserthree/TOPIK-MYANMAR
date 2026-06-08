@@ -423,6 +423,9 @@ def _serialize_level_item(
             "fee_level_i": rnd.fee_level_i if rnd else None,
             "fee_level_ii": rnd.fee_level_ii if rnd else None,
             "fees": {"I": rnd.fee_level_i, "II": rnd.fee_level_ii} if rnd else None,
+            "exam_number_visible_at": rnd.exam_number_visible_at.isoformat()
+            if rnd and rnd.exam_number_visible_at
+            else None,
         }
         if rnd
         else None,

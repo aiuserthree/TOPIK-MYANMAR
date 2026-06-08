@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>회원가입 — TOPIK Myanmar</title>
 <link rel="stylesheet" href="assets/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 <style>
   .signup-wrap {
     max-width: 560px;
@@ -85,7 +86,29 @@
   .terms-item:last-child { border-bottom: 0; }
   .terms-item .view {
     font-size: 12px; color: var(--text-3); text-decoration: underline;
+    background: none; border: 0; padding: 4px 0; cursor: pointer;
+    flex: 0 0 auto; margin-left: 12px;
   }
+  .terms-item .view:hover { color: var(--text-2); }
+  .terms-item .check { flex: 1; min-width: 0; }
+
+  /* Terms view modal */
+  .modal-terms { max-width: 560px; max-height: min(88vh, 720px); display: flex; flex-direction: column; }
+  .modal-terms .modal-body {
+    overflow-y: auto; flex: 1; min-height: 0;
+    max-height: calc(min(88vh, 720px) - 120px);
+  }
+  .terms-modal-body h2 { font-size: 16px; margin: 20px 0 8px; color: var(--text); }
+  .terms-modal-body h2:first-child { margin-top: 0; }
+  .terms-modal-body p, .terms-modal-body li {
+    font-size: 13.5px; color: var(--text-2); line-height: 1.7;
+  }
+  .terms-modal-body ul { padding-left: 18px; margin: 8px 0 14px; list-style: disc; }
+  .terms-modal-body .terms-meta {
+    font-size: 12px; color: var(--text-3); margin-bottom: 14px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .terms-modal-body.plain { white-space: pre-wrap; word-break: break-word; }
   .terms-item .req { color: var(--danger); font-weight: 700; }
   .terms-item .opt { color: var(--text-3); font-size: 12px; }
 
@@ -334,24 +357,30 @@
           <span class="box"></span>
           <span data-i18n-content="su.terms_all">전체 약관에 동의합니다</span>
         </label>
-        <label class="check terms-item" style="width:100%;">
-          <input type="checkbox" class="t-req" data-terms-type="service">
-          <span class="box"></span>
-          <span><span class="req">[필수]</span> <span data-i18n-content="su.terms_service">서비스 이용약관 동의</span></span>
-          <a href="terms.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;" data-i18n-content="su.terms_view">보기</a>
-        </label>
-        <label class="check terms-item" style="width:100%;">
-          <input type="checkbox" class="t-req" data-terms-type="privacy">
-          <span class="box"></span>
-          <span><span class="req">[필수]</span> <span data-i18n-content="su.terms_privacy">개인정보 수집·이용 동의</span></span>
-          <a href="privacy.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;" data-i18n-content="su.terms_view">보기</a>
-        </label>
-        <label class="check terms-item" style="width:100%;">
-          <input type="checkbox" class="t-opt" data-terms-type="marketing">
-          <span class="box"></span>
-          <span><span class="opt">[선택]</span> <span data-i18n-content="su.terms_marketing">마케팅 정보 수신 동의 (이메일)</span></span>
-          <a href="marketing.html" target="_blank" rel="noopener" class="view" style="margin-left:auto;" data-i18n-content="su.terms_view">보기</a>
-        </label>
+        <div class="terms-item">
+          <label class="check" style="width:100%;">
+            <input type="checkbox" class="t-req" data-terms-type="service">
+            <span class="box"></span>
+            <span><span class="req">[필수]</span> <span data-i18n-content="su.terms_service">서비스 이용약관 동의</span></span>
+          </label>
+          <button type="button" class="view" data-terms-view="service" data-i18n-content="su.terms_view">보기</button>
+        </div>
+        <div class="terms-item">
+          <label class="check" style="width:100%;">
+            <input type="checkbox" class="t-req" data-terms-type="privacy">
+            <span class="box"></span>
+            <span><span class="req">[필수]</span> <span data-i18n-content="su.terms_privacy">개인정보 수집·이용 동의</span></span>
+          </label>
+          <button type="button" class="view" data-terms-view="privacy" data-i18n-content="su.terms_view">보기</button>
+        </div>
+        <div class="terms-item">
+          <label class="check" style="width:100%;">
+            <input type="checkbox" class="t-opt" data-terms-type="marketing">
+            <span class="box"></span>
+            <span><span class="opt">[선택]</span> <span data-i18n-content="su.terms_marketing">마케팅 정보 수신 동의 (이메일)</span></span>
+          </label>
+          <button type="button" class="view" data-terms-view="marketing" data-i18n-content="su.terms_view">보기</button>
+        </div>
       </div>
 
       <div class="callout callout-neutral" style="margin-top: 20px;">
@@ -369,6 +398,20 @@
 
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
+
+<!-- ============ 약관 보기 모달 ============ -->
+<div class="modal-backdrop" id="modalTerms">
+  <div class="modal modal-terms" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+    <div class="modal-head"><h3 id="termsModalTitle">약관</h3></div>
+    <div class="modal-body">
+      <p class="terms-meta hidden" id="termsModalMeta"></p>
+      <div id="termsModalBody" class="terms-modal-body"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" id="btnTermsClose" data-i18n-content="btn.close">닫기</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ 가입 완료 모달 ============ -->
 <div class="modal-backdrop" id="modalDone">
@@ -489,7 +532,7 @@
       if (!res.ok || !res.body) return;
       var items = res.body.items || res.body.terms || (Array.isArray(res.body) ? res.body : []);
       items.forEach(function (it) {
-        var type = normalizeTermsType(it.type || it.code || it.kind || it.slug);
+        var type = normalizeTermsType(it.term_type || it.type || it.code || it.kind || it.slug);
         if (!type) return;
         var ver = it.version || it.current_version || it.published_version || null;
         TERMS_VERSIONS[type] = ver;
@@ -607,6 +650,34 @@
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  (function resumeGoogleSignup() {
+    var params = new URLSearchParams(location.search);
+    if (!params.get('google') || !window.TopikApi || !TopikApi.isLoggedIn()) return;
+    TopikApi.getMe().then(function (res) {
+      if (!res.ok || !res.body || !res.body.user) return;
+      var u = res.body.user;
+      setGoogleSignupMode(true);
+      verifiedEmail = u.email || '';
+      document.getElementById('su-email').value = verifiedEmail;
+      document.getElementById('su-email-display').value = verifiedEmail;
+      if (u.name_ko) document.getElementById('su-name-ko').value = u.name_ko;
+      if (u.name_en) document.getElementById('su-name-en').value = String(u.name_en).toUpperCase();
+      if (u.birth_date && u.birth_date !== '00000000') document.getElementById('su-birth').value = u.birth_date;
+      if (u.gender) document.getElementById('su-gender').value = u.gender === '2' ? 'female' : 'male';
+      if (u.nationality) document.getElementById('su-nationality').value = u.nationality;
+      if (u.first_language) document.getElementById('su-lang1').value = u.first_language;
+      if (u.phone) document.getElementById('su-phone').value = u.phone;
+      if (u.job_code) document.getElementById('su-job').value = String(u.job_code);
+      if (u.motive_code) document.getElementById('su-motive').value = String(u.motive_code);
+      if (u.purpose_code) document.getElementById('su-purpose').value = String(u.purpose_code);
+      document.getElementById('emailOk').classList.remove('hidden');
+      var okMsg = document.querySelector('#emailOk .callout div div');
+      if (okMsg) okMsg.innerHTML = '<strong>Google 계정 인증이 완료되었습니다.</strong>';
+      go(2);
+    }).catch(function () { /* ignore */ });
+  })();
+
   document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
     const cur = +document.querySelector('.step-pane.active').dataset.s;
     if (cur === 2) {
@@ -915,6 +986,120 @@
     document.getElementById('pwMeta').textContent =
       ['','약함','약함','보통','강함','매우 강함'][score] + ' · 영문+숫자+특수문자 8자 이상 권장';
   });
+
+  // ---- 약관 보기 모달 (STEP3) ----
+  var SIGNUP_TERMS_META = {
+    service: { title: { ko: '서비스 이용약관', my: 'ဝန်ဆောင်မှု အသုံးပြုမှု စည်းကမ်း', en: 'Terms of Service' }, page: 'terms.html' },
+    privacy: { title: { ko: '개인정보 수집·이용 동의', my: 'ကိုယ်ရေးအချက်အလက် ကောက်ယူ·အသုံးပြုမှု သဘောတူ', en: 'Consent to collection/use of personal data' }, page: 'privacy.html' },
+    marketing: { title: { ko: '마케팅 정보 수신 동의 (이메일)', my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူ (အီးမေးလ်)', en: 'Consent to marketing email' }, page: 'marketing.html' }
+  };
+
+  function termsLang() {
+    try {
+      var l = (localStorage.getItem('tpkm_lang') || 'KO').toUpperCase();
+      if (l === 'MY') return 'my';
+      if (l === 'EN') return 'en';
+    } catch (e) { /* ignore */ }
+    return 'ko';
+  }
+
+  function termsPick(map) {
+    if (!map) return '';
+    var lang = termsLang();
+    return map[lang] || map.ko || '';
+  }
+
+  function termsEmptyMessage() {
+    var lang = termsLang();
+    if (lang === 'en') return 'No terms have been registered by the administrator.';
+    if (lang === 'my') return 'ကျင်းပရေးအဖွဲ့မှ စည်းကမ်း မကြေညာသေးပါ။';
+    return '관리자에 등록된 약관이 없습니다.';
+  }
+
+  function showTermsEmpty() {
+    var bodyEl = document.getElementById('termsModalBody');
+    var metaEl = document.getElementById('termsModalMeta');
+    renderTermsBody(bodyEl, termsEmptyMessage());
+    if (metaEl) metaEl.classList.add('hidden');
+  }
+
+  function renderTermsBody(el, body) {
+    if (!el) return;
+    var text = body == null ? '' : String(body);
+    var looksHtml = /<\/?[a-z][\s\S]*>/i.test(text);
+    if (looksHtml && window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+      el.className = 'terms-modal-body';
+      el.innerHTML = DOMPurify.sanitize(text);
+    } else {
+      el.className = 'terms-modal-body plain';
+      el.textContent = text;
+    }
+  }
+
+  function fmtTermsDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    try {
+      return d.toLocaleDateString('ko-KR', { timeZone: 'Asia/Yangon', year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (e) {
+      return d.toISOString().slice(0, 10);
+    }
+  }
+
+  function openTermsModal(type) {
+    var meta = SIGNUP_TERMS_META[type];
+    if (!meta) return;
+    var titleEl = document.getElementById('termsModalTitle');
+    var bodyEl = document.getElementById('termsModalBody');
+    var metaEl = document.getElementById('termsModalMeta');
+    if (titleEl) titleEl.textContent = termsPick(meta.title);
+    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);font-size:13px;">' + (termsLang() === 'en' ? 'Loading…' : (termsLang() === 'my' ? 'ဖတ်ရှုနေသည်…' : '약관을 불러오는 중…')) + '</p>';
+    if (metaEl) metaEl.classList.add('hidden');
+    TPKM.openModal('modalTerms');
+
+    if (!window.TopikApi || typeof TopikApi.getTerm !== 'function' || !TopikApi.canUseApi()) {
+      showTermsEmpty();
+      return;
+    }
+    TopikApi.getTerm(type, termsLang()).then(function (res) {
+      if (!res.ok || !res.body || typeof res.body.body !== 'string' || !String(res.body.body).trim()) {
+        showTermsEmpty();
+        return;
+      }
+      var data = res.body;
+      renderTermsBody(bodyEl, data.body);
+      if (metaEl) {
+        var parts = [];
+        if (data.version) parts.push((termsLang() === 'en' ? 'Version ' : (termsLang() === 'my' ? 'ဗားရှင်း ' : '버전 ')) + data.version);
+        var eff = fmtTermsDate(data.effective_at);
+        if (eff) parts.push((termsLang() === 'en' ? 'Effective: ' : (termsLang() === 'my' ? 'စတင်နေ့ — ' : '시행일: ')) + eff);
+        if (parts.length) {
+          metaEl.textContent = parts.join(' · ');
+          metaEl.classList.remove('hidden');
+        }
+      }
+    }).catch(function () {
+      showTermsEmpty();
+    });
+  }
+
+  document.querySelectorAll('[data-terms-view]').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openTermsModal(btn.getAttribute('data-terms-view'));
+    });
+  });
+
+  var modalTerms = document.getElementById('modalTerms');
+  if (modalTerms) {
+    modalTerms.addEventListener('click', function (e) {
+      if (e.target === modalTerms || e.target.id === 'btnTermsClose' || e.target.closest('#btnTermsClose')) {
+        TPKM.closeModal('modalTerms');
+      }
+    });
+  }
 
   // Terms 'all' toggle
   const all = document.getElementById('termsAll');

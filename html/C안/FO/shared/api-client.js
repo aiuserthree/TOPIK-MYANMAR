@@ -669,6 +669,15 @@
     return apiFetch("/api/v1/terms" + qs, { auth: false });
   }
 
+  // 약관 본문(현행 게시 버전) — FO 약관 페이지·가입 Step3 모달
+  function getTerm(termType, lang) {
+    var qs = lang ? "?lang=" + encodeURIComponent(lang) : "";
+    return apiFetch(
+      "/api/v1/terms/" + encodeURIComponent(termType) + qs,
+      { auth: false }
+    );
+  }
+
   function getBoardComments(postId) {
     return apiFetch(
       "/api/v1/board/posts/" + encodeURIComponent(postId) + "/comments"
@@ -769,6 +778,7 @@
     uploadBoardAttachment: uploadBoardAttachment,
     unlockBoardPost: unlockBoardPost,
     getTerms: getTerms,
+    getTerm: getTerm,
     getBoardComments: getBoardComments,
     createBoardComment: createBoardComment,
     parseError: parseError,

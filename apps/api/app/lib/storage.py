@@ -73,10 +73,20 @@ def parse_s3_storage_key(storage_key: str) -> tuple[str, str] | None:
     return bucket, key
 
 
+def _s3_client_config():
+    from botocore.config import Config
+
+    endpoint = (settings.s3_endpoint or "").lower()
+    # Optional local MinIO only — IwinV (kr.object.iwinv.kr) uses default virtual-hosted style.
+    if endpoint and not endpoint.startswith("https://kr.object.iwinv.kr"):
+        if any(token in endpoint for token in ("localhost", "127.0.0.1", "minio")):
+            return Config(signature_version="s3v4", s3={"addressing_style": "path"})
+    return Config(signature_version="s3v4")
+
+
 @lru_cache
 def _get_s3_client():
     import boto3
-    from botocore.config import Config
 
     return boto3.client(
         "s3",
@@ -84,8 +94,22 @@ def _get_s3_client():
         region_name=settings.s3_region,
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret,
-        config=Config(signature_version="s3v4"),
+        config=_s3_client_config(),
     )
+
+
+def _write_local(*, data: bytes, file_id: str) -> str:
+    storage_key = f"local:{file_id}"
+    path = _upload_root() / file_id
+    path.write_bytes(data)
+    return storage_key
+
+
+def _s3_error_message(exc: ClientError) -> str:
+    code = exc.response.get("Error", {}).get("Code", "")
+    if code in {"InvalidAccessKeyId", "SignatureDoesNotMatch", "AccessDenied"}:
+        return "파일 저장소(S3) 인증에 실패했습니다. S3_ACCESS_KEY·S3_SECRET을 확인해 주세요."
+    return "파일 저장소(S3)에 업로드할 수 없습니다. S3 설정을 확인해 주세요."
 
 
 def _write_bytes(*, data: bytes, mime_type: str, category: str) -> str:
@@ -94,18 +118,29 @@ def _write_bytes(*, data: bytes, mime_type: str, category: str) -> str:
         bucket = settings.s3_bucket
         object_key = _s3_object_key(category, file_id)
         client = _get_s3_client()
-        client.put_object(
-            Bucket=bucket,
-            Key=object_key,
-            Body=data,
-            ContentType=mime_type,
-        )
+        try:
+            client.put_object(
+                Bucket=bucket,
+                Key=object_key,
+                Body=data,
+                ContentType=mime_type,
+            )
+        except ClientError as exc:
+            if settings.is_development:
+                logger.warning(
+                    "S3 upload failed (%s); using local storage for development",
+                    exc.response.get("Error", {}).get("Code", "unknown"),
+                )
+                return _write_local(data=data, file_id=file_id)
+            raise ValueError(_s3_error_message(exc)) from exc
+        except BotoCoreError as exc:
+            if settings.is_development:
+                logger.warning("S3 upload failed; using local storage for development: %s", exc)
+                return _write_local(data=data, file_id=file_id)
+            raise ValueError("파일 저장소(S3)에 연결할 수 없습니다.") from exc
         return _make_s3_storage_key(bucket, object_key)
 
-    storage_key = f"local:{file_id}"
-    path = _upload_root() / file_id
-    path.write_bytes(data)
-    return storage_key
+    return _write_local(data=data, file_id=file_id)
 
 
 def decode_photo_base64(photo_base64: str) -> tuple[bytes, str]:

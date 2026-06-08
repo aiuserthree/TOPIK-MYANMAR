@@ -406,7 +406,7 @@
               </div>
               <p class="meta ft-contact" data-i18n-content="foot.contact" data-i18n-content-html>
                 <strong>문의</strong><br>
-                topik.myanmar@mofa.go.kr<br>
+                support@topik-myanmar.com<br>
                 업무시간 월–금 09:00–17:00 (UTC+6:30)
               </p>
             </div>

@@ -21,7 +21,7 @@
     userNameEn: "Min Thet Aung",
     siteUrl: "topik-myanmar.example",
     siteUrlFull: "https://topik-myanmar.example",
-    supportEmail: "topik.myanmar@koica.go.kr",
+    supportEmail: "support@topik-myanmar.com",
     supportBoardUrl: "https://topik-myanmar.example/qna",
     year: "2026",
     // signup

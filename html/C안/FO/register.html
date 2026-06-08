@@ -208,7 +208,8 @@
 
     <!-- ============ STEP 1: 회차·급수 ============ -->
     <section class="step-pane active" data-s="1">
-      <h2 class="h3" style="margin-bottom: 6px;" data-i18n-content="reg.s1_title">응시 회차 선택</h2>
+      <h2 class="h3" style="margin-bottom: 2px;" data-i18n-content="reg.s1_round_reg">회차 접수</h2>
+      <h3 class="h4" style="margin-bottom: 6px; font-weight: 600;" data-i18n-content="reg.s1_title">응시 회차 선택</h3>
       <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s1_desc">접수 가능한 회차 중 하나를 선택해 주세요.</p>
 
       <div class="round-list" id="roundList">
@@ -305,7 +306,7 @@
       <p class="body-sm" style="margin-bottom: 16px;" data-i18n-content="reg.s3_desc">회원가입 시 등록한 증명사진입니다. 본 단계에서 사진 업로드·교체는 불가합니다.</p>
 
       <div class="photo-frame">
-        <div class="pf" data-i18n-content="reg.photo_preview" data-i18n-content-html>증명사진<br>미리보기</div>
+        <div class="pf"><span class="pf-ph" data-i18n-content="reg.photo_preview" data-i18n-content-html>증명사진<br>미리보기</span></div>
         <div class="pf-info">
           <h3 data-i18n-content="reg.photo_registered">등록된 증명사진</h3>
           <p class="body-sm" data-i18n-content="reg.photo_auto">접수 시 자동 사용됩니다. 사진이 규격에 맞지 않거나 변경이 필요한 경우 회원가입 사진을 먼저 교체해 주세요.</p>
@@ -410,7 +411,14 @@
     'reg.step4': { ko: '최종 확인', my: 'နောက်ဆုံး အတည်ပြု', en: 'Final review' },
     'reg.save_draft': { ko: '저장 후 나가기', my: 'သိမ်းပြီး ထွက်ရန်', en: 'Save & exit' },
     'reg.s1_title': { ko: '응시 회차 선택', my: 'ဖြေဆိုမည့် အကြိမ်ရေ ရွေးချယ်ရန်', en: 'Select exam session' },
+    'reg.s1_round_reg': { ko: '회차 접수', my: 'အကြိမ်ရေ လျှောက်ထားခြင်း', en: 'Session registration' },
     'reg.s1_desc': { ko: '접수 가능한 회차 중 하나를 선택해 주세요.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေတစ်ခု ရွေးချယ်ပါ။', en: 'Choose one of the open sessions.' },
+    'reg.meta_exam_date': { ko: '시험일', my: 'စာမေးပွဲနေ့', en: 'Exam date' },
+    'reg.meta_reg_period': { ko: '접수 기간', my: 'လျှောက်ထားရက်', en: 'Registration period' },
+    'reg.status_open': { ko: '접수 중', my: 'လျှောက်ထားဆဲ', en: 'Open' },
+    'reg.status_closed': { ko: '접수 마감', my: 'လျှောက်ထားမှု ပိတ်သွားပြီ', en: 'Closed' },
+    'reg.status_upcoming': { ko: '접수 예정', my: 'လျှောက်ထားရန် စီစဉ်ထား', en: 'Upcoming' },
+    'reg.no_rounds': { ko: '접수 가능한 회차가 없습니다.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေ မရှိပါ။', en: 'No sessions are open for registration.' },
     'reg.round_loading': { ko: '회차 정보를 불러오는 중…', my: 'အကြိမ်ရေ အချက်အလက် ဖွင့်နေသည်…', en: 'Loading session info…' },
     'reg.venue_title': { ko: '시험장 선택', my: 'စာစစ်ဌာန ရွေးချယ်ရန်', en: 'Select venue' },
     'reg.venue_desc': { ko: '접수 회차에 배정 가능한 시험장입니다.', my: 'ဤအကြိမ်ရေအတွက် သတ်မှတ်နိုင်သော စာစစ်ဌာနများ။', en: 'Venues available for this session.' },
@@ -477,6 +485,11 @@
 <script src="shared/roster-codes.js"></script>
 <script src="assets/common.js"></script>
 <script>
+  function bt(key, fallback) {
+    try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
+    return fallback;
+  }
+
   // ---- API-backed master data & profile (Phase 1) ----
   var REG_STATE = {
     rounds: [],
@@ -570,7 +583,7 @@
       if (!res.ok || !res.body) return;
       var items = res.body.items || res.body.terms || (Array.isArray(res.body) ? res.body : []);
       items.forEach(function (it) {
-        var type = normalizeTermsType(it.type || it.code || it.kind || it.slug);
+        var type = normalizeTermsType(it.term_type || it.type || it.code || it.kind || it.slug);
         if (!type) return;
         EXAM_TERMS_VERSIONS[type] = it.version || it.current_version || it.published_version || null;
       });
@@ -607,9 +620,9 @@
   }
 
   function roundStatusLabel(status) {
-    if (status === 'open') return { text: '접수 중', cls: '' };
-    if (status === 'closed') return { text: '접수 마감', cls: 'closed' };
-    return { text: '접수 예정', cls: 'upcoming' };
+    if (status === 'open') return { text: bt('reg.status_open', '접수 중'), cls: '' };
+    if (status === 'closed') return { text: bt('reg.status_closed', '접수 마감'), cls: 'closed' };
+    return { text: bt('reg.status_upcoming', '접수 예정'), cls: 'upcoming' };
   }
 
   function renderRoundList(rounds) {
@@ -620,23 +633,31 @@
     REG_STATE.rounds = rounds || [];
     list.querySelectorAll('.round-card').forEach(function (n) { n.remove(); });
     if (!rounds.length) {
-      if (errEl) { errEl.textContent = '접수 가능한 회차가 없습니다.'; errEl.style.display = 'block'; }
+      if (errEl) {
+        errEl.textContent = bt('reg.no_rounds', '접수 가능한 회차가 없습니다.');
+        errEl.style.display = 'block';
+      }
       return;
     }
+    var selectedId = REG_STATE.selectedRoundId;
+    var hasSelected = selectedId && rounds.some(function (r) {
+      return r.id === selectedId && r.registration_status === 'open';
+    });
     rounds.forEach(function (r, idx) {
       var st = roundStatusLabel(r.registration_status);
       var disabled = r.registration_status !== 'open';
+      var isSelected = !disabled && (hasSelected ? r.id === selectedId : idx === 0);
       var card = document.createElement('label');
-      card.className = 'round-card' + (disabled ? ' disabled ' + st.cls : (idx === 0 && !disabled ? ' selected' : ' ' + st.cls));
+      card.className = 'round-card' + (disabled ? ' disabled ' + st.cls : (isSelected ? ' selected' : ' ' + st.cls));
       card.dataset.roundId = String(r.id);
       card.innerHTML =
-        '<input type="radio" name="round" hidden' + (disabled ? ' disabled' : (idx === 0 ? ' checked' : '')) + '>' +
+        '<input type="radio" name="round" hidden' + (disabled ? ' disabled' : (isSelected ? ' checked' : '')) + '>' +
         '<div class="h"><div class="round-n">' + (r.title || ('제' + r.round_no + '회')) + '</div>' +
         '<div class="round-status">' + st.text + '</div></div>' +
         '<div class="meta-row">' +
-        '<div><strong>시험일</strong>' + fmtDateYmd(r.exam_date) + '</div>' +
-        '<div><strong>접수 기간</strong>' + fmtRegPeriod(r.registration_start_at, r.registration_end_at) + '</div></div>';
-      if (!disabled && idx === 0) REG_STATE.selectedRoundId = r.id;
+        '<div><strong>' + bt('reg.meta_exam_date', '시험일') + '</strong>' + fmtDateYmd(r.exam_date) + '</div>' +
+        '<div><strong>' + bt('reg.meta_reg_period', '접수 기간') + '</strong>' + fmtRegPeriod(r.registration_start_at, r.registration_end_at) + '</div></div>';
+      if (!disabled && isSelected) REG_STATE.selectedRoundId = r.id;
       list.appendChild(card);
     });
     bindRoundCards();
@@ -1165,27 +1186,52 @@
   }));
 
   var DUMMY_PORTRAIT = 'assets/dummy-portrait.jpg';
+  var portraitState = { url: '', fileId: null, hasPhoto: false };
+
   function renderPortrait(url, fileId) {
+    portraitState.url = url || '';
+    portraitState.fileId = fileId || null;
+    portraitState.hasPhoto = !!(url && url !== DUMMY_PORTRAIT);
     var src = url || DUMMY_PORTRAIT;
     document.querySelectorAll('.photo-frame .pf').forEach(function (pf) {
-      pf.classList.add('has-photo');
-      pf.style.padding = '0';
-      pf.style.overflow = 'hidden';
-      var img = document.createElement('img');
-      img.alt = '증명사진';
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;';
-      function fallback() { img.onerror = null; img.src = DUMMY_PORTRAIT; }
-      if (fileId && window.TopikApi && TopikApi.imgFileOnError) {
-        img.onerror = TopikApi.imgFileOnError(fileId, fallback);
+      if (portraitState.hasPhoto) {
+        pf.classList.add('has-photo');
+        pf.style.padding = '0';
+        pf.style.overflow = 'hidden';
+        var img = document.createElement('img');
+        img.alt = bt('reg.photo_registered', '등록된 증명사진');
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;';
+        function fallback() { img.onerror = null; img.src = DUMMY_PORTRAIT; }
+        if (fileId && window.TopikApi && TopikApi.imgFileOnError) {
+          img.onerror = TopikApi.imgFileOnError(fileId, fallback);
+        } else {
+          img.onerror = fallback;
+        }
+        img.src = src;
+        pf.innerHTML = '';
+        pf.appendChild(img);
       } else {
-        img.onerror = fallback;
+        pf.classList.remove('has-photo');
+        pf.style.padding = '';
+        pf.style.overflow = '';
+        pf.innerHTML = '<span class="pf-ph" data-i18n-content="reg.photo_preview" data-i18n-content-html>' +
+          (bt('reg.photo_preview', '증명사진<br>미리보기')) + '</span>';
+        if (window.TOPIKPageI18n && TPKMLang) {
+          TOPIKPageI18n.apply(TPKMLang.get());
+        }
       }
-      img.src = src;
-      pf.innerHTML = '';
-      pf.appendChild(img);
     });
   }
   renderPortrait(DUMMY_PORTRAIT);
+
+  document.addEventListener('tpkm:langchange', function () {
+    if (REG_STATE.rounds.length) renderRoundList(REG_STATE.rounds);
+    renderPortrait(
+      portraitState.hasPhoto ? portraitState.url : DUMMY_PORTRAIT,
+      portraitState.fileId
+    );
+    updateFeeDisplay(getSelectedRound());
+  });
 
   // STEP 4 — summary
   function updateSummary() {

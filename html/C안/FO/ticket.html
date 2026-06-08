@@ -360,9 +360,12 @@
       var eligibleFlat = all.filter(hasVisibleExamNumber);
       var eligible = groupBySubmission(eligibleFlat);
       var pending = grouped.filter(function (g) {
-        return !hasVisibleExamNumber(g) &&
-          (g.fo_card_status === 'number' || g.fo_card_status === 'approved' ||
-           (g.levels || []).some(function (l) { return l.exam_number && !l.exam_number_visible; }));
+        if (hasVisibleExamNumber(g)) return false;
+        if (g.fo_card_status === 'number') return true;
+        return (g.levels || []).some(function (l) {
+          return l.status === 'exam_number_assigned' ||
+            (l.exam_number && !l.exam_number_visible);
+        });
       });
       var inProgress = grouped.filter(function (g) {
         return !hasVisibleExamNumber(g) &&
@@ -398,6 +401,7 @@
   }
 
   loadTicketStatus();
+  document.addEventListener('tpkm:langchange', loadTicketStatus);
 })();
 </script>
 </body>

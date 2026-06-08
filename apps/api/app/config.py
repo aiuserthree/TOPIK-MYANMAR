@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# apps/api/.env — resolved from this file so the env loads regardless of CWD
+# (e.g. scripts/test_smtp.py run from repo root). systemd injects the same
+# values via EnvironmentFile, which take precedence over this dotenv file.
+_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
 
 class Settings(BaseSettings):
@@ -25,7 +31,7 @@ class Settings(BaseSettings):
         ),
         validation_alias="CORS_ORIGINS",
     )
-    storage_provider: str = Field(default="local", validation_alias="STORAGE_PROVIDER")
+    storage_provider: str = Field(default="s3", validation_alias="STORAGE_PROVIDER")
     upload_dir: str = Field(default="var/uploads", validation_alias="UPLOAD_DIR")
     upload_max_bytes: int = Field(default=5_242_880, validation_alias="UPLOAD_MAX_BYTES")
     s3_bucket: str = Field(default="", validation_alias="S3_BUCKET")
@@ -51,9 +57,11 @@ class Settings(BaseSettings):
     )
     embedding_dimensions: int = Field(default=1536, validation_alias="EMBEDDING_DIMENSIONS")
     semantic_search_enabled: bool = Field(default=False, validation_alias="SEMANTIC_SEARCH_ENABLED")
+    google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(default="", validation_alias="GOOGLE_CLIENT_SECRET")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -78,6 +86,10 @@ class Settings(BaseSettings):
     @property
     def s3_configured(self) -> bool:
         return bool(self.s3_bucket and self.s3_access_key and self.s3_secret)
+
+    @property
+    def google_oauth_enabled(self) -> bool:
+        return bool(self.google_client_id.strip())
 
 
 @lru_cache

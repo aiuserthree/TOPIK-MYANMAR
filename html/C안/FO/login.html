@@ -471,7 +471,8 @@
           else alert(msg);
           return;
         }
-        var u = (res.body && res.body.user) || {};
+        var body = res.body || {};
+        var u = body.user || {};
         if (window.TPKMAuth) {
           TPKMAuth.login({
             name: u.name_ko || u.name || (u.email || '').split('@')[0],
@@ -479,6 +480,10 @@
           });
         }
         var params = new URLSearchParams(location.search);
+        if (body.profile_incomplete) {
+          location.href = 'signup.html?google=1' + (params.get('next') ? '&next=' + encodeURIComponent(params.get('next')) : '');
+          return;
+        }
         location.href = params.get('next') || 'index.html';
       }).catch(function () {
         if (err) { err.classList.add('show'); err.querySelector('span').textContent = tr.fail; }

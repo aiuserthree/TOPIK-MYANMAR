@@ -27,7 +27,9 @@ from app.lib.security import (
     verify_code,
     verify_password,
 )
+from app.lib.consents import persist_term_consents
 from app.lib.email_notify import notify_password_expiry_reminder
+from app.lib.google_auth import verify_google_id_token
 from app.lib.mail import enqueue_email, format_verification_code, is_mailer_live
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
@@ -41,7 +43,6 @@ from app.lib.validation import (
 )
 from app.models.admin import AdminUser
 from app.models.auth_tokens import EmailVerificationCode, PasswordResetToken
-from app.models.content import Term, TermConsent
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -108,6 +109,11 @@ class FindEmailBody(BaseModel):
     phone: str
 
 
+class GoogleAuthBody(BaseModel):
+    id_token: str
+    preferred_lang: str = "ko"
+
+
 class ForgotPasswordBody(BaseModel):
     email: EmailField
 
@@ -159,7 +165,105 @@ async def auth_status() -> dict[str, str]:
 
 @router.get("/google/config")
 async def google_config() -> dict:
-    return {"enabled": False, "client_id": None}
+    client_id = settings.google_client_id.strip()
+    return {"enabled": bool(client_id), "client_id": client_id or None}
+
+
+PROFILE_INCOMPLETE_BIRTH = "00000000"
+
+
+def _google_display_names(claims: dict) -> tuple[str, str]:
+    full = (claims.get("name") or "").strip()
+    given = (claims.get("given_name") or "").strip()
+    family = (claims.get("family_name") or "").strip()
+    email = (claims.get("email") or "").strip()
+    local = email.split("@")[0] if email else "User"
+    name_ko = full or f"{family}{given}".strip() or local
+    name_en = (full or f"{given} {family}".strip() or local).upper()
+    return name_ko[:100], name_en[:200]
+
+
+def _is_profile_incomplete(user: User) -> bool:
+    if not user.photo_file_id:
+        return True
+    if user.birth_date == PROFILE_INCOMPLETE_BIRTH:
+        return True
+    if not (user.phone or "").strip():
+        return True
+    if validate_roster_codes(user.job_code, user.motive_code, user.purpose_code):
+        return True
+    return False
+
+
+@router.post("/google")
+async def google_login(
+    body: GoogleAuthBody,
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    if not settings.google_oauth_enabled:
+        raise api_error("SERVICE_UNAVAILABLE", "Google 로그인이 설정되지 않았습니다.", 503)
+    token = body.id_token.strip()
+    if not token:
+        raise api_error("VALIDATION_ERROR", "Google 인증 토큰이 필요합니다.", 400)
+    try:
+        claims = verify_google_id_token(token, settings.google_client_id.strip())
+    except ValueError as exc:
+        raise api_error("INVALID_TOKEN", "Google 인증에 실패했습니다.", 401) from exc
+
+    sub = claims.get("sub")
+    email = (claims.get("email") or "").strip().lower()
+    if not sub or not email:
+        raise api_error("INVALID_TOKEN", "Google 계정 정보가 부족합니다.", 401)
+    if not claims.get("email_verified", True):
+        raise api_error("INVALID_TOKEN", "이메일이 인증되지 않은 Google 계정입니다.", 401)
+
+    is_new_user = False
+    by_sub = await db.execute(select(User).where(User.google_sub == sub))
+    user = by_sub.scalar_one_or_none()
+    if not user:
+        by_email = await db.execute(select(User).where(User.email == email))
+        user = by_email.scalar_one_or_none()
+
+    if user:
+        if user.status != "active":
+            raise api_error("ACCOUNT_INACTIVE", "이용이 제한된 계정입니다.", 403)
+        if not user.google_sub:
+            user.google_sub = sub
+        _reset_login_state(user)
+    else:
+        is_new_user = True
+        name_ko, name_en = _google_display_names(claims)
+        lang = (body.preferred_lang or "ko")[:5]
+        if lang not in ("ko", "my", "en"):
+            lang = "ko"
+        user = User(
+            email=email,
+            password_hash=None,
+            signup_provider="google",
+            google_sub=sub,
+            name_ko=name_ko,
+            name_en=name_en,
+            birth_date=PROFILE_INCOMPLETE_BIRTH,
+            gender="1",
+            nationality="",
+            first_language=lang,
+            phone="",
+            job_code=0,
+            motive_code=0,
+            purpose_code=0,
+            preferred_lang=lang,
+        )
+        db.add(user)
+        await db.flush()
+        _reset_login_state(user)
+
+    await db.commit()
+    await db.refresh(user)
+    out = _user_token_response(user)
+    out["is_new_user"] = is_new_user
+    out["profile_incomplete"] = _is_profile_incomplete(user)
+    return out
 
 
 def _is_locked(account) -> bool:
@@ -266,15 +370,21 @@ async def find_email(body: FindEmailBody, db: AsyncSession = Depends(get_db_sess
     name = body.name_ko.strip()
     phone = body.phone.strip()
     result = await db.execute(
-        select(User.email).where(
+        select(User.email, User.signup_provider).where(
             User.name_ko == name,
             User.birth_date == birth,
             User.phone == phone,
             User.status == "active",
         )
     )
-    emails = [_mask_email(row) for row in result.scalars().all()]
-    return {"matches": [{"email": e} for e in emails]}
+    matches = [
+        {
+            "email_masked": _mask_email(row.email),
+            "provider": row.signup_provider or "email",
+        }
+        for row in result.all()
+    ]
+    return {"matches": matches}
 
 
 @router.post("/logout")
@@ -381,50 +491,6 @@ async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_
     return {"verified": True, "verification_token": token}
 
 
-async def _persist_consents(
-    db: AsyncSession, *, user_id: int, terms_agreed: list[dict], marketing_opt_in: bool, ip: str | None
-) -> None:
-    """가입 시 동의 약관 종류/버전 영속화(terms_consents)."""
-    # 현재 게시중 약관의 버전 매핑(버전 미전달 시 보완).
-    pub = await db.execute(select(Term).where(Term.status == "published"))
-    versions: dict[str, tuple[int, str]] = {}
-    for t in pub.scalars().all():
-        versions.setdefault(t.term_type, (t.id, t.version))
-
-    seen_types: set[str] = set()
-    for item in terms_agreed or []:
-        if not isinstance(item, dict):
-            continue
-        ttype = item.get("term_type") or item.get("type")
-        if not ttype:
-            continue
-        seen_types.add(ttype)
-        term_id, ver = versions.get(ttype, (None, ""))
-        db.add(
-            TermConsent(
-                user_id=user_id,
-                term_id=item.get("term_id") or term_id,
-                term_type=ttype,
-                version=str(item.get("version") or ver or ""),
-                agreed=bool(item.get("agreed", True)),
-                ip_address=ip,
-            )
-        )
-    # 마케팅 동의는 별도 항목으로 미전달 시 플래그 기준으로 1건 기록.
-    if "marketing" not in seen_types:
-        term_id, ver = versions.get("marketing", (None, ""))
-        db.add(
-            TermConsent(
-                user_id=user_id,
-                term_id=term_id,
-                term_type="marketing",
-                version=ver,
-                agreed=bool(marketing_opt_in),
-                ip_address=ip,
-            )
-        )
-
-
 @router.post("/register")
 async def register(
     body: RegisterBody,
@@ -476,7 +542,7 @@ async def register(
             user.photo_file_id = photo.id
         except ValueError as exc:
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
-    await _persist_consents(
+    await persist_term_consents(
         db,
         user_id=user.id,
         terms_agreed=body.terms_agreed,

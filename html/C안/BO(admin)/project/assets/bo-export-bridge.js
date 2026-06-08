@@ -10,6 +10,14 @@
     return '';
   }
 
+  function rosterSexCode(a) {
+    var raw = a.genderCode;
+    if (raw === '' || raw == null) {
+      raw = (a.gender !== '' && a.gender != null) ? a.gender : a.sx;
+    }
+    return sexCode(raw);
+  }
+
   function birth8(v) {
     return String(v || '').replace(/[^0-9]/g, '').slice(0, 8);
   }
@@ -21,7 +29,7 @@
       a.nameKo && a.nameKo !== '—' ? a.nameKo : (a.name || a.nameEn || ''),  // 한글성명(없으면 영문)
       a.name || a.nameEn || '',                                                // 영문성명
       birth8(a.birth || a.dob),                                                // 생년월일 8자리
-      sexCode(a.gender != null ? a.gender : a.sex),                            // 성별 1/2
+      rosterSexCode(a),                                                        // 성별 1/2
       a.nationality || a.nation || '미얀마',                                    // 국적(명칭)
       a.firstLang || a.l1 || '',                                               // 제1언어(명칭)
       a.jobCode != null && a.jobCode !== '' ? a.jobCode : '',                  // 직업코드

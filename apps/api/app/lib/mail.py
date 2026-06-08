@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from email.utils import parseaddr
+from email.utils import formatdate, make_msgid, parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -99,6 +99,9 @@ def _send_smtp(to_email: str, rendered: RenderedEmail, settings: Settings) -> No
     msg["Subject"] = rendered.subject
     msg["From"] = settings.mail_from
     msg["To"] = to_email
+    # RFC 5322 required headers — amavisd-new (IwinV) rejects mail without Date.
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain=envelope_from.rpartition("@")[2] or None)
     msg.attach(MIMEText(rendered.text, "plain", "utf-8"))
     msg.attach(MIMEText(rendered.html, "html", "utf-8"))
 
@@ -217,6 +220,9 @@ async def deliver_outbox_row(db: AsyncSession, row: EmailOutbox, settings: Setti
 async def process_outbox_batch(db: AsyncSession, *, limit: int = 25, settings: Settings | None = None) -> int:
     cfg = settings or get_settings()
     now = datetime.now(timezone.utc)
+    # FOR UPDATE SKIP LOCKED: with multiple uvicorn workers each running an
+    # email worker loop, this stops two workers from claiming (and sending)
+    # the same row — which otherwise causes duplicate emails.
     result = await db.execute(
         select(EmailOutbox)
         .where(
@@ -225,6 +231,7 @@ async def process_outbox_batch(db: AsyncSession, *, limit: int = 25, settings: S
         )
         .order_by(EmailOutbox.id.asc())
         .limit(limit)
+        .with_for_update(skip_locked=True)
     )
     rows = result.scalars().all()
     processed = 0

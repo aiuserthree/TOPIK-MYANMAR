@@ -24,7 +24,7 @@
   .legal-loading { font-size: 13.5px; color: var(--text-3); padding: 8px 0; }
 </style>
 </head>
-<body data-footer-compact>
+<body data-footer-compact data-term-type="marketing">
 
 <div id="site-header"></div>
 
@@ -147,115 +147,8 @@ window.TPKM_PAGE_I18N = {
   }
 };
 </script>
+<script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
-<script>
-/* 마케팅 수신 동의 본문 — BO에서 게시한 최신본을 공개 API로 불러와 렌더 (실패 시 정적 폴백 유지) */
-(function () {
-  'use strict';
-  var TERM_TYPE = 'marketing';
-
-  function resolveApiBase() {
-    if (window.TopikApi && typeof window.TopikApi.baseUrl === 'string') {
-      return window.TopikApi.baseUrl;
-    }
-    var metaName = 'topik-api-base';
-    var meta = document.querySelector('meta[name="' + metaName + '"]');
-    if (meta && meta.content && meta.content.trim()) return meta.content.trim();
-    var host = location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:8000';
-    return '';
-  }
-
-  function apiLang() {
-    var l = 'ko';
-    try {
-      var stored = (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase();
-      if (stored === 'my' || stored === 'en') l = stored;
-    } catch (e) { /* private mode */ }
-    return l;
-  }
-
-  function fmtDate(iso) {
-    if (!iso) return '';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return String(iso);
-    try {
-      return d.toLocaleDateString('ko-KR', {
-        timeZone: 'Asia/Yangon', year: 'numeric', month: 'long', day: 'numeric'
-      });
-    } catch (e) {
-      return d.toISOString().slice(0, 10);
-    }
-  }
-
-  function renderBody(container, body) {
-    var text = body == null ? '' : String(body);
-    var looksHtml = /<\/?[a-z][\s\S]*>/i.test(text);
-    if (looksHtml && window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
-      container.className = 'legal-body';
-      container.innerHTML = window.DOMPurify.sanitize(text);
-    } else {
-      // 평문/마크다운: 줄바꿈 보존 + XSS 안전 (textContent)
-      container.className = 'legal-body plain';
-      container.textContent = text;
-    }
-  }
-
-  var loadingEl = document.getElementById('termsLoading');
-  var dynamicEl = document.getElementById('termsDynamic');
-  var bodyEl = document.getElementById('termsBody');
-  var fallbackEl = document.getElementById('termsFallback');
-  var updatedEl = document.getElementById('termsUpdated');
-  var fallbackUpdatedText = updatedEl ? updatedEl.textContent : '';
-
-  function showFallback() {
-    if (loadingEl) loadingEl.hidden = true;
-    if (dynamicEl) dynamicEl.hidden = true;
-    if (fallbackEl) fallbackEl.hidden = false;
-    if (updatedEl) updatedEl.textContent = fallbackUpdatedText;
-  }
-
-  function loadTerms() {
-    var base = resolveApiBase();
-    if (loadingEl) loadingEl.hidden = false;
-    if (fallbackEl) fallbackEl.hidden = true;
-    if (dynamicEl) dynamicEl.hidden = true;
-
-    var url = base.replace(/\/$/, '') + '/api/v1/terms/' + TERM_TYPE + '?lang=' + encodeURIComponent(apiLang());
-    fetch(url, { headers: { Accept: 'application/json' } })
-      .then(function (res) {
-        if (!res.ok) throw new Error('http_' + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        if (!data || typeof data.body !== 'string') throw new Error('bad_shape');
-        renderBody(bodyEl, data.body);
-        if (updatedEl) {
-          var parts = [];
-          if (data.version) parts.push('버전 ' + data.version);
-          var eff = fmtDate(data.effective_at);
-          if (eff) parts.push('시행일: ' + eff);
-          updatedEl.textContent = parts.join(' · ') || fallbackUpdatedText;
-        }
-        if (loadingEl) loadingEl.hidden = true;
-        if (fallbackEl) fallbackEl.hidden = true;
-        if (dynamicEl) dynamicEl.hidden = false;
-      })
-      .catch(function () {
-        showFallback();
-      });
-  }
-
-  // 언어 토글 시 재요청 (헤더는 common.js가 비동기로 생성하므로 위임 처리)
-  document.addEventListener('click', function (e) {
-    var btn = e.target && e.target.closest ? e.target.closest('.lang-toggle button') : null;
-    if (btn && btn.dataset && btn.dataset.lang) {
-      setTimeout(loadTerms, 0);
-    }
-  });
-
-  loadTerms();
-})();
-</script>
+<script src="assets/terms-page.js"></script>
 </body>
 </html>

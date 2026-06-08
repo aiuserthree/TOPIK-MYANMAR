@@ -90,14 +90,14 @@
     if (!previewEl) return;
     previewEl.classList.add('has-photo');
     previewEl.innerHTML =
-      '<img src="' + dataUrl + '" alt="증명사진 미리보기">' +
+      '<img src="' + dataUrl + '" alt="' + pt('photo.preview_alt', '증명사진 미리보기') + '">' +
       (fileName ? '<span class="photo-file-meta">' + fileName + ' · ' + formatSize(fileSize) + '</span>' : '');
   }
 
   function clearPreview(previewEl, placeholder) {
     if (!previewEl) return;
     previewEl.classList.remove('has-photo');
-    previewEl.innerHTML = placeholder || '사진<br>미리보기';
+    previewEl.innerHTML = placeholder || pt('photo.preview', '사진<br>미리보기');
   }
 
   function showError(zone, msg) {
@@ -161,6 +161,14 @@
       reader.readAsDataURL(file);
     });
 
+    function restorePreviewFromState() {
+      if (!state.dataUrl) return;
+      var file = state.file;
+      setPreview(previewEl, state.dataUrl, file && file.name, file && file.size);
+    }
+
+    document.addEventListener('tpkm:langchange', restorePreviewFromState);
+
     return {
       getState: function () { return state; },
       reset: function () {
@@ -172,6 +180,7 @@
       setDataUrl: function (url) {
         if (!url) { this.reset(); return; }
         state.dataUrl = url;
+        state.file = null;
         setPreview(previewEl, url);
       }
     };

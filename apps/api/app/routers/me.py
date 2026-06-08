@@ -3,19 +3,23 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, Request
+
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db_session
-from app.lib.deps import AuthUser, require_user
+from app.lib.deps import AuthUser, get_client_ip, require_user
 from app.lib.email_notify import notify_account_status
 from app.lib.errors import api_error
+from app.lib.consents import persist_term_consents
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_photo
 from app.lib.validation import (
     gender_to_code,
+    is_under_minimum_age,
     is_valid_password,
     normalize_birth_date,
     validate_roster_codes,
@@ -24,6 +28,7 @@ from app.models.application import Application, ApplicationSubmission
 from app.models.user import User
 
 router = APIRouter(tags=["me"])
+settings = get_settings()
 
 
 class UpdateMeBody(BaseModel):
@@ -40,6 +45,7 @@ class UpdateMeBody(BaseModel):
     purpose_code: int | None = None
     marketing_opt_in: bool | None = None
     photo_base64: str | None = None
+    terms_agreed: list[dict] | None = None
 
 
 class ChangePasswordBody(BaseModel):
@@ -90,6 +96,7 @@ async def update_me(
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
     auth: AuthUser = Depends(require_user),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
@@ -103,6 +110,12 @@ async def update_me(
         birth = normalize_birth_date(data["birth_date"])
         if not birth:
             raise api_error("VALIDATION_ERROR", "생년월일 형식이 올바르지 않습니다.")
+        if is_under_minimum_age(birth):
+            raise api_error(
+                "AGE_RESTRICTED",
+                f"만 {settings.min_signup_age_years}세 미만은 회원가입할 수 없습니다.",
+                422,
+            )
         data["birth_date"] = birth
     if "gender" in data and data["gender"]:
         data["gender"] = gender_to_code(data["gender"])
@@ -112,6 +125,7 @@ async def update_me(
     if roster_err:
         raise api_error("VALIDATION_ERROR", roster_err)
     photo_base64 = data.pop("photo_base64", None)
+    terms_agreed = data.pop("terms_agreed", None)
     for key, value in data.items():
         setattr(user, key, value)
     if photo_base64:
@@ -125,6 +139,14 @@ async def update_me(
             )
         except ValueError as exc:
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
+    if terms_agreed is not None:
+        await persist_term_consents(
+            db,
+            user_id=user.id,
+            terms_agreed=terms_agreed,
+            marketing_opt_in=user.marketing_opt_in,
+            ip=ip,
+        )
     bump_rev(user)
     await db.commit()
     await db.refresh(user)
@@ -139,7 +161,15 @@ async def change_password(
 ) -> dict:
     result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(body.current_password, user.password_hash):
+    if not user:
+        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+    if user.signup_provider != "email" or not user.password_hash:
+        raise api_error(
+            "VALIDATION_ERROR",
+            "Google 계정은 비밀번호 변경을 사용할 수 없습니다.",
+            400,
+        )
+    if not verify_password(body.current_password, user.password_hash):
         raise api_error("INVALID_CREDENTIALS", "현재 비밀번호가 올바르지 않습니다.", 400)
     if not is_valid_password(body.new_password) or body.new_password != body.new_password_confirm:
         raise api_error("VALIDATION_ERROR", "새 비밀번호 규칙을 확인해 주세요.")

@@ -89,6 +89,16 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
     )
 
 
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    """Uncaught errors → JSON 500 so CORS middleware can attach headers."""
+    message = str(exc) if settings.is_development else "서버 오류가 발생했습니다."
+    return JSONResponse(
+        status_code=500,
+        content={"error": {"code": "INTERNAL_ERROR", "message": message}},
+    )
+
+
 @app.exception_handler(IntegrityError)
 async def _integrity_exception_handler(request: Request, exc: IntegrityError):
     """Unhandled unique/FK violations → JSON 409/400 (CORS-safe) instead of bare 500."""

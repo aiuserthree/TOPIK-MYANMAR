@@ -1,0 +1,33 @@
+# Local MinIO — S3-compatible storage mirroring IwinV Object Storage for dev.
+# Usage (from apps/api):
+#   docker compose -f docker-compose.minio.yml up -d
+#   # Console: http://127.0.0.1:9001  (minioadmin / minioadmin)
+#   # API S3 endpoint: http://127.0.0.1:9000
+# Then set STORAGE_PROVIDER=s3 and S3_* vars in .env (see .env.example).
+
+services:
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  create-bucket:
+    image: minio/mc:RELEASE.2025-04-08T15-39-49Z
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin 2>/dev/null; do sleep 1; done &&
+      mc mb --ignore-existing local/topik-myanmar-photos &&
+      exit 0
+      "
+
+volumes:
+  minio_data:

@@ -12,7 +12,7 @@ FONT = (
     "'Apple SD Gothic Neo','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
 )
 MONO = "'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace"
-SUPPORT_EMAIL = "topik.myanmar@koica.go.kr"
+SUPPORT_EMAIL = "support@topik-myanmar.com"
 
 THEME_C = {
     "page_bg": "#ffffff",

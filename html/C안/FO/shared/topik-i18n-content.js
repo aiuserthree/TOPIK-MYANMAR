@@ -73,9 +73,9 @@
     'foot.privacy': { ko: '개인정보처리방침', my: 'ကိုယ်ရေးအချက်အလက် မူဝါဒ', en: 'Privacy policy' },
     'foot.terms': { ko: '이용약관', my: 'အသုံးပြုမှု စည်းကမ်း', en: 'Terms of use' },
     'foot.contact': {
-      ko: '<strong>문의</strong><br>topik.myanmar@mofa.go.kr<br>업무시간 월–금 09:00–17:00 (UTC+6:30)',
-      my: '<strong>ဆက်သွယ်ရန်</strong><br>topik.myanmar@mofa.go.kr<br>တနင်္လ–သောကြာ 09:00–17:00 (UTC+6:30)',
-      en: '<strong>Contact</strong><br>topik.myanmar@mofa.go.kr<br>Mon–Fri 09:00–17:00 (UTC+6:30)'
+      ko: '<strong>문의</strong><br>support@topik-myanmar.com<br>업무시간 월–금 09:00–17:00 (UTC+6:30)',
+      my: '<strong>ဆက်သွယ်ရန်</strong><br>support@topik-myanmar.com<br>တနင်္လ–သောကြာ 09:00–17:00 (UTC+6:30)',
+      en: '<strong>Contact</strong><br>support@topik-myanmar.com<br>Mon–Fri 09:00–17:00 (UTC+6:30)'
     },
     'foot.copy': {
       ko: '© 2025–2026 Embassy of the Republic of Korea in Myanmar. All rights reserved.',
@@ -224,6 +224,7 @@
     'photo.err_type': { ko: 'JPG·PNG 형식만 업로드할 수 있습니다.', my: 'JPG·PNG ဖိုင်အမျိုးအစားသာ တင်နိုင်သည်။', en: 'Only JPG/PNG files can be uploaded.' },
     'photo.err_size': { ko: '파일 크기는 2MB 이하여야 합니다.', my: 'ဖိုင်အရွယ်အစား 2MB အောက် ဖြစ်ရမည်။', en: 'The file must be 2MB or smaller.' },
     'photo.preview': { ko: '사진<br>미리보기', my: 'ဓာတ်ပုံ<br>အစမ်းကြည့်', en: 'Photo<br>preview' },
+    'photo.preview_alt': { ko: '증명사진 미리보기', my: 'သက်သေခံ ဓာတ်ပုံ အစမ်းကြည့်', en: 'ID photo preview' },
 
     /* ── 공지/FAQ (fo-notices.js 등 공용 동적 렌더 — ko/my/en) ── */
     'nt.loading': { ko: '공지를 불러오는 중…', my: 'ကြေညာချက် ဖွင့်နေသည်…', en: 'Loading notices…' },
@@ -297,10 +298,15 @@
     } catch (e) { /* old browsers */ }
   }
 
+  function skipI18nContent(el) {
+    return el.classList.contains('has-photo');
+  }
+
   function apply(lang) {
     lang = normLang(lang);
     if (lang === 'ko') {
       document.querySelectorAll('[' + STORE_ORIG + ']').forEach(function (el) {
+        if (skipI18nContent(el)) return;
         var orig = el.getAttribute(STORE_ORIG);
         if (el.hasAttribute('data-i18n-content-html')) el.innerHTML = orig;
         else if (el.hasAttribute('data-i18n-content-placeholder')) el.placeholder = orig;
@@ -310,6 +316,7 @@
       return;
     }
     document.querySelectorAll('[data-i18n-content]').forEach(function (el) {
+      if (skipI18nContent(el)) return;
       captureOriginal(el);
       var key = el.getAttribute('data-i18n-content');
       var val = text(key, lang);
