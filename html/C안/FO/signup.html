@@ -661,8 +661,8 @@
       verifiedEmail = u.email || '';
       document.getElementById('su-email').value = verifiedEmail;
       document.getElementById('su-email-display').value = verifiedEmail;
-      if (u.name_ko) document.getElementById('su-name-ko').value = u.name_ko;
-      if (u.name_en) document.getElementById('su-name-en').value = String(u.name_en).toUpperCase();
+      document.getElementById('su-name-ko').value = '';
+      document.getElementById('su-name-en').value = '';
       if (u.birth_date && u.birth_date !== '00000000') document.getElementById('su-birth').value = u.birth_date;
       if (u.gender) document.getElementById('su-gender').value = u.gender === '2' ? 'female' : 'male';
       if (u.nationality) document.getElementById('su-nationality').value = u.nationality;
@@ -983,8 +983,8 @@
         verifiedEmail = u.email || '';
         document.getElementById('su-email').value = verifiedEmail;
         document.getElementById('su-email-display').value = verifiedEmail;
-        if (u.name_ko) document.getElementById('su-name-ko').value = u.name_ko;
-        if (u.name_en) document.getElementById('su-name-en').value = String(u.name_en).toUpperCase();
+        document.getElementById('su-name-ko').value = '';
+        document.getElementById('su-name-en').value = '';
         document.getElementById('emailOk').classList.remove('hidden');
         var okMsg = document.querySelector('#emailOk .callout div div');
         if (okMsg) okMsg.innerHTML = '<strong>Google 계정 인증이 완료되었습니다.</strong>';

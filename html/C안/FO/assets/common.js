@@ -465,6 +465,47 @@
     return TopikApi.getMe().catch(function () { /* ignore */ });
   }
 
+  // ---- Subnav: 모바일 가로 스크롤 시 활성/클릭 탭을 뷰포트 중앙으로 ----
+  function focusSubnavLink(nav, link, smooth) {
+    if (!nav || !link) return;
+    var max = Math.max(0, nav.scrollWidth - nav.clientWidth);
+    var target = link.offsetLeft - (nav.clientWidth - link.offsetWidth) / 2;
+    nav.scrollTo({
+      left: Math.max(0, Math.min(target, max)),
+      behavior: smooth ? 'smooth' : 'auto'
+    });
+  }
+
+  function focusSubnavActive(nav, smooth) {
+    var active = nav.querySelector('a.active');
+    if (active) focusSubnavLink(nav, active, smooth);
+  }
+
+  function initSubnavFocus() {
+    var navs = document.querySelectorAll('.subnav');
+    if (!navs.length) return;
+
+    navs.forEach(function (nav) {
+      focusSubnavActive(nav, false);
+
+      nav.addEventListener('click', function (e) {
+        var link = e.target.closest && e.target.closest('a');
+        if (!link || !nav.contains(link)) return;
+        focusSubnavLink(nav, link, true);
+      });
+    });
+
+    document.addEventListener('tpkm:langchange', function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          document.querySelectorAll('.subnav').forEach(function (nav) {
+            focusSubnavActive(nav, true);
+          });
+        });
+      });
+    });
+  }
+
   // ---- DOM ready ----
   function init() {
     ensureFavicon();
@@ -474,6 +515,7 @@
       buildFooter();
       buildTabbar();
       checkLoginGuard();
+      initSubnavFocus();
     };
     syncProfileState().then(boot).catch(boot);
   }

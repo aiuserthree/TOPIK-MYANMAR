@@ -48,7 +48,13 @@
   .content-block ul li { margin-bottom: 4px; list-style: disc; }
   @media (min-width: 768px) { .content-block h2 { font-size: 22px; } }
 
-  .schedule-table th { white-space: nowrap; }
+  /* 모바일: 연간 시험 일정 표 가로 스와이프 */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .schedule-table th,
+  .schedule-table td { white-space: nowrap; }
   .schedule-table .row-active { background: var(--primary-50); }
   .schedule-table .row-active td { font-weight: 600; color: var(--primary-700); }
   .schedule-table .col-num { font-family: 'Inter', sans-serif; font-weight: 600; color: var(--text); }
@@ -160,6 +166,7 @@
       <div class="content-block">
         <h2 data-i18n-content="go.h_schedule">연간 시험 일정 (2026)</h2>
         <div class="card" style="padding: 0; overflow: hidden;">
+          <div class="table-scroll">
           <table class="table schedule-table">
             <thead>
               <tr>
@@ -184,6 +191,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
         <p class="body-sm" style="margin-top: 8px;" data-i18n-content="go.schedule_note">※ 회차별 시험장·응시료는 공지사항을 참고해 주세요. 일정은 변경될 수 있습니다.</p>
       </div>
@@ -224,6 +232,7 @@
     'go.purpose_2': { ko: '국내·외 대학(원) 입학 및 학사관리 기준 활용', my: 'ပြည်တွင်း·ပြည်ပ တက္ကသိုလ် (ဘွဲ့လွန်) ဝင်ခွင့်နှင့် ပညာရေး စီမံခန့်ခွဲမှု စံအဖြစ် အသုံးပြုခြင်း', en: 'Used for admission to universities (and graduate schools) at home and abroad and for academic administration' },
     'go.purpose_3': { ko: '한국 기업 취업·EPS(고용허가제) 활용', my: 'ကိုရီးယားကုမ္ပဏီ အလုပ်အကိုင်·EPS (အလုပ်ခန့်ထားခွင့်စနစ်) တွင် အသုံးပြုခြင်း', en: 'Used for employment at Korean companies and the EPS (Employment Permit System)' },
     'go.purpose_4': { ko: '외국인의 국내 거주 및 영주권·시민권 취득에 활용', my: 'နိုင်ငံခြားသားများ ကိုရီးယားတွင် နေထိုင်ခြင်းနှင့် အမြဲတမ်းနေထိုင်ခွင့်·နိုင်ငံသားခွင့် ရယူရာတွင် အသုံးပြုခြင်း', en: "Used for foreigners' residence in Korea and for obtaining permanent residency or citizenship" },
+    'go.round_tag': { ko: '제{n}회', my: '({n}) ကြိမ်မြောက်', en: 'Session {n}' },
     'go.th_round': { ko: '회차', my: 'အကြိမ်ရေ', en: 'Session' },
     'go.th_reg': { ko: '접수 기간', my: 'လျှောက်လွှာ ကာလ', en: 'Registration period' },
     'go.th_pay': { ko: '응시료 납부', my: 'ဖြေဆိုကြေး ပေးသွင်းခြင်း', en: 'Fee payment' },
@@ -244,7 +253,25 @@
   var tbody = document.getElementById('scheduleTbody');
   if (!tbody) return;
 
+  var scheduleItems = null;
   var MMT_MS = (6 * 60 + 30) * 60000;
+
+  var STATIC_ROWS = [
+    { round_no: 106, registration_status: null, _static: { reg: '2026.06.01 — 07.21', pay: '2026.07.24 — 07.26', exam: '2026.09.19' } },
+    { round_no: 107, registration_status: 'open', _static: { reg: '2026.07.17 — 07.21', pay: '2026.07.24 — 07.26', exam: '2026.10.18' } }
+  ];
+
+  function bt(key, fallback) {
+    try {
+      if (window.TPKMLang && typeof TPKMLang.t === 'function') {
+        var v = TPKMLang.t(key);
+        if (v) return v;
+      }
+    } catch (e) { /* ignore */ }
+    return fallback;
+  }
+  function btf(key, fallback, n) { return bt(key, fallback).replace('{n}', n); }
+  function roundLabel(n) { return btf('go.round_tag', '제{n}회', n); }
 
   function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
   function mmt(v) {
@@ -269,23 +296,41 @@
     return ymdDot(start) + ' — ' + mdDot(end);
   }
 
-  function renderRows(items) {
-    if (!items || !items.length) return;
-    tbody.innerHTML = items.map(function (r) {
-      var active = r.registration_status === 'open' ? ' class="row-active"' : '';
-      return '<tr' + active + '>' +
-        '<td class="col-num">제' + (r.round_no != null ? r.round_no : '?') + '회</td>' +
-        '<td>' + period(r.registration_start_at, r.registration_end_at) + '</td>' +
-        '<td>' + payPeriod(r.payment_start_at, r.payment_end_at) + '</td>' +
-        '<td>' + ymdDot(r.exam_date) + '</td>' +
-        '</tr>';
-    }).join('');
+  function rowHtml(r) {
+    var active = r.registration_status === 'open' ? ' class="row-active"' : '';
+    var reg, pay, exam;
+    if (r._static) {
+      reg = r._static.reg;
+      pay = r._static.pay;
+      exam = r._static.exam;
+    } else {
+      reg = period(r.registration_start_at, r.registration_end_at);
+      pay = payPeriod(r.payment_start_at, r.payment_end_at);
+      exam = ymdDot(r.exam_date);
+    }
+    return '<tr' + active + '>' +
+      '<td class="col-num">' + roundLabel(r.round_no != null ? r.round_no : '?') + '</td>' +
+      '<td>' + reg + '</td>' +
+      '<td>' + pay + '</td>' +
+      '<td>' + exam + '</td>' +
+      '</tr>';
   }
+
+  function paint() {
+    var items = scheduleItems || STATIC_ROWS;
+    if (!items.length) return;
+    tbody.innerHTML = items.map(rowHtml).join('');
+  }
+
+  paint();
+
+  document.addEventListener('tpkm:langchange', paint);
 
   if (!window.TopikApi || !TopikApi.canUseApi()) return;
   TopikApi.getExamRounds().then(function (res) {
     if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) return;
-    renderRows(res.body.items);
+    scheduleItems = res.body.items;
+    paint();
   }).catch(function () { /* 정적 폴백 유지 */ });
 })();
 </script>
