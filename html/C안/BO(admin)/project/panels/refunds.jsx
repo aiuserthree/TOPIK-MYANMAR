@@ -134,7 +134,6 @@ function RefundDetailLP({ id, onClose }) {
   const r = state.refunds.find(x => x.id === id);
   const [status, setStatus] = useState(r.status);
   const [reply, setReply] = useState('');
-  const [replyPublic, setReplyPublic] = useState(false);
   const [comment, setComment] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
   const [refundMethod, setRefundMethod] = useState('계좌이체');
@@ -155,7 +154,7 @@ function RefundDetailLP({ id, onClose }) {
     if (!reply.trim()) { toastErr('답변 내용을 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       if (status !== r.status) await DataStore.apiBoardWorkflow(id, status, 'refund');
-      const ok = await DataStore.apiBoardReply(id, reply, 'refund', { public: replyPublic, status: status });
+      const ok = await DataStore.apiBoardReply(id, reply, 'refund', { status: status });
       if (ok) { setReply(''); toastOk('답변이 등록되었습니다. (FO 게시판에 노출)'); }
       return;
     }
@@ -163,8 +162,8 @@ function RefundDetailLP({ id, onClose }) {
     r.hasAnswer = true;
     r.assignee = state.me?.id || 'admin01';
     r.status = status;
-    r.comments.push({ author: state.me?.id, body: reply, public: replyPublic, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
-    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', before, after: { hasAnswer: true, status }, memo: `답변 등록(${replyPublic ? '공개' : '비공개'})` });
+    r.comments.push({ author: state.me?.id, body: reply, public: false, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
+    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', before, after: { hasAnswer: true, status }, memo: '답변 등록' });
     DataStore.notify();
     setReply('');
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
@@ -234,12 +233,6 @@ function RefundDetailLP({ id, onClose }) {
         <FormRow label="답변 내용" required>
           <textarea className="textarea" rows="5" value={reply} onChange={e => setReply(e.target.value)} placeholder="작성자에게 보낼 답변을 입력하세요."/>
         </FormRow>
-        <FormRow>
-          <label style={{ fontSize: 13, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            <input type="checkbox" checked={replyPublic} onChange={e => setReplyPublic(e.target.checked)}/>
-            공개 답변 (체크 시 FO에서도 노출 — 비밀글이라도 작성자에게는 항상 보입니다)
-          </label>
-        </FormRow>
       </FieldSet>
 
       <FieldSet legend={`댓글/대댓글 (${r.comments.length})`} cols={1}>
@@ -247,7 +240,7 @@ function RefundDetailLP({ id, onClose }) {
           {r.comments.map((c, idx) => (
             <div key={idx} style={{ padding: 10, background: 'var(--bg-2)', borderRadius: 6, fontSize: 13 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
-                <span><b>{c.author}</b> · <span className="code-id">{c.kind === 'reply' ? '답변' : '댓글'}</span> · {c.public ? '공개' : '비공개'}</span>
+                <span><b>{c.author}</b> · <span className="code-id">{c.kind === 'reply' ? '답변' : '댓글'}</span></span>
                 <span className="code-id">{c.ts}</span>
               </div>
               <div>{c.body}</div>

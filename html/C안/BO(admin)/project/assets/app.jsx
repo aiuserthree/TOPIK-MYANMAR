@@ -53,16 +53,18 @@ function ChangePasswordGate({ onDone }) {
   const [pw2, setPw2] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const valid = pw.length >= 8 && pw === pw2;
+  const pwRuleOk = /[A-Za-z]/.test(pw) && /\d/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+  const valid = pw.length >= 8 && pwRuleOk && pw === pw2;
 
   const submit = (e) => {
     e.preventDefault();
     setErr('');
     if (pw.length < 8) { setErr('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (!pwRuleOk) { setErr('새 비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.'); return; }
     if (pw !== pw2) { setErr('새 비밀번호가 일치하지 않습니다.'); return; }
     if (!window.TopikBoApi || !TopikBoApi.changeMyPassword) { setErr('API 클라이언트를 불러오지 못했습니다.'); return; }
     setBusy(true);
-    TopikBoApi.changeMyPassword(cur, pw).then(function (res) {
+    TopikBoApi.changeMyPassword(cur, pw, pw2).then(function (res) {
       setBusy(false);
       if (res.ok) {
         try {
@@ -89,7 +91,7 @@ function ChangePasswordGate({ onDone }) {
         </div>
         <div className="form-row">
           <label className="label">새 비밀번호 <span className="req">*</span></label>
-          <input className="input" type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="8자 이상" autoComplete="new-password"/>
+          <input className="input" type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="8자 이상 · 영문+숫자+특수문자" autoComplete="new-password"/>
         </div>
         <div className="form-row">
           <label className="label">새 비밀번호 확인 <span className="req">*</span></label>

@@ -30,7 +30,7 @@ from app.lib.security import (
 from app.lib.consents import persist_term_consents
 from app.lib.email_notify import notify_password_expiry_reminder
 from app.lib.google_auth import verify_google_id_token
-from app.lib.mail import enqueue_email, format_verification_code, is_mailer_live
+from app.lib.mail import enqueue_email, format_verification_code, mail_delivery_status, schedule_outbox_delivery
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
 from app.lib.validation import (
@@ -462,10 +462,10 @@ async def send_verification_code(body: SendCodeBody, db: AsyncSession = Depends(
         },
     )
     await db.commit()
-    mail_delivered = is_mailer_live() and mail_result["sent"]
+    schedule_outbox_delivery(mail_result.get("queued_id"))
     out: dict = {
         "sent": True,
-        "mail_delivered": mail_delivered,
+        "mail_delivered": mail_delivery_status(mail_result),
         "expires_in_seconds": 300,
     }
     if settings.is_development:
@@ -585,12 +585,12 @@ async def forgot_password(body: ForgotPasswordBody, db: AsyncSession = Depends(g
         },
     )
     await db.commit()
-    mail_delivered = is_mailer_live() and mail_result["sent"]
+    schedule_outbox_delivery(mail_result.get("queued_id"))
     out: dict = {
         "sent": True,
         "registered": True,
         "provider": "email",
-        "mail_delivered": mail_delivered,
+        "mail_delivered": mail_delivery_status(mail_result),
         "expires_in_seconds": 1800,
     }
     if settings.is_development:

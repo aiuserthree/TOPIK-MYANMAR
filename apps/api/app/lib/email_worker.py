@@ -9,7 +9,7 @@ from app.lib.mail import process_outbox_batch
 
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL_SECONDS = 30
+POLL_INTERVAL_SECONDS = 5
 
 
 async def email_worker_loop() -> None:

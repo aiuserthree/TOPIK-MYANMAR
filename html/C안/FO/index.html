@@ -321,19 +321,19 @@
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 01</div>
           <div class="step-t" data-i18n-content="home.step_apply">원서 접수</div>
-          <div class="step-d">2026.07.17(금) — 07.21(화)</div>
+          <div class="step-d">2026.07.17 — 07.21</div>
         </div>
         <div class="tl-card" data-tl-start="2026-07-24" data-tl-end="2026-07-26">
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 02</div>
           <div class="step-t" data-i18n-content="home.step_pay">응시료 납부 (오프라인)</div>
-          <div class="step-d">2026.07.24(금) — 07.26(일)</div>
+          <div class="step-d">2026.07.24 — 07.26</div>
         </div>
         <div class="tl-card" data-tl-start="2026-10-18" data-tl-end="2026-10-18">
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 03</div>
           <div class="step-t" data-i18n-content="home.step_exam">시험 시행</div>
-          <div class="step-d">2026.10.18 (일)</div>
+          <div class="step-d">2026.10.18</div>
         </div>
         <div class="tl-card" data-tl-tbd>
           <span class="tl-badge" aria-hidden="true" hidden></span>
@@ -555,8 +555,6 @@
   (function () {
     var TZ = '+06:30';
     var MMT_MS = (6 * 60 + 30) * 60000; // UTC → 미얀마 시간 보정
-    var WD = ['일', '월', '화', '수', '목', '금', '토'];
-
     // 정적 폴백값(현행 하드코딩과 동일한 시점). 접수시작/마감은 절대 시각 기준.
     var SCHED = {
       roundNo: 107,
@@ -576,8 +574,6 @@
     function ymd(v) { var d = mmt(v); return d ? d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) : ''; }
     function ymdDot(v) { var d = mmt(v); return d ? d.getUTCFullYear() + '.' + pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--'; }
     function mdDot(v) { var d = mmt(v); return d ? pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--'; }
-    function wd(v) { var d = mmt(v); return d ? '(' + WD[d.getUTCDay()] + ')' : ''; }
-
     function roundTag() { return btf('home.round_tag', '제{n}회', SCHED.roundNo); }
     function examDot() { return ymdDot(SCHED.examDate); }
     function regPeriod() { return ymdDot(SCHED.regStart) + ' ~ ' + mdDot(SCHED.regEnd); }
@@ -626,17 +622,17 @@
         cards[0].setAttribute('data-tl-start', ymd(SCHED.regStart));
         cards[0].setAttribute('data-tl-end', ymd(SCHED.regEnd));
         var s1 = cards[0].querySelector('.step-d');
-        if (s1) s1.textContent = ymdDot(SCHED.regStart) + wd(SCHED.regStart) + ' — ' + mdDot(SCHED.regEnd) + wd(SCHED.regEnd);
+        if (s1) s1.textContent = ymdDot(SCHED.regStart) + ' — ' + mdDot(SCHED.regEnd);
       }
       if (cards[2]) { // STEP 03 시험 시행
         cards[2].setAttribute('data-tl-start', ymd(SCHED.examDate));
         cards[2].setAttribute('data-tl-end', ymd(SCHED.examDate));
         var s3 = cards[2].querySelector('.step-d');
-        if (s3) s3.textContent = ymdDot(SCHED.examDate) + ' ' + wd(SCHED.examDate);
+        if (s3) s3.textContent = ymdDot(SCHED.examDate);
       }
       if (cards[3]) { // STEP 04 합격 발표
         var s4 = cards[3].querySelector('.step-d');
-        if (s4) s4.textContent = SCHED.resultDate ? (ymdDot(SCHED.resultDate) + ' ' + wd(SCHED.resultDate)) : bt('home.tbd', '추후 공지');
+        if (s4) s4.textContent = SCHED.resultDate ? ymdDot(SCHED.resultDate) : bt('home.tbd', '추후 공지');
       }
     }
 

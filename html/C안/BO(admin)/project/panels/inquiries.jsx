@@ -1,6 +1,6 @@
 /* panels/inquiries.jsx — 문의게시판 관리 (TPKM_BO_4_4_*)
    - 전체/일반/비밀 탭, 카테고리, 상태(답변대기/답변완료), 검색
-   - 답변 작성·답변 완료 처리(토글), 댓글/대댓글
+   - 답변 작성(등록 시 자동 답변완료), 댓글/대댓글
 */
 
 const INQ_CATS = ['접수','시험','기타'];
@@ -118,7 +118,6 @@ function InquiryDetailLP({ id, onClose }) {
   const state = useStore();
   const q = state.inquiries.find(x => x.id === id);
   const [reply, setReply] = useState('');
-  const [done, setDone] = useState(q.status === 'done');
   const [comment, setComment] = useState('');
   const [commentPublic, setCommentPublic] = useState(!q.secret);
 
@@ -139,15 +138,15 @@ function InquiryDetailLP({ id, onClose }) {
   const submit = async () => {
     if (!reply.trim()) { toastErr('답변을 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const ok = await DataStore.apiBoardReply(id, reply, 'inquiry', { markDone: done, public: !q.secret });
+      const ok = await DataStore.apiBoardReply(id, reply, 'inquiry', { markDone: true, public: !q.secret });
       if (ok) { setReply(''); toastOk('답변이 등록되었습니다. (FO 게시판에 노출)'); }
       return;
     }
     const before = { status: q.status };
     q.comments.push({ author: state.me?.id, body: reply, public: !q.secret, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
     q.assignee = state.me?.id;
-    if (done) q.status = 'done';
-    DataStore.addAudit({ type: '문의', targetId: id, action: '수정', before, after: { status: q.status }, memo: `답변 등록${done ? '+답변완료 처리' : ''}` });
+    q.status = 'done';
+    DataStore.addAudit({ type: '문의', targetId: id, action: '수정', before, after: { status: q.status }, memo: '답변 등록·답변완료 처리' });
     DataStore.notify();
     setReply('');
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
@@ -173,7 +172,7 @@ function InquiryDetailLP({ id, onClose }) {
     <LP open size="wide" title={q.title} sub={`작성자 ${q.author} · 작성일 ${q.createdAt} · ${q.secret ? '비밀글' : '일반글'}`} onClose={onClose}
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        <button className="btn btn-primary" onClick={submit} disabled={!reply.trim()}>{done ? '답변 등록 · 완료 처리' : '답변 등록'}</button>
+        <button className="btn btn-primary" onClick={submit} disabled={!reply.trim()}>답변 등록 · 완료 처리</button>
       </>}>
       <FieldSet legend="문의 내용" cols={1}>
         <KV k="카테고리" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{q.cat}</span>}/>
@@ -183,12 +182,6 @@ function InquiryDetailLP({ id, onClose }) {
       <FieldSet legend="답변 작성" cols={1}>
         <FormRow label="답변 내용" required>
           <textarea className="textarea" rows="5" value={reply} onChange={e => setReply(e.target.value)} placeholder="답변 내용을 입력하세요."/>
-        </FormRow>
-        <FormRow>
-          <label style={{ fontSize: 13, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            <input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)}/>
-            답변 완료 처리 (상태를 '답변완료'로 전환)
-          </label>
         </FormRow>
       </FieldSet>
 

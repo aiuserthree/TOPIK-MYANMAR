@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import smtplib
@@ -16,10 +17,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
+from app.database import AsyncSessionLocal
 from app.lib.email_render import render_password_reset, render_signup_verify_code, render_transactional
 from app.models.system import EmailOutbox
 
 logger = logging.getLogger(__name__)
+
+_pending_delivery_tasks: set[asyncio.Task] = set()
 
 MAX_RETRIES = 5
 RETRY_DELAYS_SECONDS = (30, 120, 600, 1800, 3600)
@@ -48,6 +52,18 @@ def is_mailer_live(settings: Settings | None = None) -> bool:
         return bool(cfg.smtp_host and cfg.smtp_user and cfg.smtp_pass)
     if provider == "resend":
         return bool(cfg.resend_api_key)
+    return False
+
+
+def mail_delivery_status(mail_result: dict, settings: Settings | None = None) -> bool:
+    """True when mail was sent or queued for immediate background delivery."""
+    cfg = settings or get_settings()
+    if not is_mailer_live(cfg):
+        return False
+    if mail_result.get("sent") or mail_result.get("status") == "sent":
+        return True
+    if mail_result.get("status") == "queued":
+        return True
     return False
 
 
@@ -183,19 +199,44 @@ async def enqueue_email(
     )
     db.add(row)
     await db.flush()
-
-    if not cfg.enable_email_worker:
-        sent = await deliver_outbox_row(db, row, cfg)
-        return {"queued_id": row.id, "sent": sent, "status": row.status}
-
     return {"queued_id": row.id, "sent": False, "status": row.status}
+
+
+async def _deliver_outbox_row_by_id(outbox_id: int) -> None:
+    cfg = get_settings()
+    try:
+        async with AsyncSessionLocal() as db:
+            row = await db.get(EmailOutbox, outbox_id)
+            if not row or row.status != "queued":
+                return
+            now = datetime.now(timezone.utc)
+            if row.next_retry_at and row.next_retry_at > now:
+                return
+            await deliver_outbox_row(db, row, cfg)
+            await db.commit()
+    except Exception:
+        logger.exception("background outbox delivery failed id=%s", outbox_id)
+
+
+def schedule_outbox_delivery(outbox_id: int | None) -> None:
+    """Commit 이후 호출 — HTTP 응답을 막지 않고 백그라운드에서 SMTP 발송."""
+    if not outbox_id or not is_mailer_live():
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    task = loop.create_task(_deliver_outbox_row_by_id(outbox_id))
+    _pending_delivery_tasks.add(task)
+    task.add_done_callback(_pending_delivery_tasks.discard)
 
 
 async def deliver_outbox_row(db: AsyncSession, row: EmailOutbox, settings: Settings) -> bool:
     rendered = render_template(row.template_key, row.locale, row.variables, settings)
     now = datetime.now(timezone.utc)
     try:
-        sent = send_email(row.to_email, rendered, settings)
+        # smtplib/urllib은 블로킹 — 스레드로 분리해 이벤트 루프를 막지 않음.
+        sent = await asyncio.to_thread(send_email, row.to_email, rendered, settings)
         row.status = "sent"
         row.sent_at = now
         row.last_error = None

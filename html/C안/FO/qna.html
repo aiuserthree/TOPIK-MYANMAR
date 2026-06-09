@@ -100,8 +100,8 @@
     font-size: 13.5px; font-weight: 600; color: var(--primary);
     margin-bottom: 8px;
   }
-  .reply-block .who::before {
-    content: "답변"; padding: 2px 8px;
+  .reply-block .reply-badge {
+    padding: 2px 8px;
     background: var(--primary); color: #fff;
     font-size: 11px; font-weight: 700;
     border-radius: 99px;
@@ -315,7 +315,10 @@
         <div class="detail-body" id="bdBody"></div>
 
         <div class="reply-block" id="bdReply" style="display:none;">
-          <div class="who"><span class="when" id="bdReplyWhen"></span></div>
+          <div class="who">
+            <span class="reply-badge" data-i18n-content="board.admin_reply">답변</span>
+            <span class="when" id="bdReplyWhen"></span>
+          </div>
           <div class="body-r" id="bdReplyBody"></div>
         </div>
 
@@ -391,7 +394,7 @@
 </script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
-<script src="assets/fo-board.js"></script>
+<script src="assets/fo-board.js?v=20260609"></script>
 <script>
   window.show = function (id) {
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));

@@ -174,13 +174,13 @@
                 <td class="col-num">제106회</td>
                 <td>2026.06.01 — 07.21</td>
                 <td>2026.07.24 — 07.26</td>
-                <td>2026.09.19 (일)</td>
+                <td>2026.09.19</td>
               </tr>
               <tr class="row-active">
                 <td class="col-num">제107회</td>
                 <td>2026.07.17 — 07.21</td>
                 <td>2026.07.24 — 07.26</td>
-                <td>2026.10.18 (일)</td>
+                <td>2026.10.18</td>
               </tr>
             </tbody>
           </table>
@@ -244,7 +244,6 @@
   var tbody = document.getElementById('scheduleTbody');
   if (!tbody) return;
 
-  var WD = ['일', '월', '화', '수', '목', '금', '토'];
   var MMT_MS = (6 * 60 + 30) * 60000;
 
   function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
@@ -260,10 +259,6 @@
   function mdDot(v) {
     var d = mmt(v);
     return d ? pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--';
-  }
-  function wd(v) {
-    var d = mmt(v);
-    return d ? ' (' + WD[d.getUTCDay()] + ')' : '';
   }
   function period(start, end) {
     if (!start || !end) return '—';
@@ -282,7 +277,7 @@
         '<td class="col-num">제' + (r.round_no != null ? r.round_no : '?') + '회</td>' +
         '<td>' + period(r.registration_start_at, r.registration_end_at) + '</td>' +
         '<td>' + payPeriod(r.payment_start_at, r.payment_end_at) + '</td>' +
-        '<td>' + ymdDot(r.exam_date) + wd(r.exam_date) + '</td>' +
+        '<td>' + ymdDot(r.exam_date) + '</td>' +
         '</tr>';
     }).join('');
   }

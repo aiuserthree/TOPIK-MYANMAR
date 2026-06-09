@@ -258,6 +258,25 @@
     return s === "inactive" ? "suspended" : s;
   }
 
+  // admin_replier_id(DB 순번) → 관리자 이름/이메일 표시
+  function resolveAdminLabel(adminId) {
+    if (adminId == null || adminId === "") return "";
+    var key = String(adminId);
+    var admins = (DS.state && DS.state.admins) || [];
+    var hit = admins.find(function (a) { return a.id === key || a.email === key; });
+    if (hit) return hit.name || hit.email || key;
+    return key;
+  }
+
+  function currentAdminLabel() {
+    var me = DS.state && DS.state.me;
+    if (!me) return "admin";
+    if (me.name) return me.name;
+    if (me.email) return me.email;
+    if (me.id && String(me.id).indexOf("@") >= 0) return me.id;
+    return resolveAdminLabel(me.id) || "admin";
+  }
+
   function mapRefund(row, idx) {
     return {
       id: String(row.id),
@@ -268,11 +287,11 @@
       createdAt: fmtKst(row.created_at),
       status: REFUND_STATUS_UI[row.workflow_status] || "접수",
       hasAnswer: !!row.has_admin_reply || !!row.admin_reply,
-      assignee: row.admin_replier_id ? String(row.admin_replier_id) : "",
+      assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
       attachments: [],
       comments: row.admin_reply ? [{
-        author: String(row.admin_replier_id || "admin"),
+        author: resolveAdminLabel(row.admin_replier_id) || "관리자",
         body: row.admin_reply,
         public: false,
         ts: fmtKst(row.admin_replied_at),
@@ -292,10 +311,10 @@
       author: row.author_email || row.author_name || ("user" + row.user_id),
       createdAt: fmtKst(row.created_at),
       status: done ? "done" : "wait",
-      assignee: row.admin_replier_id ? String(row.admin_replier_id) : "",
+      assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
       comments: row.admin_reply ? [{
-        author: String(row.admin_replier_id || "admin"),
+        author: resolveAdminLabel(row.admin_replier_id) || "관리자",
         body: row.admin_reply,
         public: !row.is_secret,
         ts: fmtKst(row.admin_replied_at),
@@ -527,11 +546,11 @@
         return mapNotice(n, i, DS.state.me && DS.state.me.id);
       });
       DS.state.faqs = ((faqRes.body && faqRes.body.items) || []).map(mapFaq);
-      DS.state.refunds = ((refRes.body && refRes.body.items) || []).map(mapRefund);
-      DS.state.inquiries = ((inqRes.body && inqRes.body.items) || []).map(mapInquiry);
       DS.state.members = ((memRes.body && memRes.body.items) || []).map(mapMember);
       DS.state.terms = ((termRes.body && termRes.body.items) || []).map(mapTerm);
       DS.state.admins = ((admRes.body && admRes.body.items) || []).map(mapAdmin);
+      DS.state.refunds = ((refRes.body && refRes.body.items) || []).map(mapRefund);
+      DS.state.inquiries = ((inqRes.body && inqRes.body.items) || []).map(mapInquiry);
       // 약관 동의 이력은 동의 이력 패널 진입 시 실제 API로 지연 로드(목업 제거)
       DS.state.consents = [];
 
@@ -792,7 +811,7 @@
         row.hasAnswer = true;
         row.comments = row.comments || [];
         row.comments.push({
-          author: DS.state.me && DS.state.me.id ? String(DS.state.me.id) : "admin",
+          author: currentAdminLabel(),
           body: body,
           public: !!opts.public,
           ts: new Date().toISOString().slice(0, 16).replace("T", " "),
@@ -800,7 +819,7 @@
         });
         if (boardKind === "inquiry" && opts.markDone) row.status = "done";
         if (boardKind === "refund" && opts.status) row.status = opts.status;
-        row.assignee = DS.state.me && DS.state.me.id ? String(DS.state.me.id) : "admin";
+        row.assignee = currentAdminLabel();
       }
       DS.notify();
       return true;

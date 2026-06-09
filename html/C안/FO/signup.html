@@ -736,7 +736,11 @@
     if (signupBusy) return;
     signupBusy = true;
     setBusy(btn, true, '발송 중…');
-    TopikApi.sendVerificationCode(e).then(function (res) {
+    var sendReq = TopikApi.sendVerificationCode(e);
+    var timeoutReq = new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error('timeout')); }, 20000);
+    });
+    Promise.race([sendReq, timeoutReq]).then(function (res) {
       signupBusy = false;
       setBusy(btn, false, '재발송');
       if (!res.ok) {
@@ -766,10 +770,12 @@
         tm.textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
         if (t <= 0) clearInterval(timerId);
       }, 1000);
-    }).catch(function () {
+    }).catch(function (err) {
       signupBusy = false;
       setBusy(btn, false, '재발송');
-      showSignupErr('네트워크 오류입니다.');
+      showSignupErr(err && err.message === 'timeout'
+        ? '서버 응답이 지연되고 있습니다. 잠시 후 재발송을 눌러 주세요.'
+        : '네트워크 오류입니다.');
     });
   });
 

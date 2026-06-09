@@ -15,12 +15,17 @@
     return esc(s).replace(/\n/g, '<br>');
   }
 
-  // i18n 헬퍼 — 중앙 사전(TPKMLang.t) 사용, 미정의 시 KO 폴백
+  // i18n 헬퍼 — TOPIKPageI18n / TPKMLang, 미정의 시 KO 폴백
   function bt(key, fallback) {
     try {
+      var lang = (window.TPKMLang && TPKMLang.get) ? TPKMLang.get() : 'KO';
+      if (window.TOPIKPageI18n && typeof TOPIKPageI18n.text === 'function') {
+        var t1 = TOPIKPageI18n.text(key, lang);
+        if (t1) return t1;
+      }
       if (window.TPKMLang && typeof TPKMLang.t === 'function') {
-        var v = TPKMLang.t(key);
-        if (v) return v;
+        var t2 = TPKMLang.t(key);
+        if (t2) return t2;
       }
     } catch (e) { /* ignore */ }
     return fallback;
@@ -448,10 +453,32 @@
     } catch (e) { /* ignore */ }
   }
 
+  // 언어 전환 시 상세 댓글 등 동적 영역 갱신용
+  var boardInstances = [];
+  var langHooked = false;
+
+  function hookLangRefresh() {
+    if (langHooked) return;
+    langHooked = true;
+    function refreshAll() {
+      boardInstances.forEach(function (inst) {
+        if (inst.isListActive && inst.isListActive() && inst.state.items.length) inst.renderList();
+        if (inst.isDetailActive && inst.isDetailActive()) inst.refreshDetailI18n();
+      });
+    }
+    document.addEventListener('tpkm:langchange', refreshAll);
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.lang-toggle button');
+      if (!btn) return;
+      setTimeout(refreshAll, 0);
+    });
+  }
+
   // -------------------------------------------------------------------------
   // 목록 + 상세 + 비밀글 잠금해제
   // -------------------------------------------------------------------------
   function initBoard(opts) {
+    hookLangRefresh();
     var listBody = opts.listBody;
     var pager = opts.pager;
     var colspan = opts.colspan || 6;
@@ -459,7 +486,15 @@
     var show = opts.show || window.show || function () {};
     var secretModalId = opts.secretModalId || 'modalSecretLock';
 
-    var state = { page: 1, items: [], pagination: null, filter: null };
+    var state = {
+      page: 1,
+      items: [],
+      pagination: null,
+      filter: null,
+      activePostId: null,
+      activePost: null,
+      commentsCache: null,
+    };
     var deepLinkConsumed = false;
     var listPaneId = opts.listPaneId || 'listPane';
     var pendingUnlockId = null;
@@ -473,6 +508,9 @@
     }
 
     function showListPane() {
+      state.activePostId = null;
+      state.activePost = null;
+      state.commentsCache = null;
       show(listPaneId);
     }
 
@@ -491,6 +529,7 @@
           return;
         }
         var list = (res.body && res.body.comments) || [];
+        state.commentsCache = list;
         box.innerHTML = buildCommentsHtml(list);
         wireComments(box, postId, function () { renderComments(postId); });
       }).catch(function () {
@@ -614,8 +653,47 @@
       });
     }
 
+    function isDetailActive() {
+      var pane = document.getElementById(opts.detailPaneId || 'detailPane');
+      return pane && pane.classList.contains('active');
+    }
+
+    function isListActive() {
+      var pane = document.getElementById(listPaneId);
+      return pane && pane.classList.contains('active');
+    }
+
+    function refreshCommentsI18n() {
+      if (!d.comments || state.activePostId == null) return;
+      if (state.commentsCache !== null) {
+        d.comments.innerHTML = buildCommentsHtml(state.commentsCache);
+        wireComments(d.comments, state.activePostId, function () { renderComments(state.activePostId); });
+        return;
+      }
+      if (d.comments.querySelector('h4')) {
+        d.comments.innerHTML = buildCommentsHtml([]);
+        wireComments(d.comments, state.activePostId, function () { renderComments(state.activePostId); });
+      }
+    }
+
+    function refreshDetailI18n() {
+      if (!isDetailActive()) return;
+      var p = state.activePost;
+      if (p && d.meta) {
+        var secret = (p.is_secret && !p.is_mine)
+          ? '<span>·</span><span>🔒 ' + esc(bt('board.secret_label', '비밀글')) + '</span>' : '';
+        d.meta.innerHTML =
+          '<span>' + esc(p.author_name || currentUserName()) + '</span>' +
+          '<span>·</span><span>' + esc(p.date_formatted) + '</span>' + secret;
+      }
+      refreshCommentsI18n();
+    }
+
     // 상세 렌더 — 글 객체(p)를 받아 상세 영역을 채운다. (조회 / 잠금해제 공용)
     function renderPostDetail(p, id) {
+      state.activePostId = id;
+      state.activePost = p;
+      state.commentsCache = null;
       show(opts.detailPaneId || 'detailPane');
       if (d.title) d.title.textContent = p.title;
       if (d.badge) {
@@ -774,11 +852,20 @@
       renderList();
     }
 
+    boardInstances.push({
+      state: state,
+      isListActive: isListActive,
+      isDetailActive: isDetailActive,
+      renderList: renderList,
+      refreshDetailI18n: refreshDetailI18n,
+    });
+
     return {
       load: load,
       openDetail: openDetail,
       setFilter: setFilter,
       reload: function () { load(state.page); },
+      refreshI18n: refreshDetailI18n,
     };
   }
 

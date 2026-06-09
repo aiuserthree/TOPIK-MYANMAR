@@ -8,10 +8,23 @@
 <style>
   .faq-wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
 
-  .faq-tools { display: flex; gap: 12px; flex-direction: column; margin-bottom: 20px; }
+  .faq-tools { display: flex; gap: 10px; flex-direction: column; margin-bottom: 20px; }
   .faq-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
   .faq-search {
+    width: 100%;
     position: relative;
+  }
+  @media (max-width: 767px) {
+    .faq-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      margin: 0 -16px;
+      padding: 0 16px 2px;
+    }
+    .faq-tabs::-webkit-scrollbar { display: none; }
+    .faq-tabs .chip { flex: 0 0 auto; }
   }
   .faq-search input {
     width: 100%; height: 44px;
@@ -73,7 +86,6 @@
   <div class="faq-wrap">
 
     <div class="faq-tools">
-      <div class="faq-search"><input type="search" id="faqSearch" placeholder="질문 검색 (예: 응시료, 수험번호, 환불…)" data-i18n-content="fq.search_ph" data-i18n-content-placeholder></div>
       <div class="faq-tabs">
         <button class="chip active" data-cat="all" data-i18n-content="nt.cat_all">전체</button>
         <button class="chip" data-cat="account" data-i18n-content="fq.cat_account">계정</button>
@@ -82,6 +94,7 @@
         <button class="chip" data-cat="result" data-i18n-content="nt.cat_result">결과</button>
         <button class="chip" data-cat="other" data-i18n-content="qna.cat_etc">기타</button>
       </div>
+      <div class="faq-search"><input type="search" id="faqSearch" placeholder="질문 검색 (예: 응시료, 수험번호, 환불…)" data-i18n-content="fq.search_ph" data-i18n-content-placeholder></div>
     </div>
 
     <div id="faqGroups">

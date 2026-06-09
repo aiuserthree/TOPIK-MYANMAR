@@ -263,10 +263,14 @@
     fileUrl: fileUrl,
     downloadFile: downloadFile,
     downloadPhotosZip: downloadPhotosZip,
-    changeMyPassword: function (currentPassword, newPassword) {
+    changeMyPassword: function (currentPassword, newPassword, newPasswordConfirm) {
       return apiFetch("/api/v1/admin/me/change-password", {
         method: "POST",
-        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          new_password_confirm: newPasswordConfirm != null ? newPasswordConfirm : newPassword,
+        }),
       });
     },
     getTermsConsents: function (q) {

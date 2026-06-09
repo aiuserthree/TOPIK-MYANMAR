@@ -8,11 +8,20 @@
 <style>
   .board-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
   .board-tools {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
     margin-bottom: 16px;
   }
-  .board-tools .filters { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-  .board-tools .search { flex: 1; min-width: 180px; position: relative; }
+  .board-tools .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .board-tools-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+  }
+  .board-tools .search { flex: 1; min-width: 0; position: relative; }
   .board-tools .search input {
     width: 100%; height: 38px; padding: 0 14px 0 38px;
     border: 1px solid var(--border); border-radius: 99px;
@@ -25,6 +34,18 @@
     background-repeat: no-repeat;
   }
   .board-tools .write { flex: 0 0 auto; }
+  @media (max-width: 767px) {
+    .board-tools .filters {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      margin: 0 -16px;
+      padding: 0 16px 2px;
+    }
+    .board-tools .filters::-webkit-scrollbar { display: none; }
+    .board-tools .filters .chip { flex: 0 0 auto; }
+  }
 
   /* List */
   .pane { display: none; }
@@ -229,8 +250,10 @@
           <button class="chip" data-i18n-content="rfd.type_refund">환불</button>
           <button class="chip" data-i18n-content="rfd.type_correction">정보정정</button>
         </div>
-        <div class="search"><input type="search" placeholder="제목·작성자 검색" data-i18n-content="qna.search_ph" data-i18n-content-placeholder></div>
-        <button class="btn btn-primary btn-sm write" onclick="show('writePane')" data-i18n-content="btn.write">글쓰기</button>
+        <div class="board-tools-row">
+          <div class="search"><input type="search" placeholder="제목·작성자 검색" data-i18n-content="qna.search_ph" data-i18n-content-placeholder></div>
+          <button class="btn btn-primary btn-sm write" onclick="show('writePane')" data-i18n-content="btn.write">글쓰기</button>
+        </div>
       </div>
 
       <div class="card" style="padding: 0; overflow: hidden;">
@@ -404,7 +427,7 @@
 </script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
-<script src="assets/fo-board.js"></script>
+<script src="assets/fo-board.js?v=20260609"></script>
 <script>
   window.show = function (id) {
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
