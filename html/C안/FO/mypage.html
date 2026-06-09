@@ -8,19 +8,6 @@
 <style>
   .my-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
 
-  .submit-banner {
-    display: none;
-    margin-bottom: 16px;
-    padding: 14px 16px;
-    background: var(--success-bg, #ecfdf5);
-    border: 1px solid var(--success, #059669);
-    border-radius: var(--radius-md);
-    color: var(--success, #059669);
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .submit-banner.show { display: block; }
-
   .me-card {
     display: flex; gap: 16px; align-items: center;
     padding: 20px;
@@ -37,6 +24,13 @@
     font-size: 11px; color: rgba(255,255,255,0.7);
     flex: 0 0 auto;
     border: 1px solid rgba(255,255,255,0.2);
+    overflow: hidden;
+  }
+  .me-card .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
   .me-card .info { flex: 1; }
   .me-card h2 { color: #fff; font-size: 20px; }
@@ -162,12 +156,8 @@
 <main class="page" role="main">
   <div class="my-wrap">
 
-    <div id="submitBanner" class="submit-banner" role="status" data-i18n-content="mp.submit_banner">
-      접수가 완료되었습니다. 아래에서 접수 내역을 확인해 주세요.
-    </div>
-
     <div class="me-card" id="meCard">
-      <div class="avatar">PHOTO</div>
+      <div class="avatar" id="meAvatar">PHOTO</div>
       <div class="info">
         <h2 id="meNameKo">—</h2>
         <div class="en" id="meNameEn">—</div>
@@ -235,8 +225,8 @@
 
 <script>
   window.TPKM_PAGE_I18N = {
-    'mp.submit_banner': { ko: '접수가 완료되었습니다. 아래에서 접수 내역을 확인해 주세요.', my: 'လျှောက်ထားမှု ပြီးဆုံးပါပြီ။ အောက်တွင် လျှောက်ထားမှု အသေးစိတ်ကို စစ်ဆေးပါ။', en: 'Registration complete. Check your application details below.' },
     'mp.edit_profile': { ko: '내정보 수정', my: 'အချက်အလက် ပြင်ဆင်', en: 'Edit profile' },
+    'mp.photo_placeholder': { ko: 'PHOTO', my: 'PHOTO', en: 'PHOTO' },
     'mp.tab_active': { ko: '진행 중인 접수', my: 'ဆောင်ရွက်ဆဲ လျှောက်လွှာ', en: 'In-progress' },
     'mp.tab_past': { ko: '지난 접수', my: 'ပြီးခဲ့သော လျှောက်လွှာ', en: 'Past' },
     'mp.confirm_title': { ko: '접수 확인증', my: 'လျှောက်ထားမှု အတည်ပြုလက်မှတ်', en: 'Registration confirmation' },
@@ -294,7 +284,7 @@
     'mp.t_fee': { ko: '응시료', my: 'ဖြေဆိုကြေး', en: 'Test fee' }
   };
 </script>
-<script src="shared/api-client.js"></script>
+<script src="shared/api-client.js?v=20260609d"></script>
 <script src="assets/common.js"></script>
 <script>
 (function () {
@@ -326,6 +316,30 @@
 
   var currentProfile = null;
   var currentItems = { active: [], past: [] };
+  var avatarLoadSeq = 0;
+  var pendingConfirmKey = null;
+
+  function consumeConfirmKey() {
+    try {
+      var key = new URLSearchParams(location.search).get('confirm');
+      if (key && history.replaceState) {
+        history.replaceState(null, '', location.pathname);
+      }
+      return key;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  pendingConfirmKey = consumeConfirmKey();
+
+  function tryOpenPendingConfirm() {
+    if (!pendingConfirmKey) return;
+    var key = pendingConfirmKey;
+    pendingConfirmKey = null;
+    var item = findItemByKey(key);
+    if (item) openConfirmForItem(item);
+  }
 
   function esc(s) {
     if (s == null) return '';
@@ -567,7 +581,87 @@
     });
   }
 
-  function fillProfile(user) {
+  function resetMeAvatar() {
+    var el = document.getElementById('meAvatar');
+    if (!el) return;
+    el.textContent = bt('mp.photo_placeholder', 'PHOTO');
+  }
+
+  function consumeProfileSeed() {
+    try {
+      var raw = sessionStorage.getItem('tpkm_mypage_profile_seed');
+      if (!raw) return null;
+      sessionStorage.removeItem('tpkm_mypage_profile_seed');
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function meAvatarHasPhoto() {
+    var el = document.getElementById('meAvatar');
+    return !!(el && el.querySelector('img'));
+  }
+
+  function showMeAvatar(fileId, photoUnavailable) {
+    var el = document.getElementById('meAvatar');
+    if (!el || !fileId || !window.TopikApi) {
+      resetMeAvatar();
+      return;
+    }
+    if (photoUnavailable && TopikApi.markFileUnavailable) {
+      TopikApi.markFileUnavailable(fileId);
+      resetMeAvatar();
+      return;
+    }
+    avatarLoadSeq += 1;
+    var seq = avatarLoadSeq;
+    if (TopikApi.clearFileUnavailable) TopikApi.clearFileUnavailable(fileId);
+    if (el.dataset.avatarBlobUrl) {
+      try { URL.revokeObjectURL(el.dataset.avatarBlobUrl); } catch (e) { /* ignore */ }
+      delete el.dataset.avatarBlobUrl;
+    }
+    var url = TopikApi.fileUrl ? TopikApi.fileUrl(fileId) : '';
+    if (!url) {
+      resetMeAvatar();
+      return;
+    }
+    el.textContent = '';
+    var img = document.createElement('img');
+    img.alt = '';
+    img.onload = function () {
+      if (seq !== avatarLoadSeq) return;
+    };
+    img.onerror = function (ev) {
+      // 이전(showMeAvatar) 요청의 늦은 onerror가 성공한 사진을 지우지 않도록 세대 가드.
+      if (seq !== avatarLoadSeq) return;
+      if (TopikApi.imgFileOnError) {
+        TopikApi.imgFileOnError(fileId, function () {
+          if (seq !== avatarLoadSeq) return;
+          resetMeAvatar();
+        })(ev);
+      } else {
+        resetMeAvatar();
+      }
+    };
+    img.src = url;
+    el.appendChild(img);
+  }
+
+  function scheduleMeAvatarRetry() {
+    var u = currentProfile;
+    if (!u || !u.photo_file_id) return;
+    [300, 900].forEach(function (delay) {
+      setTimeout(function () {
+        if (meAvatarHasPhoto()) return;
+        if (TopikApi.clearFileUnavailable) TopikApi.clearFileUnavailable(u.photo_file_id);
+        showMeAvatar(u.photo_file_id, u.photo_unavailable);
+      }, delay);
+    });
+  }
+
+  function fillProfile(user, opts) {
+    opts = opts || {};
     if (!user) return;
     currentProfile = user;
     document.getElementById('meNameKo').textContent = user.name_ko || user.name || '—';
@@ -576,6 +670,9 @@
     if (user.phone) meta.push(user.phone);
     if (user.email) meta.push(user.email);
     document.getElementById('meMeta').textContent = meta.join(' · ') || '—';
+    if (opts.skipPhoto) return;
+    if (user.photo_file_id) showMeAvatar(user.photo_file_id, user.photo_unavailable);
+    else resetMeAvatar();
   }
 
   function fillProfileFromAuth() {
@@ -741,16 +838,59 @@
   function loadMe() {
     if (!window.TopikApi || !TopikApi.useApi || !TopikApi.baseUrl || !TopikApi.isLoggedIn()) {
       fillProfileFromAuth();
-      return;
+      return Promise.resolve();
     }
     if (TopikApi.getAccessToken() === 'demo-local') {
       fillProfileFromAuth();
-      return;
+      return Promise.resolve();
     }
-    TopikApi.getMe().then(function (res) {
+    return TopikApi.getMe().then(function (res) {
       if (res.ok && res.body && res.body.user) fillProfile(res.body.user);
       else fillProfileFromAuth();
     }).catch(fillProfileFromAuth);
+  }
+
+  function loadPage() {
+    var useApi = window.TopikApi && TopikApi.useApi && TopikApi.baseUrl &&
+      TopikApi.isLoggedIn() && TopikApi.getAccessToken() !== 'demo-local';
+
+    if (!useApi) {
+      if (!window.TPKMAuth || !TPKMAuth.isLoggedIn()) {
+        location.href = 'login.html?next=' + encodeURIComponent('mypage.html');
+        return;
+      }
+      fillProfileFromAuth();
+      showLoadError(bt('mp.api_off', 'API가 연결되지 않았습니다. 로그인 후 다시 시도해 주세요.'));
+      return;
+    }
+
+    var profileSeed = consumeProfileSeed();
+    if (profileSeed) fillProfile(profileSeed, { skipPhoto: true });
+
+    document.getElementById('paneActive').innerHTML =
+      '<p style="text-align:center;padding:32px;color:var(--text-3);">' + esc(bt('mp.loading', '접수 내역을 불러오는 중…')) + '</p>';
+
+    // 접수 목록 API가 토큰 갱신을 먼저 끝낸 뒤 프로필·증명사진을 불러 타이밍 이슈를 줄임.
+    TopikApi.getMyApplications().then(function (appsRes) {
+      return TopikApi.getMe().then(function (meRes) {
+        return { appsRes: appsRes, meRes: meRes };
+      });
+    }).then(function (payload) {
+      var meRes = payload.meRes;
+      var appsRes = payload.appsRes;
+      if (meRes.ok && meRes.body && meRes.body.user) fillProfile(meRes.body.user);
+      else if (!profileSeed) fillProfileFromAuth();
+      if (appsRes.ok && appsRes.body) {
+        applyApiPayload(appsRes.body);
+      } else {
+        showLoadError(TopikApi.parseError(appsRes));
+      }
+      scheduleMeAvatarRetry();
+      tryOpenPendingConfirm();
+    }).catch(function () {
+      if (!profileSeed) fillProfileFromAuth();
+      showLoadError(bt('mp.network_err', '네트워크 오류입니다.'));
+    });
   }
 
   document.querySelectorAll('.my-tabs button').forEach(function (b) {
@@ -764,13 +904,6 @@
       });
     });
   });
-
-  if (new URLSearchParams(location.search).get('submitted') === '1') {
-    document.getElementById('submitBanner').classList.add('show');
-    if (history.replaceState) {
-      history.replaceState(null, '', location.pathname);
-    }
-  }
 
   window.printConfirm = function () {
     document.body.classList.add('printing-confirm');
@@ -786,8 +919,11 @@
     }
   });
 
-  loadMe();
-  loadApplications();
+  window.addEventListener('pageshow', function (ev) {
+    if (ev.persisted) loadPage();
+  });
+
+  loadPage();
 })();
 </script>
 </body>

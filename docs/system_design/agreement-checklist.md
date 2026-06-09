@@ -49,7 +49,7 @@
 | `[ ]` | **수험번호 공개 일시(`exam_number_visible_at`)** | 고객사 미확정, BO 입력값. 노출 게이팅에 사용 | FO 마이페이지 수험번호 노출 일·시각 확정 | P1 | [database](database.md) §7.3 · [bo-02](services/bo-02-applications.md) §2.7 · [fo-04](services/fo-04-topik-apply.md) §3.4 |
 | `[ ]` | **합격자 발표일(`result_date`)** | 워크시트 "미정". 홈 타임라인 노출 | 발표일 확정 또는 "미정" 노출 범위 합의 | P1 | [tech-spec](tech-spec.md) §8.2 · [fo-01](services/fo-01-home.md) §2.4 |
 | `[ ]` | **수납처 최종 안내 문구** | 미확정, FO 정적 반영 예정 | 납부 장소·계좌·운영시간·연락처 문구 확정 | P1 | 워크시트 §5 · [fo-03](services/fo-03-topik-rules.md) §2.3 |
-| `[ ]` | **Google 간편 가입·로그인 사용 여부** | `/auth/google/config` → `enabled:false`, OAuth 콜백 미구현 | 사용 여부 결정 + (사용 시) 앱 등록·콜백 구현. 미사용 시 버튼/분기 정리 | P1 | [overview](overview.md) §6 · [tech-spec](tech-spec.md) §8.1 · [fo-06](services/fo-06-account.md) §6 |
+| `[p]` | **Google 간편 가입·로그인 사용 여부** | API 구현 완료 (`POST /auth/google`). `GOOGLE_CLIENT_ID` 미설정 시 `enabled:false` | 사용 여부 결정 + Google Cloud 앱 등록·운영 env 설정 | P1 | [overview](overview.md) §6 · [fo-06](services/fo-06-account.md) §6 |
 | `[ ]` | **FO 시험장 선택 방식** | 구현은 `exam_venue_id` 필수 입력(명시 선택), 동시·추가 접수 시 기존 venue 잠금 | "응시자 명시 선택" 유지 vs "자동 배정" 결정 | P1 | [fo-04](services/fo-04-topik-apply.md) §2.2.1·§5 |
 | `[ ]` | **접수 취소·환불률·환불 SLA** | 취소는 수납 전까지만(0526), 수납 후 환불은 게시판 경유. 시점별 환불률 표 미정 | 시점별 환불 비율(접수 중/시험 임박/이후)·처리 SLA 확정 | P1 | [fo-03](services/fo-03-topik-rules.md) §5 · [fo-04](services/fo-04-topik-apply.md) §2.3.3 |
 | `[ ]` | **가입 최소 연령** | 구현 `MIN_SIGNUP_AGE_YEARS=14` 강제(`AGE_RESTRICTED` 422), **정의서 미명시 신규 제약** | 최소 연령값·차단 정책 확정(또는 제약 해제) | P1 | [fo-06](services/fo-06-account.md) §6 · [tech-spec](tech-spec.md) §7.1 |

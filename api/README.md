@@ -1,6 +1,9 @@
-# TOPIK Myanmar API (Phase 0–1)
+# TOPIK Myanmar API (레거시 — 참조용)
 
-Node.js 20 + Fastify 4 + TypeScript skeleton. PostgreSQL schema lives in `../db/` (Flyway SQL).
+> **⚠️ 운영 API는 `apps/api/` (FastAPI)입니다.** 본 `api/` 디렉터리는 초기 Fastify 프로토타입 참조용이며, 저장소에 일부 소스만 존재합니다.  
+> **현행 문서:** [`apps/api/README.md`](../apps/api/README.md) · [`docs/DEV_SPEC.md`](../docs/DEV_SPEC.md)
+
+Node.js 20 + Fastify 4 + TypeScript. PostgreSQL schema: `../db/migrations/` (SQL V001~V008).
 
 **macOS 로컬 실행 (PostgreSQL 설치부터):** [로컬실행_가이드.md](./로컬실행_가이드.md)
 

@@ -1,7 +1,7 @@
 # TOPIK Myanmar — 개발 스펙 (Technical Spec)
 
 > **문서 위치:** `docs/system_design/tech-spec.md`
-> **기준일:** 2026-06-08
+> **기준일:** 2026-06-09
 > **1차 근거:** [`docs/DEV_SPEC.md`](../DEV_SPEC.md) · 실제 코드 `apps/api/`, `db/migrations/`, `html/`
 > **운영 절차:** [`docs/IWINV_SETUP.md`](../IWINV_SETUP.md) · [`docs/DEPLOY.md`](../DEPLOY.md)
 > **상호 문서:** [개요](overview.md) · [DB 논리 명세](database.md)
@@ -114,7 +114,7 @@ Myanmar_v2.0/
 │   ├── C안/FO/                  # 운영 FO 정적 HTML (25페이지)
 │   ├── C안/BO(admin)/project/   # 운영 BO handoff SPA (패널 13개)
 │   └── shared/                  # api-client.js·bo-api-client.js·roster-codes.js
-├── db/migrations/               # V001~V007 SQL (정본 스키마)
+├── db/migrations/               # V001~V008 SQL (정본 스키마)
 ├── api/                         # Fastify 레거시(참조용, 일부 파일만)
 ├── packages/shared/             # 공통 상수 placeholder
 ├── scripts/                     # seed_dev/seed_prod/create_admin/test_* 등
@@ -148,7 +148,8 @@ Myanmar_v2.0/
 | --- | --- | --- | --- |
 | GET | `/health`, `/health/db` | — | 상태·DB·pgvector 확인 |
 | GET | `/auth/status` | — | API 핑 |
-| GET | `/auth/google/config` | — | **`{enabled:false}`** (OAuth 미구현) |
+| GET | `/auth/google/config` | — | `{enabled, client_id}` — `GOOGLE_CLIENT_ID` 설정 시 활성 |
+| POST | `/auth/google` | — | Google ID token → JWT (가입/로그인) |
 | POST | `/auth/send-verification-code` | — | 가입 6자리 코드(5분), `email_outbox` |
 | POST | `/auth/verify-email` | — | 코드 검증 → `verification_token` |
 | POST | `/auth/register` | — | 프로필+사진(base64)+약관 → 가입·JWT |
@@ -186,7 +187,8 @@ Myanmar_v2.0/
 | POST | `/admin/exam-rounds/{id}/assign-exam-numbers` | **super** | 13자리 일괄 채번(dry_run 지원) |
 | GET | `/admin/exam-rounds/{id}/roster.xlsx`, `/photos.zip`, `/admin/applications/photos.zip` | admin | 연명부 xlsx·사진 zip |
 | GET | `/admin/exam-rounds`, `/exam-venues`, `/region-codes` | any | 마스터 조회 |
-| POST/PATCH | `/admin/exam-rounds`(+status/revoke/restore), `/exam-venues` | **super** | 회차·시험장 CRUD |
+| POST/PATCH | `/admin/exam-rounds`(+status/revoke/restore), `/exam-venues` | **super** | 회차·시험장 CRUD (`name_my` V008) |
+| POST | `/admin/translate` | admin | ko→my 텍스트 번역 (시험장명) |
 | GET/POST/PATCH | `/admin/notices`(+attachments, send-marketing), `/faq` | admin | 콘텐츠 관리 |
 | GET/POST/PATCH | `/admin/terms`(+publish/retire), `/terms/consents`, `/terms/{id}` | admin/**super**(게시·폐지) | 약관·동의 이력(CSV) |
 | GET/POST/PATCH/DELETE | `/admin/board/posts`(+comments, reply, workflow) | any/admin | 게시판 관리(비밀글 열람=감사) |
@@ -302,14 +304,12 @@ Myanmar_v2.0/
 
 ### 7.2 로컬 개발 실행
 
-**DB 준비 (V001~V007 순서)**
+**DB 준비 (V001~V008)**
 
 ```bash
 createdb topik_myanmar
-for f in db/migrations/V00{1,2,3,4,5,6}__*.sql; do
-  psql postgresql://localhost:5432/topik_myanmar -f "$f"
-done
-# V007(pgvector) — superuser + stdin (-f 는 postgres가 경로 열기 → 권한오류)
+bash scripts/run-migrations.sh
+# V007(pgvector) — superuser + stdin
 sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
 ```
 
@@ -345,7 +345,7 @@ python3 build.py        # FO → public/  (TOPIK_API_BASE 생략 = same-origin)
 python3 build-bo.py     # BO → public-bo/
 cd apps/api && pip install -r requirements.txt && sudo systemctl restart myanmar-api
 sudo nginx -t && sudo systemctl reload nginx
-# DB: V001~V007 psql 적용 / 운영 시드: CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py
+# DB: bash scripts/run-migrations.sh (V001~V008) / 운영 시드: CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py
 # 첫 관리자: ADMIN_EMAIL=… ADMIN_PASSWORD=… python3 scripts/create_admin.py
 ```
 
@@ -363,7 +363,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 8.1 미구현·후속
 
-1. **Google OAuth** — `/auth/google/config`는 `enabled:false` 고정. 고객사 앱 등록 후 구현.
+1. **Google OAuth 운영 등록** — API 구현 완료. 고객사 Google Cloud 앱 등록 + `GOOGLE_CLIENT_ID` 설정.
 2. **공지 본문 다국어** — API `body_html`(KO) 단일, FO 언어별 본문 미구현.
 3. **의미 검색/RAG** — `semantic_chunks` 스키마만 준비(`SEMANTIC_SEARCH_ENABLED=false`). 임베딩·검색 API 후속.
 4. **`apps/web`(Vite+React) 이전** — 현재 스캐폴드. FO/BO 화면 이전은 중기.

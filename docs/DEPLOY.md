@@ -21,12 +21,12 @@
 
 ## 2. DB (PostgreSQL)
 
-DB VPS에서 `V001` → `V007` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트.
+DB VPS에서 `V001` → `V008` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트.
 
 ```bash
-# V001~V006 — topik_app
-psql "$DATABASE_URL" -f db/migrations/V001__initial_schema.sql
-# ... V002 ~ V006 ...
+cd /opt/myanmar-v2
+# V001~V006, V008 — topik_app (일괄)
+bash scripts/run-migrations.sh
 
 # V007 — superuser (IWINV_SETUP.md §2.8)
 sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql

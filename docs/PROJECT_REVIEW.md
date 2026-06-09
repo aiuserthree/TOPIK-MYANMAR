@@ -1,8 +1,9 @@
 # TOPIK Myanmar 프로젝트 종합 리뷰
 
 **기준 디자인 소스:** `html/C안/FO/`, `html/C안/BO(admin)/project/`  
-**검토일:** 2026-06-06  
-**방법:** 실제 파일 glob/grep·소스 읽기 기준 (추정 없음)
+**검토일:** 2026-06-09  
+**방법:** 실제 파일 glob/grep·소스 읽기 기준 (추정 없음)  
+**API 정본:** `apps/api/` (FastAPI) — 레거시 `api/` Fastify는 참조용
 
 ---
 
@@ -48,9 +49,9 @@
 | `html/shared/api-client.js` | FO API 클라이언트 (`TopikApi`) — HTML에서 `shared/api-client.js`로 참조 |
 | `assets/favicon.svg`, `favicon.ico`, `robots.txt`, `sitemap.xml` | 메타/배포 |
 
-**누락 파일 (참조만 존재):**
+**공유 코드:**
 
-- `shared/roster-codes.js` — `signup.html`, `register.html`, `mypage-profile.html`에서 `<script src="shared/roster-codes.js">` 참조하나 **저장소 어디에도 없음**
+- `html/shared/roster-codes.js` — 빌드 시 `public/shared/`로 병합. FO 소스 직접 서빙 시 `html/C안/FO/shared/roster-codes.js` 복사본 사용
 
 ### A.3 API 의존성 (`html/shared/api-client.js` → `TopikApi`)
 
@@ -65,8 +66,8 @@
 | **파일** | `GET /api/v1/files/:id` (+ `?token=`) |
 | **헬스** | `GET /health` |
 
-- `USE_API=false` 또는 base URL 없으면 **데모 로그인**(`demo-local` 토큰) + `localStorage` 폴백
-- `register.html`: API 미연결 시 `localStorage` 키 `tpkm_register_draft_v1` 폴백
+- 운영·로컬 개발 시 FastAPI(`:8000`) 연동이 기본. `seed_dev.py` 후 데모 계정으로 E2E 검증
+- `register.html`: 서버 draft (`/application-draft`) + localStorage 폴백
 - API base: `TOPIK_API_BASE` 설정 시 `build.py`가 `<meta name="topik-api-base">` 주입. 미설정 시 IwinV nginx 동일 origin `/api`
 
 ### A.4 i18n (KO / MY / EN)

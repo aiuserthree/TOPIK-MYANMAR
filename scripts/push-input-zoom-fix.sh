@@ -10,13 +10,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${ROOT}"
 python3 build.py
 
-echo "==> Push styles.css + board/search pages"
+echo "==> Push styles.css + all HTML (?v= cache-bust on stylesheet href)"
 rsync -avz "${ROOT}/public/assets/styles.css" "${SERVER}:${APP_ROOT}/public/assets/styles.css"
-rsync -avz \
-  "${ROOT}/public/faq.html" \
-  "${ROOT}/public/notice.html" \
-  "${ROOT}/public/qna.html" \
-  "${ROOT}/public/refund-correction.html" \
-  "${SERVER}:${APP_ROOT}/public/"
+rsync -avz "${ROOT}/public/"*.html "${SERVER}:${APP_ROOT}/public/"
 
-echo "==> Done. iPhone Safari에서 로그인/회원가입 입력 터치 후 확대 여부 확인 (캐시: 시크릿 탭 또는 Ctrl+Shift+R)"
+echo "==> Done. 일반 Safari 탭에서도 새 CSS 로드됨 — 홈부터 다시 열어 입력 터치로 확인"

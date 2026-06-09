@@ -50,19 +50,21 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
                     ],
                 },
                 {
-                    "type": "paragraph",
-                    "text": "နောက်တစ်ဆင့်များ: ① အော့ဖ်လိုင်း ဖြေဆိုကြေး ပေးသွင်းခြင်း ② ပေးသွင်းမှု အတည်ပြုပြီးနောက် ဖြေဆိုသူနံပါတ် ပေးအပ်ခြင်း ③ My Page နှင့် ကြေညာချက်တွင် ဖြေဆိုသူနံပါတ် စစ်ဆေးခြင်း",
+                    "type": "steps",
+                    "title": "နောက်တစ်ဆင့်များ",
+                    "items": [
+                        "အော့ဖ်လိုင်း ဖြေဆိုကြေး ပေးသွင်းခြင်း (ပေးသွင်းရာနေရာ·ရက်စွဲကို ကြေညာချက်တွင် ကြည့်ပါ)",
+                        "ပေးသွင်းမှု အတည်ပြုပြီးနောက် သတ်မှတ်ရက်တွင် ဖြေဆိုသူနံပါတ် တစ်ပြိုင်နက် ပေးအပ်ခြင်း",
+                        "My Page · လျှောက်လွှာ အတည်ပြုချက်တွင် ဖြေဆိုသူနံပါတ် စစ်ဆေးခြင်း",
+                    ],
                 },
                 {
                     "type": "notice",
                     "tone": "info",
-                    "text": "ဖြေဆိုသူနံပါတ်ကို အီးမေးလ်ဖြင့် မပို့ပါ။ ဖြေဆိုကြေး ပေးသွင်းမှု အတည်ပြုပြီးနောက် My Page နှင့် ကြေညာချက်တွင် စစ်ဆေးနိုင်ပါသည်။",
+                    "text": "ဖြေဆိုသူနံပါတ်ကို အီးမေးလ်ဖြင့် မပို့ပါ။ ဖြေဆိုကြေး ပေးသွင်းမှု အတည်ပြုပြီးနောက် သတ်မှတ်ရက်တွင် My Page · လျှောက်လွှာ အတည်ပြုချက်တွင် စစ်ဆေးနိုင်ပါသည်။",
                 },
             ],
-            ctas=[
-                {"label": "My Page", "href": "{myPageUrl}", "kind": "primary"},
-                {"label": "ကြေညာချက် ကြည့်ရန်", "href": "{noticeUrl}", "kind": "secondary"},
-            ],
+            ctas=[{"label": "My Page", "href": "{myPageUrl}", "kind": "primary"}],
         ),
         "en": _layout(
             subject="[TOPIK Myanmar] Application approved",
@@ -83,19 +85,21 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
                     ],
                 },
                 {
-                    "type": "paragraph",
-                    "text": "Next steps: ① Pay the exam fee offline ② Receive your exam number after payment is confirmed ③ Check your exam number on My Page and in notices",
+                    "type": "steps",
+                    "title": "Next steps",
+                    "items": [
+                        "Pay the exam fee offline (see notices for payment location and schedule)",
+                        "Exam numbers assigned in bulk on a set date after payment is confirmed",
+                        "Check your exam number on My Page · Application confirmation",
+                    ],
                 },
                 {
                     "type": "notice",
                     "tone": "info",
-                    "text": "Your exam number is not sent by email. After your fee payment is confirmed, you can check it on My Page and in notices.",
+                    "text": "Your exam number is not sent by email. After your fee payment is confirmed, you can check it on My Page · Application confirmation on the scheduled date.",
                 },
             ],
-            ctas=[
-                {"label": "My Page", "href": "{myPageUrl}", "kind": "primary"},
-                {"label": "View notices", "href": "{noticeUrl}", "kind": "secondary"},
-            ],
+            ctas=[{"label": "My Page", "href": "{myPageUrl}", "kind": "primary"}],
         ),
     },
     "application_rejected": {
@@ -368,10 +372,10 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
                 {
                     "type": "notice",
                     "tone": "info",
-                    "text": "လျှို့ဝှက်ပို့စ်၏ အကြောင်းအရာကို အီးမေးလ်တွင် မပါဝင်ပါ။ BO တွင် တိုက်ရိုက် စစ်ဆေးပါ။",
+                    "text": "လျှို့ဝှက်ပို့စ်၏ အကြောင်းအရာကို အီးမေးလ်တွင် မပါဝင်ပါ။ အုပ်ချုပ်သူတွင် တိုက်ရိုက် စစ်ဆေးပါ။",
                 },
             ],
-            ctas=[{"label": "BO တွင် ဆောင်ရွက်ရန်", "href": "{boPostUrl}", "kind": "primary"}],
+            ctas=[{"label": "စီမံခန့်ခွဲရန်", "href": "{boPostUrl}", "kind": "primary"}],
         ),
         "en": _layout(
             subject="[TOPIK Myanmar BO] New {boardName} submission",
@@ -396,10 +400,10 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
                 {
                     "type": "notice",
                     "tone": "info",
-                    "text": "The body of a secret post is not included in this email. Please check it directly in BO.",
+                    "text": "The body of a secret post is not included in this email. Please check it directly in admin.",
                 },
             ],
-            ctas=[{"label": "Process in BO", "href": "{boPostUrl}", "kind": "primary"}],
+            ctas=[{"label": "Manage in admin", "href": "{boPostUrl}", "kind": "primary"}],
         ),
     },
     "board_reply": {

@@ -1,84 +1,93 @@
-# TOPIK Myanmar 재개발 스캐폴드
+# TOPIK Myanmar — 재개발·이전 요약
 
-> 전체 개발 스펙: [`docs/DEV_SPEC.md`](docs/DEV_SPEC.md) · FO/BO handoff 리뷰: [`docs/PROJECT_REVIEW.md`](docs/PROJECT_REVIEW.md)
+> **기준일:** 2026-06-09  
+> 전체 스펙: [`docs/DEV_SPEC.md`](docs/DEV_SPEC.md) · FO/BO 리뷰: [`docs/PROJECT_REVIEW.md`](docs/PROJECT_REVIEW.md)
+
+## 현재 상태 (2026-06-09)
+
+**1단계 구현 완료.** 운영 화면은 `html/C안/` 정적 HTML, API는 `apps/api` FastAPI가 정본입니다.
+
+| 영역 | 정본 경로 | 상태 |
+| --- | --- | --- |
+| FO 화면 | `html/C안/FO/` (25페이지) | FastAPI 연동, `build.py` → `public/` |
+| BO 화면 | `html/C안/BO(admin)/project/` | 패널 13개 FastAPI 연동, `build-bo.py` → `public-bo/` |
+| API | `apps/api/` | FO/BO REST 전반 구현 |
+| DB | `db/migrations/V001`~`V008` | PostgreSQL 15 + pgvector |
+| 신규 FO | `apps/web/` (Vite+React) | 스캐폴드만 — **미운영** |
+| 레거시 API | `api/` (Fastify) | 참조용 |
 
 ## 확정 스택
 
-- Frontend: Vite + React + TypeScript (`apps/web`)
-- Backend: Python FastAPI 3.11+ (`apps/api`)
-- Database: PostgreSQL 15+ on Iwinv VPS **+ pgvector** (FAQ/공지 의미 검색·RAG·중복 탐지)
-- Object Storage: IwinV S3 호환 오브젝트 스토리지 (회원 사진·파일 업로드, `docs/IWINV_SETUP.md` §5)
-- 운영 원칙: IwinV VPS에 nginx + systemd + PostgreSQL(pgvector)로 배포하며, 기존 `api/`, `html/`, `build.py`, `build-bo.py`는 보존합니다.
-- BO 화면 디자인 handoff: `html/C안/BO(admin)/project/` (운영 API stub은 `html/C안/BO/`)
+| 계층 | 기술 |
+| --- | --- |
+| **운영 FO** | HTML + CSS + JavaScript (`html/C안/FO`) |
+| **운영 BO** | React 18 CDN + Babel SPA (`html/C안/BO(admin)/project/`) |
+| **Backend** | Python 3.11+ · FastAPI · SQLAlchemy(async) · asyncpg |
+| **Database** | PostgreSQL 15+ **+ pgvector** (IwinV DB VPS) |
+| **Object Storage** | IwinV S3 (`https://kr.object.iwinv.kr`) |
+| **운영** | IwinV VPS 2대 · nginx + systemd |
+
+`apps/web`(Vite+React)는 중기 FO 이전 목표이며, 현재 운영 FO는 레거시 정적 빌드를 사용합니다.
 
 ## 폴더 구조
 
 ```text
 apps/
-├── web/                    # Vite + React 신규 프론트엔드
-└── api/                    # FastAPI 신규 백엔드
-db/
-└── migrations/             # 기존 PostgreSQL SQL migrations 유지
-packages/
-└── shared/                 # 공통 상수/타입 placeholder
+├── api/                    # FastAPI 운영 API (정본)
+└── web/                    # Vite+React 스캐폴드 (미운영)
+html/
+├── C안/FO/                 # 운영 FO
+├── C안/BO(admin)/project/  # 운영 BO
+└── shared/                 # 공통 JS 클라이언트
+db/migrations/              # V001~V008 SQL
+packages/shared/            # 공통 상수 placeholder
+build.py / build-bo.py      # 정적 빌드
 ```
 
 ## 로컬 실행
 
-API:
+**API:**
 
 ```bash
 cd apps/api
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Web:
+**FO/BO (권장 — 실제 운영 화면):**
 
 ```bash
-cd apps/web
-cp .env.example .env.local
-npm install
-npm run dev
+python3 scripts/seed_dev.py   # 저장소 루트
+cd html/C안/FO && python3 -m http.server 8080
+cd html/C안/BO\(admin\)/project && python3 -m http.server 8081
 ```
 
-브라우저:
-
-- Web: http://localhost:5173
-- API health: http://localhost:8000/health
-
-Vite dev server는 `/api`를 FastAPI(`127.0.0.1:8000`)로 프록시합니다.
-
-## 기존 DB migration 적용
-
-기존 SQL migration은 `db/migrations`에 유지합니다. 새 FastAPI 앱은 `DATABASE_URL`로 같은 PostgreSQL에 연결합니다.
+**Vite 스캐폴드 (선택):**
 
 ```bash
-psql "$DATABASE_URL" -f db/migrations/V001__initial_schema.sql
-psql "$DATABASE_URL" -f db/migrations/V002__email_outbox_retry.sql
-psql "$DATABASE_URL" -f db/migrations/V003__bo_integration.sql
-psql "$DATABASE_URL" -f db/migrations/V004__user_last_login.sql
-psql "$DATABASE_URL" -f db/migrations/V005__application_drafts.sql
-psql "$DATABASE_URL" -f db/migrations/V006__fo_contract_and_security.sql
-# V007 — postgres superuser (CREATE EXTENSION vector). IwinV: docs/IWINV_SETUP.md §2.4.1
-# stdin: 현재 셸이 파일을 읽고 postgres 가 SQL 실행 (-f 는 postgres 가 경로를 열어 /root 등에서 실패)
+cd apps/web && npm install && npm run dev   # http://localhost:5173
+```
+
+## DB migration 적용
+
+```bash
+# V001~V008 일괄 (V007 pgvector는 superuser 별도)
+bash scripts/run-migrations.sh
+
+# V007 — postgres superuser
 sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
 ```
 
-## Iwinv VPS PostgreSQL 기본 설정
+FastAPI는 `DATABASE_URL=postgresql+asyncpg://...` 형식을 사용합니다.
 
-Ubuntu VPS 예시:
+## IwinV VPS PostgreSQL
+
+상세: [`docs/IWINV_SETUP.md`](docs/IWINV_SETUP.md)
 
 ```bash
-sudo apt update
 sudo apt install -y postgresql postgresql-contrib postgresql-15-pgvector
-sudo -u postgres psql
 ```
-
-DB/user 생성:
 
 ```sql
 CREATE DATABASE topik_myanmar;
@@ -86,30 +95,10 @@ CREATE USER topik_app WITH ENCRYPTED PASSWORD '강한_비밀번호';
 GRANT ALL PRIVILEGES ON DATABASE topik_myanmar TO topik_app;
 ```
 
-원격 접속이 필요하면 `/etc/postgresql/*/main/postgresql.conf`의 `listen_addresses`와 `pg_hba.conf`를 조정한 뒤 PostgreSQL을 재시작합니다. 방화벽은 앱 서버 IP만 허용합니다.
+## 다음 단계 (2단계 이후)
 
-```bash
-sudo ufw allow from <APP_SERVER_IP> to any port 5432 proto tcp
-sudo systemctl restart postgresql
-```
-
-FastAPI 연결 문자열:
-
-```env
-DATABASE_URL=postgresql+asyncpg://topik_app:강한_비밀번호@<DB_HOST>:5432/topik_myanmar
-```
-
-백업 기본:
-
-```bash
-pg_dump -Fc -U topik_app -h <DB_HOST> topik_myanmar > topik_myanmar_$(date +%Y%m%d).dump
-pg_restore -d topik_myanmar_restore topik_myanmar_YYYYMMDD.dump
-```
-
-## 다음 단계
-
-1. Iwinv Web/DB 서버 생성 후 [`docs/IWINV_SETUP.md`](docs/IWINV_SETUP.md)에 따라 운영 환경을 설정합니다.
-2. 기존 `html/C안/FO` 화면을 페이지 단위로 `apps/web`에 옮길 우선순위를 정합니다. BO UI 참조는 `html/C안/BO(admin)/project/`를 사용합니다.
-3. 기존 Fastify `api/src/routes`를 기준으로 FastAPI router 계약을 설계합니다.
-4. 기존 SQL schema에 맞춘 SQLAlchemy model 또는 repository 레이어 작성 방식을 결정합니다.
-5. Iwinv VPS PostgreSQL 접속 정책, 백업 주기, 운영 계정을 확정합니다.
+1. IwinV 운영 배포 — [`docs/DEPLOY.md`](docs/DEPLOY.md), DNS·SMTP·S3 확정
+2. Google OAuth 운영 앱 등록 (`GOOGLE_CLIENT_ID` 설정)
+3. FO 공지 본문 다국어
+4. 의미 검색/RAG API (`SEMANTIC_SEARCH_ENABLED`)
+5. `html/C안/FO` → `apps/web` 페이지 이전 (중기)

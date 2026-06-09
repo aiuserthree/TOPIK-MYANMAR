@@ -1,5 +1,5 @@
 {
-  "version": "2026-06-02",
+  "version": "2026-06-09",
   "memo_tags": {
     "schema_draft": "(스키마 초안)",
     "api_draft": "(API 명세 초안)",
@@ -35,14 +35,75 @@
     },
     {
       "id": "db_migrations",
-      "description": "Flyway migration SQL",
+      "description": "SQL migrations V001-V008",
       "paths": [],
-      "globs": ["db/migrations/V001*.sql"],
-      "nos": [158, 159, 160, 161],
-      "hint_status": "[p]",
+      "globs": ["db/migrations/V00*.sql"],
+      "nos": [158, 159, 160, 161, 367, 368],
+      "hint_status": "[x]",
       "memo_tag": "migration_seed",
       "confidence": "high",
-      "only_if_blank": true
+      "only_if_blank": false
+    },
+    {
+      "id": "fastapi_schema",
+      "description": "FastAPI ORM + V001-V008 schema implemented",
+      "paths": ["apps/api/app/models/user.py", "apps/api/app/models/application.py"],
+      "globs": ["db/migrations/V008*.sql"],
+      "nos": [143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 162, 163, 164, 168, 169, 415, 416, 417, 418, 419, 420, 426, 427, 430],
+      "hint_status": "[x]",
+      "memo_tag": null,
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "fastapi_email_triggers",
+      "description": "Email outbox + 14 templates (SMTP env pending)",
+      "paths": ["apps/api/app/lib/email_notify.py", "apps/api/app/lib/mail.py"],
+      "nos": [175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 192, 298, 299],
+      "hint_status": "[p]",
+      "memo_tag": "c_editorial_14",
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "fo_bo_api_wired",
+      "description": "FO/BO HTML wired to FastAPI",
+      "paths": ["html/shared/api-client.js", "html/C안/BO(admin)/project/assets/bo-api-bridge.js"],
+      "nos": [217, 218, 273, 283, 305, 306, 307, 308, 309, 320, 370],
+      "hint_status": "[x]",
+      "memo_tag": "api_draft",
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "bo_rev_partial",
+      "description": "API rev exists; BO client does not send If-Match",
+      "paths": ["apps/api/app/lib/rev.py"],
+      "nos": [96, 138, 305],
+      "hint_status": "[p]",
+      "memo_tag": null,
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "google_oauth_partial",
+      "description": "Google OAuth API; env + withdraw gap",
+      "paths": ["apps/api/app/routers/auth.py"],
+      "nos": [72, 76, 77, 82, 472, 282],
+      "hint_status": "[p]",
+      "memo_tag": "worksheet",
+      "confidence": "high",
+      "only_if_blank": false
+    },
+    {
+      "id": "notice_i18n_gap",
+      "description": "Notice KO-only API; BO MY/EN UI not saved",
+      "paths": ["html/C안/BO(admin)/project/assets/bo-api-bridge.js"],
+      "nos": [483],
+      "hint_status": "[p]",
+      "memo_tag": "worksheet",
+      "confidence": "medium",
+      "only_if_blank": false
     },
     {
       "id": "db_seed",

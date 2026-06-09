@@ -72,7 +72,7 @@ API_META_RE = re.compile(r'\s*<meta name="topik-api-base"[^>]*>\n?', re.IGNORECA
 ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H")
 # nginx serves JS/CSS with Cache-Control immutable 7d — bump ?v= on each build.
 ASSET_URL_RE = re.compile(
-    r'(src=")((?:shared/api-client\.js|assets/common\.js|assets/fo-board\.js|assets/styles\.css))(?:\?v=[^"]*)?(")',
+    r'((?:src|href)=")((?:shared/api-client\.js|assets/common\.js|assets/fo-board\.js|assets/styles\.css))(?:\?v=[^"]*)?(")',
     re.IGNORECASE,
 )
 

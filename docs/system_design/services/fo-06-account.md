@@ -51,7 +51,7 @@
 | 로그인 | `email`, `password` | 이메일 정규화. 관리자→회원 순 조회(active). 비번 검증. 성공 시 access+refresh 발급 + 사용자 정보 반환. **로그인 상태 유지** 시 refresh 장기 보관. 비번 변경 180일 경과 시 변경 권고 메일(쿨다운 30일). | `POST /api/v1/auth/login` | `users`(`failed_login_count`,`login_locked_until`,`last_login_at`,`password_changed_at`) | 실패 401 `INVALID_CREDENTIALS` |
 | 로그인 실패 잠금 | — | **5회 실패 시 30분 잠금**. 잠금 중 시도 423 `ACCOUNT_LOCKED`. | (동일) | `users.login_locked_until` | 잠금 메시지 |
 | ?next 복귀 | `next` 파라미터 | 성공 시 `next`(동일 출처 상대경로)로 복귀, 없으면 홈. | (가드 연계) | — | open-redirect 검증 |
-| 구글 간편 로그인 | — | 버튼 노출. 현재 `enabled:false`(미가동). | `GET /api/v1/auth/google/config` | — | §6 |
+| 구글 간편 로그인 | — | `GOOGLE_CLIENT_ID` 설정 시 버튼·OAuth 가동. 미설정 시 `enabled:false`. | `GET /api/v1/auth/google/config`, `POST /auth/google` | `users.google_sub` | §6 |
 | 회원가입/찾기 링크 | — | `signup.html` / 아이디·비번 찾기 LP. | — | — | — |
 
 > 토큰: 스테이트리스 JWT(access) + refresh. 서버측 강제 무효화(블랙리스트/`user_sessions`)는 미적용(`fo-00 §5`).
@@ -95,7 +95,7 @@
 | 인증코드 발송 | `email`, `preferred_lang` | 이메일 형식 검증. **이미 가입 시 409 `EMAIL_ALREADY_REGISTERED`**(중복 차단). 6자리 코드, **5분 TTL** 발송. | `POST /api/v1/auth/send-verification-code` | `email_verification_codes`, `email_outbox`(`signup_verify_code`) | dev `dev_code`, rate limit(권장) |
 | 코드 확인 | `email`, `code` | 일치·미만료 시 `verification_token` 발급(이후 register에서 검증). 코드 행 삭제. | `POST /api/v1/auth/verify-email` | `email_verification_codes` | 400 `INVALID_CODE` |
 | 타이머/재발송 | — | 5분 카운트다운, 만료 시 재발송 안내. | (send 재호출) | — | — |
-| 구글 간편가입 | — | [구글로 계속하기] → OAuth → 이메일 자동 인증 → STEP2. **현재 미가동**(§6). | `GET /auth/google/config`(`enabled:false`) | `users.signup_provider/provider_uid` | (미구현) |
+| 구글 간편가입 | — | [구글로 계속하기] → ID token → JWT. `GOOGLE_CLIENT_ID` 설정 시 가동. | `GET /auth/google/config`, `POST /auth/google` | `users.signup_provider=google`, `google_sub` | §6 |
 | 다음 활성화 | — | 이메일 인증 완료 전 [다음] 비활성. | — | — | — |
 
 #### 2.2.2 STEP2 계정 설정(기본정보+비번+사진) — `TPKM_FO_6_2_2_0_0_S`
@@ -252,7 +252,7 @@ flowchart TD
 
 | 정의서/정본 | 구현 | 영향/조치 |
 | --- | --- | --- |
-| SNS 간편가입·로그인(구글, 0526) | `/auth/google/config` → `enabled:false`, OAuth 콜백 **미구현** | **미가동** — 구글 가입/로그인, 아이디·비번 찾기 구글 분기 전부 보류. 가동 필요 |
+| SNS 간편가입·로그인(구글, 0526) | `POST /auth/google` 구현 완료. `GOOGLE_CLIENT_ID` 미설정 시 `enabled:false` | **구현 완료** — Google Cloud 앱 등록·운영 env 설정 후 가동 |
 | `POST /auth/signup`(REST 초안) | `POST /auth/register` | 경로 차이 |
 | `/auth/email/verify/send`·`/confirm` | `/auth/send-verification-code`·`/auth/verify-email` | 경로 차이 |
 | `PATCH /me/password` | `POST /me/change-password` | 경로/메서드 차이 |

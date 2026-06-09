@@ -13,6 +13,8 @@ from email.utils import formatdate, make_msgid, parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from contextvars import ContextVar
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -219,6 +221,8 @@ async def enqueue_email(
     )
     db.add(row)
     await db.flush()
+    if row.id:
+        _outbox_delivery_queue().append(row.id)
     return {"queued_id": row.id, "sent": False, "status": row.status}
 
 
@@ -257,6 +261,27 @@ async def _deliver_outbox_row_by_id(outbox_id: int) -> None:
             await db.commit()
     except Exception:
         logger.exception("background outbox delivery failed id=%s", outbox_id)
+
+
+_pending_outbox_ids: ContextVar[list[int] | None] = ContextVar("_pending_outbox_ids", default=None)
+
+
+def _outbox_delivery_queue() -> list[int]:
+    queue = _pending_outbox_ids.get()
+    if queue is None:
+        queue = []
+        _pending_outbox_ids.set(queue)
+    return queue
+
+
+def schedule_queued_outbox_deliveries() -> None:
+    """Commit 이후 호출 — 요청 중 enqueue 된 outbox id 를 백그라운드 SMTP 발송."""
+    queue = _pending_outbox_ids.get()
+    if not queue:
+        return
+    for outbox_id in queue:
+        schedule_outbox_delivery(outbox_id)
+    _pending_outbox_ids.set([])
 
 
 def schedule_outbox_delivery(outbox_id: int | None) -> None:

@@ -196,4 +196,4 @@ flowchart TD
 | 정책 | "로그인 상태 유지" 토큰 유효기간·refresh rotation | (합의 필요) |
 | 정책 | 개인정보처리방침/약관 URL·푸터 노출 링크 확정 | 비고 |
 | 구현 차이 | FO 로그아웃 시 서버측 토큰 무효화(블랙리스트) 미적용(스테이트리스 JWT) | 구현 상이 — 서버 무효화 필요 시 세션 테이블(`user_sessions`) 도입 (합의 필요) |
-| 구현 차이 | Google OAuth(`/auth/google/config`) 현재 `enabled:false` 스텁 — SNS 로그인 미가동 | 구현 상이(계정 06 참고) |
+| 구현 차이 | Google OAuth 구현 완료 — `GOOGLE_CLIENT_ID` 설정 시 가동, 미설정 시 `enabled:false` | 계정 06 참고 |

@@ -1,7 +1,7 @@
 # TOPIK Myanmar 개발 스펙
 
-> **기준일:** 2026-06-07  
-> 이 문서는 저장소 실제 파일을 기준으로 작성했습니다. 재개발 방향은 [`MIGRATION.md`](../MIGRATION.md), IwinV 운영 절차는 [`IWINV_SETUP.md`](IWINV_SETUP.md)를 참고하세요.
+> **기준일:** 2026-06-09  
+> 이 문서는 저장소 실제 파일을 기준으로 작성했습니다. 재개발·이전 요약은 [`MIGRATION.md`](../MIGRATION.md), IwinV 운영 절차는 [`IWINV_SETUP.md`](IWINV_SETUP.md)를 참고하세요.
 
 ---
 
@@ -9,16 +9,17 @@
 
 **TOPIK Myanmar**는 미얀마 TOPIK 시험 접수·운영을 위한 웹 서비스입니다. 회원 가입, 시험 접수, 마이페이지(FO), 접수·회차·콘텐츠 관리(BO) 등의 기능을 제공합니다.
 
-현재 저장소는 **재개발 스캐폴드 단계**입니다. 기존 정적 HTML FO/BO와 Node.js Fastify API(`api/`)는 보존·참조용으로 두고, 신규 화면·API는 `apps/web`(Vite + React)과 `apps/api`(FastAPI)에서 단계적으로 이전합니다. 운영 목표 환경은 IwinV VPS 2대(Web + DB)이며 nginx + systemd로 배포합니다.
+**1단계 구현 완료.** 운영 FO/BO는 `html/C안/` 정적 HTML, API는 `apps/api` FastAPI가 정본입니다. `apps/web`(Vite+React)는 중기 FO 이전용 스캐폴드이며, 레거시 Fastify `api/`는 참조용입니다. 운영 환경은 IwinV VPS 2대(Web + DB), nginx + systemd 배포입니다.
 
 | 구분 | 역할 | 상태 |
 | --- | --- | --- |
-| 신규 FO/BO | `apps/web` | 스캐폴드(홈 placeholder) |
-| 신규 API | `apps/api` | FastAPI FO/BO API 대부분 구현 (auth·me·접수·콘텐츠·게시판·admin·파일·메일) |
-| 레거시 FO/BO | `html/C안/` | FO 25페이지 HTML; BO UI·API 연동은 `BO(admin)/project/` (과거 `BO/` stub 디렉터리는 저장소에 없음) |
-| 레거시 API | `api/` | README·일부 소스만 존재(전체 구현 미동봉) |
-| DB 스키마 | `db/migrations/` | V001~V007 SQL migration 포함 |
-| 이메일 시안 | `시안/email/` | C안 에디토리얼 14종 미리보기; API 렌더 `apps/api/app/lib/email_render.py` |
+| **운영 FO** | `html/C안/FO/` | 25페이지 HTML/CSS/JS, FastAPI 연동, `build.py` → `public/` |
+| **운영 BO** | `html/C안/BO(admin)/project/` | 패널 13개 React CDN SPA, FastAPI 연동, `build-bo.py` → `public-bo/` |
+| **운영 API** | `apps/api/` | FastAPI FO/BO REST 전반 구현 (auth·me·접수·콘텐츠·게시판·admin·파일·메일·export) |
+| 신규 FO (중기) | `apps/web/` | Vite+React 스캐폴드(홈 placeholder) — **미운영** |
+| 레거시 API | `api/` | 참조용 (일부 소스만 존재) |
+| DB 스키마 | `db/migrations/` | V001~V008 SQL migration |
+| 이메일 | `시안/email/` + `apps/api/app/lib/email_*` | C안 14종 ko/my/en 렌더 + outbox 워커 |
 
 운영·배포 체크리스트는 [`DEPLOY.md`](DEPLOY.md), 상세 절차는 [`IWINV_SETUP.md`](IWINV_SETUP.md)를 따릅니다.
 
@@ -133,7 +134,7 @@ apps/api/
 | 영역 | Path prefix | 상태 |
 | --- | --- | --- |
 | Health | `/health`, `/health/db` | 구현 |
-| Auth | `/api/v1/auth/*` (login, refresh, register, verify, forgot/reset) | 구현 (Google OAuth `enabled: false`) |
+| Auth | `/api/v1/auth/*` (login, refresh, register, verify, forgot/reset, Google) | 구현 (`GOOGLE_CLIENT_ID` 설정 시 OAuth 활성) |
 | Me | `/api/v1/me/*` | 구현 |
 | Exam | `/api/v1/exam-rounds`, `/exam-venues` | 구현 |
 | Application | `/api/v1/application-draft`, `application-submissions`, `applications` | 구현 |
@@ -284,7 +285,7 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 6.1 Migration 파일
 
-**저장소에 포함된 파일 (V001~V007):**
+**저장소에 포함된 파일 (V001~V008):**
 
 | 파일 | 내용 |
 | --- | --- |
@@ -295,15 +296,17 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 | `V005__application_drafts.sql` | `application_drafts` (user당 1건, JSONB, 30일 TTL) |
 | `V006__fo_contract_and_security.sql` | 지역별 시험장코드, 로그인/비밀글 잠금, 약관 동의 이력 |
 | `V007__pgvector_semantic_search.sql` | **pgvector extension**, `semantic_chunks` (FAQ/공지/RAG/중복접수 embedding) |
+| `V008__exam_venue_name_my.sql` | `exam_venues.name_my` — 미얀마어 시험장명 (FO MY 표시·BO 자동번역) |
 
-운영·로컬 모두 **V001 → V007 순서**로 `psql -f` 적용 ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8). V007의 `CREATE EXTENSION vector`는 **postgres superuser**로 실행하며, IwinV 등에서는 `sudo -u postgres psql -f` 대신 **stdin**(`< 절대경로`)을 사용합니다(`-f`는 OS user `postgres`가 경로를 열어 `/root` 등에서 `Permission denied`). Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적용 절차의 기준은 SQL migration입니다.
+운영·로컬 모두 **V001 → V008 순서**로 적용. 일괄: `bash scripts/run-migrations.sh` ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8). V007의 `CREATE EXTENSION vector`는 **postgres superuser** + **stdin**(`< 절대경로`)으로 실행합니다. Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적용 기준은 SQL migration입니다.
 
 ### 6.2 스키마 개요 (문서·V005 기준)
 
 - **V001(문서 기준):** `users`, `exam_rounds`, `exam_venues`, `applications`, `admin_users`, `notices`, `faq_items`, `terms`, `country_region_codes` 등
 - **V005:** `application_drafts` — FO `register.html` 접수 임시저장
 - **V006:** 로그인 잠금, 비밀글 잠금, 지역별 시험장코드 UNIQUE, `terms_consents`
-- **V007:** pgvector + `semantic_chunks` — `source_type`(notice/faq/board_post/application/terms/rag_corpus), 다국어·청크 단위 embedding, HNSW(cosine) 인덱스. **API embedding/sync·검색 엔드포인트는 후속 단계** (`SEMANTIC_SEARCH_ENABLED=false` 기본)
+- **V007:** pgvector + `semantic_chunks` — `source_type`(notice/faq/board_post/application/terms/rag_corpus), HNSW(cosine) 인덱스. **API embedding/sync·검색 엔드포인트는 후속** (`SEMANTIC_SEARCH_ENABLED=false`)
+- **V008:** `exam_venues.name_my` — FO MY 언어 시험장명, BO `POST /admin/translate` 자동번역 입력
 
 ### 6.2.1 pgvector (의미 검색·RAG)
 
@@ -328,7 +331,7 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 6.4 Alembic
 
-`apps/api/alembic/versions/20260606_0001_initial_schema.py` — ORM `metadata.create_all` bootstrap revision **1개** 존재. **운영·로컬 DB 적용 기준은 SQL migration(V001~V007)**이며, 이미 V001~V007이 적용된 DB에 Alembic revision을 섞지 않습니다. 신규 빈 DB 로컬 부트스트랩·ORM 스냅샷용으로만 사용합니다.
+`apps/api/alembic/versions/20260606_0001_initial_schema.py` — ORM bootstrap revision **1개**. **운영·로컬 DB 적용 기준은 SQL migration(V001~V008)**이며, 이미 SQL이 적용된 DB에 Alembic revision을 섞지 않습니다.
 
 ---
 
@@ -438,16 +441,14 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 9.1 신규 스택 (권장 개발 경로)
 
-**PostgreSQL 준비** — DB가 없으면 생성 후 V001~V007 순서 적용:
+**PostgreSQL 준비** — DB 생성 후 migration 적용:
 
 ```bash
 createdb topik_myanmar
-for f in db/migrations/V00{1,2,3,4,5,6}__*.sql; do
-  psql postgresql://localhost:5432/topik_myanmar -f "$f"
-done
-# V007 (pgvector) — superuser 필요. stdin: 현재 셸이 파일 읽음 (-f 는 postgres 가 경로 열기)
+bash scripts/run-migrations.sh
+# V007 (pgvector) — superuser 필요 (run-migrations.sh에 V007 포함 시 실패할 수 있음)
 sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
-# IwinV: /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql 절대경로 — IWINV_SETUP.md §2.8
+# IwinV: IWINV_SETUP.md §2.8
 ```
 
 **API:**
@@ -535,9 +536,9 @@ python3 -m http.server 8081
 
 | 상태 | 범위 |
 | --- | --- |
-| **구현됨 (1단계)** | Health, FO/BO auth, `find-email`, me(rev/If-Match), exam-rounds/venues(`payment_*`·`result_announcement_date`), application-draft/submissions, notices/faq/terms, board, files, admin 전반, **roster.xlsx**·**photos.zip** export, **마케팅 공지 일괄 메일**, **이메일 14종 렌더+도메인 트리거(ko/my/en)**, **optimistic locking(rev/409)** |
-| **부분** | Google OAuth (`enabled: false`), `/internal/notifications/*`(레거시 계약, 미등록) |
-| **미구현/보류** | Google login/register, 운영 SMTP 실발송(도메인·DNS 확정 후) |
+| **구현됨 (1단계)** | Health, FO/BO auth, **Google OAuth**(`GOOGLE_CLIENT_ID` 설정 시), `find-email`, me(rev/If-Match), exam-rounds/venues, application-draft/submissions, notices/faq/terms, board, files, admin 전반, **roster.xlsx**·**photos.zip** export, **마케팅 공지 일괄 메일**, **이메일 14종 렌더+도메인 트리거(ko/my/en)**, **rev/409**, **BO 시험장 MY 자동번역**, **V008 name_my** |
+| **부분** | `/internal/notifications/*`(레거시 계약, 미등록), 의미 검색(스키마만) |
+| **운영 대기** | SMTP/DNS 확정 후 실발송 검증, 도메인 구매·SSL |
 
 FO는 `html/C안/FO/shared/api-client.js`(빌드 시 `html/shared` 병합), BO는 `BO(admin)/project/shared/bo-api-client.js`로 FastAPI(`:8000`) 연동. 응시료·수납처 안내 페이지(`rules-fee.html`, `apply-howto.html`)는 **정적 문구** — API/DB 연동 없음(아래 §15).
 
@@ -656,7 +657,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 14.2 FastAPI·운영 완성 (1단계 이후)
 
 1. IwinV Web/DB [`IWINV_SETUP.md`](IWINV_SETUP.md) — nginx, systemd, PostgreSQL, **테라웹메일 SMTP** DNS(MX/SPF/DKIM)
-2. Google OAuth (`/auth/google`) — 고객사 앱 등록 확정 후
+2. Google OAuth 운영 앱 등록 — API 구현 완료, `GOOGLE_CLIENT_ID`·DNS origin 확정 후
 3. ~~이메일 14종 ko/my/en 렌더·도메인 트리거~~ — 완료 (`email_render.py` + `email_templates.py` + `email_templates_i18n.py`)
 4. `STORAGE_PROVIDER=s3` + IwinV 오브젝트 스토리지 (운영 사진)
 5. `html/C안/FO` → `apps/web` 페이지 이전 (중기)
@@ -699,7 +700,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | BO 정적 | `python3 build-bo.py` → `public-bo/` (동일) |
 | API | `apps/api` venv + `systemctl restart myanmar-api` |
 | Vite FO (선택) | `apps/web` `npm run build` → `dist/` |
-| DB 스키마 | `db/migrations/V001`~`V007` 순서 `psql -f` (V007: postgres superuser, IwinV는 stdin `<`) |
+| DB 스키마 | `bash scripts/run-migrations.sh` (V001~V008, V007: postgres superuser stdin `<`) |
 | 운영 시드 | `CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py` (**`seed_dev.py` 금지**) |
 | 첫 BO 관리자 | `ADMIN_EMAIL=… ADMIN_PASSWORD=… python3 scripts/create_admin.py` |
 
@@ -751,7 +752,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | P1 | SMTP/DNS 미확정 시 이메일 인증 불가 (FO 가입 블로cker) |
 | P1 | 제107회 시험장 BO 수동 등록 필요 (seed에 미포함) |
 | P1 | FO `ticket.html` — 수험표 사진 미표시(by design, topik.go.kr 안내 전용) |
-| P2 | Google OAuth — API `enabled:false` 고정, 고객사 앱 등록 후 |
+| P2 | Google OAuth — API 구현 완료, 고객사 앱 등록·`GOOGLE_CLIENT_ID` 설정 후 |
 | P2 | FO 공지 다국어 본문 미구현 |
 | P2 | 응시료·수납처 최종 MMK — 정적 HTML + seed 임시값 |
 

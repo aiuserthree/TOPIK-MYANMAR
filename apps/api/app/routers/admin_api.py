@@ -35,12 +35,14 @@ from app.lib.email_notify import (
     notify_application_approved,
     notify_application_rejected,
     notify_board_reply,
+    notify_board_workflow_changed,
     notify_member_info_changed,
+    notify_notice_marketing,
     notify_photo_rejected,
     notify_temp_password,
     resolve_admin_notify_email,
+    count_active_applications,
 )
-from app.lib.mail import enqueue_email, schedule_outbox_delivery
 from app.lib.profile import is_full_member
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.roster_export import build_roster_zip, group_roster_rows
@@ -1380,18 +1382,13 @@ async def send_marketing_notice(
     users = result.scalars().all()
     queued = 0
     for user in users:
-        await enqueue_email(
+        await notify_notice_marketing(
             db,
-            template_key="notice_marketing",
-            to_email=user.email,
-            locale=user.preferred_lang,
-            user_id=user.id,
-            variables={
-                "noticeTitle": notice.title,
-                "noticeCategory": notice.category,
-                "publishedAt": published,
-                "noticeUrl": notice_url,
-            },
+            user,
+            notice_title=notice.title,
+            notice_category=notice.category or "공지",
+            published_at=published,
+            notice_url=notice_url,
         )
         queued += 1
 
@@ -1806,6 +1803,12 @@ async def admin_create_board_comment(
         parent_comment_id=parent_id,
     )
     db.add(comment)
+    user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
+    if user:
+        parent_id = body.get("parent_id") or body.get("parent_comment_id")
+        await notify_board_reply(
+            db, post, user, activity_type="댓글" if not parent_id else "대댓글"
+        )
     await write_audit(
         db, admin_user_id=admin.id, action_type="board_comment",
         target_type="board_posts", target_id=post_id, ip_address=ip,
@@ -1849,6 +1852,9 @@ async def board_workflow(
         raise api_error("VALIDATION_ERROR", "workflow_status가 올바르지 않습니다.", 400)
     before = post.workflow_status
     post.workflow_status = body.workflow_status
+    user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
+    if user and before != post.workflow_status:
+        await notify_board_workflow_changed(db, post, user, workflow_status=post.workflow_status)
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -1948,8 +1954,10 @@ async def update_user(
             changed_fields.append(label)
             diff_lines.append(f"{label}: {old} → {val}")
         setattr(user, key, val)
+    canceled_count = 0
     if data.get("status") == "withdrawn":
         now = datetime.now(timezone.utc)
+        canceled_count = await count_active_applications(db, user_id)
         user.withdrawn_at = now
         # 탈퇴 시 진행중(미취소) 접수 자동 취소 cascade.
         await db.execute(
@@ -1972,7 +1980,12 @@ async def update_user(
     if data.get("status") == "suspended":
         await notify_account_status(db, user, action="suspended")
     elif data.get("status") == "withdrawn":
-        await notify_account_status(db, user, action="withdrawn")
+        await notify_account_status(
+            db,
+            user,
+            action="withdrawn",
+            canceled_applications=canceled_count,
+        )
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -2010,7 +2023,6 @@ async def reset_user_password(
         memo=f"임시 비밀번호 발급 ({user.email})",
     )
     await db.commit()
-    schedule_outbox_delivery(outbox_id)
     return {"temp_password": temp}
 
 
@@ -2108,7 +2120,6 @@ async def reset_admin_password(
         memo=f"임시 비밀번호 발급 ({row.email})",
     )
     await db.commit()
-    schedule_outbox_delivery(outbox_id)
     return {"temp_password": temp}
 
 

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, BeforeValidator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +43,6 @@ from app.lib.mail import (
     enqueue_email,
     format_verification_code,
     mail_delivery_status,
-    schedule_outbox_delivery,
 )
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
@@ -88,7 +87,7 @@ class RefreshBody(BaseModel):
 
 class SendCodeBody(BaseModel):
     email: EmailField
-    preferred_lang: str = "ko"
+    preferred_lang: str | None = None
 
 
 class VerifyEmailBody(BaseModel):
@@ -131,6 +130,7 @@ class GoogleAuthBody(BaseModel):
 
 class ForgotPasswordBody(BaseModel):
     email: EmailField
+    preferred_lang: str | None = None
 
 
 class ResetPasswordBody(BaseModel):
@@ -138,6 +138,25 @@ class ResetPasswordBody(BaseModel):
     reset_token: str
     password: str
     password_confirm: str
+
+
+def _normalize_preferred_lang(raw: str | None, fallback: str = "ko") -> str:
+    lang = (raw or fallback or "ko")[:5]
+    if lang not in ("ko", "my", "en"):
+        fb = (fallback or "ko")[:5]
+        return fb if fb in ("ko", "my", "en") else "ko"
+    return lang
+
+
+def _resolve_request_locale(body_lang: str | None, request: Request | None = None) -> str:
+    """FO UI language at request time — body field, then X-TPKM-Locale header, else ko."""
+    if body_lang and str(body_lang).strip():
+        return _normalize_preferred_lang(body_lang)
+    if request is not None:
+        header = request.headers.get("x-tpkm-locale")
+        if header and header.strip():
+            return _normalize_preferred_lang(header.strip())
+    return "ko"
 
 
 def _user_token_response(user: User) -> dict:
@@ -473,7 +492,11 @@ async def refresh(body: RefreshBody, db: AsyncSession = Depends(get_db_session))
 
 
 @router.post("/send-verification-code")
-async def send_verification_code(body: SendCodeBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def send_verification_code(
+    body: SendCodeBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     email = body.email.strip().lower()
     if not is_valid_email(email):
         raise api_error("VALIDATION_ERROR", "유효한 이메일을 입력해 주세요.")
@@ -497,7 +520,7 @@ async def send_verification_code(body: SendCodeBody, db: AsyncSession = Depends(
         db,
         template_key="signup_verify_code",
         to_email=email,
-        locale=body.preferred_lang,
+        locale=_resolve_request_locale(body.preferred_lang, request),
         variables={
             "userName": email.split("@")[0],
             "verificationCode": format_verification_code(code),
@@ -505,7 +528,6 @@ async def send_verification_code(body: SendCodeBody, db: AsyncSession = Depends(
         },
     )
     await db.commit()
-    schedule_outbox_delivery(mail_result.get("queued_id"))
     out: dict = {
         "sent": True,
         "mail_delivered": mail_delivery_status(mail_result),
@@ -604,7 +626,11 @@ async def register(
 
 
 @router.post("/forgot-password")
-async def forgot_password(body: ForgotPasswordBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def forgot_password(
+    body: ForgotPasswordBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     email = body.email.strip().lower()
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     user = user_res.scalar_one_or_none()
@@ -627,15 +653,14 @@ async def forgot_password(body: ForgotPasswordBody, db: AsyncSession = Depends(g
         db,
         template_key="password_reset",
         to_email=email,
-        locale="ko",
+        locale=_resolve_request_locale(body.preferred_lang, request),
         variables={
-            "userName": email.split("@")[0],
+            "userName": user.name_ko or email.split("@")[0],
             "verificationCode": format_verification_code(code),
             "expiresMinutes": "30",
         },
     )
     await db.commit()
-    schedule_outbox_delivery(mail_result.get("queued_id"))
     out: dict = {
         "sent": True,
         "registered": True,

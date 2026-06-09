@@ -1,6 +1,8 @@
-# TOPIK Myanmar Web
+# TOPIK Myanmar Web (스캐폴드 — 미운영)
 
-Vite + React + TypeScript 기반의 신규 FO/BO 화면 개발 시작점입니다. 기존 `html/` 정적 화면은 유지하고, 새 화면은 `apps/web`에서 단계적으로 재구현합니다.
+> **운영 FO는 `html/C안/FO/` (HTML/CSS/JS)입니다.** 본 `apps/web`은 중기 FO 이전용 Vite+React 스캐폴드이며, 현재 홈 placeholder만 존재합니다.
+
+Vite + React + TypeScript. 향후 `html/C안/FO` 화면을 단계적으로 이전할 예정입니다.
 
 ## Getting Started
 

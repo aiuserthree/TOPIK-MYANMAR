@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     smtp_pass: str = Field(default="", validation_alias="SMTP_PASS")
     enable_email_worker: bool = Field(default=False, validation_alias="ENABLE_EMAIL_WORKER")
     public_fo_base: str = Field(default="https://www.topik-myanmar.com", validation_alias="PUBLIC_FO_BASE")
+    public_bo_base: str = Field(default="https://admin.topik-myanmar.com", validation_alias="PUBLIC_BO_BASE")
+    admin_notify_email: str = Field(default="admin@topik-myanmar.com", validation_alias="ADMIN_NOTIFY_EMAIL")
     min_signup_age_years: int = Field(default=14, validation_alias="MIN_SIGNUP_AGE_YEARS")
     embedding_model: str = Field(
         default="text-embedding-3-small",

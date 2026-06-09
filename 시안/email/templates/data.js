@@ -42,7 +42,7 @@
     rejectCode: "정보 불일치",
     photoRejectReason: "정면 사진이 아닙니다. 얼굴이 정면을 향하도록 다시 촬영해 주세요.",
     photoRejectCode: "정면 아님",
-    editProfileUrl: "https://topik-myanmar.example/mypage/profile",
+    editProfileUrl: "https://topik-myanmar.example/mypage-profile.html",
     // temp pw
     temporaryPassword: "Tmp9#kQ2m",
     loginUrl: "https://topik-myanmar.example/login",
@@ -235,13 +235,10 @@
       intro: "{userName} 님, 신청하신 TOPIK 접수가 정상적으로 승인되었습니다.",
       blocks: [
         { type: "infoTable", rows: [["회차", "{roundName}"], ["급수", "{level}"], ["시험일", "{examDate}"], ["시험장", "{venueName}"]] },
-        { type: "steps", title: "다음 단계", items: ["오프라인 응시료 수납 (수납처·일정은 공지 참고)", "수납 확인 후 수험번호 부여", "마이페이지·공지사항에서 수험번호 확인"] },
-        { type: "notice", tone: "info", text: "수험번호는 이메일로 발송되지 않습니다. 응시료 수납이 확인된 후 마이페이지와 공지사항에서 확인하실 수 있습니다." },
+        { type: "steps", title: "다음 단계", items: ["오프라인 응시료 수납 (수납처·일정은 공지 참고)", "수납 확인 후 정해진 날짜에 수험번호 일괄 부여", "마이페이지·접수확인에서 수험번호 확인"] },
+        { type: "notice", tone: "info", text: "수험번호는 이메일로 발송되지 않습니다. 응시료 수납이 확인된 후 정해진 날짜에 마이페이지·접수확인에서 확인하실 수 있습니다." },
       ],
-      ctas: [
-        { label: "마이페이지", href: "{myPageUrl}", kind: "primary" },
-        { label: "공지사항 보기", href: "{noticeUrl}", kind: "secondary" },
-      ],
+      ctas: [{ label: "마이페이지", href: "{myPageUrl}", kind: "primary" }],
       variables: ["userName", "applicantNo", "roundName", "level", "examDate", "venueName"],
     },
 
@@ -376,9 +373,9 @@
       intro: "새로운 게시글이 접수되었습니다. 아래 정보를 확인하고 처리해 주세요.",
       blocks: [
         { type: "infoTable", rows: [["작성자", "{userName}"], ["게시판", "{boardName}"], ["유형", "{category}"], ["제목", "{postTitle}"], ["접수일시", "{submittedAt}"], ["비밀글", "{secretFlag}"]] },
-        { type: "notice", tone: "info", text: "비밀글은 본문이 메일에 포함되지 않습니다. BO에서 직접 확인해 주세요." },
+        { type: "notice", tone: "info", text: "비밀글은 본문이 메일에 포함되지 않습니다. 관리자에서 직접 확인해 주세요." },
       ],
-      ctas: [{ label: "BO에서 처리하기", href: "{boPostUrl}", kind: "primary" }],
+      ctas: [{ label: "관리자에서 처리하기", href: "{boPostUrl}", kind: "primary" }],
       variables: ["userName", "boardName", "category", "postTitle", "secretFlag", "boPostUrl"],
     },
 
@@ -594,7 +591,7 @@
             {
               type: "reasonBox",
               tone: "info",
-              title: "변경 내역 (diff)",
+              title: "변경 내역",
               reason: "{changeDiffHtml}",
             },
             {
@@ -662,7 +659,7 @@
             {
               type: "reasonBox",
               tone: "info",
-              title: "Change details (diff)",
+              title: "Change details",
               reason: "{changeDiffHtml}",
             },
             {
@@ -808,18 +805,48 @@
     };
   }
 
-  const TRANSACTIONAL_RENDER = TRANSACTIONAL.map(withKoDefaults);
+  function koFieldsFromTpl(tpl) {
+    return {
+      subject: tpl.subject,
+      preheader: tpl.preheader,
+      eyebrowKo: tpl.eyebrowKo,
+      eyebrowEn: tpl.eyebrowEn,
+      indexNo: tpl.indexNo,
+      h1: tpl.h1,
+      intro: tpl.intro,
+      blocks: tpl.blocks,
+      ctas: tpl.ctas,
+    };
+  }
+
+  /** Attach MY/EN packs (i18n_packs.js) to KO-only templates for preview + registry. */
+  function attachLocalePacks(tpl) {
+    if (tpl.i18n) return tpl;
+    const packs = (window.TOPIK_I18N_PACKS || {})[tpl.key];
+    if (!packs) return tpl;
+    return {
+      ...tpl,
+      i18n: {
+        ko: koFieldsFromTpl(tpl),
+        my: packs.my,
+        en: packs.en,
+      },
+    };
+  }
+
+  const TRANSACTIONAL_I18N = TRANSACTIONAL.map(attachLocalePacks);
+  const TRANSACTIONAL_RENDER = TRANSACTIONAL_I18N.map(withKoDefaults);
 
   const TEMPLATES = [LAYOUT_PREVIEW, ...TRANSACTIONAL_RENDER];
   const TEMPLATE_BY_KEY = Object.fromEntries(
-    TRANSACTIONAL.concat([LAYOUT_PREVIEW]).map((t) => [t.key, t])
+    TRANSACTIONAL_I18N.concat([LAYOUT_PREVIEW]).map((t) => [t.key, t])
   );
   const TEMPLATE_BY_TEMPLATE_KEY = Object.fromEntries(
-    TRANSACTIONAL.filter((t) => t.templateKey).map((t) => [t.templateKey, t])
+    TRANSACTIONAL_I18N.filter((t) => t.templateKey).map((t) => [t.templateKey, t])
   );
 
   /** 14 transactional types for email_outbox (snake_case keys). */
-  const TEMPLATE_REGISTRY = TRANSACTIONAL.filter((t) => t.templateKey).map((t) => ({
+  const TEMPLATE_REGISTRY = TRANSACTIONAL_I18N.filter((t) => t.templateKey).map((t) => ({
     templateKey: t.templateKey,
     previewKey: t.key,
     nav: t.nav,
@@ -832,6 +859,7 @@
     THEMES,
     TEMPLATES,
     TRANSACTIONAL,
+    TRANSACTIONAL_I18N,
     TRANSACTIONAL_RENDER,
     LAYOUT_PREVIEW,
     TEMPLATE_BY_KEY,

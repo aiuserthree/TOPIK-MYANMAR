@@ -10,7 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.lib.deps import AuthUser, require_complete_user
 from app.lib.errors import api_error
-from app.lib.email_notify import notify_board_post_created, resolve_admin_notify_email
+from app.lib.email_notify import (
+    notify_board_activity_to_operator,
+    notify_board_post_created,
+    resolve_admin_notify_email,
+)
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_upload
@@ -421,6 +425,15 @@ async def create_comment(
         parent_comment_id=body.parent_comment_id,
     )
     db.add(comment)
+    commenter = (await db.execute(select(User).where(User.id == auth.id))).scalar_one_or_none()
+    if commenter:
+        parent_label = "대댓글" if body.parent_comment_id else "댓글"
+        await notify_board_activity_to_operator(
+            db,
+            post,
+            activity_type=f"회원 {parent_label}",
+            actor_name=commenter.name_ko,
+        )
     await db.commit()
     await db.refresh(comment)
     return {"id": comment.id, "created_at": comment.created_at.isoformat()}

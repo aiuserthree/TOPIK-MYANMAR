@@ -393,14 +393,13 @@
       </div>
       <h3 style="font-size: 20px; margin-bottom: 8px;" data-i18n-content="reg.done_title">접수가 완료되었습니다</h3>
       <p style="color: var(--text-2); font-size: 14px; line-height: 1.7;" data-i18n-content="reg.done_desc" data-i18n-content-html>
-        사진 심사 및 오프라인 응시료 수납 후 수험번호가 부여됩니다.<br>
-        관련 일정 및 유의사항은 공지사항을 참고하시기 바랍니다.<br>
+        사진 심사 및 오프라인 응시료 수납 후<br>
+        정해진 날짜에 수험번호가 일괄 부여됩니다.<br>
         접수 결과는 마이페이지에서 확인하시기 바랍니다.
       </p>
     </div>
     <div class="modal-foot">
-      <a href="notice.html" class="btn btn-secondary" data-i18n-content="reg.view_notice">공지사항 보기</a>
-      <a href="mypage.html" class="btn btn-primary" data-i18n-content="menu.mypage">마이페이지</a>
+      <button type="button" class="btn btn-primary btn-block" id="btnDoneConfirm" data-i18n-content="reg.done_confirm">접수확인</button>
     </div>
   </div>
 </div>
@@ -470,8 +469,8 @@
     'reg.agree': { ko: '서비스 이용약관 및 개인정보 처리 방침에 동의합니다.', my: 'ဝန်ဆောင်မှု စည်းကမ်းနှင့် ကိုယ်ရေးအချက်အလက် မူဝါဒကို သဘောတူသည်။', en: 'I agree to the Terms of Service and Privacy Policy.' },
     'reg.submit': { ko: '접수하기', my: 'လျှောက်ထားရန်', en: 'Submit registration' },
     'reg.done_title': { ko: '접수가 완료되었습니다', my: 'လျှောက်ထားခြင်း ပြီးဆုံးပါပြီ', en: 'Registration complete' },
-    'reg.done_desc': { ko: '사진 심사 및 오프라인 응시료 수납 후 수험번호가 부여됩니다.<br>관련 일정 및 유의사항은 공지사항을 참고하시기 바랍니다.<br>접수 결과는 마이페이지에서 확인하시기 바랍니다.', my: 'ဓာတ်ပုံစိစစ်ခြင်းနှင့် အော့ဖ်လိုင်း ဖြေဆိုကြေး ပေးသွင်းပြီးမှ ဖြေဆိုသူနံပါတ် ပေးအပ်မည်။<br>သက်ဆိုင်ရာ အချိန်ဇယားနှင့် သတိပြုရန်များကို ကြေညာချက်တွင် ကြည့်ပါ။<br>လျှောက်ထားမှု ရလဒ်ကို ကျွန်ုပ်စာမျက်နှာတွင် စစ်ဆေးပါ။', en: 'Your exam number is assigned after photo review and offline fee payment.<br>See Notices for schedules and important info.<br>Check the result on My page.' },
-    'reg.view_notice': { ko: '공지사항 보기', my: 'ကြေညာချက် ကြည့်ရန်', en: 'View notices' },
+    'reg.done_desc': { ko: '사진 심사 및 오프라인 응시료 수납 후<br>정해진 날짜에 수험번호가 일괄 부여됩니다.<br>접수 결과는 마이페이지에서 확인하시기 바랍니다.', my: 'ဓာတ်ပုံစိစစ်ခြင်းနှင့် အော့ဖ်လိုင်း ဖြေဆိုကြေး ပေးသွင်းပြီးနောက်<br>သတ်မှတ်ထားသော နေ့တွင် ဖြေဆိုသူနံပါတ်များ တစ်ပြိုင်တည်း ပေးအပ်မည်။<br>လျှောက်ထားမှု ရလဒ်ကို ကျွန်ုပ်စာမျက်နှာတွင် စစ်ဆေးပါ။', en: 'After photo review and offline fee payment,<br>exam numbers are assigned in batch on the scheduled date.<br>Check your registration result on My page.' },
+    'reg.done_confirm': { ko: '접수확인', my: 'လျှောက်ထားမှု အတည်ပြု', en: 'View confirmation' },
     'su.name_ko': { ko: '한글 성명', my: 'ကိုရီးယား အမည်', en: 'Korean name' },
     'su.name_en': { ko: '영문 성명', my: 'အင်္ဂလိပ် အမည်', en: 'English name' },
     'su.birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
@@ -1408,6 +1407,17 @@
     el.style.display = msg ? 'block' : 'none';
   }
 
+  var lastConfirmKey = null;
+
+  document.getElementById('btnDoneConfirm').addEventListener('click', function () {
+    TPKM.closeModal('modalDone');
+    var url = 'mypage.html';
+    if (lastConfirmKey != null && lastConfirmKey !== '') {
+      url += '?confirm=' + encodeURIComponent(String(lastConfirmKey));
+    }
+    location.href = url;
+  });
+
   // Submit — API (Phase 1); demo token falls back to modal only
   document.getElementById('btnSubmit').addEventListener('click', function () {
     if (!document.getElementById('agreeTerms').checked) {
@@ -1436,6 +1446,7 @@
     var token = TopikApi.getAccessToken();
     if (!TopikApi.useApi || !TopikApi.baseUrl || token === 'demo-local') {
       localStorage.removeItem(DRAFT_KEY);
+      lastConfirmKey = null;
       TPKM.openModal('modalDone');
       return;
     }
@@ -1456,7 +1467,14 @@
         try {
           sessionStorage.setItem('topik_last_submission', JSON.stringify(res.body));
         } catch (e) {}
-        location.href = 'mypage.html?submitted=1';
+        try {
+          if (REG_STATE.profile) {
+            sessionStorage.setItem('tpkm_mypage_profile_seed', JSON.stringify(REG_STATE.profile));
+          }
+        } catch (e2) {}
+        var apps = res.body && res.body.applications;
+        lastConfirmKey = (apps && apps[0] && apps[0].id) || (res.body && res.body.submission_id) || null;
+        TPKM.openModal('modalDone');
         return;
       }
       var err = (res.body && res.body.error) || {};

@@ -1,22 +1,49 @@
-# CODING AGENTS: READ THIS FIRST
+# TOPIK Myanmar BO (운영 관리자)
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+미얀마 TOPIK **백오피스(BO)** 운영 화면. React 18 CDN + Babel SPA로 구현되어 있으며, FastAPI `apps/api`의 `/api/v1/admin/*`와 연동합니다.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+> **기준일:** 2026-06-09
 
-## What you should do — IMPORTANT
+## 구성
 
-**Read `bo/project/admin.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+| 경로 | 역할 |
+| --- | --- |
+| `project/admin-login.html` | 관리자 로그인 |
+| `project/admin.html` | SPA 셸 (사이드바 라우팅) |
+| `project/assets/app.jsx` | 패널 라우터, 최초 비밀번호 변경 게이트 |
+| `project/assets/bo-api-bridge.js` | 패널 액션 → `TopikBoApi` 매핑 |
+| `project/panels/*.jsx` | 기능 패널 13개 |
+| `project/shared/bo-api-client.js` | Admin API 클라이언트 |
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+## 패널 목록
 
-## About the design files
+`dashboard`, `applicants`, `sessions`, `venues`, `notices`, `faq`, `refunds`, `inquiries`, `members`, `terms`, `admins`, `permissions`, `audit`
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## 로컬 실행
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+```bash
+# API 먼저 기동 (저장소 루트)
+cd apps/api && source .venv/bin/activate
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
-## Bundle contents
+# BO 정적 서버
+cd html/C안/BO\(admin\)/project
+python3 -m http.server 8081
+# http://localhost:8081/admin-login.html
+```
 
-- `bo/README.md` — this file
-- `bo/project/` — the `미얀마(BO)` project files (HTML prototypes, assets, components)
+데모 계정 (`python3 scripts/seed_dev.py` 후): `admin-dev@topik-mm.local` / `DevOnly!2026`
+
+## 빌드·배포
+
+```bash
+python3 build-bo.py   # → public-bo/
+# IwinV: TOPIK_API_BASE 생략 → nginx same-origin /api
+```
+
+운영 URL: `https://admin.topik-myanmar.com`
+
+## 문서
+
+- [`docs/PROJECT_REVIEW.md`](../../../docs/PROJECT_REVIEW.md) — BO 구현 리뷰
+- [`docs/system_design/services/bo-*.md`](../../../docs/system_design/services/) — BO 서비스별 설계

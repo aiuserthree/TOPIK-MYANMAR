@@ -83,7 +83,7 @@
         <div class="ph-prev">현재 사진</div>
         <div style="flex:1;">
           <p style="font-size: 13.5px; color: var(--text-2);" data-i18n-content="mpp.photo_desc1">시험 접수 시 자동 사용됩니다.</p>
-          <p class="body-sm" style="margin-top: 4px;" data-i18n-content="mpp.photo_desc2" data-i18n-content-html>새 사진 등록 시 <strong>진행 중인 접수 건에도 즉시 반영</strong>되며, <strong>BO 사진 심사가 자동으로 재실행(재심사)</strong>됩니다. (0527 정책)</p>
+          <p class="body-sm" style="margin-top: 4px;" data-i18n-content="mpp.photo_desc2" data-i18n-content-html>새 사진 등록 시 진행 중인 접수 건에도 즉시 반영되며, 사진 심사가 자동으로 재실행(재심사)됩니다.</p>
           <div style="margin-top: 10px; display:flex; gap: 6px;">
             <button class="btn btn-secondary btn-sm" type="button" data-photo-select data-i18n-content="mpp.photo_select">파일 선택</button>
             <button class="btn btn-text btn-sm" type="button" data-photo-spec data-i18n-content="mpp.photo_spec">규격 안내</button>
@@ -224,7 +224,7 @@
     'mpp.tab_account': { ko: '계정·비밀번호', my: 'အကောင့် · စကားဝှက်', en: 'Account & password' },
     'mpp.photo_title': { ko: '증명사진', my: 'သက်သေခံ ဓာတ်ပုံ', en: 'ID photo' },
     'mpp.photo_desc1': { ko: '시험 접수 시 자동 사용됩니다.', my: 'စာမေးပွဲ လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုသည်။', en: 'It is used automatically when you register for the exam.' },
-    'mpp.photo_desc2': { ko: '새 사진 등록 시 <strong>진행 중인 접수 건에도 즉시 반영</strong>되며, <strong>BO 사진 심사가 자동으로 재실행(재심사)</strong>됩니다. (0527 정책)', my: 'ဓာတ်ပုံအသစ် တင်ပါက <strong>ဆောင်ရွက်ဆဲ လျှောက်လွှာများတွင်လည်း ချက်ချင်း သက်ရောက်</strong>ပြီး၊ <strong>BO ဓာတ်ပုံစိစစ်မှု အလိုအလျောက် ပြန်လည်စစ်ဆေး</strong>ပါမည်။ (0527 မူဝါဒ)', en: 'When you upload a new photo, it is <strong>immediately applied to applications in progress</strong>, and the <strong>BO photo review runs again automatically (re-review)</strong>. (0527 policy)' },
+    'mpp.photo_desc2': { ko: '새 사진 등록 시 진행 중인 접수 건에도 즉시 반영되며, 사진 심사가 자동으로 재실행(재심사)됩니다.', my: 'ဓာတ်ပုံအသစ် တင်ပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများတွင်လည်း ချက်ချင်း သက်ရောက်ပြီး၊ ဓာတ်ပုံစိစစ်မှု အလိုအလျောက် ပြန်လည်စစ်ဆေးပါမည်။', en: 'When you upload a new photo, it is immediately applied to applications in progress, and the photo review runs again automatically (re-review).' },
     'mpp.photo_select': { ko: '파일 선택', my: 'ဖိုင်ရွေးရန်', en: 'Choose file' },
     'mpp.photo_spec': { ko: '규격 안내', my: 'စံချိန်စံညွှန်း', en: 'Requirements' },
     'mpp.basic_info': { ko: '기본정보', my: 'အချက်အလက်', en: 'Basic information' },
@@ -414,13 +414,16 @@
       if (!photoFailed && newPhotoId) {
         showProfilePhoto(newPhotoId, u.photo_unavailable);
       }
-      var alertMsg = photoFailed
-        ? ((res.body && res.body.message) ||
-           '기본정보는 저장되었지만 사진 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.')
-        : ((res.body && res.body.message && !res.body.photo_error)
-           ? res.body.message
-           : '회원정보가 수정되었습니다.');
-      alert(alertMsg);
+      if (photoFailed) {
+        alert((res.body && res.body.message) ||
+          '기본정보는 저장되었지만 사진 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      alert('회원정보가 저장되었습니다.');
+      try {
+        if (u) sessionStorage.setItem('tpkm_mypage_profile_seed', JSON.stringify(u));
+      } catch (e) { /* ignore */ }
+      location.href = 'mypage.html';
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;

@@ -2,7 +2,7 @@
 
 **확정 디자인:** C안 에디토리얼 (`THEMES.C`). FO/BO 운영 시안도 C안 기준 — `docs/기능정의서/시안확정_C안.md`.
 
-HTML/CSS/JS만 사용. 렌더 결과는 SMTP 워커가 `email_outbox.body_html`에 저장하는 형태를 가정합니다.
+HTML/CSS/JS만 사용. **프로덕션 렌더:** `apps/api/app/lib/email_render.py` + `email_templates.py` + `email_templates_i18n.py` → `email_outbox` → SMTP 워커(`email_worker.py`).
 
 ## 미리보기
 

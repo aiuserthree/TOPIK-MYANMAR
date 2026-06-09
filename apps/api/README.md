@@ -1,29 +1,37 @@
 # TOPIK Myanmar FastAPI
 
-Vite + React + FastAPI 재개발을 위한 초기 API 스캐폴드입니다. 기존 `api/` Fastify 서버와 `db/migrations/*.sql`은 그대로 두고, 새 백엔드는 `apps/api`에서 별도로 시작합니다.
+미얀마 TOPIK FO/BO **운영 API** (`apps/api`). 레거시 `api/` Fastify 서버는 참조용이며, 신규 개발은 본 디렉터리를 기준으로 합니다.
+
+> **기준일:** 2026-06-09
 
 ## 구성
 
 ```text
 apps/api/
 ├── app/
-│   ├── main.py              # FastAPI 앱, CORS, 라우터 등록
-│   ├── config.py            # DATABASE_URL, JWT_SECRET, CORS_ORIGINS
+│   ├── main.py              # FastAPI 앱, CORS, lifespan(email worker), 예외 핸들러
+│   ├── config.py            # Settings (DB·JWT·CORS·S3·MAIL·Google OAuth)
 │   ├── database.py          # SQLAlchemy async engine/session
+│   ├── models/              # User, Application, Exam, Content, Board, Admin, EmailOutbox 등
+│   ├── lib/                 # deps, security, storage, mail, email_worker, audit, roster_export, rev 등
 │   └── routers/
-│       ├── health.py        # GET /health
-│       └── auth.py          # GET /api/v1/auth/status placeholder
-├── alembic/                 # 향후 ORM 기반 migration 작성 위치
-├── alembic.ini
-├── pyproject.toml
+│       ├── health.py        # /health, /health/db, /health/mail
+│       ├── auth.py          # FO/BO 로그인, 가입, Google OAuth, 이메일 인증, 비번 재설정
+│       ├── me.py            # /me, change-password, withdraw
+│       ├── exam.py          # exam-rounds, exam-venues
+│       ├── applications.py  # draft, submissions, applications, cancel
+│       ├── content.py       # notices, faq, terms
+│       ├── board.py         # FO 게시판 (환불·정정, 문의)
+│       ├── files.py         # 파일 프록시 (local/S3)
+│       └── admin_api.py     # BO /admin/* 전체
+├── alembic/                 # bootstrap revision 1개 (빈 DB 전용, 운영은 SQL migration)
+├── requirements.txt
 └── .env.example
 ```
 
-기존 스키마는 `db/migrations`의 SQL을 기준으로 합니다. 현재 주요 테이블은 `users`, `exam_rounds`, `exam_venues`, `applications`, `admin_users`, `application_memos`, `email_outbox`, `application_drafts` 등입니다.
+스키마 정본: `db/migrations/V001`~`V008` SQL. Alembic은 신규 빈 DB 부트스트랩용 보조 수단입니다.
 
 ## 로컬 실행
-
-Python 가상환경과 PostgreSQL 접속 정보만 사용합니다.
 
 ```bash
 cd apps/api
@@ -38,42 +46,85 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 curl http://localhost:8000/health
+curl http://localhost:8000/health/db
 curl http://localhost:8000/api/v1/auth/status
 ```
 
-## 환경 변수
+## DB 마이그레이션
+
+```bash
+# 저장소 루트 — V001~V008 일괄 (V007 pgvector는 superuser 별도)
+bash scripts/run-migrations.sh
+
+# V007만 superuser (CREATE EXTENSION vector)
+sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
+```
+
+| Migration | 내용 |
+| --- | --- |
+| V001 | 핵심 스키마 (users, applications, admin_users, notices, board 등) |
+| V002 | email_outbox 재시도 컬럼 |
+| V003 | application_memos, audit log JSON |
+| V004 | last_login_at |
+| V005 | application_drafts (30일 TTL) |
+| V006 | 로그인 잠금, 비밀글 잠금, terms_consents, 지역 코드 |
+| V007 | pgvector + semantic_chunks |
+| V008 | exam_venues.name_my (미얀마어 시험장명) |
+
+## 시드
+
+```bash
+# 개발 (저장소 루트)
+python3 scripts/seed_dev.py        # 제107회 + 데모 FO/BO 계정
+
+# 운영 (dev 시드 금지)
+CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py
+ADMIN_EMAIL=... ADMIN_PASSWORD=... python3 scripts/create_admin.py
+```
+
+## 환경 변수 (주요)
 
 ```env
 DATABASE_URL=postgresql+asyncpg://topik_app:비밀번호@127.0.0.1:5432/topik_myanmar
-JWT_SECRET=운영용-긴-랜덤-문자열
-CORS_ORIGINS=http://localhost:5173
+JWT_SECRET=운영용-긴-랜덤-문자열-32자이상
+JWT_REFRESH_SECRET=별도-긴-랜덤-문자열
+CORS_ORIGINS=http://localhost:8080,http://localhost:8081,http://localhost:5173
+
+# 스토리지 (개발: local, 운영: s3)
+STORAGE_PROVIDER=local
+UPLOAD_DIR=var/uploads
+
+# 메일 (개발: console, 운영: smtp)
+MAIL_PROVIDER=console
+ENABLE_EMAIL_WORKER=false
+
+# Google OAuth (선택 — GOOGLE_CLIENT_ID 설정 시 활성)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+PUBLIC_FO_BASE=https://www.topik-myanmar.com
 ```
 
-FastAPI/SQLAlchemy async 연결은 `postgresql+asyncpg://` 형식을 사용합니다. 일반 `psql` 또는 다른 도구에서는 `postgresql://` 형식을 사용해도 됩니다.
+전체 목록: `.env.example` · [`docs/DEV_SPEC.md`](../../docs/DEV_SPEC.md) §8
 
-## PostgreSQL 연결
+## 구현된 API (요약)
 
-로컬 DB를 쓸 경우:
+| 영역 | Prefix | 상태 |
+| --- | --- | --- |
+| Health | `/health`, `/health/db`, `/health/mail` | 구현 |
+| Auth | `/api/v1/auth/*` (login, register, Google, verify, reset) | 구현 |
+| Me | `/api/v1/me/*` | 구현 |
+| Exam | `/api/v1/exam-rounds`, `/exam-venues` | 구현 |
+| Applications | `/api/v1/application-draft`, `application-submissions`, `applications` | 구현 |
+| Content | `/api/v1/notices`, `/faq`, `/terms` | 구현 |
+| Board | `/api/v1/board/*` | 구현 |
+| Files | `/api/v1/files/:id`, `/admin/files/:id` | 구현 |
+| Admin | `/api/v1/admin/*` (접수·회차·콘텐츠·게시판·회원·관리자·감사·export) | 구현 |
 
-```bash
-createdb topik_myanmar
-psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V001__initial_schema.sql
-psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V002__email_outbox_retry.sql
-psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V003__bo_integration.sql
-psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V004__user_last_login.sql
-psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V005__application_drafts.sql
-psql postgresql://localhost:5432/topik_myanmar -f ../../db/migrations/V006__fo_contract_and_security.sql
-sudo -u postgres psql -d topik_myanmar < ../../db/migrations/V007__pgvector_semantic_search.sql
-```
+상세: [`docs/system_design/tech-spec.md`](../../docs/system_design/tech-spec.md) §4
 
-Iwinv VPS의 PostgreSQL에 직접 연결할 경우 `DATABASE_URL`의 host를 VPS 내부 IP 또는 허용된 공인 IP로 바꿉니다.
+## 관련 문서
 
-## Alembic
-
-현재 운영 기준 적용 절차는 `db/migrations/V001`부터 `V007`까지의 SQL migration입니다. Alembic의 단일 초기 revision은 신규 빈 DB에 ORM 기준 스키마를 만들기 위한 보조 수단이며, 운영 DB 변경 이력의 기준으로 혼용하지 않습니다.
-
-```bash
-cd apps/api
-alembic revision -m "create example table"
-alembic upgrade head
-```
+- [`docs/DEV_SPEC.md`](../../docs/DEV_SPEC.md) — 전체 개발 스펙
+- [`docs/DEPLOY.md`](../../docs/DEPLOY.md) — 배포 체크리스트
+- [`docs/IWINV_SETUP.md`](../../docs/IWINV_SETUP.md) — IwinV 운영

@@ -521,8 +521,12 @@ psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_m
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V005__application_drafts.sql
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V006__fo_contract_and_security.sql
 # V007: root(또는 현재 셸)가 파일을 읽고 postgres가 SQL 실행 — -f 상대경로는 /root 등에서 Permission denied
+psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V008__exam_venue_name_my.sql
+# V007: root(또는 현재 셸)가 파일을 읽고 postgres가 SQL 실행
 sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
 ```
+
+또는 일괄: `bash scripts/run-migrations.sh` (V007은 superuser 별도 적용 권장).
 
 V007의 `CREATE EXTENSION`은 **postgres superuser** 권한이 필요합니다. `topik_app`으로 V007을 실행하면 extension 생성에서 실패합니다.
 

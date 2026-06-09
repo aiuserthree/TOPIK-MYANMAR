@@ -105,27 +105,29 @@ def _header() -> str:
     )
 
 
-def _button(cta: Cta) -> str:
+def _button(cta: Cta, variables: dict[str, Any]) -> str:
     t = THEME_C
     primary = cta.kind == "primary"
     bg = t["primary"] if primary else t["card_bg"]
     fg = t["on_primary"] if primary else t["primary"]
     border = t["primary"] if primary else t["line"]
     arrow = '<span style="padding-left:10px;font-weight:400;">→</span>'
+    href = _sub(cta.href, variables)
+    label = _sub(cta.label, variables)
     return (
         f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">'
         f'<tr><td align="center" style="background:{bg};border:1px solid {border};border-radius:0;">'
-        f'<a href="{_esc(cta.href)}" style="display:block;padding:15px 30px;font:700 15px/1.2 {FONT};'
-        f'color:{fg};text-decoration:none;letter-spacing:.06em;">{_esc(cta.label)}{arrow}</a>'
+        f'<a href="{_esc(href)}" style="display:block;padding:15px 30px;font:700 15px/1.2 {FONT};'
+        f'color:{fg};text-decoration:none;letter-spacing:.06em;">{_esc(label)}{arrow}</a>'
         f"</td></tr></table>"
     )
 
 
-def _cta_block(ctas: list[Cta]) -> str:
+def _cta_block(ctas: list[Cta], variables: dict[str, Any]) -> str:
     if not ctas:
         return ""
     rows = "".join(
-        f'<tr><td style="padding-top:{0 if i == 0 else 10}px;">{_button(cta)}</td></tr>'
+        f'<tr><td style="padding-top:{0 if i == 0 else 10}px;">{_button(cta, variables)}</td></tr>'
         for i, cta in enumerate(ctas)
     )
     return (
@@ -235,6 +237,13 @@ def _steps_block(block: dict[str, Any], variables: dict[str, Any]) -> str:
     )
 
 
+def _block_visible(block: dict[str, Any], variables: dict[str, Any]) -> bool:
+    show_when = block.get("showWhen")
+    if not show_when:
+        return True
+    return all(str(variables.get(k)) == str(v) for k, v in show_when.items())
+
+
 def _render_block(block: dict[str, Any], variables: dict[str, Any]) -> str:
     kind = block.get("type", "paragraph")
     if kind == "code":
@@ -279,8 +288,10 @@ def render_c_html(tpl: EmailLayout, variables: dict[str, Any], *, locale: str = 
         if key in variables and key not in resolved:
             resolved[key] = variables[key]
 
-    blocks_html = "".join(_render_block(b, resolved) for b in tpl.blocks)
-    ctas = [_cta_block(tpl.ctas)] if tpl.ctas else []
+    blocks_html = "".join(
+        _render_block(b, resolved) for b in tpl.blocks if _block_visible(b, resolved)
+    )
+    ctas = [_cta_block(tpl.ctas, resolved)] if tpl.ctas else []
     preheader = _sub(tpl.preheader, resolved)
     subject = _sub(tpl.subject, resolved)
     html_lang = "my" if locale.startswith("my") else "en" if locale.startswith("en") else "ko"
@@ -484,11 +495,16 @@ def render_transactional(
     subject = _sub(layout.subject, merged)
     text_parts = [merged.get("userName", ""), subject]
     for block in layout.blocks:
+        if not _block_visible(block, merged):
+            continue
         if block.get("type") == "infoTable":
             for row in block.get("rows", []):
                 text_parts.append(f"{row[0]}: {_sub(row[1], merged)}")
         elif block.get("type") == "code":
             text_parts.append(_sub(block.get("value", ""), merged))
+        elif block.get("type") == "steps":
+            for i, item in enumerate(block.get("items") or [], 1):
+                text_parts.append(f"{i}. {_sub(item, merged)}")
         elif block.get("reason"):
             text_parts.append(_sub(block["reason"], merged))
         elif block.get("text"):

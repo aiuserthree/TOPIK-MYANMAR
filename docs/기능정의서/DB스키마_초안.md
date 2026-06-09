@@ -1,8 +1,8 @@
 # TOPIK Myanmar — DB 스키마 초안 (v0.1)
 
-> **목적**: A/B/C UI 시안과 무관한 **프로덕션 데이터 모델** 초안.  
-> **근거**: `기능정의서/FO/*`, `기능정의서/BO/*`, `개발자_체크리스트.md` 143–169, 프로토타입 `html/A안` + `html/shared` localStorage 키.  
-> **DB 엔진**: PostgreSQL 15+ (**확정** — `백엔드_스택_결정.md`). 마이그레이션: Flyway SQL. 런타임 ORM: Drizzle(Node). 본 문서는 논리 스키마만 정의.
+> **목적**: 프로덕션 데이터 모델 **초안** (요구사항·기능정의서 기반).  
+> **실제 구현 정본**: `db/migrations/V001~V008` + [`docs/system_design/database.md`](../system_design/database.md)  
+> **갱신:** 2026-06-09 — PostgreSQL 15+ + pgvector, SQL migration, FastAPI SQLAlchemy ORM. (초안의 Flyway/Drizzle는 미적용)
 
 ---
 

@@ -184,6 +184,15 @@
     } catch (e) { /* quota */ }
   }
 
+  function readUiLang() {
+    var lang = "ko";
+    try {
+      var stored = (global.localStorage.getItem("tpkm_lang") || "KO").toLowerCase();
+      if (stored === "my" || stored === "en") lang = stored;
+    } catch (e) { /* private mode */ }
+    return lang;
+  }
+
   function apiUrl(path) {
     var base = API_BASE_URL.replace(/\/$/, "");
     return base + path;
@@ -382,6 +391,7 @@
     if (options.body && !headers["Content-Type"] && !isFormData) {
       headers["Content-Type"] = "application/json";
     }
+    headers["X-TPKM-Locale"] = readUiLang();
     if (!apiConfigured()) {
       return Promise.resolve({
         ok: false,
@@ -486,7 +496,7 @@
     return apiFetch("/api/v1/auth/send-verification-code", {
       method: "POST",
       auth: false,
-      body: JSON.stringify({ email: email }),
+      body: JSON.stringify({ email: email, preferred_lang: readUiLang() }),
     });
   }
 
@@ -511,15 +521,10 @@
   }
 
   function loginWithGoogle(idToken) {
-    var lang = "ko";
-    try {
-      var stored = (global.localStorage.getItem("tpkm_lang") || "KO").toLowerCase();
-      if (stored === "my" || stored === "en") lang = stored;
-    } catch (e) { /* private mode */ }
     return apiFetch("/api/v1/auth/google", {
       method: "POST",
       auth: false,
-      body: JSON.stringify({ id_token: idToken, preferred_lang: lang }),
+      body: JSON.stringify({ id_token: idToken, preferred_lang: readUiLang() }),
     }).then(function (res) {
       if (res.ok && res.body && res.body.access_token) {
         persistSession(res.body, true);
@@ -541,7 +546,7 @@
     return apiFetch("/api/v1/auth/forgot-password", {
       method: "POST",
       auth: false,
-      body: JSON.stringify({ email: email }),
+      body: JSON.stringify({ email: email, preferred_lang: readUiLang() }),
     });
   }
 

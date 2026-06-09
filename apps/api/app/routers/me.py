@@ -12,7 +12,7 @@ from app.config import get_settings
 from app.database import get_db_session
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user, require_user
 from app.lib.profile import AUTH_USER_STATUSES, is_profile_incomplete
-from app.lib.email_notify import notify_account_status
+from app.lib.email_notify import count_active_applications, notify_account_status
 from app.lib.errors import api_error
 from app.lib.consents import persist_term_consents
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
@@ -197,6 +197,7 @@ async def withdraw(
     if not user or not verify_password(body.password, user.password_hash):
         raise api_error("INVALID_CREDENTIALS", "비밀번호가 올바르지 않습니다.", 400)
     now = datetime.now(timezone.utc)
+    canceled_count = await count_active_applications(db, user.id)
     user.status = "withdrawn"
     user.withdrawn_at = now
     await db.execute(
@@ -209,6 +210,6 @@ async def withdraw(
         .where(Application.user_id == user.id, Application.cancelled_at.is_(None))
         .values(cancelled_at=now, cancel_reason="회원 탈퇴", status="cancelled")
     )
-    await notify_account_status(db, user, action="withdrawn")
+    await notify_account_status(db, user, action="withdrawn", canceled_applications=canceled_count)
     await db.commit()
     return {"withdrawn": True}

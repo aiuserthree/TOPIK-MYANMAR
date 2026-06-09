@@ -8,9 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from app.config import get_settings
 from app.lib.env_validate import validate_runtime_settings
 from app.lib.email_worker import email_worker_loop
+from app.lib.mail import schedule_queued_outbox_deliveries
 from app.routers import (
     admin_api,
     applications,
@@ -58,6 +61,19 @@ if settings.cors_allow_localhost:
     _cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
 
 app.add_middleware(CORSMiddleware, **_cors_kwargs)
+
+
+class OutboxDeliveryMiddleware(BaseHTTPMiddleware):
+    """DB commit 후 enqueue 된 transactional mail 을 백그라운드 발송."""
+
+    async def dispatch(self, request, call_next):
+        try:
+            return await call_next(request)
+        finally:
+            schedule_queued_outbox_deliveries()
+
+
+app.add_middleware(OutboxDeliveryMiddleware)
 
 
 @app.exception_handler(HTTPException)

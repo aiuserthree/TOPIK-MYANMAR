@@ -53,19 +53,21 @@ TRANSACTIONAL_LAYOUTS: dict[str, dict[str, EmailLayout]] = {
                     ],
                 },
                 {
-                    "type": "paragraph",
-                    "text": "다음 단계: ① 오프라인 응시료 수납 ② 수납 확인 후 수험번호 부여 ③ 마이페이지·공지사항에서 수험번호 확인",
+                    "type": "steps",
+                    "title": "다음 단계",
+                    "items": [
+                        "오프라인 응시료 수납 (수납처·일정은 공지 참고)",
+                        "수납 확인 후 정해진 날짜에 수험번호 일괄 부여",
+                        "마이페이지·접수확인에서 수험번호 확인",
+                    ],
                 },
                 {
                     "type": "notice",
                     "tone": "info",
-                    "text": "수험번호는 이메일로 발송되지 않습니다. 응시료 수납이 확인된 후 마이페이지와 공지사항에서 확인하실 수 있습니다.",
+                    "text": "수험번호는 이메일로 발송되지 않습니다. 응시료 수납이 확인된 후 정해진 날짜에 마이페이지·접수확인에서 확인하실 수 있습니다.",
                 },
             ],
-            ctas=[
-                {"label": "마이페이지", "href": "{myPageUrl}", "kind": "primary"},
-                {"label": "공지사항 보기", "href": "{noticeUrl}", "kind": "secondary"},
-            ],
+            ctas=[{"label": "마이페이지", "href": "{myPageUrl}", "kind": "primary"}],
         ),
     },
     "application_rejected": {
@@ -220,10 +222,10 @@ TRANSACTIONAL_LAYOUTS: dict[str, dict[str, EmailLayout]] = {
                 {
                     "type": "notice",
                     "tone": "info",
-                    "text": "비밀글은 본문이 메일에 포함되지 않습니다. BO에서 직접 확인해 주세요.",
+                    "text": "비밀글은 본문이 메일에 포함되지 않습니다. 관리자에서 직접 확인해 주세요.",
                 },
             ],
-            ctas=[{"label": "BO에서 처리하기", "href": "{boPostUrl}", "kind": "primary"}],
+            ctas=[{"label": "관리자에서 처리하기", "href": "{boPostUrl}", "kind": "primary"}],
         ),
     },
     "board_reply": {
@@ -289,19 +291,31 @@ TRANSACTIONAL_LAYOUTS: dict[str, dict[str, EmailLayout]] = {
             eyebrow_en="ACCOUNT STATUS",
             index_no="12",
             h1="회원 계정이 {accountStatusLabel}되었습니다",
-            intro="{userName} 님, TOPIK Myanmar 회원 계정이 관리자에 의해 {accountStatusLabel} 처리되었습니다.",
+            intro="{userName} 님, TOPIK Myanmar 회원 계정이 관리자에 의해 {accountStatusLabel} 처리되었습니다. 아래 내용을 확인해 주세요.",
             blocks=[
                 {
                     "type": "infoTable",
                     "rows": [
                         ["처리 구분", "{accountStatusLabel}"],
                         ["사유", "{statusReason}"],
+                        ["적용 기간", "{statusUntil}"],
                     ],
                 },
                 {
                     "type": "notice",
                     "tone": "warn",
-                    "text": "본인이 요청하지 않은 처리라면 즉시 문의 게시판 또는 {supportEmail}으로 연락해 주세요.",
+                    "showWhen": {"accountAction": "suspended"},
+                    "text": "정지 기간 동안 로그인·시험 접수·마이페이지 이용이 제한됩니다. 문의가 필요하시면 문의 게시판을 이용해 주세요.",
+                },
+                {
+                    "type": "notice",
+                    "tone": "negative",
+                    "showWhen": {"accountAction": "withdrawn"},
+                    "text": "탈퇴 처리 시 진행 중이던 접수 {canceledApplications}건이 자동 취소되었습니다. 환불은 응시료 규정에 따릅니다. 동일 이메일 재가입은 30일간 제한될 수 있습니다.",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 또는 문의 게시판으로 연락해 주세요.",
                 },
             ],
             ctas=[

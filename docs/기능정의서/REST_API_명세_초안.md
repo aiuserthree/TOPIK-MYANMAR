@@ -1,8 +1,20 @@
 # TOPIK Myanmar — REST API 명세 초안 (v0.1)
 
-> **목적**: A/B/C UI 시안과 무관한 **프로덕션 HTTP API** 초안. 백엔드·프론트 연동·OpenAPI(Swagger) 작성의 기준 문서.  
-> **근거**: `기능정의서/DB스키마_초안.md`, `기능정의서/FO/*`, `기능정의서/BO/*`, `개발자_체크리스트.md` 217–218, 프로토타입 `html/A안` + `html/shared`.  
-> **상태**: v0.1 — 엔드포인트·필드명은 구현 시 소폭 조정 가능. 인증 방식(JWT vs 세션)은 **권장안** 포함, 최종 합의 전제.
+> **목적**: 프로덕션 HTTP API 초안. 백엔드·프론트 연동 기준 문서.  
+> **근거**: `기능정의서/DB스키마_초안.md`, FO/BO 기능정의서, `html/shared/api-client.js`  
+> **상태**: v0.1 초안 — **실제 구현 정본은 `apps/api`** ([`docs/system_design/tech-spec.md`](../system_design/tech-spec.md) §4)  
+> **갱신:** 2026-06-09 — FastAPI FO/BO API 대부분 구현 완료. 초안과 다른 경로·필드는 tech-spec §4.2 「초안 대비 차이」 참고.
+
+### 구현 현황 (2026-06-09)
+
+| 영역 | 구현 (`apps/api`) | 초안과 다른 점 |
+| --- | --- | --- |
+| Auth | `/auth/register`, `/auth/send-verification-code`, `/auth/google` | 초안 `/auth/signup`, `/auth/email/verify/*` |
+| Admin login | 공용 `/auth/login` (portal=bo) | 초안 `/admin/auth/login` |
+| 채번 | `POST .../assign-exam-numbers` (`dry_run`) | 초안 `.../exam-numbers/assign` (`mode:preview`) |
+| Export | 동기 `roster.xlsx`, `photos.zip` | 초안 비동기 Job |
+| Google OAuth | **구현** (`GOOGLE_CLIENT_ID` 설정 시) | 초안 redirect flow |
+| Internal | `/internal/notifications/*` | **미구현** |
 
 ---
 
