@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
 from app.lib.errors import api_error
+from app.lib.profile import is_profile_incomplete
 from app.lib.security import decode_access_token
 from app.models.admin import AdminUser
 from app.models.user import User
@@ -86,6 +87,19 @@ async def require_user(user: Annotated[AuthUser | None, Depends(get_optional_use
     if not user or user.is_admin:
         raise api_error("UNAUTHORIZED", "로그인이 필요합니다.", 401)
     return user
+
+
+async def require_complete_user(
+    auth: Annotated[AuthUser, Depends(require_user)],
+    db: AsyncSession = Depends(get_db_session),
+) -> AuthUser:
+    result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+    if is_profile_incomplete(user):
+        raise api_error("PROFILE_INCOMPLETE", "회원가입을 완료해 주세요.", 403)
+    return auth
 
 
 def _guard_must_change(user: AuthUser) -> None:

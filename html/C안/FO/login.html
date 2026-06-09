@@ -473,7 +473,7 @@
         }
         var body = res.body || {};
         var u = body.user || {};
-        if (window.TPKMAuth) {
+        if (!body.profile_incomplete && window.TPKMAuth) {
           TPKMAuth.login({
             name: u.name_ko || u.name || (u.email || '').split('@')[0],
             email: u.email, id: u.id, role: u.role
@@ -481,6 +481,7 @@
         }
         var params = new URLSearchParams(location.search);
         if (body.profile_incomplete) {
+          if (window.__tpkmRebuildNav) __tpkmRebuildNav();
           location.href = 'signup.html?google=1' + (params.get('next') ? '&next=' + encodeURIComponent(params.get('next')) : '');
           return;
         }

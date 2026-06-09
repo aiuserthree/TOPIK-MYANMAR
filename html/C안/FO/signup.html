@@ -653,7 +653,7 @@
 
   (function resumeGoogleSignup() {
     var params = new URLSearchParams(location.search);
-    if (!params.get('google') || !window.TopikApi || !TopikApi.isLoggedIn()) return;
+    if (!params.get('google') || !window.TopikApi || !TopikApi.hasSession()) return;
     TopikApi.getMe().then(function (res) {
       if (!res.ok || !res.body || !res.body.user) return;
       var u = res.body.user;
@@ -942,7 +942,7 @@
         }
         var body = res.body || {};
         var u = body.user || {};
-        if (window.TPKMAuth) {
+        if (!body.profile_incomplete && window.TPKMAuth) {
           TPKMAuth.login({
             name: u.name_ko || u.name || (u.email || '').split('@')[0],
             email: u.email, id: u.id, role: u.role
@@ -1131,7 +1131,7 @@
       showSignupErr('이메일 인증을 완료해 주세요.');
       return;
     }
-    if (!TopikApi.isLoggedIn() && isGoogleSignup) {
+    if (!TopikApi.hasSession() && isGoogleSignup) {
       showSignupErr('Google 인증이 만료되었습니다. Step 1에서 다시 시도해 주세요.');
       return;
     }

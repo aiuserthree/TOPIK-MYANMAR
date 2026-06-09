@@ -30,6 +30,7 @@ from app.lib.security import (
 from app.lib.consents import persist_term_consents
 from app.lib.email_notify import notify_password_expiry_reminder
 from app.lib.google_auth import verify_google_id_token
+from app.lib.profile import PROFILE_INCOMPLETE_BIRTH, is_profile_incomplete
 from app.lib.mail import enqueue_email, format_verification_code, mail_delivery_status, schedule_outbox_delivery
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
@@ -169,9 +170,6 @@ async def google_config() -> dict:
     return {"enabled": bool(client_id), "client_id": client_id or None}
 
 
-PROFILE_INCOMPLETE_BIRTH = "00000000"
-
-
 def _google_display_names(claims: dict) -> tuple[str, str]:
     full = (claims.get("name") or "").strip()
     given = (claims.get("given_name") or "").strip()
@@ -181,18 +179,6 @@ def _google_display_names(claims: dict) -> tuple[str, str]:
     name_ko = full or f"{family}{given}".strip() or local
     name_en = (full or f"{given} {family}".strip() or local).upper()
     return name_ko[:100], name_en[:200]
-
-
-def _is_profile_incomplete(user: User) -> bool:
-    if not user.photo_file_id:
-        return True
-    if user.birth_date == PROFILE_INCOMPLETE_BIRTH:
-        return True
-    if not (user.phone or "").strip():
-        return True
-    if validate_roster_codes(user.job_code, user.motive_code, user.purpose_code):
-        return True
-    return False
 
 
 @router.post("/google")
@@ -262,7 +248,7 @@ async def google_login(
     await db.refresh(user)
     out = _user_token_response(user)
     out["is_new_user"] = is_new_user
-    out["profile_incomplete"] = _is_profile_incomplete(user)
+    out["profile_incomplete"] = is_profile_incomplete(user)
     return out
 
 
@@ -359,7 +345,9 @@ async def login(
     _reset_login_state(user)
     await _maybe_password_reminder(db, user)
     await db.commit()
-    return _user_token_response(user)
+    out = _user_token_response(user)
+    out["profile_incomplete"] = is_profile_incomplete(user)
+    return out
 
 
 @router.post("/find-email")
@@ -551,7 +539,9 @@ async def register(
     )
     await db.commit()
     await db.refresh(user)
-    return _user_token_response(user)
+    out = _user_token_response(user)
+    out["profile_incomplete"] = is_profile_incomplete(user)
+    return out
 
 
 @router.post("/forgot-password")

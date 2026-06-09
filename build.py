@@ -32,7 +32,8 @@ def _resolve_fo_src() -> pathlib.Path:
 def _merge_shared(dst_shared: pathlib.Path) -> None:
     """Merge html/shared + FO/shared without dropping FO-only files (i18n, roster-codes)."""
     dst_shared.mkdir(parents=True, exist_ok=True)
-    for src in (FO_SHARED_SRC, SHARED_SRC):
+    # SHARED first, then FO — FO wins on same filename (e.g. api-client.js overrides).
+    for src in (SHARED_SRC, FO_SHARED_SRC):
         if not src or not src.is_dir():
             continue
         for item in src.iterdir():

@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
-from app.lib.deps import AuthUser, require_user
+from app.lib.deps import AuthUser, require_complete_user
 from app.lib.errors import api_error
 from app.lib.email_notify import notify_board_post_created, resolve_admin_notify_email
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
@@ -131,7 +131,7 @@ def _full_post_dict(post: BoardPost, author_name: str | None, auth: AuthUser, at
 async def list_posts(
     board_type: str = Query(...),
     page: int = Query(1, ge=1),
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     # 일반글은 누구나 열람(목록 노출). 비밀글은 목록엔 노출하되 본문 잠금.
@@ -179,7 +179,7 @@ async def _load_post_with_author(db: AsyncSession, post_id: int):
 @router.get("/posts/{post_id}")
 async def get_post(
     post_id: int,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     post, user = await _load_post_with_author(db, post_id)
@@ -206,7 +206,7 @@ async def get_post(
 @router.post("/posts")
 async def create_post(
     body: CreatePostBody,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     # 비밀번호는 선택: 미입력 시 작성자·관리자만 열람(비밀번호 unlock 불가).
@@ -251,7 +251,7 @@ async def create_post(
 @router.post("/attachments")
 async def upload_attachment(
     file: UploadFile = File(...),
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     content_type = (file.content_type or "").lower()
@@ -300,7 +300,7 @@ async def upload_attachment(
 async def unlock_post(
     post_id: int,
     body: UnlockBody,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     post, user = await _load_post_with_author(db, post_id)
@@ -356,7 +356,7 @@ def _comment_node(c: BoardComment, author_name: str | None) -> dict:
 @router.get("/posts/{post_id}/comments")
 async def list_comments(
     post_id: int,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     post, _ = await _load_post_with_author(db, post_id)
@@ -405,7 +405,7 @@ async def list_comments(
 async def create_comment(
     post_id: int,
     body: CreateCommentBody,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     post, _ = await _load_post_with_author(db, post_id)

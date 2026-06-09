@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
-from app.lib.deps import AuthUser, require_user
+from app.lib.deps import AuthUser, require_complete_user
 from app.lib.errors import api_error
 from app.lib.formatting import (
     card_status_label,
@@ -105,7 +105,7 @@ async def _purge_expired_drafts(db: AsyncSession, user_id: int) -> None:
 
 
 @router.get("/application-draft")
-async def get_draft(auth: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def get_draft(auth: AuthUser = Depends(require_complete_user), db: AsyncSession = Depends(get_db_session)) -> dict:
     await _purge_expired_drafts(db, auth.id)
     result = await db.execute(
         select(ApplicationDraft).where(
@@ -122,7 +122,7 @@ async def get_draft(auth: AuthUser = Depends(require_user), db: AsyncSession = D
 @router.put("/application-draft")
 async def save_draft(
     body: DraftBody,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     await _purge_expired_drafts(db, auth.id)
@@ -142,7 +142,7 @@ async def save_draft(
 
 
 @router.delete("/application-draft")
-async def delete_draft(auth: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def delete_draft(auth: AuthUser = Depends(require_complete_user), db: AsyncSession = Depends(get_db_session)) -> dict:
     await db.execute(delete(ApplicationDraft).where(ApplicationDraft.user_id == auth.id))
     await db.commit()
     return {"deleted": True}
@@ -151,7 +151,7 @@ async def delete_draft(auth: AuthUser = Depends(require_user), db: AsyncSession 
 @router.post("/application-submissions")
 async def submit_application(
     body: SubmitBody,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     levels = [lv.upper() for lv in body.exam_levels if lv.upper() in ("I", "II")]
@@ -455,7 +455,7 @@ def _serialize_submission_items(
 
 
 @router.get("/applications")
-async def my_applications(auth: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def my_applications(auth: AuthUser = Depends(require_complete_user), db: AsyncSession = Depends(get_db_session)) -> dict:
     result = await db.execute(
         select(ApplicationSubmission)
         .where(ApplicationSubmission.user_id == auth.id)
@@ -487,7 +487,7 @@ async def my_applications(auth: AuthUser = Depends(require_user), db: AsyncSessi
 async def cancel_application(
     application_id: int,
     body: dict | None = None,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """급수(application) 단위 취소 — 동일 submission의 다른 급수는 유지."""
@@ -521,7 +521,7 @@ async def cancel_application(
 async def cancel_submission(
     submission_id: int,
     body: dict | None = None,
-    auth: AuthUser = Depends(require_user),
+    auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """submission 전체 취소 (하위 모든 급수)."""
