@@ -27,6 +27,7 @@ from app.lib.deps import (
     require_any_admin,
 )
 from app.lib.errors import api_error
+from app.lib.translate import translate_text
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
 from app.config import get_settings
 from app.lib.email_notify import (
@@ -39,7 +40,7 @@ from app.lib.email_notify import (
     notify_temp_password,
     resolve_admin_notify_email,
 )
-from app.lib.mail import enqueue_email
+from app.lib.mail import enqueue_email, schedule_outbox_delivery
 from app.lib.profile import is_full_member
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.roster_export import build_roster_zip, group_roster_rows
@@ -267,10 +268,17 @@ class RoundPatchBody(BaseModel):
     venue_ids: list[int] | None = None
 
 
+class TranslateBody(BaseModel):
+    text: str
+    source: str = "ko"
+    target: str = "my"
+
+
 class VenueBody(BaseModel):
     venue_code: str
     name_ko: str
     name_en: str | None = None
+    name_my: str | None = None
     address: str | None = None
     country_code: str = "025"
     region_code: str
@@ -1147,6 +1155,22 @@ async def restore_round(
     return {"restored": True, "registration_status": status}
 
 
+@router.post("/translate")
+async def admin_translate(
+    body: TranslateBody,
+    _: AuthUser = Depends(require_any_admin),
+) -> dict:
+    try:
+        translated = await translate_text(body.text, source=body.source, target=body.target)
+    except Exception as exc:
+        raise api_error(
+            "TRANSLATE_FAILED",
+            "번역에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            502,
+        ) from exc
+    return {"text": translated, "source": body.source, "target": body.target}
+
+
 @router.get("/exam-venues")
 async def admin_venues(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
     result = await db.execute(select(ExamVenue).order_by(ExamVenue.venue_code))
@@ -1165,7 +1189,7 @@ async def update_venue(
     venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == venue_id))).scalar_one_or_none()
     if not venue:
         raise api_error("NOT_FOUND", "시험장을 찾을 수 없습니다.", 404)
-    for key in ("venue_code", "name_ko", "name_en", "address", "region_code", "capacity", "memo", "is_active"):
+    for key in ("venue_code", "name_ko", "name_en", "name_my", "address", "region_code", "capacity", "memo", "is_active"):
         if key in body:
             setattr(venue, key, body[key])
     await write_audit(
@@ -1196,6 +1220,7 @@ async def create_venue(
         venue_code=body.venue_code,
         name_ko=body.name_ko,
         name_en=body.name_en,
+        name_my=body.name_my,
         address=body.address,
         country_code=body.country_code,
         region_code=body.region_code,
@@ -1969,7 +1994,7 @@ async def reset_user_password(
     temp = "tpkm" + "".join(secrets.choice(alphabet) for _ in range(8))
     user.password_hash = hash_password(temp)
     user.password_changed_at = None
-    await notify_temp_password(db, user, temp)
+    outbox_id = await notify_temp_password(db, user, temp)
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -1979,6 +2004,7 @@ async def reset_user_password(
         memo=f"임시 비밀번호 발급 ({user.email})",
     )
     await db.commit()
+    schedule_outbox_delivery(outbox_id)
     return {"temp_password": temp}
 
 
@@ -2066,7 +2092,7 @@ async def reset_admin_password(
     temp = "tpkm" + "".join(secrets.choice(alphabet) for _ in range(8))
     row.password_hash = hash_password(temp)
     row.must_change_password = True
-    await notify_temp_password(db, row, temp, is_admin=True, admin_username=row.email)
+    outbox_id = await notify_temp_password(db, row, temp, is_admin=True, admin_username=row.email)
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -2076,6 +2102,7 @@ async def reset_admin_password(
         memo=f"임시 비밀번호 발급 ({row.email})",
     )
     await db.commit()
+    schedule_outbox_delivery(outbox_id)
     return {"temp_password": temp}
 
 

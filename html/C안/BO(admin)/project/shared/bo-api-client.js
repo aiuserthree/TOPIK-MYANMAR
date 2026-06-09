@@ -133,7 +133,7 @@
     return apiFetch("/api/v1/auth/login", {
       method: "POST",
       auth: false,
-      body: JSON.stringify({ email: email, password: password }),
+      body: JSON.stringify({ email: email, password: password, portal: "bo" }),
     }).then(function (res) {
       var account = (res.body && (res.body.user || res.body.admin)) || null;
       if (res.ok && res.body && res.body.access_token && account && isAdminRole(account.role)) {
@@ -362,6 +362,12 @@
       return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(id) + "/restore", {
         method: "POST",
         body: JSON.stringify(body),
+      });
+    },
+    translateText: function (payload) {
+      return apiFetch("/api/v1/admin/translate", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
       });
     },
     getExamVenues: function () { return apiFetch("/api/v1/admin/exam-venues"); },

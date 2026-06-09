@@ -16,6 +16,20 @@
   .signup-head h1 { font-size: 24px; text-align: center; }
   .signup-head p { font-size: 13.5px; color: var(--text-3); text-align: center; margin-top: 6px; }
 
+  /* sticky step indicator — 탭 스와이프 시 현재 단계가 보이도록 */
+  .step-sticky {
+    position: sticky; top: var(--header-h);
+    z-index: 5;
+    background: var(--bg);
+    padding: 12px 0;
+    margin: 0 -16px 20px;
+    padding-left: 16px; padding-right: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-sticky .steps { margin-bottom: 0; -webkit-overflow-scrolling: touch; }
+  #signupSteps .step { flex: 0 0 auto; }
+  .steps .step.done { cursor: pointer; }
+
   .step-pane { display: none; }
   .step-pane.active { display: block; }
 
@@ -154,20 +168,22 @@
       <p data-i18n-content="su.welcome">TOPIK 미얀마 시행 공식 접수 서비스에 오신 것을 환영합니다.</p>
     </div>
 
-    <ol class="steps" style="margin-bottom: 28px;">
-      <li class="step active" data-s="1">
-        <span class="n">1</span>
-        <span data-i18n-content="su.step1">이메일 인증</span>
-      </li>
-      <li class="step" data-s="2">
-        <span class="n">2</span>
-        <span data-i18n-content="su.step2">기본정보 입력</span>
-      </li>
-      <li class="step" data-s="3">
-        <span class="n">3</span>
-        <span data-i18n-content="su.step3">약관 동의</span>
-      </li>
-    </ol>
+    <div class="step-sticky">
+      <ol class="steps" id="signupSteps">
+        <li class="step active" data-s="1">
+          <span class="n">1</span>
+          <span data-i18n-content="su.step1">이메일 인증</span>
+        </li>
+        <li class="step" data-s="2">
+          <span class="n">2</span>
+          <span data-i18n-content="su.step2">기본정보 입력</span>
+        </li>
+        <li class="step" data-s="3">
+          <span class="n">3</span>
+          <span data-i18n-content="su.step3">약관 동의</span>
+        </li>
+      </ol>
+    </div>
 
     <!-- ============ STEP 1: 이메일 인증 + 구글 ============ -->
     <section class="step-pane active" data-s="1">
@@ -421,10 +437,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
       </div>
       <h3 style="font-size: 20px; margin-bottom: 8px;" data-i18n-content="su.done_title">가입이 완료되었습니다</h3>
-      <p style="color: var(--text-3); font-size: 14px;" data-i18n-content="su.done_desc" data-i18n-content-html>자동으로 로그인됩니다.<br>이제 TOPIK 시험을 접수하실 수 있습니다.</p>
+      <p style="color: var(--text-3); font-size: 14px;" data-i18n-content="su.done_desc" data-i18n-content-html>회원가입이 완료되었습니다.<br>로그인 후 TOPIK 시험을 접수하실 수 있습니다.</p>
     </div>
     <div class="modal-foot">
-      <a href="index.html" class="btn btn-secondary" data-i18n-content="su.go_home">홈으로</a>
+      <a href="login.html" class="btn btn-secondary" data-i18n-content="su.go_login">로그인</a>
       <a href="register.html" class="btn btn-primary" data-i18n-content="su.go_register">시험 접수하기</a>
     </div>
   </div>
@@ -487,8 +503,8 @@
     'su.photo_notice': { ko: '가입 시 등록한 증명사진은 시험 접수 시 자동으로 사용됩니다. 접수 단계에서는 사진 업로드·변경이 불가하니, 본 가입 화면에서 신중하게 등록해 주세요.', my: 'မှတ်ပုံတင်စဉ် တင်ထားသော ဓာတ်ပုံကို စာမေးပွဲ လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုသည်။ လျှောက်ထားဆဲအဆင့်တွင် ဓာတ်ပုံ ပြောင်း၍မရသဖြင့် ဤမှတ်ပုံတင် စာမျက်နှာတွင် ဂရုတစိုက် တင်ပါ။', en: 'The ID photo you register at sign-up is used automatically for exam registration. It cannot be changed during registration, so upload carefully here.' },
     'su.finish': { ko: '가입 완료', my: 'အကောင့်ဖွင့်ပြီး', en: 'Complete sign-up' },
     'su.done_title': { ko: '가입이 완료되었습니다', my: 'အကောင့်ဖွင့်ခြင်း ပြီးဆုံးပါပြီ', en: 'Sign-up complete' },
-    'su.done_desc': { ko: '자동으로 로그인됩니다.<br>이제 TOPIK 시험을 접수하실 수 있습니다.', my: 'အလိုအလျောက် ဝင်ရောက်ပါမည်။<br>ယခု TOPIK စာမေးပွဲ လျှောက်ထားနိုင်ပါပြီ။', en: 'You will be signed in automatically.<br>You can now register for the TOPIK exam.' },
-    'su.go_home': { ko: '홈으로', my: 'ပင်မသို့', en: 'Home' },
+    'su.done_desc': { ko: '회원가입이 완료되었습니다.<br>로그인 후 TOPIK 시험을 접수하실 수 있습니다.', my: 'အကောင့်ဖွင့်ခြင်း ပြီးမြောက်ပါပြီ။<br>ဝင်ရောက်ပြီးနောက် TOPIK စာမေးပွဲ လျှောက်ထားနိုင်ပါပြီ။', en: 'Sign-up is complete.<br>Sign in to register for the TOPIK exam.' },
+    'su.go_login': { ko: '로그인', my: 'ဝင်ရောက်ရန်', en: 'Sign in' },
     'su.go_register': { ko: '시험 접수하기', my: 'စာမေးပွဲ လျှောက်ရန်', en: 'Register for exam' },
     'form.select': { ko: '선택', my: 'ရွေးချယ်ပါ', en: 'Select' },
     'qna.cat_etc': { ko: '기타', my: 'အခြား', en: 'Other' }
@@ -641,6 +657,35 @@
   // Step navigation
   const steps = document.querySelectorAll('.step-pane');
   const indi  = document.querySelectorAll('.steps .step');
+  const stepsBar = document.getElementById('signupSteps');
+
+  function scrollStepTabIntoView(s) {
+    var bar = stepsBar;
+    if (!bar) return;
+    var el = bar.querySelector('.step[data-s="' + s + '"]');
+    if (!el) return;
+
+    function run() {
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      if (maxScroll <= 1) return;
+      var barRect = bar.getBoundingClientRect();
+      var elRect = el.getBoundingClientRect();
+      var tabLeft = elRect.left - barRect.left + bar.scrollLeft;
+      var target = tabLeft + elRect.width / 2 - bar.clientWidth / 2;
+      target = Math.max(0, Math.min(target, maxScroll));
+      if (bar.scrollTo) {
+        bar.scrollTo({ left: target, behavior: 'smooth' });
+      } else {
+        bar.scrollLeft = target;
+      }
+    }
+
+    /* 레이아웃 반영 후 스크롤 (scrollIntoView는 overflow-x 컨테이너에서 동작 불안정) */
+    requestAnimationFrame(function () {
+      requestAnimationFrame(run);
+    });
+  }
+
   function go(s) {
     steps.forEach(p => p.classList.toggle('active', +p.dataset.s === s));
     indi.forEach(i => {
@@ -649,6 +694,17 @@
       i.classList.toggle('done',   n <  s);
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollStepTabIntoView(s);
+  }
+
+  if (stepsBar) {
+    stepsBar.addEventListener('click', function (e) {
+      var tab = e.target.closest('.step');
+      if (!tab || !stepsBar.contains(tab)) return;
+      var n = +tab.dataset.s;
+      if (tab.classList.contains('done')) go(n);
+      else if (tab.classList.contains('active')) scrollStepTabIntoView(n);
+    });
   }
 
   (function resumeGoogleSignup() {
@@ -750,7 +806,7 @@
       document.getElementById('otpRow').classList.remove('hidden');
       var host = location.hostname;
       var localDev = host === 'localhost' || host === '127.0.0.1';
-      if (localDev && res.body && res.body.dev_code) {
+      if (localDev && res.body && res.body.dev_code && res.body.mail_delivered === false) {
         document.getElementById('su-otp').value = res.body.dev_code;
       }
       var mailOk = res.body && res.body.mail_delivered !== false;
@@ -1187,15 +1243,10 @@
     }
     setBusy(btn, true, '가입 처리 중…');
 
-    function finishSignup(user) {
+    function finishSignup() {
       setBusy(btn, false, '가입 완료');
-      if (window.TPKMAuth && user) {
-        TPKMAuth.login({
-          name: user.name_ko || user.email,
-          email: user.email,
-          id: user.id
-        });
-      }
+      if (window.TPKMAuth) TPKMAuth.logout();
+      else if (window.TopikApi && TopikApi.logout) TopikApi.logout();
       if (window.__tpkmRebuildNav) __tpkmRebuildNav();
       TPKM.openModal('modalDone');
     }
@@ -1213,7 +1264,7 @@
     if (isGoogleSignup) {
       TopikApi.updateProfile(profilePayload).then(function (res) {
         if (!res.ok) { handleSignupError(res); return; }
-        finishSignup((res.body && res.body.user) || {});
+        finishSignup();
       }).catch(function () {
         setBusy(btn, false, '가입 완료');
         showSignupErr('네트워크 오류입니다.');
@@ -1232,7 +1283,7 @@
 
     TopikApi.register(emailPayload).then(function (res) {
       if (!res.ok) { handleSignupError(res); return; }
-      finishSignup((res.body && res.body.user) || {});
+      finishSignup();
     }).catch(function () {
       setBusy(btn, false, '가입 완료');
       showSignupErr('네트워크 오류입니다.');

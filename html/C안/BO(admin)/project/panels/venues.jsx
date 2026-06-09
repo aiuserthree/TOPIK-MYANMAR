@@ -67,7 +67,7 @@ function VenuesPanel() {
         <div className="dg-scroll">
           <table className="dg">
             <thead><tr>
-              <th>코드</th><th>지역</th><th>한글 명칭</th><th>영문 명칭</th><th>주소</th><th className="num">정원</th><th>상태</th><th>비고</th><th>관리</th>
+              <th>코드</th><th>지역</th><th>한글 명칭</th><th>영문 명칭</th><th>미얀마어 명칭</th><th>주소</th><th className="num">정원</th><th>상태</th><th>비고</th><th>관리</th>
             </tr></thead>
             <tbody>
               {list.map(v => (
@@ -76,6 +76,7 @@ function VenuesPanel() {
                   <td>{v.region}</td>
                   <td><b>{v.nameKo}</b></td>
                   <td className="muted">{v.nameEn}</td>
+                  <td className="muted">{v.nameMy || '—'}</td>
                   <td className="muted" style={{ maxWidth: 240, overflow:'hidden', textOverflow:'ellipsis' }}>{v.address}</td>
                   <td className="num">{DataStore.fmtNum(v.cap)}</td>
                   <td>
@@ -104,9 +105,30 @@ function VenueEditLP({ edit, onClose, onSave }) {
   const state = useStore();
   const v = edit.id ? state.venues.find(x => x.id === edit.id) : null;
   const [f, setF] = useState(v ? { ...v } : {
-    code: '', regionCode: '001', region: '양곤', nameKo: '', nameEn: '', address: '', cap: 100, active: true, memo: ''
+    code: '', regionCode: '001', region: '양곤', nameKo: '', nameEn: '', nameMy: '', address: '', cap: 100, active: true, memo: ''
   });
+  const [translating, setTranslating] = useState(false);
   const set = (k, val) => setF(s => ({ ...s, [k]: val }));
+  const applyMyanmarTranslate = async () => {
+    if (!f.nameKo || translating) return;
+    setTranslating(true);
+    try {
+      if (DataStore.isApiMode && DataStore.isApiMode() && window.TopikBoApi && TopikBoApi.translateText) {
+        const res = await TopikBoApi.translateText({ text: f.nameKo, source: 'ko', target: 'my' });
+        if (res.ok && res.body && res.body.text) {
+          set('nameMy', res.body.text);
+          toastOk('미얀마어 명칭이 적용되었습니다.');
+        } else {
+          toastErr((TopikBoApi.parseError && TopikBoApi.parseError(res)) || '번역에 실패했습니다.');
+        }
+        return;
+      }
+      set('nameMy', f.nameKo);
+      toastOk('데모: 미얀마어 명칭이 적용되었습니다.');
+    } finally {
+      setTranslating(false);
+    }
+  };
   const onRegion = (rc) => {
     const r = state.regions.find(x => x.code === rc);
     setF(s => ({ ...s, regionCode: rc, region: r ? r.name.split('(')[0] : s.region }));
@@ -143,6 +165,14 @@ function VenueEditLP({ edit, onClose, onSave }) {
         </FormRow>
         <FormRow label="영문 명칭" required>
           <input className="input" value={f.nameEn} onChange={e => set('nameEn', e.target.value)} placeholder="예: Yangon Univ. Hlaing Campus"/>
+        </FormRow>
+        <FormRow label="미얀마어 명칭" hint="한글 명칭 기준 자동 번역 · 필요 시 직접 수정">
+          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+            <input className="input" style={{ flex: 1 }} value={f.nameMy || ''} onChange={e => set('nameMy', e.target.value)} placeholder="မြန်မာဘာသာ အမည်"/>
+            <button type="button" className="btn btn-secondary" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }} disabled={!f.nameKo || translating} onClick={applyMyanmarTranslate}>
+              {translating ? '번역 중…' : '적용'}
+            </button>
+          </div>
         </FormRow>
         <FormRow label="주소">
           <input className="input" value={f.address} onChange={e => set('address', e.target.value)}/>

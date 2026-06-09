@@ -267,7 +267,7 @@
     'login.send_code': { ko: '인증코드 발송', my: 'အတည်ပြုကုဒ် ပို့ရန်', en: 'Send code' }
   };
 </script>
-<script src="shared/api-client.js"></script>
+<script src="shared/api-client.js?v=20260609"></script>
 <script src="assets/common.js"></script>
 <script>
   // PW visibility toggle
@@ -318,6 +318,9 @@
           if (result.status === 401) {
             err.querySelector('span').textContent =
               '이메일 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.';
+          } else if (result.status === 423) {
+            err.querySelector('span').textContent =
+              '로그인 실패가 누적되어 계정이 잠겼습니다. 30분 후 다시 시도하거나 BO에서 임시 비밀번호를 재발급해 주세요.';
           } else if (result.status === 503 || result.error === 'database_unavailable') {
             err.querySelector('span').textContent =
               '서버를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.';
@@ -603,7 +606,7 @@
         alert('입력하신 이메일은 Google 계정으로 가입된 계정입니다. 구글 로그인을 이용해 주세요.');
         return;
       }
-      if (b.dev_code) {
+      if (b.dev_code && b.mail_delivered === false) {
         try { sessionStorage.setItem('tpkm_pw_reset_devcode', b.dev_code); } catch (e2) {}
       }
       goReset();

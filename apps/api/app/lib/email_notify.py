@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.lib.formatting import fmt_date
-from app.lib.mail import enqueue_email
+from app.lib.mail import cancel_pending_outbox, enqueue_email
 from app.models.admin import AdminUser
 from app.models.application import Application
 from app.models.board import BoardPost
@@ -166,13 +166,16 @@ async def notify_board_reply(db: AsyncSession, post: BoardPost, user: User, *, a
 
 async def notify_temp_password(
     db: AsyncSession, user: User, temp_password: str, *, is_admin: bool = False, admin_username: str | None = None
-) -> None:
+) -> int | None:
     base = _fo_base()
     if is_admin:
-        await enqueue_email(
+        to_email = user.email if hasattr(user, "email") else str(user)
+        template_key = "temp_password_admin"
+        await cancel_pending_outbox(db, to_email=to_email, template_key=template_key)
+        result = await enqueue_email(
             db,
-            template_key="temp_password_admin",
-            to_email=user.email if hasattr(user, "email") else str(user),
+            template_key=template_key,
+            to_email=to_email,
             locale="ko",
             variables={
                 "adminUsername": admin_username or getattr(user, "email", ""),
@@ -180,8 +183,9 @@ async def notify_temp_password(
                 "boLoginUrl": f"{base.replace('www.', 'admin.')}/admin-login.html",
             },
         )
-        return
-    await enqueue_email(
+        return result.get("queued_id")
+    await cancel_pending_outbox(db, to_email=user.email, template_key="temp_password")
+    result = await enqueue_email(
         db,
         template_key="temp_password",
         to_email=user.email,
@@ -193,6 +197,7 @@ async def notify_temp_password(
             "loginUrl": f"{base}/login.html",
         },
     )
+    return result.get("queued_id")
 
 
 async def notify_account_status(

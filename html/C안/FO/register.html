@@ -8,7 +8,7 @@
 <style>
   .reg-wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
 
-  /* sticky step indicator on mobile */
+  /* sticky step indicator — 탭 스와이프 시 현재 단계가 보이도록 */
   .step-sticky {
     position: sticky; top: var(--header-h);
     z-index: 5;
@@ -18,6 +18,9 @@
     padding-left: 16px; padding-right: 16px;
     border-bottom: 1px solid var(--border);
   }
+  .step-sticky .steps { margin-bottom: 0; -webkit-overflow-scrolling: touch; }
+  #registerSteps .step { flex: 0 0 auto; }
+  .steps .step.done { cursor: pointer; }
 
   .step-pane { display: none; }
   .step-pane.active { display: block; }
@@ -194,7 +197,7 @@
     </header>
 
     <div class="step-sticky">
-      <ol class="steps">
+      <ol class="steps" id="registerSteps">
         <li class="step active" data-s="1"><span class="n">1</span><span data-i18n-content="reg.step1">회차·급수</span></li>
         <li class="step" data-s="2"><span class="n">2</span><span data-i18n-content="reg.step2">회원정보 확인</span></li>
         <li class="step" data-s="3"><span class="n">3</span><span data-i18n-content="reg.step3">사진 규격 확인</span></li>
@@ -487,7 +490,54 @@
 <script>
   function bt(key, fallback) {
     try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
+    if (window.TOPIKPageI18n && TOPIKPageI18n.text) {
+      var lang = 'ko';
+      try {
+        if (window.TPKMLang && TPKMLang.get) lang = TPKMLang.get();
+        else if (window.TMI18N && TMI18N.getLang) lang = TMI18N.getLang();
+      } catch (e2) { /* ignore */ }
+      var pageVal = TOPIKPageI18n.text(key, lang);
+      if (pageVal) return pageVal;
+    }
     return fallback;
+  }
+
+  function venuePlaceholderText() {
+    return bt('reg.venue_ph', '시험장을 선택해 주세요');
+  }
+
+  function updateVenuePlaceholder() {
+    var sel = document.getElementById('venueSelect');
+    if (!sel) return;
+    var ph = sel.querySelector('option[value=""]');
+    if (!ph) return;
+    ph.setAttribute('data-i18n-content', 'reg.venue_ph');
+    ph.textContent = venuePlaceholderText();
+  }
+
+  function currentFoLang() {
+    try {
+      var l = (localStorage.getItem('tpkm_lang') || 'KO').toUpperCase();
+      if (l === 'MY') return 'my';
+      if (l === 'EN') return 'en';
+    } catch (e) { /* ignore */ }
+    return 'ko';
+  }
+
+  function refreshVenueOptionLabels() {
+    var sel = document.getElementById('venueSelect');
+    if (!sel) return;
+    updateVenuePlaceholder();
+    (REG_STATE.venues || []).forEach(function (v) {
+      var opt = sel.querySelector('option[value="' + v.id + '"]');
+      if (opt) opt.textContent = formatVenueLabel(v);
+    });
+    if (REG_STATE.reapplyLockedVenueId) {
+      var locked = (REG_STATE.venues || []).find(function (x) {
+        return Number(x.id) === Number(REG_STATE.reapplyLockedVenueId);
+      });
+      if (locked) REG_STATE.reapplyLockedVenueName = formatVenueLabel(locked);
+    }
   }
 
   // ---- API-backed master data & profile (Phase 1) ----
@@ -794,6 +844,9 @@
   function formatVenueLabel(v) {
     if (!v) return '';
     if (typeof v === 'string') return v;
+    var lang = currentFoLang();
+    if (lang === 'my') return v.name_my || v.name_en || v.name_ko || v.name || '';
+    if (lang === 'en') return v.name_en || v.name_ko || v.name || '';
     var ko = v.name_ko || v.name || '';
     var en = v.name_en ? ' (' + v.name_en + ')' : '';
     return ko + en;
@@ -1020,11 +1073,16 @@
   function renderVenueSelect(venues) {
     var sel = document.getElementById('venueSelect');
     REG_STATE.venues = venues || [];
-    sel.innerHTML = '<option value="">시험장을 선택해 주세요</option>';
+    sel.innerHTML = '';
+    var phOpt = document.createElement('option');
+    phOpt.value = '';
+    phOpt.setAttribute('data-i18n-content', 'reg.venue_ph');
+    phOpt.textContent = venuePlaceholderText();
+    sel.appendChild(phOpt);
     venues.forEach(function (v) {
       var opt = document.createElement('option');
       opt.value = String(v.id);
-      opt.textContent = v.name_ko + (v.name_en ? ' (' + v.name_en + ')' : '');
+      opt.textContent = formatVenueLabel(v);
       sel.appendChild(opt);
     });
     var mode = getReapplyMode();
@@ -1127,6 +1185,34 @@
   // Step navigation
   const panes = document.querySelectorAll('.step-pane');
   const indi  = document.querySelectorAll('.steps .step');
+  const stepsBar = document.getElementById('registerSteps');
+
+  function scrollStepTabIntoView(s) {
+    var bar = stepsBar;
+    if (!bar) return;
+    var el = bar.querySelector('.step[data-s="' + s + '"]');
+    if (!el) return;
+
+    function run() {
+      var maxScroll = bar.scrollWidth - bar.clientWidth;
+      if (maxScroll <= 1) return;
+      var barRect = bar.getBoundingClientRect();
+      var elRect = el.getBoundingClientRect();
+      var tabLeft = elRect.left - barRect.left + bar.scrollLeft;
+      var target = tabLeft + elRect.width / 2 - bar.clientWidth / 2;
+      target = Math.max(0, Math.min(target, maxScroll));
+      if (bar.scrollTo) {
+        bar.scrollTo({ left: target, behavior: 'smooth' });
+      } else {
+        bar.scrollLeft = target;
+      }
+    }
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(run);
+    });
+  }
+
   function go(s) {
     panes.forEach(p => p.classList.toggle('active', +p.dataset.s === s));
     indi.forEach(i => {
@@ -1135,6 +1221,17 @@
       i.classList.toggle('done',   n <  s);
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollStepTabIntoView(s);
+  }
+
+  if (stepsBar) {
+    stepsBar.addEventListener('click', function (e) {
+      var tab = e.target.closest('.step');
+      if (!tab || !stepsBar.contains(tab)) return;
+      var n = +tab.dataset.s;
+      if (tab.classList.contains('done')) go(n);
+      else if (tab.classList.contains('active')) scrollStepTabIntoView(n);
+    });
   }
   document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => {
     const cur = +document.querySelector('.step-pane.active').dataset.s;
@@ -1521,6 +1618,8 @@
     if (mode && mode.reapply) return;
     restoreDraftFromApi();
   }
+
+  document.addEventListener('tpkm:langchange', refreshVenueOptionLabels);
   restoreDraft();
 </script>
 </body>

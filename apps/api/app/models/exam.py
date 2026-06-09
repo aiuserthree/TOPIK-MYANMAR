@@ -50,6 +50,7 @@ class ExamVenue(TimestampMixin, Base):
     venue_code: Mapped[str] = mapped_column(String(2), nullable=False)
     name_ko: Mapped[str] = mapped_column(String(200), nullable=False)
     name_en: Mapped[Optional[str]] = mapped_column(String(200))
+    name_my: Mapped[Optional[str]] = mapped_column(String(200))
     address: Mapped[Optional[str]] = mapped_column(Text)
     country_code: Mapped[str] = mapped_column(String(3), nullable=False, server_default="025")
     region_code: Mapped[str] = mapped_column(String(3), nullable=False)

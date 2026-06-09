@@ -13,7 +13,7 @@ from email.utils import formatdate, make_msgid, parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
@@ -178,6 +178,26 @@ def send_email(to_email: str, rendered: RenderedEmail, settings: Settings | None
     raise ValueError(f"Unsupported MAIL_PROVIDER: {cfg.mail_provider}")
 
 
+async def cancel_pending_outbox(
+    db: AsyncSession,
+    *,
+    to_email: str,
+    template_key: str,
+) -> int:
+    """같은 수신자·템플릿의 queued 메일을 취소 — 재발급·SMTP 재시도 중복 발송 방지."""
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        update(EmailOutbox)
+        .where(
+            EmailOutbox.to_email == to_email.strip().lower(),
+            EmailOutbox.template_key == template_key,
+            EmailOutbox.status == "queued",
+        )
+        .values(status="cancelled", updated_at=now, next_retry_at=None)
+    )
+    return result.rowcount or 0
+
+
 async def enqueue_email(
     db: AsyncSession,
     *,
@@ -202,17 +222,38 @@ async def enqueue_email(
     return {"queued_id": row.id, "sent": False, "status": row.status}
 
 
+async def _claim_queued_outbox_rows(
+    db: AsyncSession,
+    *,
+    outbox_id: int | None = None,
+    limit: int = 25,
+) -> list[EmailOutbox]:
+    """FOR UPDATE SKIP LOCKED — 워커·백그라운드 태스크가 동일 행을 중복 발송하지 않도록 선점."""
+    now = datetime.now(timezone.utc)
+    stmt = (
+        select(EmailOutbox)
+        .where(
+            EmailOutbox.status == "queued",
+            (EmailOutbox.next_retry_at.is_(None)) | (EmailOutbox.next_retry_at <= now),
+        )
+        .order_by(EmailOutbox.id.asc())
+        .limit(limit)
+        .with_for_update(skip_locked=True)
+    )
+    if outbox_id is not None:
+        stmt = stmt.where(EmailOutbox.id == outbox_id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def _deliver_outbox_row_by_id(outbox_id: int) -> None:
     cfg = get_settings()
     try:
         async with AsyncSessionLocal() as db:
-            row = await db.get(EmailOutbox, outbox_id)
-            if not row or row.status != "queued":
+            rows = await _claim_queued_outbox_rows(db, outbox_id=outbox_id, limit=1)
+            if not rows:
                 return
-            now = datetime.now(timezone.utc)
-            if row.next_retry_at and row.next_retry_at > now:
-                return
-            await deliver_outbox_row(db, row, cfg)
+            await deliver_outbox_row(db, rows[0], cfg)
             await db.commit()
     except Exception:
         logger.exception("background outbox delivery failed id=%s", outbox_id)
@@ -260,21 +301,7 @@ async def deliver_outbox_row(db: AsyncSession, row: EmailOutbox, settings: Setti
 
 async def process_outbox_batch(db: AsyncSession, *, limit: int = 25, settings: Settings | None = None) -> int:
     cfg = settings or get_settings()
-    now = datetime.now(timezone.utc)
-    # FOR UPDATE SKIP LOCKED: with multiple uvicorn workers each running an
-    # email worker loop, this stops two workers from claiming (and sending)
-    # the same row — which otherwise causes duplicate emails.
-    result = await db.execute(
-        select(EmailOutbox)
-        .where(
-            EmailOutbox.status == "queued",
-            (EmailOutbox.next_retry_at.is_(None)) | (EmailOutbox.next_retry_at <= now),
-        )
-        .order_by(EmailOutbox.id.asc())
-        .limit(limit)
-        .with_for_update(skip_locked=True)
-    )
-    rows = result.scalars().all()
+    rows = await _claim_queued_outbox_rows(db, limit=limit)
     processed = 0
     for row in rows:
         await deliver_outbox_row(db, row, cfg)

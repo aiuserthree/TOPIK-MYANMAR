@@ -52,6 +52,7 @@ def serialize_venue(v: ExamVenue) -> dict:
         "venue_code": v.venue_code,
         "name_ko": v.name_ko,
         "name_en": v.name_en,
+        "name_my": v.name_my,
         "address": v.address,
         "country_code": v.country_code,
         "region_code": v.region_code,

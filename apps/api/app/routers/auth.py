@@ -38,7 +38,13 @@ from app.lib.profile import (
     is_full_member,
     remove_incomplete_signup_user,
 )
-from app.lib.mail import enqueue_email, format_verification_code, mail_delivery_status, schedule_outbox_delivery
+from app.lib.mail import (
+    cancel_pending_outbox,
+    enqueue_email,
+    format_verification_code,
+    mail_delivery_status,
+    schedule_outbox_delivery,
+)
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
 from app.lib.validation import (
@@ -73,6 +79,7 @@ EmailField = Annotated[str, BeforeValidator(_normalize_email)]
 class LoginBody(BaseModel):
     email: EmailField
     password: str
+    portal: str | None = None  # "fo" | "bo" — 동일 이메일이 회원·관리자에 모두 있을 때 구분
 
 
 class RefreshBody(BaseModel):
@@ -319,30 +326,38 @@ async def _maybe_password_reminder(db: AsyncSession, user: User) -> None:
     await notify_password_expiry_reminder(db, user, days_since=days)
 
 
-@router.post("/login")
-async def login(
-    body: LoginBody,
-    ip: str | None = Depends(get_client_ip),
-    db: AsyncSession = Depends(get_db_session),
+async def _login_admin(
+    db: AsyncSession,
+    *,
+    email: str,
+    password: str,
+    ip: str | None,
 ) -> dict:
-    email = body.email.strip().lower()
     admin_res = await db.execute(select(AdminUser).where(AdminUser.email == email, AdminUser.status == "active"))
     admin = admin_res.scalar_one_or_none()
-    if admin:
-        if _is_locked(admin):
-            raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
-        if verify_password(body.password, admin.password_hash):
-            _reset_login_state(admin)
-            await write_audit(
-                db, admin_user_id=admin.id, action_type="login",
-                target_type="admin_users", target_id=admin.id, ip_address=ip,
-            )
-            await db.commit()
-            return _admin_token_response(admin)
+    if not admin:
+        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+    if _is_locked(admin):
+        raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
+    if not verify_password(password, admin.password_hash):
         _register_login_failure(admin)
         await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+    _reset_login_state(admin)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="login",
+        target_type="admin_users", target_id=admin.id, ip_address=ip,
+    )
+    await db.commit()
+    return _admin_token_response(admin)
 
+
+async def _login_user(
+    db: AsyncSession,
+    *,
+    email: str,
+    password: str,
+) -> dict:
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     user = user_res.scalar_one_or_none()
     if not user:
@@ -351,7 +366,7 @@ async def login(
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     if _is_locked(user):
         raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
-    if not verify_password(body.password, user.password_hash):
+    if not verify_password(password, user.password_hash):
         _register_login_failure(user)
         await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
@@ -361,6 +376,27 @@ async def login(
     out = _user_token_response(user)
     out["profile_incomplete"] = is_profile_incomplete(user)
     return out
+
+
+@router.post("/login")
+async def login(
+    body: LoginBody,
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    email = body.email.strip().lower()
+    portal = (body.portal or "").strip().lower() or None
+
+    if portal == "fo":
+        return await _login_user(db, email=email, password=body.password)
+    if portal == "bo":
+        return await _login_admin(db, email=email, password=body.password, ip=ip)
+
+    # portal 미지정(구 FO 페이지·캐시된 api-client): 동일 이메일이 회원·관리자에 있으면 회원 우선
+    user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
+    if user_res.scalar_one_or_none():
+        return await _login_user(db, email=email, password=body.password)
+    return await _login_admin(db, email=email, password=body.password, ip=ip)
 
 
 @router.post("/find-email")
@@ -456,6 +492,7 @@ async def send_verification_code(body: SendCodeBody, db: AsyncSession = Depends(
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
         )
     )
+    await cancel_pending_outbox(db, to_email=email, template_key="signup_verify_code")
     mail_result = await enqueue_email(
         db,
         template_key="signup_verify_code",
@@ -558,6 +595,7 @@ async def register(
         marketing_opt_in=body.marketing_opt_in,
         ip=ip,
     )
+    _reset_login_state(user)
     await db.commit()
     await db.refresh(user)
     out = _user_token_response(user)
@@ -584,6 +622,7 @@ async def forgot_password(body: ForgotPasswordBody, db: AsyncSession = Depends(g
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
         )
     )
+    await cancel_pending_outbox(db, to_email=email, template_key="password_reset")
     mail_result = await enqueue_email(
         db,
         template_key="password_reset",

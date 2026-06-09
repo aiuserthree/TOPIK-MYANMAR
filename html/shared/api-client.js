@@ -289,7 +289,7 @@
     return fetch(apiUrl("/api/v1/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ email: email, password: password }),
+      body: JSON.stringify({ email: email, password: password, portal: "fo" }),
     })
       .then(function (res) {
         return res
@@ -503,12 +503,6 @@
       method: "POST",
       auth: false,
       body: JSON.stringify(payload),
-    }).then(function (res) {
-      if (res.ok && res.body && res.body.access_token) {
-        persistSession(res.body, true);
-        syncLegacyUser(res.body.user);
-      }
-      return res;
     });
   }
 
