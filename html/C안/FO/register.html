@@ -36,7 +36,7 @@
     transition: all .15s var(--ease);
     position: relative;
   }
-  .round-card.disabled { opacity: .5; cursor: not-allowed; }
+  .round-card.disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
   .round-card:hover:not(.disabled):not(.selected) { border-color: var(--border-strong); }
   .round-card.selected { border-color: var(--primary); background: var(--primary-50); }
   .round-card.selected::after {
@@ -420,6 +420,7 @@
     'reg.meta_reg_period': { ko: '접수 기간', my: 'လျှောက်ထားရက်', en: 'Registration period' },
     'reg.status_open': { ko: '접수 중', my: 'လျှောက်ထားဆဲ', en: 'Open' },
     'reg.status_closed': { ko: '접수 마감', my: 'လျှောက်ထားမှု ပိတ်သွားပြီ', en: 'Closed' },
+    'reg.status_scheduled': { ko: '예정', my: 'စီစဉ်ထား', en: 'Scheduled' },
     'reg.status_upcoming': { ko: '접수 예정', my: 'လျှောက်ထားရန် စီစဉ်ထား', en: 'Upcoming' },
     'reg.no_rounds': { ko: '접수 가능한 회차가 없습니다.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေ မရှိပါ။', en: 'No sessions are open for registration.' },
     'reg.round_loading': { ko: '회차 정보를 불러오는 중…', my: 'အကြိမ်ရေ အချက်အလက် ဖွင့်နေသည်…', en: 'Loading session info…' },
@@ -652,12 +653,11 @@
   function fmtDateYmd(iso) {
     if (!iso) return '—';
     var d = new Date(iso);
-    if (isNaN(d.getTime())) return String(iso).slice(0, 10);
+    if (isNaN(d.getTime())) return String(iso).slice(0, 10).replace(/-/g, '.');
     var y = d.getFullYear();
     var m = String(d.getMonth() + 1).padStart(2, '0');
     var day = String(d.getDate()).padStart(2, '0');
-    var w = ['일','월','화','수','목','금','토'][d.getDay()];
-    return y + '.' + m + '.' + day + ' (' + w + ')';
+    return y + '.' + m + '.' + day;
   }
 
   function fmtRegPeriod(start, end) {
@@ -672,7 +672,14 @@
   function roundStatusLabel(status) {
     if (status === 'open') return { text: bt('reg.status_open', '접수 중'), cls: '' };
     if (status === 'closed') return { text: bt('reg.status_closed', '접수 마감'), cls: 'closed' };
+    if (status === 'scheduled') return { text: bt('reg.status_scheduled', '예정'), cls: 'upcoming' };
     return { text: bt('reg.status_upcoming', '접수 예정'), cls: 'upcoming' };
+  }
+
+  function visibleRegisterRounds(rounds) {
+    return (rounds || []).filter(function (r) {
+      return r.registration_status === 'open' || r.registration_status === 'scheduled';
+    });
   }
 
   function renderRoundList(rounds) {
@@ -689,6 +696,7 @@
       }
       return;
     }
+    if (errEl) errEl.style.display = 'none';
     var selectedId = REG_STATE.selectedRoundId;
     var hasSelected = selectedId && rounds.some(function (r) {
       return r.id === selectedId && r.registration_status === 'open';
@@ -1145,11 +1153,10 @@
     if (!window.TopikApi || !TopikApi.useApi) return;
     var loading = document.getElementById('roundListLoading');
     if (loading) loading.style.display = 'block';
-    TopikApi.getExamRounds({ registration_status: 'open' }).then(function (res) {
-      if (res.ok && res.body.items) renderRoundList(res.body.items);
-      else TopikApi.getExamRounds().then(function (r2) {
-        if (r2.ok && r2.body.items) renderRoundList(r2.body.items);
-      });
+    TopikApi.getExamRounds().then(function (res) {
+      if (res.ok && res.body && Array.isArray(res.body.items)) {
+        renderRoundList(visibleRegisterRounds(res.body.items));
+      }
     });
     TopikApi.getExamVenues().then(function (res) {
       if (res.ok && res.body.items) renderVenueSelect(res.body.items);

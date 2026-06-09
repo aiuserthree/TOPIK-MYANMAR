@@ -550,33 +550,50 @@
     });
   })();
 
-  // 회차 일정 — BO가 설정한 회차 데이터를 반영(미얀마 +06:30).
+  // 회차 일정 — BO 회차관리 API 데이터 반영 (달력 표시는 BO와 동일하게 KST).
   // API 미가용/실패 시에는 아래 정적 폴백값으로 기존 화면을 그대로 유지한다.
   (function () {
-    var TZ = '+06:30';
-    var MMT_MS = (6 * 60 + 30) * 60000; // UTC → 미얀마 시간 보정
-    // 정적 폴백값(현행 하드코딩과 동일한 시점). 접수시작/마감은 절대 시각 기준.
+    var CAL_TZ = 'Asia/Seoul';
+    var DAY_TZ = '+09:00';
+    // 정적 폴백값. 접수시작/마감은 KST 절대 시각.
     var SCHED = {
       roundNo: 107,
-      examDate: '2026-10-18T00:00:00+06:30',
-      regStart: '2026-07-17T00:00:00+06:30',
-      regEnd: '2026-07-21T23:59:59+06:30',
+      examDate: '2026-10-18',
+      regStart: '2026-07-17T00:00:00+09:00',
+      regEnd: '2026-07-21T23:59:59+09:00',
+      payStart: '2026-07-24T00:00:00+09:00',
+      payEnd: '2026-07-26T23:59:59+09:00',
       resultDate: null,
-      payPeriod: '2026.07.24 ~ 07.26', // BO 회차에 납부 기간 미설정 시 사용하는 정적 폴백
     };
 
     function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
-    function mmt(v) {
+    function calParts(v) {
       if (!v) return null;
-      var d = (v instanceof Date) ? v : new Date(v);
-      return isNaN(d.getTime()) ? null : new Date(d.getTime() + MMT_MS);
+      var raw = String(v);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        var bits = raw.split('-');
+        return { y: bits[0], m: bits[1], d: bits[2] };
+      }
+      var d = (v instanceof Date) ? v : new Date(raw);
+      if (isNaN(d.getTime())) return null;
+      try {
+        var fmt = new Intl.DateTimeFormat('en-CA', {
+          timeZone: CAL_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+        });
+        var bits2 = fmt.format(d).split('-');
+        return { y: bits2[0], m: bits2[1], d: bits2[2] };
+      } catch (e) {
+        return { y: String(d.getFullYear()), m: pad(d.getMonth() + 1), d: pad(d.getDate()) };
+      }
     }
-    function ymd(v) { var d = mmt(v); return d ? d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) : ''; }
-    function ymdDot(v) { var d = mmt(v); return d ? d.getUTCFullYear() + '.' + pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--'; }
-    function mdDot(v) { var d = mmt(v); return d ? pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--'; }
+    function ymd(v) { var p = calParts(v); return p ? p.y + '-' + p.m + '-' + p.d : ''; }
+    function ymdDot(v) { var p = calParts(v); return p ? p.y + '.' + p.m + '.' + p.d : '--'; }
+    function mdDot(v) { var p = calParts(v); return p ? p.m + '.' + p.d : '--'; }
+    function periodDot(start, end) { return ymdDot(start) + ' — ' + mdDot(end); }
+    function payPeriod() { return periodDot(SCHED.payStart, SCHED.payEnd); }
     function roundTag() { return btf('home.round_tag', '제{n}회', SCHED.roundNo); }
     function examDot() { return ymdDot(SCHED.examDate); }
-    function regPeriod() { return ymdDot(SCHED.regStart) + ' ~ ' + mdDot(SCHED.regEnd); }
+    function regPeriod() { return periodDot(SCHED.regStart, SCHED.regEnd); }
 
     var dday = document.querySelector('.dday');
     var head = dday ? dday.querySelector('.dday-head') : null;
@@ -601,10 +618,10 @@
       var exam = bt('home.exam_date', '시험일');
       var pay = bt('home.pay', '응시료 납부');
       if (isClosed) {
-        return footItem(exam, examDot()) + footItem(pay, SCHED.payPeriod);
+        return footItem(exam, examDot()) + footItem(pay, payPeriod());
       }
       return footItem(bt('home.reg_period', '접수기간'), regPeriod()) +
-             footItem(pay, SCHED.payPeriod) +
+             footItem(pay, payPeriod()) +
              footItem(exam, examDot());
     }
 
@@ -622,7 +639,13 @@
         cards[0].setAttribute('data-tl-start', ymd(SCHED.regStart));
         cards[0].setAttribute('data-tl-end', ymd(SCHED.regEnd));
         var s1 = cards[0].querySelector('.step-d');
-        if (s1) s1.textContent = ymdDot(SCHED.regStart) + ' — ' + mdDot(SCHED.regEnd);
+        if (s1) s1.textContent = regPeriod();
+      }
+      if (cards[1] && SCHED.payStart && SCHED.payEnd) { // STEP 02 응시료 납부
+        cards[1].setAttribute('data-tl-start', ymd(SCHED.payStart));
+        cards[1].setAttribute('data-tl-end', ymd(SCHED.payEnd));
+        var s2 = cards[1].querySelector('.step-d');
+        if (s2) s2.textContent = payPeriod();
       }
       if (cards[2]) { // STEP 03 시험 시행
         cards[2].setAttribute('data-tl-start', ymd(SCHED.examDate));
@@ -649,8 +672,8 @@
           b.setAttribute('aria-hidden', 'true');
           return;
         }
-        var start = new Date(startYmd + 'T00:00:00' + TZ).getTime();
-        var end = new Date(endYmd + 'T23:59:59' + TZ).getTime();
+        var start = new Date(startYmd + 'T00:00:00' + DAY_TZ).getTime();
+        var end = new Date(endYmd + 'T23:59:59' + DAY_TZ).getTime();
         if (now < start) {
           b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
           b.setAttribute('aria-hidden', 'true');
@@ -732,30 +755,39 @@
     // 언어 전환 시 동적 일정 문자열도 다시 렌더
     document.addEventListener('tpkm:langchange', function () { render(); });
 
+    function isScheduledStatus(st) {
+      return st === 'scheduled' || st === 'planned';
+    }
+
     function pickRound(items) {
       var open = items.filter(function (r) { return r.registration_status === 'open'; });
       if (open.length) return open[0];
-      var scheduled = items.filter(function (r) { return r.registration_status === 'scheduled'; })
+      var scheduled = items.filter(function (r) { return isScheduledStatus(r.registration_status); })
         .sort(function (a, b) { return new Date(a.registration_start_at) - new Date(b.registration_start_at); });
       if (scheduled.length) return scheduled[0];
-      return items[0];
+      var upcoming = items.filter(function (r) { return r.registration_status !== 'closed' && r.registration_status !== 'revoked'; });
+      return upcoming.length ? upcoming[0] : items[0];
     }
 
-    // BO가 설정한 실제 회차로 덮어쓰기 (공개 엔드포인트는 접수기간을 그대로 반환)
-    if (window.TopikApi && TopikApi.useApi) {
+    function applyRoundFromApi(r) {
+      if (!r || !r.registration_start_at || !r.registration_end_at) return;
+      if (r.round_no != null) SCHED.roundNo = r.round_no;
+      SCHED.examDate = r.exam_date || SCHED.examDate;
+      SCHED.regStart = r.registration_start_at;
+      SCHED.regEnd = r.registration_end_at;
+      SCHED.resultDate = r.result_announcement_date || r.result_date || null;
+      if (r.payment_start_at && r.payment_end_at) {
+        SCHED.payStart = r.payment_start_at;
+        SCHED.payEnd = r.payment_end_at;
+      }
+      render();
+    }
+
+    // BO가 설정한 실제 회차로 덮어쓰기
+    if (window.TopikApi && TopikApi.canUseApi && TopikApi.canUseApi()) {
       TopikApi.getExamRounds().then(function (res) {
         if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) return;
-        var r = pickRound(res.body.items);
-        if (!r || !r.registration_start_at || !r.registration_end_at) return;
-        if (r.round_no != null) SCHED.roundNo = r.round_no;
-        SCHED.examDate = r.exam_date || SCHED.examDate;
-        SCHED.regStart = r.registration_start_at;
-        SCHED.regEnd = r.registration_end_at;
-        SCHED.resultDate = r.result_announcement_date || null;
-        if (r.payment_start_at && r.payment_end_at) {
-          SCHED.payPeriod = ymdDot(r.payment_start_at) + ' ~ ' + mdDot(r.payment_end_at);
-        }
-        render();
+        applyRoundFromApi(pickRound(res.body.items));
       }).catch(function () { /* 정적 폴백 유지 */ });
     }
   })();

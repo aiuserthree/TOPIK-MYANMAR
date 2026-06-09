@@ -456,6 +456,9 @@
     'su.s1_desc': { ko: '인증된 이메일이 곧 회원 아이디(로그인 ID)가 됩니다.', my: 'အတည်ပြုထားသော အီးမေးလ်သည် အဖွဲ့ဝင် အိုင်ဒီ (login ID) ဖြစ်လာမည်။', en: 'Your verified email becomes your member ID (login ID).' },
     'su.email': { ko: '이메일', my: 'အီးမေးလ်', en: 'Email' },
     'su.send_code': { ko: '인증코드 발송', my: 'ကုဒ် ပို့ရန်', en: 'Send code' },
+    'su.resend': { ko: '재발송', my: 'ပြန်ပို့ရန်', en: 'Resend' },
+    'su.sending': { ko: '발송 중…', my: 'ပို့နေသည်…', en: 'Sending…' },
+    'su.verifying': { ko: '확인 중…', my: 'စစ်ဆေးနေသည်…', en: 'Checking…' },
     'su.email_hint': { ko: '미얀마 통신 환경을 고려해 안정적인 이메일 주소를 입력해 주세요.', my: 'မြန်မာ ဆက်သွယ်ရေး အခြေအနေကို ထည့်သွင်းစဉ်းစားပြီး တည်ငြိမ်သော အီးမေးလ်လိပ်စာ ထည့်ပါ။', en: 'Use a reliable email address suited to Myanmar networks.' },
     'su.otp': { ko: '인증코드', my: 'အတည်ပြုကုဒ်', en: 'Verification code' },
     'su.otp_ph': { ko: '6자리', my: '၆ လုံး', en: '6 digits' },
@@ -529,7 +532,56 @@
   var verifiedEmail = '';
   var verificationToken = '';
   var signupBusy = false;
+  var otpCodeSent = false;
+  var confirmBtnBusy = false;
   var isGoogleSignup = false;
+
+  function i18nText(key) {
+    try {
+      if (window.TPKMLang && typeof TPKMLang.t === 'function') {
+        var v = TPKMLang.t(key);
+        if (v) return v;
+      }
+      if (window.TOPIKPageI18n && typeof TOPIKPageI18n.text === 'function') {
+        var lang = (window.TPKMLang && TPKMLang.get) ? TPKMLang.get() : 'KO';
+        var v2 = TOPIKPageI18n.text(key, lang);
+        if (v2) return v2;
+      }
+    } catch (e) { /* ignore */ }
+    return '';
+  }
+
+  function setBtnI18n(btn, key) {
+    if (!btn || !key) return;
+    btn.setAttribute('data-i18n-content', key);
+    var val = i18nText(key);
+    if (val) btn.textContent = val;
+  }
+
+  function setSendCodeBtnState(busy) {
+    signupBusy = !!busy;
+    var btn = document.getElementById('btnSendCode');
+    if (!btn) return;
+    btn.disabled = !!busy;
+    if (busy) setBtnI18n(btn, 'su.sending');
+    else setBtnI18n(btn, otpCodeSent ? 'su.resend' : 'su.send_code');
+  }
+
+  function setConfirmBtnState(busy) {
+    confirmBtnBusy = !!busy;
+    var btn = document.getElementById('btnConfirmCode');
+    if (!btn) return;
+    btn.disabled = !!busy;
+    if (busy) setBtnI18n(btn, 'su.verifying');
+    else setBtnI18n(btn, 'btn.confirm');
+  }
+
+  function refreshSignupStep1Buttons() {
+    setSendCodeBtnState(signupBusy);
+    setConfirmBtnState(confirmBtnBusy);
+  }
+
+  document.addEventListener('tpkm:langchange', refreshSignupStep1Buttons);
 
   // ---- 약관 동의 이력 (계약서 6.4) ----
   // 현행 게시 약관 버전을 조회해 두고, 동의한 항목만 terms_agreed 로 전송한다.
@@ -568,10 +620,23 @@
     return out;
   }
 
+  function step1CanProceed() {
+    if (isGoogleSignup && verifiedEmail && window.TopikApi && TopikApi.hasSession()) {
+      return true;
+    }
+    return !!verificationToken;
+  }
+
+  function updateStep1NextButton() {
+    var btn = document.getElementById('btnGoStep2');
+    if (btn) btn.disabled = !step1CanProceed();
+  }
+
   function setGoogleSignupMode(on) {
     isGoogleSignup = !!on;
     var pw = document.getElementById('pw-section');
     if (pw) pw.style.display = isGoogleSignup ? 'none' : '';
+    updateStep1NextButton();
   }
 
   /** Policy: 정책_합의_워크시트 §2.9 — API MIN_SIGNUP_AGE_YEARS 와 동일 */
@@ -695,6 +760,7 @@
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
     scrollStepTabIntoView(s);
+    if (s === 1) updateStep1NextButton();
   }
 
   if (stepsBar) {
@@ -790,20 +856,20 @@
       return;
     }
     if (signupBusy) return;
-    signupBusy = true;
-    setBusy(btn, true, '발송 중…');
+    setSendCodeBtnState(true);
     var sendReq = TopikApi.sendVerificationCode(e);
     var timeoutReq = new Promise(function (_, reject) {
       setTimeout(function () { reject(new Error('timeout')); }, 20000);
     });
     Promise.race([sendReq, timeoutReq]).then(function (res) {
-      signupBusy = false;
-      setBusy(btn, false, '재발송');
       if (!res.ok) {
+        setSendCodeBtnState(false);
         showSignupErr(TopikApi.parseError(res));
         return;
       }
+      otpCodeSent = true;
       document.getElementById('otpRow').classList.remove('hidden');
+      setSendCodeBtnState(false);
       var host = location.hostname;
       var localDev = host === 'localhost' || host === '127.0.0.1';
       if (localDev && res.body && res.body.dev_code && res.body.mail_delivered === false) {
@@ -827,8 +893,8 @@
         if (t <= 0) clearInterval(timerId);
       }, 1000);
     }).catch(function (err) {
-      signupBusy = false;
-      setBusy(btn, false, '재발송');
+      if (!document.getElementById('otpRow').classList.contains('hidden')) otpCodeSent = true;
+      setSendCodeBtnState(false);
       showSignupErr(err && err.message === 'timeout'
         ? '서버 응답이 지연되고 있습니다. 잠시 후 재발송을 눌러 주세요.'
         : '네트워크 오류입니다.');
@@ -847,9 +913,9 @@
       showSignupErr('서버에 연결할 수 없습니다.');
       return;
     }
-    setBusy(btn, true, '확인 중…');
+    setConfirmBtnState(true);
     TopikApi.verifyEmail(e, code).then(function (res) {
-      setBusy(btn, false, '확인');
+      setConfirmBtnState(false);
       if (!res.ok) {
         showSignupErr(TopikApi.parseError(res));
         return;
@@ -858,18 +924,20 @@
       verificationToken = res.body.verification_token || '';
       setGoogleSignupMode(false);
       document.getElementById('emailOk').classList.remove('hidden');
-      document.getElementById('btnGoStep2').disabled = false;
+      updateStep1NextButton();
       document.getElementById('su-email-display').value = verifiedEmail;
       clearInterval(timerId);
     }).catch(function () {
-      setBusy(btn, false, '확인');
+      setConfirmBtnState(false);
       showSignupErr('네트워크 오류입니다.');
     });
   });
 
   document.getElementById('btnGoStep2').addEventListener('click', function () {
-    if (!verificationToken) {
-      showSignupErr('이메일 인증을 완료해 주세요.');
+    if (!step1CanProceed()) {
+      showSignupErr(isGoogleSignup
+        ? 'Google 인증이 만료되었습니다. 다시 시도해 주세요.'
+        : '이메일 인증을 완료해 주세요.');
       return;
     }
     go(2);

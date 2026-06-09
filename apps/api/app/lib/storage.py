@@ -76,12 +76,24 @@ def parse_s3_storage_key(storage_key: str) -> tuple[str, str] | None:
 def _s3_client_config():
     from botocore.config import Config
 
+    # boto3 1.36+ defaults checksum on every PutObject; IwinV 등 S3 호환 스토리지는
+    # MissingContentLength 로 실패할 수 있음 → when_required 로 완화.
+    base = Config(
+        signature_version="s3v4",
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+    )
     endpoint = (settings.s3_endpoint or "").lower()
     # Optional local MinIO only — IwinV (kr.object.iwinv.kr) uses default virtual-hosted style.
     if endpoint and not endpoint.startswith("https://kr.object.iwinv.kr"):
         if any(token in endpoint for token in ("localhost", "127.0.0.1", "minio")):
-            return Config(signature_version="s3v4", s3={"addressing_style": "path"})
-    return Config(signature_version="s3v4")
+            return Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            )
+    return base
 
 
 @lru_cache
@@ -124,12 +136,15 @@ def _write_bytes(*, data: bytes, mime_type: str, category: str) -> str:
                 Key=object_key,
                 Body=data,
                 ContentType=mime_type,
+                ContentLength=len(data),
             )
         except ClientError as exc:
+            err_code = exc.response.get("Error", {}).get("Code", "unknown")
+            logger.warning("S3 put_object failed: %s bucket=%s key=%s", err_code, bucket, object_key)
             if settings.is_development:
                 logger.warning(
                     "S3 upload failed (%s); using local storage for development",
-                    exc.response.get("Error", {}).get("Code", "unknown"),
+                    err_code,
                 )
                 return _write_local(data=data, file_id=file_id)
             raise ValueError(_s3_error_message(exc)) from exc

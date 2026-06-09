@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db_session
 from app.lib.deps import AuthUser, require_complete_user
 from app.lib.errors import api_error
+from app.lib.exam_round_status import sync_exam_round_status
 from app.lib.formatting import (
     card_status_label,
     derive_card_status_for_app,
@@ -162,6 +163,8 @@ async def submit_application(
 
     round_res = await db.execute(select(ExamRound).where(ExamRound.id == body.exam_round_id))
     exam_round = round_res.scalar_one_or_none()
+    if exam_round:
+        await sync_exam_round_status(db, exam_round)
     if not exam_round or exam_round.registration_status != "open":
         raise api_error("ROUND_NOT_OPEN", "접수 가능한 회차가 아닙니다.", 400)
 

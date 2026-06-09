@@ -36,24 +36,61 @@ CREATE TABLE IF NOT EXISTS semantic_chunks (
   )
 );
 
-CREATE INDEX IF NOT EXISTS idx_semantic_chunks_source
-  ON semantic_chunks (source_type, source_id);
+-- 인덱스·COMMENT 는 테이블 owner 권한이 필요합니다.
+-- semantic_chunks 가 postgres 소유로 이미 존재하면 topik_app 마이그레이션은 건너뜁니다.
+DO $idx$
+BEGIN
+  CREATE INDEX IF NOT EXISTS idx_semantic_chunks_source
+    ON semantic_chunks (source_type, source_id);
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'skip idx_semantic_chunks_source (not table owner)';
+END
+$idx$;
 
-CREATE INDEX IF NOT EXISTS idx_semantic_chunks_locale
-  ON semantic_chunks (locale);
+DO $idx$
+BEGIN
+  CREATE INDEX IF NOT EXISTS idx_semantic_chunks_locale
+    ON semantic_chunks (locale);
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'skip idx_semantic_chunks_locale (not table owner)';
+END
+$idx$;
 
-CREATE INDEX IF NOT EXISTS idx_semantic_chunks_pending
-  ON semantic_chunks (source_type)
-  WHERE embedding IS NULL;
+DO $idx$
+BEGIN
+  CREATE INDEX IF NOT EXISTS idx_semantic_chunks_pending
+    ON semantic_chunks (source_type)
+    WHERE embedding IS NULL;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'skip idx_semantic_chunks_pending (not table owner)';
+END
+$idx$;
 
-CREATE INDEX IF NOT EXISTS idx_semantic_chunks_embedding_hnsw
-  ON semantic_chunks USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64)
-  WHERE embedding IS NOT NULL;
+DO $idx$
+BEGIN
+  CREATE INDEX IF NOT EXISTS idx_semantic_chunks_embedding_hnsw
+    ON semantic_chunks USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+    WHERE embedding IS NOT NULL;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'skip idx_semantic_chunks_embedding_hnsw (not table owner)';
+END
+$idx$;
 
-COMMENT ON TABLE semantic_chunks IS
-  'Unified embedding chunks for semantic FAQ/notice search, RAG chatbot, duplicate application detection';
-COMMENT ON COLUMN semantic_chunks.source_type IS
-  'notice | faq | board_post | application | terms | rag_corpus';
-COMMENT ON COLUMN semantic_chunks.embedding IS
-  '1536-dim default (OpenAI text-embedding-3-small/large compatible)';
+DO $cmt$
+BEGIN
+  COMMENT ON TABLE semantic_chunks IS
+    'Unified embedding chunks for semantic FAQ/notice search, RAG chatbot, duplicate application detection';
+  COMMENT ON COLUMN semantic_chunks.source_type IS
+    'notice | faq | board_post | application | terms | rag_corpus';
+  COMMENT ON COLUMN semantic_chunks.embedding IS
+    '1536-dim default (OpenAI text-embedding-3-small/large compatible)';
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'skip semantic_chunks comments (not table owner)';
+END
+$cmt$;

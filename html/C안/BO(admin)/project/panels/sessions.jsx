@@ -197,12 +197,13 @@ function SessionEditLP({ edit, onClose, onSave }) {
         <FormRow label="회차명" required>
           <input className="input" value={f.name} onChange={e => set('name', e.target.value)}/>
         </FormRow>
-        <FormRow label="상태">
-          <select className="select" value={f.status} onChange={e => set('status', e.target.value)}>
-            <option value="planned">예정</option>
-            <option value="open">접수중</option>
-            <option value="closed">마감</option>
-          </select>
+        <FormRow label="접수 상태">
+          <div className="input" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-2)', color: 'var(--text-2)', cursor: 'default' }}>
+            {existing
+              ? ({ planned: '예정', open: '접수중', closed: '마감', revoked: '폐지' }[f.status] || f.status)
+              : '저장 시 접수기간 기준 자동 설정'}
+          </div>
+          <span className="hint">접수 시작일 00:00(KST) 이전=예정 · 기간 내=접수중 · 마감일 23:59(KST) 이후=마감. 폐지는 목록에서 별도 처리.</span>
         </FormRow>
         <FormRow label="정원" required>
           <input type="number" className="input" value={f.cap} min={0} onFocus={selectAllOnFocus} onChange={e => set('cap', parseRequiredInt(e.target.value))}/>

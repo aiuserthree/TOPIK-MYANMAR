@@ -22,6 +22,33 @@
     return String(v).slice(0, 10);
   }
 
+  /** timestamptz → 달력용 날짜(YYYY-MM-DD, Asia/Seoul). UTC slice 시 접수기간이 하루 밀리는 문제 방지 */
+  function isoDateKst(v) {
+    if (!v) return "";
+    var raw = String(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return raw.slice(0, 10);
+    try {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(d);
+    } catch (e) {
+      return raw.slice(0, 10);
+    }
+  }
+
+  /** BO 회차 접수기간 — 달력에서 고른 날짜를 KST 자정/말일로 저장 */
+  function kstDayStart(ymd) {
+    return ymd + "T00:00:00+09:00";
+  }
+  function kstDayEnd(ymd) {
+    return ymd + "T23:59:59+09:00";
+  }
+
   /** UTC ISO → BO 관리자 표시용 한국시간(KST, UTC+9) 'YYYY-MM-DD HH:MM' */
   function fmtKst(v) {
     if (!v) return "";
@@ -149,8 +176,8 @@
       id: String(row.id),
       no: row.round_no,
       name: row.title,
-      applyStart: isoDate(row.registration_start_at),
-      applyEnd: isoDate(row.registration_end_at),
+      applyStart: isoDateKst(row.registration_start_at),
+      applyEnd: isoDateKst(row.registration_end_at),
       examDate: isoDate(row.exam_date),
       resultDate: isoDate(row.result_date), // null/empty → BO UI에서 '미정'
       cap: row.capacity,
@@ -686,28 +713,16 @@
       round_no: data.no,
       title: data.name,
       exam_date: data.examDate,
-      registration_start_at: data.applyStart + "T00:00:00",
-      registration_end_at: data.applyEnd + "T23:59:59",
+      registration_start_at: kstDayStart(data.applyStart),
+      registration_end_at: kstDayEnd(data.applyEnd),
       fee_level_i: data.feeI,
       fee_level_ii: data.feeII,
       capacity: data.cap,
       venue_ids: (data.venues || []).map(function (v) { return parseInt(v, 10); }).filter(Boolean),
     };
-    var p;
-    if (data.id && !data._isNew) {
-      p = Api.updateExamRound(data.id, payload).then(function (res) {
-        if (!res.ok) return res;
-        return Api.setExamRoundStatus(data.id, STATUS_TO_API[data.status] || "scheduled");
-      });
-    } else {
-      p = Api.createExamRound(payload).then(function (res) {
-        if (!res.ok || !res.body || !res.body.id) return res;
-        if (data.status && data.status !== "planned") {
-          return Api.setExamRoundStatus(res.body.id, STATUS_TO_API[data.status] || "scheduled");
-        }
-        return res;
-      });
-    }
+    var p = data.id && !data._isNew
+      ? Api.updateExamRound(data.id, payload)
+      : Api.createExamRound(payload);
     return p.then(function (res) {
       if (!res || !res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       return DS.initFromApi();

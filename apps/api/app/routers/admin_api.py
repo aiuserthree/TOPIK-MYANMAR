@@ -54,6 +54,7 @@ from app.models.content import FaqItem, Notice, Term, TermConsent
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue
 from app.models.system import FileAttachment
 from app.models.user import User
+from app.lib.exam_round_status import sync_exam_round_status, sync_exam_rounds_status
 from app.routers.exam import serialize_round, serialize_venue
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -983,7 +984,9 @@ async def assign_exam_numbers(
 @router.get("/exam-rounds")
 async def admin_exam_rounds(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
     result = await db.execute(select(ExamRound).options(selectinload(ExamRound.venue_links)).order_by(ExamRound.round_no.desc()))
-    return {"items": [serialize_round(r) for r in result.scalars().all()]}
+    rounds = list(result.scalars().all())
+    await sync_exam_rounds_status(db, rounds)
+    return {"items": [serialize_round(r) for r in rounds]}
 
 
 @router.post("/exam-rounds")
@@ -1008,9 +1011,12 @@ async def create_round(
     await db.flush()
     for vid in body.venue_ids:
         db.add(ExamRoundVenue(exam_round_id=rnd.id, exam_venue_id=vid))
+    await sync_exam_round_status(db, rnd)
     await write_audit(
         db, admin_user_id=admin.id, action_type="exam_round_create",
-        target_type="exam_rounds", target_id=rnd.id, after_data={"round_no": body.round_no}, ip_address=ip,
+        target_type="exam_rounds", target_id=rnd.id,
+        after_data={"round_no": body.round_no, "registration_status": rnd.registration_status},
+        ip_address=ip,
     )
     await db.commit()
     return {"id": rnd.id}
@@ -1041,7 +1047,6 @@ async def update_round(
         "fee_level_i",
         "fee_level_ii",
         "capacity",
-        "registration_status",
         "exam_number_visible_at",
     ):
         if key in patch:
@@ -1050,10 +1055,11 @@ async def update_round(
         await db.execute(delete(ExamRoundVenue).where(ExamRoundVenue.exam_round_id == round_id))
         for vid in patch["venue_ids"]:
             db.add(ExamRoundVenue(exam_round_id=round_id, exam_venue_id=vid))
+    await sync_exam_round_status(db, rnd)
     await write_audit(
         db, admin_user_id=admin.id, action_type="exam_round_update",
         target_type="exam_rounds", target_id=round_id, before_data=before,
-        after_data=jsonable_encoder(patch), ip_address=ip,
+        after_data=jsonable_encoder({**patch, "registration_status": rnd.registration_status}), ip_address=ip,
     )
     await db.commit()
     return {"updated": True}

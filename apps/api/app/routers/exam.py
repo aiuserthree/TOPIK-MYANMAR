@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
+from app.lib.exam_round_status import sync_exam_rounds_status
 from app.models.exam import ExamRound, ExamVenue
 
 router = APIRouter(tags=["exam"])
@@ -76,7 +77,10 @@ async def list_exam_rounds(
     if registration_status:
         stmt = stmt.where(ExamRound.registration_status == registration_status)
     result = await db.execute(stmt)
-    rounds = result.scalars().all()
+    rounds = list(result.scalars().all())
+    await sync_exam_rounds_status(db, rounds)
+    if registration_status:
+        rounds = [r for r in rounds if r.registration_status == registration_status]
     return {"items": [serialize_round(r) for r in rounds]}
 
 
