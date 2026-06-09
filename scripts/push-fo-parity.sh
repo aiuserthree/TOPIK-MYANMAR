@@ -12,7 +12,7 @@ python3 build.py
 
 echo "==> Push FO static → ${SERVER}:${APP_ROOT}/public (HTML + JS, cache-bust ?v= in HTML)"
 rsync -avz "${ROOT}/public/"*.html "${SERVER}:${APP_ROOT}/public/"
-rsync -avz "${ROOT}/public/assets/common.js" "${SERVER}:${APP_ROOT}/public/assets/"
+rsync -avz "${ROOT}/public/assets/styles.css" "${ROOT}/public/assets/common.js" "${SERVER}:${APP_ROOT}/public/assets/"
 rsync -avz "${ROOT}/public/shared/api-client.js" "${SERVER}:${APP_ROOT}/public/shared/"
 
 echo "==> Verify (remote curl via ssh)"
