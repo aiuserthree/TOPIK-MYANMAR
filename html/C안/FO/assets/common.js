@@ -114,6 +114,12 @@
     logout() {
       clearApiSession();
       localStorage.removeItem('tpkm_user');
+      try {
+        if (window.google && window.google.accounts && window.google.accounts.id &&
+            window.google.accounts.id.disableAutoSelect) {
+          window.google.accounts.id.disableAutoSelect();
+        }
+      } catch (e) { /* ignore */ }
     }
   };
   window.TPKMAuth = Auth;
@@ -320,11 +326,7 @@
         if (PROTECTED.has(href)) {
           a.addEventListener('click', (e) => {
             e.preventDefault();
-            if (Auth.isSignupPending()) {
-              location.href = 'signup.html?google=1';
-            } else {
-              location.href = 'login.html?next=' + encodeURIComponent(href);
-            }
+            redirectToLogin(href);
           });
         }
       });
@@ -431,17 +433,23 @@
   }
 
   // ---- Login guard ----
+  // 가입 미완료(구글 중도 이탈) 세션은 로그인 전과 동일 — 로그인 페이지로 유도.
+  function redirectToLogin(nextHref) {
+    if (Auth.isSignupPending()) Auth.logout();
+    const next = encodeURIComponent(
+      nextHref || (location.pathname.split('/').pop() + location.search)
+    );
+    location.href = 'login.html?next=' + next;
+  }
+
   // Add `data-require-login` on a <body> element OR pass through this helper.
   function checkLoginGuard() {
     const body = document.body;
     if (!body.hasAttribute('data-require-login')) return;
     if (Auth.isLoggedIn()) return;
-    if (Auth.isSignupPending()) {
-      location.replace('signup.html?google=1');
-      return;
-    }
-    const next = encodeURIComponent(location.pathname.split('/').pop() + location.search);
-    location.replace('login.html?next=' + next);
+    const next = location.pathname.split('/').pop() + location.search;
+    if (Auth.isSignupPending()) Auth.logout();
+    location.replace('login.html?next=' + encodeURIComponent(next));
   }
 
   function syncProfileState() {

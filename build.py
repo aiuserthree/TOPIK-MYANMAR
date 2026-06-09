@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import pathlib
+from datetime import datetime, timezone
 
 SHARED_SRC = pathlib.Path("html/shared")
 FO_SHARED_SRC = None  # resolved below
@@ -68,6 +69,19 @@ API_BASE = os.environ.get("TOPIK_API_BASE", _DEFAULT_API_BASE).rstrip("/")
 API_META = f'<meta name="topik-api-base" content="{API_BASE}">' if API_BASE else ""
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
 API_META_RE = re.compile(r'\s*<meta name="topik-api-base"[^>]*>\n?', re.IGNORECASE)
+ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H")
+# nginx serves JS/CSS with Cache-Control immutable 7d — bump ?v= on each build.
+ASSET_URL_RE = re.compile(
+    r'(src=")((?:shared/api-client\.js|assets/common\.js|assets/fo-board\.js|assets/styles\.css))(?:\?v=[^"]*)?(")',
+    re.IGNORECASE,
+)
+
+
+def patch_asset_cache_bust(text: str) -> str:
+    return ASSET_URL_RE.sub(
+        lambda m: f"{m.group(1)}{m.group(2)}?v={ASSET_VERSION}{m.group(3)}",
+        text,
+    )
 
 
 def patch_html_api_meta(text: str) -> str:
@@ -79,7 +93,9 @@ def patch_html_api_meta(text: str) -> str:
 
 for html in DST.glob("*.html"):
     text = html.read_text(encoding="utf-8")
-    patched = patch_html_api_meta(text.replace("../../shared/", "shared/"))
+    patched = patch_asset_cache_bust(
+        patch_html_api_meta(text.replace("../../shared/", "shared/"))
+    )
     if patched != text:
         html.write_text(patched, encoding="utf-8")
 

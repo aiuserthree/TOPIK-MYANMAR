@@ -14,6 +14,7 @@ python3 build.py
 echo "==> Push API patch → ${SERVER}:${APP_ROOT}/apps/api"
 rsync -avz "${ROOT}/apps/api/app/lib/profile.py" "${SERVER}:${APP_ROOT}/apps/api/app/lib/"
 rsync -avz "${ROOT}/apps/api/app/lib/deps.py" "${SERVER}:${APP_ROOT}/apps/api/app/lib/"
+rsync -avz "${ROOT}/apps/api/app/routers/admin_api.py" "${SERVER}:${APP_ROOT}/apps/api/app/routers/"
 rsync -avz "${ROOT}/apps/api/app/routers/auth.py" "${SERVER}:${APP_ROOT}/apps/api/app/routers/"
 rsync -avz "${ROOT}/apps/api/app/routers/me.py" "${SERVER}:${APP_ROOT}/apps/api/app/routers/"
 rsync -avz "${ROOT}/apps/api/app/routers/applications.py" "${SERVER}:${APP_ROOT}/apps/api/app/routers/"

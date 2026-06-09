@@ -40,6 +40,7 @@ from app.lib.email_notify import (
     resolve_admin_notify_email,
 )
 from app.lib.mail import enqueue_email
+from app.lib.profile import is_full_member
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.roster_export import build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
@@ -1855,7 +1856,7 @@ async def reply_post(
 
 @router.get("/users")
 async def admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
-    result = await db.execute(select(User).order_by(User.id.desc()).limit(200))
+    result = await db.execute(select(User).order_by(User.id.desc()).limit(500))
     return {
         "items": [
             {
@@ -1871,6 +1872,7 @@ async def admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSession
                 "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
             }
             for u in result.scalars().all()
+            if is_full_member(u)
         ]
     }
 

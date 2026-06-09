@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
 from app.lib.errors import api_error
-from app.lib.profile import is_profile_incomplete
+from app.lib.profile import AUTH_USER_STATUSES, is_profile_incomplete
 from app.lib.security import decode_access_token
 from app.models.admin import AdminUser
 from app.models.user import User
@@ -61,7 +61,9 @@ async def get_optional_user(
         return None
     kind, _, ident = sub.partition(":")
     if kind == "user":
-        result = await db.execute(select(User).where(User.id == int(ident), User.status == "active"))
+        result = await db.execute(
+            select(User).where(User.id == int(ident), User.status.in_(AUTH_USER_STATUSES))
+        )
         user = result.scalar_one_or_none()
         if not user:
             return None
@@ -93,7 +95,9 @@ async def require_complete_user(
     auth: Annotated[AuthUser, Depends(require_user)],
     db: AsyncSession = Depends(get_db_session),
 ) -> AuthUser:
-    result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
+    result = await db.execute(
+        select(User).where(User.id == auth.id, User.status.in_(AUTH_USER_STATUSES))
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)

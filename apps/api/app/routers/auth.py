@@ -30,7 +30,14 @@ from app.lib.security import (
 from app.lib.consents import persist_term_consents
 from app.lib.email_notify import notify_password_expiry_reminder
 from app.lib.google_auth import verify_google_id_token
-from app.lib.profile import PROFILE_INCOMPLETE_BIRTH, is_profile_incomplete
+from app.lib.profile import (
+    PROFILE_INCOMPLETE_BIRTH,
+    SIGNUP_PENDING_STATUS,
+    AUTH_USER_STATUSES,
+    is_profile_incomplete,
+    is_full_member,
+    remove_incomplete_signup_user,
+)
 from app.lib.mail import enqueue_email, format_verification_code, mail_delivery_status, schedule_outbox_delivery
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
@@ -212,8 +219,11 @@ async def google_login(
         user = by_email.scalar_one_or_none()
 
     if user:
-        if user.status != "active":
+        if user.status in ("suspended", "withdrawn"):
             raise api_error("ACCOUNT_INACTIVE", "이용이 제한된 계정입니다.", 403)
+        if is_profile_incomplete(user):
+            if user.status != SIGNUP_PENDING_STATUS:
+                user.status = SIGNUP_PENDING_STATUS
         if not user.google_sub:
             user.google_sub = sub
         _reset_login_state(user)
@@ -239,6 +249,7 @@ async def google_login(
             motive_code=0,
             purpose_code=0,
             preferred_lang=lang,
+            status=SIGNUP_PENDING_STATUS,
         )
         db.add(user)
         await db.flush()
@@ -336,6 +347,8 @@ async def login(
     user = user_res.scalar_one_or_none()
     if not user:
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+    if is_profile_incomplete(user):
+        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     if _is_locked(user):
         raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
     if not verify_password(body.password, user.password_hash):
@@ -399,7 +412,9 @@ async def refresh(body: RefreshBody, db: AsyncSession = Depends(get_db_session))
     sub = str(payload["sub"])
     kind, _, ident = sub.partition(":")
     if kind == "user":
-        result = await db.execute(select(User).where(User.id == int(ident), User.status == "active"))
+        result = await db.execute(
+            select(User).where(User.id == int(ident), User.status.in_(AUTH_USER_STATUSES))
+        )
         user = result.scalar_one_or_none()
         if not user:
             raise api_error("INVALID_TOKEN", "사용자를 찾을 수 없습니다.", 401)
@@ -426,9 +441,12 @@ async def send_verification_code(body: SendCodeBody, db: AsyncSession = Depends(
     email = body.email.strip().lower()
     if not is_valid_email(email):
         raise api_error("VALIDATION_ERROR", "유효한 이메일을 입력해 주세요.")
-    exists = await db.execute(select(User.id).where(User.email == email))
-    if exists.scalar_one_or_none():
-        raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
+    existing = await db.execute(select(User).where(User.email == email))
+    existing_user = existing.scalar_one_or_none()
+    if existing_user:
+        if is_full_member(existing_user):
+            raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
+        await remove_incomplete_signup_user(db, existing_user)
     code = f"{random.randint(100000, 999999)}"
     await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
     db.add(
@@ -501,9 +519,12 @@ async def register(
     if roster_err:
         raise api_error("VALIDATION_ERROR", roster_err)
 
-    exists = await db.execute(select(User.id).where(User.email == email))
-    if exists.scalar_one_or_none():
-        raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
+    existing = await db.execute(select(User).where(User.email == email))
+    existing_user = existing.scalar_one_or_none()
+    if existing_user:
+        if is_full_member(existing_user):
+            raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
+        await remove_incomplete_signup_user(db, existing_user)
 
     user = User(
         email=email,

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db_session
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user, require_user
-from app.lib.profile import is_profile_incomplete
+from app.lib.profile import AUTH_USER_STATUSES, is_profile_incomplete
 from app.lib.email_notify import notify_account_status
 from app.lib.errors import api_error
 from app.lib.consents import persist_term_consents
@@ -84,7 +84,9 @@ def serialize_user(user: User) -> dict:
 
 @router.get("/me")
 async def get_me(auth: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db_session)) -> dict:
-    result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
+    result = await db.execute(
+        select(User).where(User.id == auth.id, User.status.in_(AUTH_USER_STATUSES))
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
@@ -100,7 +102,9 @@ async def update_me(
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
+    result = await db.execute(
+        select(User).where(User.id == auth.id, User.status.in_(AUTH_USER_STATUSES))
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
@@ -149,6 +153,8 @@ async def update_me(
             ip=ip,
         )
     bump_rev(user)
+    if not is_profile_incomplete(user):
+        user.status = "active"
     await db.commit()
     await db.refresh(user)
     return {"user": serialize_user(user), "profile_incomplete": is_profile_incomplete(user)}

@@ -394,8 +394,24 @@
         fallback.disabled = true;
         fallback.style.opacity = '0.55';
         fallback.style.cursor = 'not-allowed';
+        fallback.style.pointerEvents = 'auto';
       }
       if (hint) { hint.textContent = tr.disabled; hint.style.display = 'block'; }
+    }
+
+    function showGenericGoogleButton() {
+      if (area) area.style.position = 'relative';
+      if (fallback) {
+        fallback.style.display = 'flex';
+        fallback.disabled = false;
+        fallback.style.opacity = '1';
+        fallback.style.cursor = 'pointer';
+        fallback.style.pointerEvents = 'none';
+      }
+      if (mount) {
+        mount.style.cssText = 'position:absolute;top:0;left:0;right:0;opacity:0;z-index:2;width:100%;display:flex;justify-content:center;cursor:pointer;';
+      }
+      if (hint) hint.style.display = 'none';
     }
 
     if (fallback) {
@@ -437,8 +453,15 @@
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleCredential,
-          ux_mode: 'popup'
+          ux_mode: 'popup',
+          context: 'signin',
+          auto_select: false,
+          use_fedcm_for_prompt: false,
+          use_fedcm_for_button: false
         });
+        if (window.google.accounts.id.disableAutoSelect) {
+          window.google.accounts.id.disableAutoSelect();
+        }
         mount.innerHTML = '';
         var width = Math.min((area && area.offsetWidth) || 360, 400);
         window.google.accounts.id.renderButton(mount, {
@@ -446,9 +469,7 @@
           text: 'signin_with', shape: 'rectangular', logo_alignment: 'center',
           width: width, locale: gisLocale()
         });
-        if (fallback) fallback.style.display = 'none';
-        if (hint) hint.style.display = 'none';
-        mount.style.display = 'flex';
+        showGenericGoogleButton();
       } catch (e) {
         showDisabled();
       }
