@@ -284,7 +284,7 @@
     'mp.t_fee': { ko: '응시료', my: 'ဖြေဆိုကြေး', en: 'Test fee' }
   };
 </script>
-<script src="shared/api-client.js?v=20260609d"></script>
+<script src="shared/api-client.js?v=20260610a"></script>
 <script src="assets/common.js"></script>
 <script>
 (function () {
@@ -317,30 +317,6 @@
   var currentProfile = null;
   var currentItems = { active: [], past: [] };
   var avatarLoadSeq = 0;
-  var pendingConfirmKey = null;
-
-  function consumeConfirmKey() {
-    try {
-      var key = new URLSearchParams(location.search).get('confirm');
-      if (key && history.replaceState) {
-        history.replaceState(null, '', location.pathname);
-      }
-      return key;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  pendingConfirmKey = consumeConfirmKey();
-
-  function tryOpenPendingConfirm() {
-    if (!pendingConfirmKey) return;
-    var key = pendingConfirmKey;
-    pendingConfirmKey = null;
-    var item = findItemByKey(key);
-    if (item) openConfirmForItem(item);
-  }
-
   function esc(s) {
     if (s == null) return '';
     return String(s)
@@ -783,8 +759,9 @@
   }
 
   function loadApplications() {
-    var useApi = window.TopikApi && TopikApi.useApi && TopikApi.baseUrl &&
-      TopikApi.isLoggedIn() && TopikApi.getAccessToken() !== 'demo-local';
+    var useApi = window.TopikApi && TopikApi.canUseApi &&
+      TopikApi.canUseApi() && TopikApi.isLoggedIn() &&
+      TopikApi.getAccessToken() !== 'demo-local';
 
     if (!useApi) {
       if (!window.TPKMAuth || !TPKMAuth.isLoggedIn()) {
@@ -836,7 +813,7 @@
   });
 
   function loadMe() {
-    if (!window.TopikApi || !TopikApi.useApi || !TopikApi.baseUrl || !TopikApi.isLoggedIn()) {
+    if (!window.TopikApi || !TopikApi.canUseApi || !TopikApi.canUseApi() || !TopikApi.isLoggedIn()) {
       fillProfileFromAuth();
       return Promise.resolve();
     }
@@ -851,8 +828,9 @@
   }
 
   function loadPage() {
-    var useApi = window.TopikApi && TopikApi.useApi && TopikApi.baseUrl &&
-      TopikApi.isLoggedIn() && TopikApi.getAccessToken() !== 'demo-local';
+    var useApi = window.TopikApi && TopikApi.canUseApi &&
+      TopikApi.canUseApi() && TopikApi.isLoggedIn() &&
+      TopikApi.getAccessToken() !== 'demo-local';
 
     if (!useApi) {
       if (!window.TPKMAuth || !TPKMAuth.isLoggedIn()) {
@@ -886,7 +864,6 @@
         showLoadError(TopikApi.parseError(appsRes));
       }
       scheduleMeAvatarRetry();
-      tryOpenPendingConfirm();
     }).catch(function () {
       if (!profileSeed) fillProfileFromAuth();
       showLoadError(bt('mp.network_err', '네트워크 오류입니다.'));

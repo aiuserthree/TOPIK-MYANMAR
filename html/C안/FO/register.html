@@ -1319,9 +1319,6 @@
         pf.style.overflow = '';
         pf.innerHTML = '<span class="pf-ph" data-i18n-content="reg.photo_preview" data-i18n-content-html>' +
           (bt('reg.photo_preview', '증명사진<br>미리보기')) + '</span>';
-        if (window.TOPIKPageI18n && TPKMLang) {
-          TOPIKPageI18n.apply(TPKMLang.get());
-        }
       }
     });
   }
@@ -1407,15 +1404,9 @@
     el.style.display = msg ? 'block' : 'none';
   }
 
-  var lastConfirmKey = null;
-
   document.getElementById('btnDoneConfirm').addEventListener('click', function () {
     TPKM.closeModal('modalDone');
-    var url = 'mypage.html';
-    if (lastConfirmKey != null && lastConfirmKey !== '') {
-      url += '?confirm=' + encodeURIComponent(String(lastConfirmKey));
-    }
-    location.href = url;
+    location.href = 'mypage.html';
   });
 
   // Submit — API (Phase 1); demo token falls back to modal only
@@ -1444,9 +1435,8 @@
     }
 
     var token = TopikApi.getAccessToken();
-    if (!TopikApi.useApi || !TopikApi.baseUrl || token === 'demo-local') {
+    if (!TopikApi.canUseApi || !TopikApi.canUseApi() || token === 'demo-local') {
       localStorage.removeItem(DRAFT_KEY);
-      lastConfirmKey = null;
       TPKM.openModal('modalDone');
       return;
     }
@@ -1472,8 +1462,6 @@
             sessionStorage.setItem('tpkm_mypage_profile_seed', JSON.stringify(REG_STATE.profile));
           }
         } catch (e2) {}
-        var apps = res.body && res.body.applications;
-        lastConfirmKey = (apps && apps[0] && apps[0].id) || (res.body && res.body.submission_id) || null;
         TPKM.openModal('modalDone');
         return;
       }
