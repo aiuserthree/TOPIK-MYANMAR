@@ -226,7 +226,15 @@
     document.getElementById('okBanner').style.display = 'flex';
   }
 
-  if (window.TopikBoApi && TopikBoApi.isAuthenticated()) {
+  if (new URLSearchParams(location.search).get('reason') === 'idle') {
+    showError('세션 만료', '30분간 활동이 없어 로그아웃되었습니다. 다시 로그인해 주세요.');
+  }
+
+  if (window.TopikBoApi && TopikBoApi.ensureSession) {
+    TopikBoApi.ensureSession().then(function (ok) {
+      if (ok) goAdmin();
+    });
+  } else if (window.TopikBoApi && TopikBoApi.isAuthenticated()) {
     goAdmin();
   }
 

@@ -86,9 +86,19 @@ function ChangePasswordGate({ onDone }) {
   };
 
   useEffect(() => {
-    if (!window.TopikBoApi || !TopikBoApi.isAuthenticated()) {
+    if (!window.TopikBoApi) {
       goToLogin();
+      return;
     }
+    TopikBoApi.ensureSession().then(function (ok) {
+      if (!ok) {
+        goToLogin();
+        return;
+      }
+      if (TopikBoApi.startIdleWatch) {
+        TopikBoApi.startIdleWatch(goToLogin);
+      }
+    });
   }, []);
 
   const finishPasswordChange = () => {
@@ -184,26 +194,67 @@ function App() {
 
   // Boot: token + session check + load me into store + API data
   useEffect(() => {
-    if (!window.TopikBoApi || !TopikBoApi.isAuthenticated()) {
+    if (!window.TopikBoApi) {
       location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
       return;
     }
-    const raw = TopikBoApi.getSessionRaw();
-    let me;
-    try {
-      me = JSON.parse(raw);
-    } catch (e) {
-      TopikBoApi.logout();
-      location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
-      return;
+    var cancelled = false;
+    TopikBoApi.ensureSession().then(function (ok) {
+      if (cancelled) return;
+      if (!ok) {
+        location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+        return;
+      }
+      TopikBoApi.startIdleWatch(function () {
+        try {
+          if (typeof window.toast === 'function') {
+            window.toast('30분간 활동이 없어 로그아웃되었습니다.');
+          }
+        } catch (e) { /* optional */ }
+        location.replace('admin-login.html?reason=idle&next=' + encodeURIComponent('admin.html' + location.hash));
+      });
+      const raw = TopikBoApi.getSessionRaw();
+      let me;
+      try {
+        me = JSON.parse(raw);
+      } catch (e) {
+        TopikBoApi.logout();
+        location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+        return;
+      }
+      if (DataStore.normalizeRole) me.role = DataStore.normalizeRole(me.role);
+      DataStore.state.me = me;
+      DataStore.notify();
+      setMustChange(!!me.must_change_password);
+      try { sessionStorage.setItem('tpkm_bo_admin', JSON.stringify({ role: me.role || 'super', name: me.name || me.id })); } catch (e) {}
+      if (window.TOPIKBoCore) TOPIKBoCore.startSessionHeartbeat(me.id || me.name, me.name);
+      if (!me.must_change_password && DataStore.initFromApi) DataStore.initFromApi();
+    });
+    return function () {
+      cancelled = true;
+      if (TopikBoApi.stopIdleWatch) TopikBoApi.stopIdleWatch();
+    };
+  }, []);
+
+  // 유휴 만료·세션 무효 후 클릭 시 즉시 로그인 이동(화면에 남아 있는 경우)
+  useEffect(() => {
+    function onClickGuard(ev) {
+      if (!window.TopikBoApi) return;
+      if (TopikBoApi.isIdleExpired && TopikBoApi.isIdleExpired()) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        if (TopikBoApi.expireIdleSession) TopikBoApi.expireIdleSession();
+        return;
+      }
+      if (!TopikBoApi.isAuthenticated()) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        TopikBoApi.logout();
+        location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+      }
     }
-    if (DataStore.normalizeRole) me.role = DataStore.normalizeRole(me.role);
-    DataStore.state.me = me;
-    DataStore.notify();
-    setMustChange(!!me.must_change_password);
-    try { sessionStorage.setItem('tpkm_bo_admin', JSON.stringify({ role: me.role || 'super', name: me.name || me.id })); } catch (e) {}
-    if (window.TOPIKBoCore) TOPIKBoCore.startSessionHeartbeat(me.id || me.name, me.name);
-    if (!me.must_change_password && DataStore.initFromApi) DataStore.initFromApi();
+    document.addEventListener('click', onClickGuard, true);
+    return () => document.removeEventListener('click', onClickGuard, true);
   }, []);
 
   useEffect(() => {

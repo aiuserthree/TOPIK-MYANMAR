@@ -4,7 +4,14 @@
 (function (global) {
   "use strict";
 
-  var STORAGE = { access: "bo_access_token", admin: "bo_admin_user" };
+  var STORAGE = { access: "bo_access_token", refresh: "bo_refresh_token", admin: "bo_admin_user" };
+  var ACTIVITY_KEY = "bo_last_activity";
+  var IDLE_MS = 30 * 60 * 1000;
+  var ACCESS_REFRESH_LEAD_MS = 5 * 60 * 1000;
+  var refreshInFlight = null;
+  var idleInterval = null;
+  var idleExpireHandled = false;
+  var idleOnExpired = null;
 
   function readMetaApiBase() {
     if (typeof document === "undefined") return null;
@@ -56,6 +63,169 @@
     }
   }
 
+  function getRefreshToken() {
+    try {
+      return global.sessionStorage.getItem(STORAGE.refresh) || global.localStorage.getItem(STORAGE.refresh);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function tokenStore() {
+    try {
+      if (global.localStorage.getItem(STORAGE.access) || global.localStorage.getItem(STORAGE.refresh)) {
+        return global.localStorage;
+      }
+      if (global.sessionStorage.getItem(STORAGE.access) || global.sessionStorage.getItem(STORAGE.refresh)) {
+        return global.sessionStorage;
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
+  function touchActivity() {
+    try {
+      global.sessionStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+    } catch (e) { /* ignore */ }
+  }
+
+  function getLastActivity() {
+    try {
+      var v = global.sessionStorage.getItem(ACTIVITY_KEY);
+      if (v) return parseInt(v, 10) || Date.now();
+    } catch (e) { /* ignore */ }
+    return Date.now();
+  }
+
+  function isIdleExpired() {
+    return Date.now() - getLastActivity() > IDLE_MS;
+  }
+
+  function tokenExpiresAtMs(token) {
+    if (!token) return null;
+    try {
+      var parts = token.split(".");
+      if (parts.length < 2) return null;
+      var payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (payload.length % 4) payload += "=";
+      var data = JSON.parse(atob(payload));
+      return data.exp ? data.exp * 1000 : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function accessNeedsRefresh() {
+    var token = getAccessToken();
+    if (!token) return true;
+    if (isTokenExpired(token)) return true;
+    var exp = tokenExpiresAtMs(token);
+    if (!exp) return false;
+    return exp - Date.now() <= ACCESS_REFRESH_LEAD_MS;
+  }
+
+  function refreshSession() {
+    if (refreshInFlight) return refreshInFlight;
+    var rt = getRefreshToken();
+    if (!rt || !canUseApi()) {
+      return Promise.resolve(false);
+    }
+    refreshInFlight = fetch(apiUrl("/api/v1/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ refresh_token: rt }),
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok || !body || !body.access_token) return false;
+        var store = tokenStore() || global.sessionStorage;
+        try {
+          store.setItem(STORAGE.access, body.access_token);
+          if (body.refresh_token) store.setItem(STORAGE.refresh, body.refresh_token);
+        } catch (e) { return false; }
+        touchActivity();
+        return true;
+      });
+    }).catch(function () {
+      return false;
+    }).then(function (ok) {
+      refreshInFlight = null;
+      return ok;
+    });
+    return refreshInFlight;
+  }
+
+  function ensureSession() {
+    if (!getSessionRaw()) return Promise.resolve(false);
+    if (isIdleExpired()) {
+      clearSession();
+      return Promise.resolve(false);
+    }
+    var access = getAccessToken();
+    if (access && !isTokenExpired(access)) {
+      return Promise.resolve(true);
+    }
+    if (!getRefreshToken()) {
+      clearSession();
+      return Promise.resolve(false);
+    }
+    return refreshSession().then(function (ok) {
+      if (!ok) clearSession();
+      return ok;
+    });
+  }
+
+  function handleSessionExpired() {
+    if (idleExpireHandled) return;
+    idleExpireHandled = true;
+    stopIdleWatch();
+    clearAuthStorage();
+    if (typeof idleOnExpired === "function") idleOnExpired();
+  }
+
+  function expireIdleSession() {
+    handleSessionExpired();
+  }
+
+  function stopIdleWatch() {
+    if (idleInterval) {
+      global.clearInterval(idleInterval);
+      idleInterval = null;
+    }
+    var h = global._boIdleHandlers;
+    if (h && global.document) {
+      h.events.forEach(function (ev) {
+        global.document.removeEventListener(ev, h.onUserActivity, true);
+      });
+    }
+    global._boIdleHandlers = null;
+  }
+
+  function startIdleWatch(onExpired) {
+    stopIdleWatch();
+    idleExpireHandled = false;
+    idleOnExpired = onExpired;
+    touchActivity();
+    function onUserActivity(ev) {
+      if (isIdleExpired()) {
+        if (ev && ev.preventDefault) {
+          ev.preventDefault();
+          if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        }
+        handleSessionExpired();
+        return;
+      }
+      touchActivity();
+    }
+    var events = ["click", "mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach(function (ev) {
+      global.document.addEventListener(ev, onUserActivity, { passive: false, capture: true });
+    });
+    global._boIdleHandlers = { onUserActivity: onUserActivity, events: events };
+    idleInterval = global.setInterval(function () {
+      if (isIdleExpired()) handleSessionExpired();
+    }, 10000);
+  }
+
   function getSessionRaw() {
     try {
       return global.sessionStorage.getItem("bo_session");
@@ -80,17 +250,21 @@
   }
 
   function isAuthenticated() {
+    if (!getSessionRaw() || isIdleExpired()) return false;
     var token = getAccessToken();
-    return !!(token && getSessionRaw() && !isTokenExpired(token));
+    if (token && !isTokenExpired(token)) return true;
+    return !!getRefreshToken();
   }
 
   function clearAuthStorage() {
     try {
-      global.sessionStorage.removeItem(STORAGE.access);
-      global.localStorage.removeItem(STORAGE.access);
-      global.sessionStorage.removeItem(STORAGE.admin);
-      global.localStorage.removeItem(STORAGE.admin);
+      [global.sessionStorage, global.localStorage].forEach(function (store) {
+        store.removeItem(STORAGE.access);
+        store.removeItem(STORAGE.refresh);
+        store.removeItem(STORAGE.admin);
+      });
       global.sessionStorage.removeItem("bo_session");
+      global.sessionStorage.removeItem(ACTIVITY_KEY);
     } catch (e) { /* ignore */ }
   }
 
@@ -106,6 +280,7 @@
     var store = persist ? global.localStorage : global.sessionStorage;
     try {
       store.setItem(STORAGE.access, body.access_token);
+      if (body.refresh_token) store.setItem(STORAGE.refresh, body.refresh_token);
       store.setItem(STORAGE.admin, JSON.stringify(account));
       global.sessionStorage.setItem("bo_session", JSON.stringify({
         id: account.email,
@@ -115,6 +290,7 @@
         must_change_password: !!account.must_change_password,
         loginAt: new Date().toISOString(),
       }));
+      touchActivity();
       return isAuthenticated();
     } catch (e) {
       return false;
@@ -122,28 +298,104 @@
   }
 
   function clearSession() {
+    stopIdleWatch();
     clearAuthStorage();
   }
 
-  function apiFetch(path, options) {
+  function doApiFetch(path, options, isRetry) {
     options = options || {};
     if (!canUseApi()) {
       return Promise.resolve({ ok: false, status: 0, body: { error: { message: "API not configured" } } });
     }
-    var headers = Object.assign({ Accept: "application/json" }, options.headers || {});
-    var token = getAccessToken();
-    if (token && options.auth !== false) headers.Authorization = "Bearer " + token;
-    var isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
-    if (options.body && !headers["Content-Type"] && !isFormData) headers["Content-Type"] = "application/json";
-    return fetch(apiUrl(path), {
-      method: options.method || "GET",
-      headers: headers,
-      body: options.body,
-    }).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (body) {
-        return { ok: res.ok, status: res.status, body: body };
+    var useAuth = options.auth !== false;
+
+    function runFetch() {
+      var headers = Object.assign({ Accept: "application/json" }, options.headers || {});
+      var token = getAccessToken();
+      if (token && useAuth) headers.Authorization = "Bearer " + token;
+      var isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+      if (options.body && !headers["Content-Type"] && !isFormData) headers["Content-Type"] = "application/json";
+      return fetch(apiUrl(path), {
+        method: options.method || "GET",
+        headers: headers,
+        body: options.body,
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (body) {
+          if (res.status === 401 && useAuth && !isRetry && getRefreshToken()) {
+            return refreshSession().then(function (ok) {
+              if (ok) return doApiFetch(path, options, true);
+              clearSession();
+              return { ok: false, status: 401, body: body };
+            });
+          }
+          return { ok: res.ok, status: res.status, body: body };
+        });
       });
-    });
+    }
+
+    if (!useAuth) return runFetch();
+
+    if (isIdleExpired()) {
+      clearSession();
+      return Promise.resolve({
+        ok: false,
+        status: 401,
+        body: { error: { message: "30분간 활동이 없어 세션이 만료되었습니다. 다시 로그인해 주세요." } },
+      });
+    }
+    touchActivity();
+
+    if (accessNeedsRefresh() && getRefreshToken()) {
+      return refreshSession().then(function (ok) {
+        if (!ok && (!getAccessToken() || isTokenExpired(getAccessToken()))) {
+          clearSession();
+          return { ok: false, status: 401, body: { error: { message: "세션이 만료되었습니다." } } };
+        }
+        return runFetch();
+      });
+    }
+    return runFetch();
+  }
+
+  function apiFetch(path, options) {
+    return doApiFetch(path, options, false);
+  }
+
+  function authBlobFetch(url, headers, isRetry) {
+    if (isIdleExpired()) {
+      clearSession();
+      return Promise.resolve({ ok: false, status: 401, body: { error: { message: "세션이 만료되었습니다." } } });
+    }
+    touchActivity();
+    var token = getAccessToken();
+    var h = Object.assign({}, headers || {});
+    if (token) h.Authorization = "Bearer " + token;
+
+    function run() {
+      return fetch(url, { headers: h }).then(function (res) {
+        if (res.status === 401 && !isRetry && getRefreshToken()) {
+          return refreshSession().then(function (ok) {
+            if (ok) return authBlobFetch(url, headers, true);
+            clearSession();
+            return { ok: false, status: 401, body: {} };
+          });
+        }
+        return { ok: res.ok, status: res.status, res: res };
+      });
+    }
+
+    if (accessNeedsRefresh() && getRefreshToken()) {
+      return refreshSession().then(function (ok) {
+        if (!ok && (!getAccessToken() || isTokenExpired(getAccessToken()))) {
+          clearSession();
+          return { ok: false, status: 401, body: {} };
+        }
+        token = getAccessToken();
+        if (token) h.Authorization = "Bearer " + token;
+        return run();
+      });
+    }
+    return run();
   }
 
   function isAdminRole(role) {
@@ -272,11 +524,19 @@
       }
     });
     var qs = parts.length ? "?" + parts.join("&") : "";
-    var headers = { Accept: "application/zip,application/octet-stream,*/*" };
-    var token = getAccessToken();
-    if (token) headers.Authorization = "Bearer " + token;
-    return fetch(apiUrl("/api/v1/admin/applications/photos.zip" + qs), { headers: headers })
-      .then(function (res) {
+    return authBlobFetch(
+      apiUrl("/api/v1/admin/applications/photos.zip" + qs),
+      { Accept: "application/zip,application/octet-stream,*/*" }
+    ).then(function (result) {
+        if (!result.ok || !result.res) {
+          if (result.res) {
+            return result.res.json().catch(function () { return {}; }).then(function (body) {
+              return { ok: false, status: result.status, body: body };
+            });
+          }
+          return { ok: false, status: result.status || 0, body: result.body || {} };
+        }
+        var res = result.res;
         var ct = (res.headers && res.headers.get && res.headers.get("Content-Type")) || "";
         if (!res.ok || ct.indexOf("application/json") > -1) {
           return res.json().catch(function () { return {}; }).then(function (body) {
@@ -301,6 +561,13 @@
     getAccessToken: getAccessToken,
     getSessionRaw: getSessionRaw,
     isAuthenticated: isAuthenticated,
+    ensureSession: ensureSession,
+    refreshSession: refreshSession,
+    startIdleWatch: startIdleWatch,
+    stopIdleWatch: stopIdleWatch,
+    isIdleExpired: isIdleExpired,
+    expireIdleSession: expireIdleSession,
+    touchActivity: touchActivity,
     apiFetch: apiFetch,
     parseError: parseError,
     isConflict: isConflict,
@@ -463,11 +730,14 @@
       if (!canUseApi()) {
         return Promise.resolve({ ok: false, status: 0, body: { error: { message: "API not configured" } } });
       }
-      var headers = { Accept: "application/zip,application/octet-stream,*/*" };
-      var token = getAccessToken();
-      if (token) headers.Authorization = "Bearer " + token;
-      return fetch(apiUrl("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/roster.xlsx"), { headers: headers })
-        .then(function (res) {
+      return authBlobFetch(
+        apiUrl("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/roster.xlsx"),
+        { Accept: "application/zip,application/octet-stream,*/*" }
+      ).then(function (result) {
+          if (!result.ok || !result.res) {
+            return { ok: false, status: result.status || 0, body: result.body || {} };
+          }
+          var res = result.res;
           var ct = (res.headers && res.headers.get && res.headers.get("Content-Type")) || "";
           if (!res.ok || ct.indexOf("application/json") > -1) {
             return res.json().catch(function () { return {}; }).then(function (body) {
@@ -518,6 +788,13 @@
       });
     },
     getAuditLogs: function () { return apiFetch("/api/v1/admin/audit-logs"); },
+    getPermissionMatrix: function () { return apiFetch("/api/v1/admin/permissions/matrix"); },
+    putPermissionMatrix: function (payload) {
+      return apiFetch("/api/v1/admin/permissions/matrix", {
+        method: "PUT",
+        body: JSON.stringify(payload || {}),
+      });
+    },
     getBoardPosts: function (boardType, q) {
       var parts = ["board_type=" + encodeURIComponent(boardType)];
       Object.keys(q || {}).forEach(function (k) {

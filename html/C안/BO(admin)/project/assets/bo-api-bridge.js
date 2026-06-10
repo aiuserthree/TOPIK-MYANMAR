@@ -298,6 +298,21 @@
     if (r === "viewer") return "readonly";
     return r;
   }
+
+  function mapMatrixToPerms(matrix) {
+    return {
+      super: DS.recommendedPerms("super"),
+      general: (matrix && matrix.admin) || DS.recommendedPerms("general"),
+      viewer: (matrix && matrix.readonly) || DS.recommendedPerms("viewer"),
+    };
+  }
+
+  function permsDraftToApi(draft) {
+    return {
+      admin: draft.general || {},
+      readonly: draft.viewer || {},
+    };
+  }
   function memberStatusUi(s) {
     return s === "suspended" ? "inactive" : s;
   }
@@ -590,6 +605,7 @@
       Api.getTerms(),
       Api.getAdminUsers(),
       Api.getAuditLogs(),
+      Api.getPermissionMatrix(),
     ]).then(function (results) {
       var regRes = results[0];
       var venRes = results[1];
@@ -603,6 +619,7 @@
       var termRes = results[9];
       var admRes = results[10];
       var audRes = results[11];
+      var permRes = results[12];
 
       var critical = [regRes, venRes, rndRes, appRes, notRes, faqRes, refRes, inqRes, memRes, termRes, admRes];
       var bad = critical.find(function (r) { return !r.ok; });
@@ -656,6 +673,10 @@
         DS.state.audit = audRes.body.items.map(mapAudit);
       } else {
         DS.state.audit = [];
+      }
+
+      if (permRes.ok && permRes.body && permRes.body.matrix) {
+        DS.state.perms = mapMatrixToPerms(permRes.body.matrix);
       }
 
       if (DS.state.sessions.length) {
@@ -1232,7 +1253,21 @@
     });
   };
 
-  DS.staticPermissions = true;
+  DS.apiSavePermissionMatrix = function (draft) {
+    return Api.putPermissionMatrix({ matrix: permsDraftToApi(draft) }).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return false;
+      }
+      DS.state.perms = JSON.parse(JSON.stringify(draft));
+      if (res.body && res.body.matrix) {
+        DS.state.perms = mapMatrixToPerms(res.body.matrix);
+      }
+      DS.notify();
+      return DS.reloadAudit().then(function () { return true; });
+    });
+  };
+
   DS.fmtKst = fmtKst;
 
   var origSetSession = DS.setSession;

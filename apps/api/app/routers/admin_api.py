@@ -50,7 +50,16 @@ from app.lib.roster_export import build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
 from app.lib.validation import is_valid_password
-from app.models.admin import AdminAuditLog, AdminUser
+from app.lib.admin_permissions import (
+    assert_perm,
+    board_menu_for_type,
+    load_matrix,
+    matrix_perm,
+    perm_schema,
+    role_has,
+    save_matrix,
+)
+from app.models.admin import AdminAuditLog, AdminPermissionMatrix, AdminUser
 from app.models.application import Application, ApplicationMemo, ApplicationSubmission
 from app.models.board import BoardComment, BoardPost
 from app.models.content import FaqItem, Notice, Term, TermConsent
@@ -117,6 +126,10 @@ class PaymentBody(BaseModel):
 class PaymentCancelBody(BaseModel):
     payment_cancel_reason: str | None = None
     rev: int | None = None
+
+
+class PermissionMatrixPutBody(BaseModel):
+    matrix: dict
 
 
 class PhotoReviewBody(BaseModel):
@@ -570,7 +583,7 @@ async def export_photos_zip(
     round_id: int | None = Query(None),
     venue_id: int | None = Query(None),
     level: str | None = Query(None),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "export")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -666,7 +679,7 @@ async def export_photos_zip(
 @router.get("/exam-rounds/{round_id}/roster.xlsx")
 async def export_roster_xlsx(
     round_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "export")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -718,7 +731,7 @@ async def export_round_photos_zip(
     round_id: int,
     venue_id: int | None = Query(None),
     level: str | None = Query(None),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "export")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -775,7 +788,7 @@ async def approve_application(
     request: Request,
     body: RevBody | None = None,
     if_match: str | None = Header(None, alias="If-Match"),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "approve")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -802,7 +815,7 @@ async def reject_application(
     body: RejectBody,
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "reject")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -827,7 +840,7 @@ async def payment_application(
     body: PaymentBody,
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "pay")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -855,7 +868,7 @@ async def cancel_payment(
     body: PaymentCancelBody,
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "pay")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -885,7 +898,7 @@ async def photo_review(
     body: PhotoReviewBody,
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "photo")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -956,7 +969,7 @@ def _assign_group_serials(apps_sorted: list[Application], accommodation_ids: set
 async def assign_exam_numbers(
     round_id: int,
     body: AssignNumbersBody,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("applicants", "exam")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1088,7 +1101,7 @@ async def admin_exam_rounds(_: AuthUser = Depends(require_any_admin), db: AsyncS
 @router.post("/exam-rounds")
 async def create_round(
     body: RoundBody,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("sessions", "create")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1122,7 +1135,7 @@ async def create_round(
 async def update_round(
     round_id: int,
     body: RoundPatchBody,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("sessions", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1165,7 +1178,7 @@ async def update_round(
 async def round_status(
     round_id: int,
     body: dict,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("sessions", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1190,7 +1203,7 @@ async def round_status(
 @router.post("/exam-rounds/{round_id}/revoke")
 async def revoke_round(
     round_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("sessions", "delete")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1215,7 +1228,7 @@ async def revoke_round(
 async def restore_round(
     round_id: int,
     body: dict | None = None,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("sessions", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1283,7 +1296,7 @@ async def admin_venues(_: AuthUser = Depends(require_any_admin), db: AsyncSessio
 async def update_venue(
     venue_id: int,
     body: dict,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("venues", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1305,7 +1318,7 @@ async def update_venue(
 @router.post("/exam-venues")
 async def create_venue(
     body: VenueBody,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("venues", "create")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1373,7 +1386,7 @@ async def admin_notices(
 @router.post("/notices")
 async def create_notice(
     body: NoticeBody,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("notices", "create")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1415,7 +1428,7 @@ async def create_notice(
 @router.post("/notices/attachments")
 async def upload_notice_attachment(
     file: UploadFile = File(...),
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("notices", "edit")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     content_type = (file.content_type or "").lower()
@@ -1455,7 +1468,7 @@ async def upload_notice_attachment(
 @router.post("/notices/{notice_id}/send-marketing")
 async def send_marketing_notice(
     notice_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("notices", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1506,7 +1519,7 @@ async def send_marketing_notice(
 async def update_notice(
     notice_id: int,
     body: dict,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("notices", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1547,7 +1560,7 @@ async def update_notice(
 @router.delete("/notices/{notice_id}")
 async def delete_notice(
     notice_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("notices", "delete")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1570,7 +1583,7 @@ async def delete_notice(
 @router.post("/notices/{notice_id}/restore")
 async def restore_notice(
     notice_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("notices", "edit")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1613,7 +1626,7 @@ async def admin_faq(_: AuthUser = Depends(require_any_admin), db: AsyncSession =
 @router.post("/faq")
 async def create_faq(
     body: FaqBody,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("faq", "create")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1639,6 +1652,10 @@ async def update_faq(
     row = (await db.execute(select(FaqItem).where(FaqItem.id == faq_id))).scalar_one_or_none()
     if not row:
         raise api_error("NOT_FOUND", "FAQ를 찾을 수 없습니다.", 404)
+    if body.get("is_active") is False:
+        await assert_perm(db, admin, "faq", "delete")
+    else:
+        await assert_perm(db, admin, "faq", "edit")
     for key in (
         "category",
         "question_ko",
@@ -1750,7 +1767,7 @@ async def get_term(
 
 
 @router.post("/terms")
-async def create_term(body: TermBody, admin: AuthUser = Depends(require_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def create_term(body: TermBody, admin: AuthUser = Depends(matrix_perm("terms", "create")), db: AsyncSession = Depends(get_db_session)) -> dict:
     row = Term(**body.model_dump(), status="draft")
     db.add(row)
     await db.flush()
@@ -1763,7 +1780,7 @@ async def create_term(body: TermBody, admin: AuthUser = Depends(require_admin), 
 async def update_term(
     term_id: int,
     body: dict,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("terms", "create")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     row = (await db.execute(select(Term).where(Term.id == term_id))).scalar_one_or_none()
@@ -1782,7 +1799,7 @@ async def update_term(
 @router.post("/terms/{term_id}/retire")
 async def retire_term(
     term_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("terms", "publish")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1801,7 +1818,7 @@ async def retire_term(
 @router.post("/terms/{term_id}/publish")
 async def publish_term(
     term_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("terms", "publish")),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -1954,6 +1971,7 @@ async def admin_create_board_comment(
     post = (await db.execute(select(BoardPost).where(BoardPost.id == post_id))).scalar_one_or_none()
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+    await assert_perm(db, admin, board_menu_for_type(post.board_type), "answer")
     content = (body.get("content") or body.get("body") or "").strip()
     if not content:
         raise api_error("VALIDATION_ERROR", "댓글 내용을 입력해 주세요.")
@@ -1994,6 +2012,7 @@ async def delete_board_post(
     post = (await db.execute(select(BoardPost).where(BoardPost.id == post_id))).scalar_one_or_none()
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+    await assert_perm(db, admin, board_menu_for_type(post.board_type), "delete")
     await db.delete(post)
     await write_audit(db, admin_user_id=admin.id, action_type="board_delete", target_type="board_posts", target_id=post_id)
     await db.commit()
@@ -2010,6 +2029,7 @@ async def board_workflow(
     post = (await db.execute(select(BoardPost).where(BoardPost.id == post_id))).scalar_one_or_none()
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+    await assert_perm(db, admin, board_menu_for_type(post.board_type), "answer")
     allowed = (
         {"received", "in_review", "completed", "rejected"}
         if post.board_type == "refund_correction"
@@ -2045,6 +2065,7 @@ async def reply_post(
     post = (await db.execute(select(BoardPost).where(BoardPost.id == post_id))).scalar_one_or_none()
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+    await assert_perm(db, admin, board_menu_for_type(post.board_type), "answer")
     post.admin_reply = body.body.strip()
     post.admin_replied_at = datetime.now(timezone.utc)
     post.admin_replier_id = admin.id
@@ -2108,6 +2129,8 @@ async def update_user(
     data = body.model_dump(exclude_unset=True)
     data.pop("rev", None)
     memo = (data.pop("memo", None) or "").strip() or None
+    if data.get("status") not in ("suspended", "withdrawn") and data:
+        await assert_perm(db, admin, "members", "edit")
     if "email" in data:
         requested = (data.pop("email") or "").strip().lower()
         if requested and requested != (user.email or "").strip().lower():
@@ -2200,7 +2223,7 @@ async def update_user(
 @router.post("/users/{user_id}/reset-password")
 async def reset_user_password(
     user_id: int,
-    admin: AuthUser = Depends(require_admin),
+    admin: AuthUser = Depends(matrix_perm("members", "reset")),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
@@ -2333,10 +2356,66 @@ async def reset_admin_password(
     return {"temp_password": temp}
 
 
+@router.get("/permissions/matrix")
+async def get_permissions_matrix(
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    matrix = await load_matrix(db)
+    row = (
+        await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
+    ).scalar_one_or_none()
+    return {
+        "matrix": matrix,
+        "schema": perm_schema(),
+        "updated_at": row.updated_at.isoformat() if row and row.updated_at else None,
+        "updated_by_admin_id": row.updated_by_admin_id if row else None,
+    }
+
+
+@router.put("/permissions/matrix")
+async def put_permissions_matrix(
+    body: PermissionMatrixPutBody,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)
+    before_row = (
+        await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
+    ).scalar_one_or_none()
+    before = before_row.matrix if before_row else await load_matrix(db)
+    row = await save_matrix(db, matrix=body.matrix, admin_user_id=admin.id)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="permission_matrix_update",
+        target_type="admin_permission_matrix",
+        target_id="1",
+        before_data={"matrix": before},
+        after_data={"matrix": row.matrix},
+        ip_address=ip,
+    )
+    await db.commit()
+    return {
+        "updated": True,
+        "matrix": row.matrix,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
 @router.get("/audit-logs")
-async def audit_logs(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def audit_logs(admin: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+    matrix = await load_matrix(db)
+    if admin.role != "super":
+        can_all = role_has(matrix, admin.role, "audit", "viewAll")
+        can_own = role_has(matrix, admin.role, "audit", "viewOwn")
+        if not can_all and not can_own:
+            raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
     result = await db.execute(select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(200))
     logs = result.scalars().all()
+    if admin.role != "super" and not role_has(matrix, admin.role, "audit", "viewAll"):
+        logs = [l for l in logs if l.admin_user_id == admin.id]
     admin_ids = {l.admin_user_id for l in logs if l.admin_user_id}
     admins = {}
     if admin_ids:

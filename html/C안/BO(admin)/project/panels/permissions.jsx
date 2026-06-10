@@ -39,6 +39,10 @@ function PermissionsPanel() {
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(state.perms), [draft, state.perms]);
 
+  useEffect(() => {
+    setDraft(JSON.parse(JSON.stringify(state.perms)));
+  }, [state.perms]);
+
   // counts per role (active admins)
   const roleCount = useMemo(() => {
     const c = { super: 0, general: 0, viewer: 0 };
@@ -87,13 +91,18 @@ function PermissionsPanel() {
   const resetDraft = () => setDraft(JSON.parse(JSON.stringify(state.perms)));
   const save = () => {
     if (!canManage) return;
-    if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.staticPermissions) {
-      toastErr('API 모드에서는 정적 권한만 지원합니다. 변경 사항을 저장할 수 없습니다.');
+    const next = JSON.parse(JSON.stringify(draft));
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      DataStore.apiSavePermissionMatrix(next).then(function (ok) {
+        if (!ok) return;
+        setDraft(JSON.parse(JSON.stringify(DataStore.state.perms)));
+        toastOk('권한 매트릭스가 저장되었습니다.', { title: '저장 완료', type: 'success' });
+      });
       return;
     }
     // diff summary
     const before = JSON.parse(JSON.stringify(state.perms));
-    state.perms = JSON.parse(JSON.stringify(draft));
+    state.perms = next;
     DataStore.addAudit({ type: '관리자계정', targetId: '권한매트릭스', action: '수정', before, after: state.perms, memo: '권한 매트릭스 변경 저장' });
     DataStore.notify();
     toastOk('권한 매트릭스가 저장되었습니다.', { title: '저장 완료', type: 'success' });
@@ -134,9 +143,9 @@ function PermissionsPanel() {
         </div>
       </div>
 
-      {DataStore.isApiMode && DataStore.isApiMode() && DataStore.staticPermissions && (
+      {DataStore.isApiMode && DataStore.isApiMode() && (
         <div style={{ padding: 14, background: '#eef4ff', color: '#1d4ed8', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
-          ⓘ API 모드: 권한 매트릭스는 <b>역할(super/admin/readonly) 기준 정적 매트릭스</b>로 UI 버튼 비활성에 적용됩니다. 서버 RBAC가 최종 권한이며, 매트릭스 편집 저장은 데모 모드에서만 가능합니다.
+          ⓘ API 모드: 권한 매트릭스는 <b>서버 DB에 저장</b>되며, 저장 즉시 API RBAC와 BO UI 버튼 비활성에 반영됩니다. 최고관리자(super)만 편집·저장할 수 있습니다.
         </div>
       )}
 
@@ -230,7 +239,7 @@ function PermissionsPanel() {
       )}
 
       <div style={{ marginTop: 16, padding: 14, background: 'var(--bg-2)', borderRadius: 8, fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.7 }}>
-        등급 변경(계정별)은 <a href="#admins" style={{ color: 'var(--primary)' }}>관리자 계정 관리</a>에서 수행합니다. 권한 검증은 서버에서 강제됩니다(클라이언트 메뉴 숨김만으로 보호되지 않음). 세밀한 RBAC는 향후 확장 항목입니다.
+        등급 변경(계정별)은 <a href="#admins" style={{ color: 'var(--primary)' }}>관리자 계정 관리</a>에서 수행합니다. 권한 검증은 서버에서 강제됩니다(클라이언트 메뉴 숨김만으로 보호되지 않음).
       </div>
 
       <style>{`

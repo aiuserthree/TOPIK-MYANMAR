@@ -29,6 +29,21 @@ class AdminUser(TimestampMixin, Base):
     login_locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
+class AdminPermissionMatrix(Base):
+    """Single-row store: role → menu_id → allowed actions (super is implicit full access)."""
+
+    __tablename__ = "admin_permission_matrix"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, server_default="1")
+    matrix: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    updated_by_admin_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("admin_users.id", ondelete="SET NULL")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class AdminAuditLog(Base):
     __tablename__ = "admin_audit_logs"
 
