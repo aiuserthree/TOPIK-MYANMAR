@@ -330,29 +330,6 @@
       '</tr>';
   }
 
-  function mergeWithStatic(apiItems) {
-    var byNo = {};
-    STATIC_ROWS.forEach(function (r) {
-      byNo[r.round_no] = Object.assign({}, r);
-    });
-    (apiItems || []).forEach(function (api) {
-      var no = api.round_no;
-      if (byNo[no]) {
-        // 안내 페이지: 정적 일정(마케팅) 유지, API는 접수중 하이라이트만 반영
-        byNo[no].registration_status = api.registration_status;
-      } else {
-        byNo[no] = api;
-      }
-    });
-    var ordered = STATIC_ROWS.map(function (r) { return byNo[r.round_no]; });
-    (apiItems || []).forEach(function (api) {
-      if (!byNo[api.round_no] || !STATIC_ROWS.some(function (s) { return s.round_no === api.round_no; })) {
-        if (!ordered.some(function (x) { return x.round_no === api.round_no; })) ordered.push(api);
-      }
-    });
-    return ordered;
-  }
-
   function paint() {
     var items = scheduleItems || STATIC_ROWS;
     if (!items.length) return;
