@@ -558,7 +558,7 @@ function ExamVisibilityCard({ sessionId }) {
         <h3>수험번호 / 수험표 노출 시점 설정 (FO 접수확인)</h3>
       </div>
       <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <FormRow label="노출 시작일" hint="이 일시 이전에는 FO에서 수험번호 미노출">
+        <FormRow label="노출 시작일" hint="이 일시 이전에는 사용자 화면(FO)에서 수험번호 미노출">
           <input type="date" className="input" style={{ height: 38, width: 200 }} value={date} onChange={e => setDate(e.target.value)}/>
         </FormRow>
         <FormRow label="노출 시작 시각">
