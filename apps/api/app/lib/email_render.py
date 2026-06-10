@@ -31,12 +31,49 @@ THEME_C = {
     "status_tint": {"positive": "#eef6f1", "warn": "#faf3e8", "negative": "#f9edec"},
 }
 
-FOOTER = {
-    "sending_note": "본 메일은 발신 전용입니다. 회신하셔도 답변을 받으실 수 없습니다.",
-    "support_label": "문의",
-    "operator": "주미얀마 대한민국 대사관 운영 · 국립국제교육원(NIIED) 주관",
-    "copyright": "© {year} TOPIK Myanmar. All rights reserved.",
+FOOTER_I18N: dict[str, dict[str, str]] = {
+    "ko": {
+        "sending_note": "본 메일은 발신 전용입니다. 회신하셔도 답변을 받으실 수 없습니다.",
+        "support_label": "문의",
+        "operator": "주미얀마 대한민국 대사관 운영 · 국립국제교육원(NIIED) 주관",
+        "copyright": "© {year} TOPIK Myanmar. All rights reserved.",
+        "marketing_note": (
+            "본 메일은 광고성 정보 수신에 동의하신 회원에게 발송되었습니다. "
+            "수신을 원하지 않으시면 아래 수신거부를 눌러 주세요."
+        ),
+        "unsubscribe_label": "수신거부",
+    },
+    "my": {
+        "sending_note": "ဤအီးမေးလ်သည် ပို့ခြင်းသက်သက်သာ ဖြစ်ပါသည်။ ပြန်လည်ဖြေကြားချက်ကို မလက်ခံပါ။",
+        "support_label": "မေးမြန်းရန်",
+        "operator": "မြန်မာနိုင်ငံရှိ ကိုရီးယားသံရုံးက ကြီးကြပ်ဆောင်ရွက်ခြင်း · NIIED",
+        "copyright": "© {year} TOPIK Myanmar. All rights reserved.",
+        "marketing_note": (
+            "ဤအီးမေးလ်ကို ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူထားသော အဖွဲ့ဝင်များသို့ ပို့ထားပါသည်။ "
+            "လက်မခံပါက အောက်ပါ စာရင်းမှ ထုတ်ဖျက်ရန် ကို နှိပ်ပါ။"
+        ),
+        "unsubscribe_label": "စာရင်းမှ ထုတ်ဖျက်ရန်",
+    },
+    "en": {
+        "sending_note": "This is a send-only email. Replies will not be answered.",
+        "support_label": "Support",
+        "operator": "Operated by the Embassy of the Republic of Korea in Myanmar · Hosted by NIIED",
+        "copyright": "© {year} TOPIK Myanmar. All rights reserved.",
+        "marketing_note": (
+            "This email was sent to members who agreed to receive marketing information. "
+            "If you no longer wish to receive these emails, use the unsubscribe link below."
+        ),
+        "unsubscribe_label": "Unsubscribe",
+    },
 }
+
+# Backward-compatible alias (KO)
+FOOTER = FOOTER_I18N["ko"]
+
+
+def _footer_locale(locale: str) -> str:
+    lang = (locale or "ko")[:2].lower()
+    return lang if lang in FOOTER_I18N else "ko"
 
 
 @dataclass
@@ -259,28 +296,53 @@ def _render_block(block: dict[str, Any], variables: dict[str, Any]) -> str:
     return _paragraph(block, variables)
 
 
-def _footer(site_url: str, site_url_full: str) -> str:
+def _footer(
+    site_url: str,
+    site_url_full: str,
+    *,
+    locale: str = "ko",
+    marketing: bool = False,
+    unsubscribe_url: str = "",
+) -> str:
     t = THEME_C
     pad = t["card_pad"]
     year = str(datetime.now(timezone.utc).year)
+    f = FOOTER_I18N[_footer_locale(locale)]
+    marketing_html = ""
+    if marketing:
+        marketing_html = (
+            f'<tr><td style="padding:14px 0 0;">'
+            f'<div style="font:500 12px/1.6 {FONT};color:rgba(255,255,255,.55);">'
+            f'{_esc(f["marketing_note"])}</div>'
+            f'<div style="margin-top:8px;">'
+            f'<a href="{_esc(unsubscribe_url)}" style="font:600 12px/1 {FONT};color:#fff;text-decoration:underline;">'
+            f'{_esc(f["unsubscribe_label"])}</a></div></td></tr>'
+        )
     return (
         f'<tr><td style="background:{t["primary_dark"]};padding:26px {pad}px;border-top:1px solid rgba(255,255,255,.16);">'
         f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">'
-        f'<tr><td style="font:600 13px/1.5 {FONT};color:rgba(255,255,255,.92);">{_esc(FOOTER["sending_note"])}</td></tr>'
+        f'<tr><td style="font:600 13px/1.5 {FONT};color:rgba(255,255,255,.92);">{_esc(f["sending_note"])}</td></tr>'
         f'<tr><td style="padding-top:12px;font:500 12px/1.7 {FONT};color:rgba(255,255,255,.55);">'
-        f'{_esc(FOOTER["support_label"])} &nbsp;'
+        f'{_esc(f["support_label"])} &nbsp;'
         f'<a href="{_esc(site_url_full)}" style="color:#fff;text-decoration:none;">{_esc(site_url)}</a> &nbsp;·&nbsp; '
         f'<a href="mailto:{_esc(SUPPORT_EMAIL)}" style="color:#fff;text-decoration:none;">{_esc(SUPPORT_EMAIL)}</a>'
         f"</td></tr>"
+        f"{marketing_html}"
         f'<tr><td style="padding-top:16px;border-top:1px solid rgba(255,255,255,.16);"></td></tr>'
-        f'<tr><td style="padding-top:14px;font:500 12px/1.7 {FONT};color:rgba(255,255,255,.55);">{_esc(FOOTER["operator"])}</td></tr>'
+        f'<tr><td style="padding-top:14px;font:500 12px/1.7 {FONT};color:rgba(255,255,255,.55);">{_esc(f["operator"])}</td></tr>'
         f'<tr><td style="padding-top:4px;font:500 12px/1.7 {FONT};color:rgba(255,255,255,.55);">'
-        f'{_esc(FOOTER["copyright"].replace("{year}", year))}</td></tr>'
+        f'{_esc(f["copyright"].replace("{year}", year))}</td></tr>'
         f"</table></td></tr>"
     )
 
 
-def render_c_html(tpl: EmailLayout, variables: dict[str, Any], *, locale: str = "ko") -> str:
+def render_c_html(
+    tpl: EmailLayout,
+    variables: dict[str, Any],
+    *,
+    locale: str = "ko",
+    marketing: bool = False,
+) -> str:
     t = THEME_C
     pad = t["card_pad"]
     resolved = {**variables}
@@ -295,6 +357,7 @@ def render_c_html(tpl: EmailLayout, variables: dict[str, Any], *, locale: str = 
     preheader = _sub(tpl.preheader, resolved)
     subject = _sub(tpl.subject, resolved)
     html_lang = "my" if locale.startswith("my") else "en" if locale.startswith("en") else "ko"
+    lang = _footer_locale(locale)
 
     body = (
         f'<tr><td style="padding:34px {pad}px {pad}px;">'
@@ -312,7 +375,7 @@ def render_c_html(tpl: EmailLayout, variables: dict[str, Any], *, locale: str = 
     card = (
         f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" '
         f'style="width:600px;max-width:600px;background:{t["card_bg"]};border-radius:0;overflow:hidden;">'
-        f"{_header()}{body}{_footer(resolved.get('siteUrl', ''), resolved.get('siteUrlFull', ''))}"
+        f"{_header()}{body}{_footer(resolved.get('siteUrl', ''), resolved.get('siteUrlFull', ''), locale=lang, marketing=marketing, unsubscribe_url=str(resolved.get('unsubscribeUrl') or ''))}"
         f"</table>"
     )
 
@@ -509,7 +572,7 @@ def render_transactional(
             text_parts.append(_sub(block["reason"], merged))
         elif block.get("text"):
             text_parts.append(_sub(block["text"], merged))
-    html = render_c_html(layout, merged, locale=lang)
+    html = render_c_html(layout, merged, locale=lang, marketing=template_key == "notice_marketing")
     return subject, "\n".join(p for p in text_parts if p).strip(), html
 
 

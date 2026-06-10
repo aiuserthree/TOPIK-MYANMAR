@@ -437,6 +437,7 @@
       marketing: !!row.marketing_opt_in,
       signupProvider: row.signup_provider || "email",
       reason: "",
+      rev: row.rev != null ? row.rev : null,
     };
   }
 
@@ -524,6 +525,11 @@
   function applicantRev(id) {
     var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
     return a && a.rev != null ? a.rev : undefined;
+  }
+
+  function memberRev(id) {
+    var m = DS.state.members.find(function (x) { return x.id === String(id); });
+    return m && m.rev != null ? m.rev : undefined;
   }
 
   function handleMutation(res, reloadFn) {
@@ -766,10 +772,21 @@
     });
   };
 
-  DS.apiCancelPay = function (ids) {
-    return Promise.all(ids.map(function (id) { return Api.cancelPayment(id); })).then(function (ress) {
+  DS.apiCancelPay = function (ids, reason) {
+    var sessionId = DS.state.activeSessionId;
+    return Promise.all(ids.map(function (id) {
+      return Api.cancelPayment(id, { payment_cancel_reason: reason }, { rev: applicantRev(id) });
+    })).then(function (ress) {
+      var conflict = ress.find(function (r) { return Api.isConflict(r); });
+      if (conflict) {
+        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+        return DS.reloadApplicants(sessionId).then(function () { return 0; });
+      }
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
+      ress.forEach(function (res, i) {
+        applyRevFromResponse(ids[i], res);
+      });
       ids.forEach(function (id) { applyLocalApplicant(id, { paid: false, status: "refund" }); });
       return ids.length;
     });
@@ -777,6 +794,10 @@
 
   DS.apiAssignExamNumbers = function (sessionId, preview) {
     return Api.assignExamNumbers(sessionId, { dry_run: !!preview }).then(function (res) {
+      if (Api.isConflict && Api.isConflict(res)) {
+        toastErr("다른 관리자가 먼저 처리 중이거나 이미 부여되었습니다. 새로고침 후 다시 시도해 주세요.");
+        return DS.reloadApplicants(sessionId).then(function () { return null; });
+      }
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return null; }
       if (!preview && res.body) {
         return DS.reloadApplicants(sessionId).then(function () { return res.body; });
@@ -1072,6 +1093,19 @@
     return Api.downloadPhotosZip(query || {});
   };
 
+  DS.reloadMembers = function () {
+    if (!DS.isApiMode()) return Promise.resolve();
+    return Api.getUsers().then(function (res) {
+      if (!res.ok) {
+        DS.state.apiError = TopikBoApi.parseError(res);
+        return false;
+      }
+      DS.state.members = ((res.body && res.body.items) || []).map(mapMember);
+      DS.notify();
+      return true;
+    });
+  };
+
   DS.apiSaveMember = function (id, data, memo) {
     return Api.updateUser(id, {
       name_ko: data.nameKo,
@@ -1080,9 +1114,11 @@
       nationality: data.nation,
       marketing_opt_in: data.marketing,
       memo: (memo || "").trim() || undefined,
-    }).then(function (res) {
-      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      return DS.initFromApi();
+    }, { rev: memberRev(id) }).then(function (res) {
+      return handleMutation(res, function () { return DS.reloadMembers(); }).then(function (ok) {
+        if (!ok) return false;
+        return DS.initFromApi();
+      });
     });
   };
 
@@ -1090,12 +1126,15 @@
     return Api.updateUser(id, {
       status: memberStatusApi(status),
       memo: (reason || "").trim() || undefined,
-    }).then(function (res) {
-      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      var m = DS.state.members.find(function (x) { return x.id === String(id); });
-      if (m) { m.status = status; m.reason = reason || m.reason; }
-      DS.notify();
-      return true;
+    }, { rev: memberRev(id) }).then(function (res) {
+      return handleMutation(res, function () { return DS.reloadMembers(); }).then(function (ok) {
+        if (!ok) return false;
+        var m = DS.state.members.find(function (x) { return x.id === String(id); });
+        if (m) { m.status = status; m.reason = reason || m.reason; }
+        if (res.body && res.body.rev != null && m) m.rev = res.body.rev;
+        DS.notify();
+        return true;
+      });
     });
   };
 

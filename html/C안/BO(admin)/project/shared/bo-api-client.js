@@ -493,11 +493,13 @@
         body: JSON.stringify(payload || {}),
       });
     },
-    cancelPayment: function (id) {
-      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/payment/cancel", {
-        method: "POST",
-        body: "{}",
-      });
+    cancelPayment: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/payment/cancel",
+        "POST",
+        payload || {},
+        opts
+      );
     },
     getNotices: function (q) {
       var parts = [];

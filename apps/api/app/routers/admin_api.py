@@ -114,6 +114,11 @@ class PaymentBody(BaseModel):
     rev: int | None = None
 
 
+class PaymentCancelBody(BaseModel):
+    payment_cancel_reason: str | None = None
+    rev: int | None = None
+
+
 class PhotoReviewBody(BaseModel):
     action: str
     photo_reject_code: str | None = None
@@ -847,16 +852,31 @@ async def payment_application(
 @router.post("/applications/{app_id}/payment/cancel")
 async def cancel_payment(
     app_id: int,
+    body: PaymentCancelBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    reason = (body.payment_cancel_reason or "").strip()
+    if reason:
+        app.payment_cancel_reason = reason
     app.payment_status = "refunded"
-    await write_audit(db, admin_user_id=admin.id, action_type="payment_cancel", target_type="applications", target_id=app_id)
+    bump_rev(app)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="payment_cancel",
+        target_type="applications",
+        target_id=app_id,
+        memo=reason or None,
+    )
     await db.commit()
-    return {"refunded": True}
+    return {"refunded": True, "rev": app.rev}
 
 
 @router.post("/applications/{app_id}/photo-review")
@@ -943,7 +963,9 @@ async def assign_exam_numbers(
     # RBAC: 수험번호 부여는 최고관리자만(계약서 7절).
     _require_super(admin)
 
-    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    rnd = (
+        await db.execute(select(ExamRound).where(ExamRound.id == round_id).with_for_update())
+    ).scalar_one_or_none()
     if not rnd:
         raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
     # 이미 부여·공개된 수험번호의 재배정 방지(최초 부여는 허용).
@@ -2060,6 +2082,7 @@ async def admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSession
                 "signup_provider": u.signup_provider or "email",
                 "created_at": u.created_at.isoformat() if u.created_at else None,
                 "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+                "rev": u.rev,
             }
             for u in result.scalars().all()
             if is_full_member(u)

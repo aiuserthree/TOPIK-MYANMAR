@@ -4,7 +4,7 @@
    render(themeId, tpl, {sample}) -> full HTML document string.
    ============================================================ */
 (function () {
-  const { THEMES, FOOTER, SAMPLE, FONT, TEMPLATE_BY_KEY } = window.TOPIK;
+  const { THEMES, FOOTER, FOOTER_I18N, SAMPLE, FONT, TEMPLATE_BY_KEY } = window.TOPIK;
 
   /** Resolve preview key + locale into renderable template (gap templates use i18n). */
   function resolveTemplate(tplOrKey, locale) {
@@ -258,7 +258,9 @@
   }
 
   // ---- FOOTER ----------------------------------------------
-  function footer(t, tpl, sample) {
+  function footer(t, tpl, sample, locale) {
+    const loc = locale && FOOTER_I18N[locale] ? locale : "ko";
+    const F = FOOTER_I18N[loc];
     const dark = t.footerStyle === "dark";
     const bg = dark ? t.primaryDark : t.accentTint;
     const ink = dark ? "rgba(255,255,255,.92)" : t.body;
@@ -271,23 +273,23 @@
 
     const marketing = tpl.marketing
       ? `<tr><td style="padding:14px 0 0;">
-          <div style="font:500 12px/1.6 ${t.font};color:${mut};">${esc(FOOTER.marketingNote)}</div>
-          <div style="margin-top:8px;"><a href="${esc(sample?SAMPLE.unsubscribeUrl:"{unsubscribeUrl}")}" style="font:600 12px/1 ${t.font};color:${linkc};text-decoration:underline;">${esc(FOOTER.unsubscribeLabel)}</a></div>
+          <div style="font:500 12px/1.6 ${t.font};color:${mut};">${esc(F.marketingNote)}</div>
+          <div style="margin-top:8px;"><a href="${esc(sample?SAMPLE.unsubscribeUrl:"{unsubscribeUrl}")}" style="font:600 12px/1 ${t.font};color:${linkc};text-decoration:underline;">${esc(F.unsubscribeLabel)}</a></div>
         </td></tr>`
       : "";
 
     return `<tr><td class="ed-footer ed-pad" style="background:${bg};padding:26px ${t.cardPad}px;border-top:1px solid ${line};">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-        <tr><td class="ed-footer-text" style="font:600 13px/1.5 ${t.font};color:${ink};">${esc(FOOTER.sendingNote)}</td></tr>
+        <tr><td class="ed-footer-text" style="font:600 13px/1.5 ${t.font};color:${ink};">${esc(F.sendingNote)}</td></tr>
         <tr><td class="ed-footer-text" style="padding-top:12px;font:500 12px/1.7 ${t.font};color:${mut};">
-          ${esc(FOOTER.supportLabel)} &nbsp;
+          ${esc(F.supportLabel)} &nbsp;
           <a href="${esc(sample?SAMPLE.siteUrlFull:"{siteUrl}")}" style="color:${linkc};text-decoration:none;">${esc(siteUrl)}</a> &nbsp;·&nbsp;
           <a href="mailto:${esc(supportEmail)}" style="color:${linkc};text-decoration:none;">${esc(supportEmail)}</a>
         </td></tr>
         ${marketing}
         <tr><td style="padding-top:16px;border-top:1px solid ${line};margin-top:8px;"></td></tr>
-        <tr><td class="ed-footer-text" style="padding-top:14px;font:500 12px/1.7 ${t.font};color:${mut};">${esc(FOOTER.operator)}</td></tr>
-        <tr><td class="ed-footer-text" style="padding-top:4px;font:500 12px/1.7 ${t.font};color:${mut};">${esc(sub(FOOTER.copyright, sample)).replace("{year}", esc(year))}</td></tr>
+        <tr><td class="ed-footer-text" style="padding-top:14px;font:500 12px/1.7 ${t.font};color:${mut};">${esc(F.operator)}</td></tr>
+        <tr><td class="ed-footer-text" style="padding-top:4px;font:500 12px/1.7 ${t.font};color:${mut};">${esc(sub(F.copyright, sample)).replace("{year}", esc(year))}</td></tr>
       </table>
     </td></tr>`;
   }
@@ -322,7 +324,7 @@
       ${t.topStripe ? `<tr><td style="height:4px;background:${t.topStripe};font-size:0;line-height:0;">&nbsp;</td></tr>` : ""}
       ${header(t, active)}
       ${body}
-      ${footer(t, active, sample)}
+      ${footer(t, active, sample, locale)}
     </table>`;
 
     const htmlLang = locale === "my" ? "my" : locale === "en" ? "en" : "ko";

@@ -262,7 +262,7 @@ function ApplicantsPanel() {
   const doCancelPay = async (ids, reason) => {
     if (!reason || !reason.trim()) { toastErr('수납 취소(환불) 사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const n = await DataStore.apiCancelPay(ids);
+      const n = await DataStore.apiCancelPay(ids, reason);
       if (n) toastOk(`${n}건 수납 취소(환불자 분류) 처리되었습니다.`, { title: '수납 취소', type: 'success' });
       setPayModal(null);
       setSelected(new Set());

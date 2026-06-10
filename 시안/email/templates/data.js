@@ -4,16 +4,37 @@
    KO master content. Three visual concepts (A / B / C).
    ============================================================ */
 (function () {
-  // ---- Shared footer config --------------------------------
-  const FOOTER = {
-    sendingNote: "본 메일은 발신 전용입니다. 회신하셔도 답변을 받으실 수 없습니다.",
-    supportLabel: "문의",
-    operator: "주미얀마 대한민국 대사관 운영 · 국립국제교육원(NIIED) 주관",
-    copyright: "© {year} TOPIK Myanmar. All rights reserved.",
-    marketingNote:
-      "본 메일은 광고성 정보 수신에 동의하신 회원에게 발송되었습니다. 수신을 원하지 않으시면 아래 수신거부를 눌러 주세요.",
-    unsubscribeLabel: "수신거부",
+  // ---- Shared footer config (locale-aware) -----------------
+  const FOOTER_I18N = {
+    ko: {
+      sendingNote: "본 메일은 발신 전용입니다. 회신하셔도 답변을 받으실 수 없습니다.",
+      supportLabel: "문의",
+      operator: "주미얀마 대한민국 대사관 운영 · 국립국제교육원(NIIED) 주관",
+      copyright: "© {year} TOPIK Myanmar. All rights reserved.",
+      marketingNote:
+        "본 메일은 광고성 정보 수신에 동의하신 회원에게 발송되었습니다. 수신을 원하지 않으시면 아래 수신거부를 눌러 주세요.",
+      unsubscribeLabel: "수신거부",
+    },
+    my: {
+      sendingNote: "ဤအီးမေးလ်သည် ပို့ခြင်းသက်သက်သာ ဖြစ်ပါသည်။ ပြန်လည်ဖြေကြားချက်ကို မလက်ခံပါ။",
+      supportLabel: "မေးမြန်းရန်",
+      operator: "မြန်မာနိုင်ငံရှိ ကိုရီးယားသံရုံးက ကြီးကြပ်ဆောင်ရွက်ခြင်း · NIIED",
+      copyright: "© {year} TOPIK Myanmar. All rights reserved.",
+      marketingNote:
+        "ဤအီးမေးလ်ကို ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူထားသော အဖွဲ့ဝင်များသို့ ပို့ထားပါသည်။ လက်မခံပါက အောက်ပါ စာရင်းမှ ထုတ်ဖျက်ရန် ကို နှိပ်ပါ။",
+      unsubscribeLabel: "စာရင်းမှ ထုတ်ဖျက်ရန်",
+    },
+    en: {
+      sendingNote: "This is a send-only email. Replies will not be answered.",
+      supportLabel: "Support",
+      operator: "Operated by the Embassy of the Republic of Korea in Myanmar · Hosted by NIIED",
+      copyright: "© {year} TOPIK Myanmar. All rights reserved.",
+      marketingNote:
+        "This email was sent to members who agreed to receive marketing information. If you no longer wish to receive these emails, use the unsubscribe link below.",
+      unsubscribeLabel: "Unsubscribe",
+    },
   };
+  const FOOTER = FOOTER_I18N.ko;
 
   // ---- Sample values (for live preview rendering) ----------
   const SAMPLE = {
@@ -858,6 +879,7 @@
     TEMPLATE_REGISTRY,
     DEFAULT_THEME,
     FOOTER,
+    FOOTER_I18N,
     SAMPLE,
     FONT,
     MONO,
