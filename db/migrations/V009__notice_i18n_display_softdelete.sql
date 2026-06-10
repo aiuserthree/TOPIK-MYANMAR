@@ -1,0 +1,12 @@
+-- 공지: 다국어(MY/EN), 노출 기간, soft-delete(휴지통)
+ALTER TABLE notices
+  ADD COLUMN IF NOT EXISTS title_my TEXT,
+  ADD COLUMN IF NOT EXISTS title_en TEXT,
+  ADD COLUMN IF NOT EXISTS body_my TEXT,
+  ADD COLUMN IF NOT EXISTS body_en TEXT,
+  ADD COLUMN IF NOT EXISTS display_start_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS display_end_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_notices_deleted_at ON notices (deleted_at) WHERE is_deleted = TRUE;

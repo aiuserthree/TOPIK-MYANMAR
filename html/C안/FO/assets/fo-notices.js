@@ -123,6 +123,14 @@
     });
   }
 
+  function currentLang() {
+    try {
+      if (window.TPKMLang && TPKMLang.getLang) return TPKMLang.getLang();
+      if (window.TPKMLang && TPKMLang.lang) return TPKMLang.lang;
+    } catch (e) { /* ignore */ }
+    return 'ko';
+  }
+
   function loadList(opts) {
     opts = opts || {};
     if (!window.TopikApi || !TopikApi.canUseApi()) {
@@ -132,6 +140,7 @@
     return TopikApi.getNotices({
       category: opts.category,
       q: opts.q,
+      lang: opts.lang || currentLang(),
       page: opts.page,
       home_preview: opts.homePreview ? '1' : undefined,
     }).then(function (res) {
@@ -161,7 +170,8 @@
     if (titleEl) titleEl.textContent = nt('nt.loading', '불러오는 중…');
     if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">' + esc(nt('nt.detail_loading', '로딩 중입니다.')) + '</p>';
 
-    TopikApi.getNotice(id, sessionKey()).then(function (res) {
+    var lang = currentLang();
+    TopikApi.getNotice(id, sessionKey(), lang).then(function (res) {
       if (!res.ok) {
         if (titleEl) titleEl.textContent = nt('nt.load_fail', '공지를 불러올 수 없습니다');
         if (bodyEl) bodyEl.innerHTML = '<p>' + esc(TopikApi.parseError(res)) + '</p>';
@@ -178,9 +188,6 @@
           '</span>' +
           '<span>' +
           esc(n.date_formatted) +
-          '</span>' +
-          '<span>' + esc(nt('nt.views', '조회')) + ' ' +
-          esc(n.view_count) +
           '</span>';
       }
       if (bodyEl) bodyEl.innerHTML = n.body_html || '';

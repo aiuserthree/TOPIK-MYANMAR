@@ -202,7 +202,7 @@ HTTP 상태 + JSON 본문 (스택 트레이스·내부 SQL 미노출).
 | POST | `/api/v1/auth/reset-password` | token | `users` | 새 비밀번호 저장 |
 | POST | `/auth/find-email` | — | `users` | 아이디 찾기(마스킹 응답) |
 | GET | `/me` | 🔒 | `users`, `file_attachments` | 프로필 + `rev` |
-| PATCH | `/me` | 🔒 | `users`, `applications` | 연락처·이메일·신원정보·코드·`rev` 필수. 사진 변경 시 진행 중 `applications` 연동 |
+| PATCH | `/me` | 🔒 | `users`, `applications` | 연락처·신원정보·코드·`rev` 필수. **이메일(로그인 ID) 변경 불가**. 사진 변경 시 진행 중 `applications` 연동 |
 | POST | `/me/photo` | 🔒 | `file_attachments`, `users.photo_file_id` | 증명사진 교체 → BO 재심사 트리거 |
 | PATCH | `/me/password` | 🔒 | `users` | 비밀번호 변경 |
 | POST | `/me/withdraw` | 🔒 | `users`, `applications` | 탈퇴·접수 취소 연쇄 |
@@ -413,7 +413,7 @@ HTTP 상태 + JSON 본문 (스택 트레이스·내부 SQL 미노출).
 | Method | Path | DB | 설명 |
 | --- | --- | --- | --- |
 | GET | `/admin/users` | `users` | 검색·페이지 |
-| GET/PATCH | `/admin/users/{id}` | `users` | 정지·탈퇴·수정 + `rev` |
+| GET/PATCH | `/admin/users/{id}` | `users` | 정지·탈퇴·수정 + `rev`. **이메일 변경 불가** (`400 EMAIL_NOT_EDITABLE`) |
 | POST | `/admin/users/{id}/reset-password` | `users`, `email_outbox` | 임시 비밀번호 |
 | GET/POST/PATCH | `/admin/terms` | `terms` | 버전·다국어 |
 | GET | `/admin/users/{id}/term-agreements` | `term_agreements` | |

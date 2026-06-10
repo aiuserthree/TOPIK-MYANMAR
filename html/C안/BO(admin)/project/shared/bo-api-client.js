@@ -64,8 +64,24 @@
     }
   }
 
+  function isTokenExpired(token) {
+    if (!token) return true;
+    try {
+      var parts = token.split(".");
+      if (parts.length < 2) return true;
+      var payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (payload.length % 4) payload += "=";
+      var data = JSON.parse(atob(payload));
+      if (!data.exp) return false;
+      return data.exp * 1000 <= Date.now();
+    } catch (e) {
+      return true;
+    }
+  }
+
   function isAuthenticated() {
-    return !!(getAccessToken() && getSessionRaw());
+    var token = getAccessToken();
+    return !!(token && getSessionRaw() && !isTokenExpired(token));
   }
 
   function clearAuthStorage() {
@@ -76,6 +92,12 @@
       global.localStorage.removeItem(STORAGE.admin);
       global.sessionStorage.removeItem("bo_session");
     } catch (e) { /* ignore */ }
+  }
+
+  function roleUi(r) {
+    if (r === "admin" || r === "standard") return "general";
+    if (r === "readonly") return "viewer";
+    return r || "general";
   }
 
   function persistSession(body, persist) {
@@ -89,7 +111,7 @@
         id: account.email,
         email: account.email,
         name: account.name,
-        role: account.role,
+        role: roleUi(account.role),
         must_change_password: !!account.must_change_password,
         loginAt: new Date().toISOString(),
       }));
@@ -165,6 +187,27 @@
     var b = (res && res.body) || {};
     if (b.error && b.error.message) return b.error.message;
     return "요청을 처리할 수 없습니다.";
+  }
+
+  function isConflict(res) {
+    return !!(res && res.status === 409);
+  }
+
+  /** rev/If-Match 낙관적 잠금 — opts.rev 또는 payload.rev */
+  function withRevFetch(path, method, payload, opts) {
+    opts = opts || {};
+    var body = Object.assign({}, payload || {});
+    var rev = opts.rev != null ? opts.rev : body.rev;
+    var headers = {};
+    if (rev != null) {
+      headers["If-Match"] = String(rev);
+      body.rev = rev;
+    }
+    return apiFetch(path, {
+      method: method,
+      headers: headers,
+      body: JSON.stringify(body),
+    });
   }
 
   /**
@@ -260,6 +303,7 @@
     isAuthenticated: isAuthenticated,
     apiFetch: apiFetch,
     parseError: parseError,
+    isConflict: isConflict,
     fileUrl: fileUrl,
     downloadFile: downloadFile,
     downloadPhotosZip: downloadPhotosZip,
@@ -308,26 +352,37 @@
     getApplication: function (id) {
       return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id));
     },
-    approveApplication: function (id) {
-      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/approve", { method: "POST", body: "{}" });
+    approveApplication: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/approve",
+        "POST",
+        payload || {},
+        opts
+      );
     },
-    rejectApplication: function (id, payload) {
-      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/reject", {
-        method: "POST",
-        body: JSON.stringify(payload || {}),
-      });
+    rejectApplication: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/reject",
+        "POST",
+        payload || {},
+        opts
+      );
     },
-    paymentApplication: function (id, payload) {
-      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/payment", {
-        method: "POST",
-        body: JSON.stringify(payload || {}),
-      });
+    paymentApplication: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/payment",
+        "POST",
+        payload || {},
+        opts
+      );
     },
-    photoReview: function (id, payload) {
-      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/photo-review", {
-        method: "POST",
-        body: JSON.stringify(payload || {}),
-      });
+    photoReview: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/photo-review",
+        "POST",
+        payload || {},
+        opts
+      );
     },
     assignExamNumbers: function (roundId, payload) {
       return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/assign-exam-numbers", {
@@ -447,9 +502,18 @@
     getNotices: function (q) {
       var parts = [];
       Object.keys(q || {}).forEach(function (k) {
-        if (q[k] != null) parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(q[k]));
+        if (q[k] != null && q[k] !== "") parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(q[k]));
       });
       return apiFetch("/api/v1/admin/notices" + (parts.length ? "?" + parts.join("&") : ""));
+    },
+    deleteNotice: function (id) {
+      return apiFetch("/api/v1/admin/notices/" + encodeURIComponent(id), { method: "DELETE" });
+    },
+    restoreNotice: function (id) {
+      return apiFetch("/api/v1/admin/notices/" + encodeURIComponent(id) + "/restore", {
+        method: "POST",
+        body: "{}",
+      });
     },
     getAuditLogs: function () { return apiFetch("/api/v1/admin/audit-logs"); },
     getBoardPosts: function (boardType, q) {
@@ -478,11 +542,13 @@
       });
     },
     getUsers: function () { return apiFetch("/api/v1/admin/users"); },
-    updateUser: function (id, payload) {
-      return apiFetch("/api/v1/admin/users/" + encodeURIComponent(id), {
-        method: "PATCH",
-        body: JSON.stringify(payload || {}),
-      });
+    updateUser: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/users/" + encodeURIComponent(id),
+        "PATCH",
+        payload || {},
+        opts
+      );
     },
     resetUserPassword: function (id) {
       return apiFetch("/api/v1/admin/users/" + encodeURIComponent(id) + "/reset-password", {

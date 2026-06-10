@@ -15,6 +15,16 @@ body.admin {
   line-height: 1.55;
 }
 
+/* 비밀번호 표시/숨기기 (로그인·최초 변경 공통) */
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 56px; }
+.pw-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  height: 30px; padding: 0 10px; font-size: 12px; color: var(--text-3);
+  border: 0; background: transparent; border-radius: 4px; cursor: pointer;
+}
+.pw-toggle:hover { color: var(--primary); background: var(--bg-2); }
+
 /* ============================================================
    APP SHELL — sidebar + topbar + main
    ============================================================ */

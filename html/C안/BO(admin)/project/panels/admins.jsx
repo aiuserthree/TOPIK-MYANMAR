@@ -182,9 +182,10 @@ function AdminEditLP({ edit, onClose, onSave }) {
   });
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
   const isApi = DataStore.isApiMode && DataStore.isApiMode();
+  const pwRuleOk = (p) => p && p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p) && /[^A-Za-z0-9]/.test(p);
   const valid = isApi
-    ? (f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || (f.pw && f.pw.length >= 8)))
-    : (/^[A-Za-z0-9]{4,30}$/.test(f.id) && f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || (f.pw && f.pw.length >= 8)));
+    ? (f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || pwRuleOk(f.pw)))
+    : (/^[A-Za-z0-9]{4,30}$/.test(f.id) && f.name && /^.+@.+\..+$/.test(f.email) && (!f._isNew || pwRuleOk(f.pw)));
   return (
     <LP open size="sm" title={a0 ? `계정 수정 — ${a0.name}` : '관리자 계정 등록'} onClose={onClose}
       footer={<>
@@ -216,8 +217,8 @@ function AdminEditLP({ edit, onClose, onSave }) {
           </select>
         </FormRow>
         {f._isNew && (
-          <FormRow label="초기 비밀번호" required hint="8자 이상 영문+숫자 · 첫 로그인 시 변경 강제">
-            <input className="input" type="text" value={f.pw} onChange={e => set('pw', e.target.value)} minLength={8} autoComplete="off"/>
+          <FormRow label="초기 비밀번호" required hint="8자 이상 · 영문+숫자+특수문자 · 첫 로그인 시 변경 강제">
+            <input className="input" type="password" value={f.pw} onChange={e => set('pw', e.target.value)} minLength={8} autoComplete="new-password" placeholder="예) Temp1234!"/>
           </FormRow>
         )}
         <FormRow label="비고" span={2}>

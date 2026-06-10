@@ -527,18 +527,27 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
                     "rows": [
                         ["လုပ်ဆောင်ချက်", "{accountStatusLabel}"],
                         ["အကြောင်းရင်း", "{statusReason}"],
+                        ["သက်တမ်းကာလ", "{statusUntil}"],
                     ],
                 },
                 {
                     "type": "notice",
                     "tone": "warn",
-                    "text": "သင်တောင်းဆိုမထားသော လုပ်ဆောင်ချက်ဖြစ်ပါက ချက်ချင်း စုံစမ်းမေးမြန်းရေး ဘုတ် သို့မဟုတ် {supportEmail} သို့ ဆက်သွယ်ပါ။",
+                    "showWhen": {"accountAction": "suspended"},
+                    "text": "ရပ်ဆိုင်းကာလအတွင်း ဝင်ရောက်ခြင်း၊ စာရင်းသွင်းခြင်းနှင့် My Page အသုံးပြုခြင်းကို ကန့်သတ်ထားပါသည်။",
+                },
+                {
+                    "type": "notice",
+                    "tone": "negative",
+                    "showWhen": {"accountAction": "withdrawn"},
+                    "text": "အဖွဲ့ဝင်မှ ထွက်ခွာပါက လက်ရှိ စာရင်းသွင်းမှု {canceledApplications} ခု အလိုအလျောက် ပယ်ဖျက်ပါသည်။ ပြန်အမ်းငွေသည် စာမေးပွဲကြေးစည်းမျဉ်းအရ ဆောင်ရွက်ပါသည်။",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "သင်တောင်းဆိုမထားသော လုပ်ဆောင်ချက်ဖြစ်ပါက ချက်ချင်း {supportEmail} သို့ ဆက်သွယ်ပါ။",
                 },
             ],
-            ctas=[
-                {"label": "စုံစမ်းမေးမြန်းရေး ဘုတ်", "href": "{supportBoardUrl}", "kind": "primary"},
-                {"label": "ဆိုက်သို့", "href": "{siteUrlFull}", "kind": "secondary"},
-            ],
+            ctas=[],
         ),
         "en": _layout(
             subject="[TOPIK Myanmar] Account {accountStatusLabel} notice",
@@ -554,18 +563,27 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
                     "rows": [
                         ["Action", "{accountStatusLabel}"],
                         ["Reason", "{statusReason}"],
+                        ["Effective period", "{statusUntil}"],
                     ],
                 },
                 {
                     "type": "notice",
                     "tone": "warn",
-                    "text": "If you did not request this action, contact us immediately via the inquiry board or at {supportEmail}.",
+                    "showWhen": {"accountAction": "suspended"},
+                    "text": "While suspended, login, exam registration, and My Page access are restricted.",
+                },
+                {
+                    "type": "notice",
+                    "tone": "negative",
+                    "showWhen": {"accountAction": "withdrawn"},
+                    "text": "If withdrawn, {canceledApplications} in-progress application(s) were automatically cancelled. Refunds follow the fee policy. Re-registration with the same email may be restricted for 30 days.",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "If you did not request this action, please contact us immediately at {supportEmail}.",
                 },
             ],
-            ctas=[
-                {"label": "Inquiry board", "href": "{supportBoardUrl}", "kind": "primary"},
-                {"label": "Visit website", "href": "{siteUrlFull}", "kind": "secondary"},
-            ],
+            ctas=[],
         ),
     },
     "member_info_changed": {

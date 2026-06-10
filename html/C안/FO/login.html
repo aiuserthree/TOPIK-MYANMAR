@@ -237,6 +237,26 @@
   </div>
 </div>
 
+<!-- ============ 비밀번호 변경 권장 모달 ============ -->
+<div class="modal-backdrop" id="modalPwExpiry">
+  <div class="modal">
+    <div class="modal-head"><h3 data-i18n-content="login.pw_expiry_title">비밀번호 변경 안내</h3></div>
+    <div class="modal-body">
+      <div class="callout">
+        <div class="ico"></div>
+        <div>
+          <strong data-i18n-content="login.pw_expiry_strong">비밀번호를 6개월 이상 변경하지 않으셨습니다.</strong><br>
+          <span data-i18n-content="login.pw_expiry_body">계정 보안을 위해 비밀번호 변경을 권장합니다. 마이페이지 &gt; 프로필에서 변경할 수 있습니다.</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="btnPwExpiryLater" data-i18n-content="login.pw_expiry_later">나중에</button>
+      <button class="btn btn-primary" id="btnPwExpiryChange" data-i18n-content="login.pw_expiry_change">비밀번호 변경</button>
+    </div>
+  </div>
+</div>
+
 <script>
   window.TPKM_PAGE_I18N = {
     'login.title': { ko: '로그인', my: 'ဝင်ရောက်ရန်', en: 'Sign in' },
@@ -264,12 +284,38 @@
     'su.email': { ko: '이메일', my: 'အီးမေးလ်', en: 'Email' },
     'login.code_sent': { ko: '인증코드를 발송했습니다.', my: 'အတည်ပြုကုဒ် ပို့ပြီးပါပြီ။', en: 'A verification code has been sent.' },
     'login.sent_suffix': { ko: '주소로 6자리 인증코드를 발송했습니다. 다음 화면에서 코드와 새 비밀번호를 입력해 주세요. (유효시간 30분)', my: 'လိပ်စာသို့ ၆ လုံး အတည်ပြုကုဒ် ပို့ပြီးပါပြီ။ နောက်စာမျက်နှာတွင် ကုဒ်နှင့် စကားဝှက်အသစ် ထည့်ပါ။ (သက်တမ်း ၃၀ မိနစ်)', en: 'A 6-digit verification code was sent to this address. Enter the code and a new password on the next screen. (valid 30 min)' },
-    'login.send_code': { ko: '인증코드 발송', my: 'အတည်ပြုကုဒ် ပို့ရန်', en: 'Send code' }
+    'login.send_code': { ko: '인증코드 발송', my: 'အတည်ပြုကုဒ် ပို့ရန်', en: 'Send code' },
+    'login.pw_expiry_title': { ko: '비밀번호 변경 안내', my: 'စကားဝှက် ပြောင်းလဲရန် အသိပေးချက်', en: 'Password change reminder' },
+    'login.pw_expiry_strong': { ko: '비밀번호를 6개월 이상 변경하지 않으셨습니다.', my: 'စကားဝှက်ကို ၆ လထက် ပိုကြာ မပြောင်းလဲရသေးပါ။', en: 'You have not changed your password for over 6 months.' },
+    'login.pw_expiry_body': { ko: '계정 보안을 위해 비밀번호 변경을 권장합니다. 마이페이지 > 프로필에서 변경할 수 있습니다.', my: 'အကောင့် လုံခြုံရေးအတွက် စကားဝှက် ပြောင်းလဲခြင်းကို အကြံပြုပါသည်။ My Page > Profile တွင် ပြောင်းနိုင်ပါသည်။', en: 'We recommend changing your password for account security. You can update it under My Page > Profile.' },
+    'login.pw_expiry_later': { ko: '나중에', my: 'နောက်မှ', en: 'Later' },
+    'login.pw_expiry_change': { ko: '비밀번호 변경', my: 'စကားဝှက် ပြောင်းရန်', en: 'Change password' }
   };
 </script>
 <script src="shared/api-client.js?v=20260609b"></script>
 <script src="assets/common.js"></script>
 <script>
+  function maybeShowPwExpiry(due, thenGo) {
+    if (!due) { if (thenGo) thenGo(); return; }
+    var modal = document.getElementById('modalPwExpiry');
+    if (!modal || !window.TPKM) { if (thenGo) thenGo(); return; }
+    var laterBtn = document.getElementById('btnPwExpiryLater');
+    var changeBtn = document.getElementById('btnPwExpiryChange');
+    function closeAndGo(href) {
+      TPKM.closeModal('modalPwExpiry');
+      location.href = href;
+    }
+    if (laterBtn) {
+      laterBtn.onclick = function () {
+        closeAndGo((new URLSearchParams(location.search).get('next')) || 'index.html');
+      };
+    }
+    if (changeBtn) {
+      changeBtn.onclick = function () { closeAndGo('mypage-profile.html#password'); };
+    }
+    TPKM.openModal('modalPwExpiry');
+  }
+
   // PW visibility toggle
   document.getElementById('pwToggle').addEventListener('click', function () {
     const pw = document.getElementById('password');
@@ -340,7 +386,7 @@
           id: u.id,
           role: u.role,
         });
-        goNext();
+        maybeShowPwExpiry(!!(result.password_change_due || (result.body && result.body.password_change_due)), goNext);
       })
       .catch(function () {
         finish();
@@ -509,7 +555,9 @@
           location.href = 'signup.html?google=1' + (params.get('next') ? '&next=' + encodeURIComponent(params.get('next')) : '');
           return;
         }
-        location.href = params.get('next') || 'index.html';
+        maybeShowPwExpiry(!!body.password_change_due, function () {
+          location.href = params.get('next') || 'index.html';
+        });
       }).catch(function () {
         if (err) { err.classList.add('show'); err.querySelector('span').textContent = tr.fail; }
         else alert(tr.fail);

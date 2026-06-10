@@ -5,6 +5,8 @@
 function VenuesPanel() {
   const state = useStore();
   const [edit, setEdit] = useState(null);
+  const canCreate = DataStore.can('venues', 'create');
+  const canEdit = DataStore.can('venues', 'edit');
 
   const list = state.venues.slice().sort((a,b) => a.regionCode.localeCompare(b.regionCode) || a.code.localeCompare(b.code));
 
@@ -59,7 +61,7 @@ function VenuesPanel() {
           <div className="sub">국가코드 025(미얀마) · 지역코드 + 시험장코드(2자리)는 13자리 수험번호 생성에 사용됩니다.</div>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 시험장 등록</button>
+          <button className="btn btn-primary" disabled={!canCreate} onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 시험장 등록</button>
         </div>
       </div>
 
@@ -85,8 +87,8 @@ function VenuesPanel() {
                   <td className="muted" style={{ maxWidth: 200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v.memo || '—'}</td>
                   <td>
                     <div className="row-actions">
-                      <button className="ibtn" onClick={() => setEdit({ id: v.id })}><I.Edit style={{ width: 12, height: 12 }}/> 수정</button>
-                      <button className="ibtn" onClick={() => toggleActive(v)}>{v.active ? '비활성' : '활성'}</button>
+                      <button className="ibtn" disabled={!canEdit} onClick={() => setEdit({ id: v.id })}><I.Edit style={{ width: 12, height: 12 }}/> 수정</button>
+                      <button className="ibtn" disabled={!canEdit} onClick={() => toggleActive(v)}>{v.active ? '비활성' : '활성'}</button>
                     </div>
                   </td>
                 </tr>

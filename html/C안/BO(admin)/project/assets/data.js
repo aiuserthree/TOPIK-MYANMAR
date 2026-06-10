@@ -374,6 +374,7 @@
     applicants: APPLICANTS,
     members: MEMBERS,
     notices: NOTICES,
+    noticeTrash: [],
     faqs: FAQS,
     refunds: REFUNDS,
     inquiries: INQUIRIES,
@@ -446,9 +447,28 @@
     try { return JSON.parse(sessionStorage.getItem('tpkm_bo_admin') || 'null'); } catch (e) { return null; }
   }
 
+  /** API role(admin/readonly) → UI role(general/viewer) */
+  function normalizeRole(role) {
+    if (role === 'admin' || role === 'standard') return 'general';
+    if (role === 'readonly') return 'viewer';
+    return role || 'super';
+  }
+
+  /** 역할별 권한 매트릭스 — API 모드에서도 정적 recommendedPerms 기준으로 UI 버튼 비활성 */
+  function can(menuId, action) {
+    const role = normalizeRole(state.me?.role);
+    if (role === 'super') return true;
+    const allowed = (state.perms[role] || {})[menuId] || [];
+    return allowed.includes(action);
+  }
+
+  function isReadonly() {
+    return normalizeRole(state.me?.role) === 'viewer';
+  }
+
   window.DataStore = {
     state, subscribe, notify, addAudit, setSession, getAdminSession,
     badges, fmtNum, fmtResultDate, fmtCurrency, statusLabel, levelLabel, roleLabel, venueName, pad,
-    permSections: PERM_SECTIONS, permActions: PERM_ACTIONS, recommendedPerms,
+    permSections: PERM_SECTIONS, permActions: PERM_ACTIONS, recommendedPerms, normalizeRole, can, isReadonly,
   };
 })();

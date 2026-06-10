@@ -136,7 +136,7 @@ function PermissionsPanel() {
 
       {DataStore.isApiMode && DataStore.isApiMode() && DataStore.staticPermissions && (
         <div style={{ padding: 14, background: '#eef4ff', color: '#1d4ed8', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
-          ⓘ API 모드: 권한 매트릭스는 <b>1차 고정(정적)</b>입니다. 역할별 권한 API는 추후 제공 예정이며, 현재 화면은 클라이언트 기본값을 표시합니다.
+          ⓘ API 모드: 권한 매트릭스는 <b>역할(super/admin/readonly) 기준 정적 매트릭스</b>로 UI 버튼 비활성에 적용됩니다. 서버 RBAC가 최종 권한이며, 매트릭스 편집 저장은 데모 모드에서만 가능합니다.
         </div>
       )}
 

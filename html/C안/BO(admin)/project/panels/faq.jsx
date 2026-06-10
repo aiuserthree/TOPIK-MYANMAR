@@ -8,6 +8,9 @@ function FaqPanel() {
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState(null);
   const [delId, setDelId] = useState(null);
+  const canCreate = DataStore.can('faq', 'create');
+  const canEdit = DataStore.can('faq', 'edit');
+  const canDelete = DataStore.can('faq', 'delete');
 
   const filtered = useMemo(() => {
     let r = state.faqs.slice();
@@ -65,7 +68,7 @@ function FaqPanel() {
           <div className="sub">자주 묻는 질문을 카테고리별로 관리합니다. FO FAQ와 직접 연동됩니다.</div>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> FAQ 등록</button>
+          <button className="btn btn-primary" disabled={!canCreate} onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> FAQ 등록</button>
         </div>
       </div>
 
@@ -97,8 +100,8 @@ function FaqPanel() {
                   <td className="code muted">2026-05-{(10 + f.no).toString().padStart(2,'0')}</td>
                   <td>
                     <div className="row-actions">
-                      <button className="ibtn" onClick={() => setEdit({ id: f.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>
-                      <button className="ibtn danger" onClick={() => setDelId(f.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                      <button className="ibtn" disabled={!canEdit} onClick={() => setEdit({ id: f.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>
+                      <button className="ibtn danger" disabled={!canDelete} onClick={() => setDelId(f.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
                     </div>
                   </td>
                 </tr>

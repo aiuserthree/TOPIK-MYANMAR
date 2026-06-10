@@ -33,10 +33,13 @@ from app.lib.google_auth import verify_google_id_token
 from app.lib.profile import (
     PROFILE_INCOMPLETE_BIRTH,
     SIGNUP_PENDING_STATUS,
+    WITHDRAW_REREGISTRATION_DAYS,
     AUTH_USER_STATUSES,
     is_profile_incomplete,
     is_full_member,
     remove_incomplete_signup_user,
+    remove_withdrawn_user_for_reregister,
+    withdrawn_rejoin_days_remaining,
 )
 from app.lib.mail import (
     cancel_pending_outbox,
@@ -63,6 +66,27 @@ settings = get_settings()
 
 LOGIN_MAX_FAIL = 5
 LOGIN_LOCK_MINUTES = 30
+
+
+async def _prepare_existing_user_for_signup(db: AsyncSession, existing_user: User | None) -> None:
+    """가입 전 기존 이메일 행 정리. 탈퇴 30일 이내·정지·기가입은 차단."""
+    if not existing_user:
+        return
+    if existing_user.status == "suspended":
+        raise api_error("ACCOUNT_INACTIVE", "이용이 제한된 계정입니다.", 403)
+    remaining = withdrawn_rejoin_days_remaining(existing_user)
+    if remaining is not None:
+        raise api_error(
+            "REJOIN_RESTRICTED",
+            f"탈퇴 후 {WITHDRAW_REREGISTRATION_DAYS}일간 동일 이메일로 재가입할 수 없습니다. ({remaining}일 후 가능)",
+            403,
+        )
+    if existing_user.status == "withdrawn":
+        await remove_withdrawn_user_for_reregister(db, existing_user)
+        return
+    if is_full_member(existing_user):
+        raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
+    await remove_incomplete_signup_user(db, existing_user)
 
 
 def _normalize_email(value: str) -> str:
@@ -245,8 +269,19 @@ async def google_login(
         user = by_email.scalar_one_or_none()
 
     if user:
-        if user.status in ("suspended", "withdrawn"):
+        if user.status == "suspended":
             raise api_error("ACCOUNT_INACTIVE", "이용이 제한된 계정입니다.", 403)
+        remaining = withdrawn_rejoin_days_remaining(user)
+        if remaining is not None:
+            raise api_error(
+                "REJOIN_RESTRICTED",
+                f"탈퇴 후 {WITHDRAW_REREGISTRATION_DAYS}일간 동일 이메일로 재가입할 수 없습니다. ({remaining}일 후 가능)",
+                403,
+            )
+        if user.status == "withdrawn":
+            await remove_withdrawn_user_for_reregister(db, user)
+            user = None
+    if user:
         if is_profile_incomplete(user):
             if user.status != SIGNUP_PENDING_STATUS:
                 user.status = SIGNUP_PENDING_STATUS
@@ -323,6 +358,13 @@ def _mask_email(email: str) -> str:
     return f"{visible}***@{domain}"
 
 
+def _password_change_due(user: User) -> bool:
+    if user.signup_provider != "email" or not user.password_changed_at:
+        return False
+    days = (datetime.now(timezone.utc) - user.password_changed_at).days
+    return days >= PASSWORD_REMINDER_DAYS
+
+
 async def _maybe_password_reminder(db: AsyncSession, user: User) -> None:
     if not user.password_changed_at or user.signup_provider != "email":
         return
@@ -394,6 +436,7 @@ async def _login_user(
     await db.commit()
     out = _user_token_response(user)
     out["profile_incomplete"] = is_profile_incomplete(user)
+    out["password_change_due"] = _password_change_due(user)
     return out
 
 
@@ -502,10 +545,7 @@ async def send_verification_code(
         raise api_error("VALIDATION_ERROR", "유효한 이메일을 입력해 주세요.")
     existing = await db.execute(select(User).where(User.email == email))
     existing_user = existing.scalar_one_or_none()
-    if existing_user:
-        if is_full_member(existing_user):
-            raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
-        await remove_incomplete_signup_user(db, existing_user)
+    await _prepare_existing_user_for_signup(db, existing_user)
     code = f"{random.randint(100000, 999999)}"
     await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
     db.add(
@@ -580,10 +620,7 @@ async def register(
 
     existing = await db.execute(select(User).where(User.email == email))
     existing_user = existing.scalar_one_or_none()
-    if existing_user:
-        if is_full_member(existing_user):
-            raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
-        await remove_incomplete_signup_user(db, existing_user)
+    await _prepare_existing_user_for_signup(db, existing_user)
 
     user = User(
         email=email,

@@ -17,6 +17,9 @@ function bumpVersion(ver) {
 
 function TermsPanel() {
   const state = useStore();
+  const canCreate = DataStore.can('terms', 'create');
+  const canEdit = DataStore.can('terms', 'create');
+  const canPublish = DataStore.can('terms', 'publish');
   const [kindF, setKindF] = useState('all');
   const [edit, setEdit] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -127,7 +130,7 @@ function TermsPanel() {
         </div>
         <div className="actions">
           <button className="btn btn-secondary" onClick={() => setConsent(true)}><I.History style={{ width: 14, height: 14 }}/> 동의 이력</button>
-          <button className="btn btn-primary" onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 약관 등록</button>
+          <button className="btn btn-primary" disabled={!canCreate} onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 약관 등록</button>
         </div>
       </div>
 
@@ -165,10 +168,10 @@ function TermsPanel() {
                   <td>
                     <div className="row-actions">
                       <button className="ibtn" onClick={() => setPreview(t.id)}><I.Eye style={{ width: 12, height: 12 }}/> 미리보기</button>
-                      {t.status === 'draft' && <button className="ibtn" onClick={() => setEdit({ id: t.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>}
-                      {t.status === 'draft' && <button className="ibtn primary" onClick={() => setPublish(t.id)}>게시</button>}
-                      {t.status === 'pub' && <button className="ibtn" onClick={() => setEdit({ fromPublishedId: t.id })}><I.Edit style={{ width: 12, height: 12 }}/> 신규 버전</button>}
-                      {t.status === 'pub' && <button className="ibtn danger" onClick={() => setRetire(t.id)}>폐지</button>}
+                      {t.status === 'draft' && <button className="ibtn" disabled={!canEdit} onClick={() => setEdit({ id: t.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>}
+                      {t.status === 'draft' && <button className="ibtn primary" disabled={!canPublish} onClick={() => setPublish(t.id)}>게시</button>}
+                      {t.status === 'pub' && <button className="ibtn" disabled={!canEdit} onClick={() => setEdit({ fromPublishedId: t.id })}><I.Edit style={{ width: 12, height: 12 }}/> 신규 버전</button>}
+                      {t.status === 'pub' && <button className="ibtn danger" disabled={!canPublish} onClick={() => setRetire(t.id)}>폐지</button>}
                     </div>
                   </td>
                 </tr>

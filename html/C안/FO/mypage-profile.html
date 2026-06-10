@@ -45,6 +45,15 @@
   .danger-zone h3 { color: var(--danger); font-size: 16px; margin-bottom: 6px; }
   .danger-zone p { font-size: 13px; color: #7a0d20; line-height: 1.5; }
   .danger-zone .btn { margin-top: 12px; }
+
+  #leaveGoogleArea { margin-top: 14px; }
+  #leaveGoogleMount { display: flex; justify-content: center; min-height: 44px; }
+  .leave-or {
+    margin: 14px 0 10px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-4);
+  }
 </style>
 </head>
 <body data-require-login data-footer-compact>
@@ -62,11 +71,19 @@
 
   <div class="profile-wrap">
 
-    <div class="callout" style="margin-bottom: 20px;">
+    <div class="callout" id="pf-pw-notice" style="margin-bottom: 20px;">
       <div class="ico"></div>
       <div>
         <strong data-i18n-content="mpp.pw_notice_title">비밀번호 변경 안내</strong> <span data-i18n-content="mpp.pw_notice_body">— 계정 관리 및 대리접수 방지를 위해 비밀번호는 6개월마다 변경을 권장합니다.</span>
         <span data-i18n-content="mpp.pw_last_changed">마지막 변경일:</span> <strong id="pf-pw-changed">—</strong>
+      </div>
+    </div>
+
+    <div class="callout" id="pf-google-notice" style="display: none; margin-bottom: 20px;">
+      <div class="ico"></div>
+      <div>
+        <strong data-i18n-content="mpp.google_notice_title">Google 계정으로 가입</strong>
+        <span data-i18n-content="mpp.google_notice_body"> — 비밀번호는 Google에서 관리됩니다. 로그인·보안 설정은 Google 계정에서 변경해 주세요.</span>
       </div>
     </div>
 
@@ -162,24 +179,26 @@
       <h2 class="h3" style="margin-bottom: 12px;" data-i18n-content="mpp.email_login_id">이메일 (로그인 ID)</h2>
       <div class="form-row">
         <input class="input" id="pf-email" value="" readonly>
-        <span class="hint" data-i18n-content="mpp.email_hint">이메일 변경 시 변경된 주소로 재인증이 필요합니다.</span>
+        <span class="hint" data-i18n-content="mpp.email_hint">이메일(로그인 ID)은 변경할 수 없습니다.</span>
       </div>
 
-      <h2 class="h3" style="margin: 24px 0 12px;" data-i18n-content="mpp.pw_change">비밀번호 변경</h2>
-      <div class="form-row">
-        <label class="label" data-i18n-content="mpp.cur_pw">현재 비밀번호</label>
-        <input class="input" type="password" id="pf-cur-pw" autocomplete="current-password">
-      </div>
-      <div class="form-row">
-        <label class="label" data-i18n-content="mpp.new_pw">새 비밀번호</label>
-        <input class="input" type="password" id="pf-new-pw" placeholder="영문+숫자+특수문자 8자 이상" data-i18n-content="mpp.pw_ph" data-i18n-content-placeholder autocomplete="new-password">
-      </div>
-      <div class="form-row">
-        <label class="label" data-i18n-content="mpp.new_pw2">새 비밀번호 확인</label>
-        <input class="input" type="password" id="pf-new-pw2" autocomplete="new-password">
-      </div>
+      <div id="pf-pw-section">
+        <h2 class="h3" style="margin: 24px 0 12px;" data-i18n-content="mpp.pw_change">비밀번호 변경</h2>
+        <div class="form-row">
+          <label class="label" data-i18n-content="mpp.cur_pw">현재 비밀번호</label>
+          <input class="input" type="password" id="pf-cur-pw" autocomplete="current-password">
+        </div>
+        <div class="form-row">
+          <label class="label" data-i18n-content="mpp.new_pw">새 비밀번호</label>
+          <input class="input" type="password" id="pf-new-pw" placeholder="영문+숫자+특수문자 8자 이상" data-i18n-content="mpp.pw_ph" data-i18n-content-placeholder autocomplete="new-password">
+        </div>
+        <div class="form-row">
+          <label class="label" data-i18n-content="mpp.new_pw2">새 비밀번호 확인</label>
+          <input class="input" type="password" id="pf-new-pw2" autocomplete="new-password">
+        </div>
 
-      <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-account" data-i18n-content="mpp.save_account">계정정보 저장</button>
+        <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-account" data-i18n-content="mpp.save_account">계정정보 저장</button>
+      </div>
 
       <!-- 탈퇴 -->
       <div class="danger-zone">
@@ -188,7 +207,7 @@
           탈퇴 시 진행 중인 접수 내역이 <strong>모두 취소</strong>됩니다.
           탈퇴 후 동일 이메일로 재가입은 일정 기간 제한될 수 있습니다.
         </p>
-        <button class="btn btn-danger btn-sm" onclick="TPKM.openModal('modalLeave')" data-i18n-content="mpp.withdraw_title">회원 탈퇴</button>
+        <button class="btn btn-danger btn-sm" type="button" id="btnOpenLeave" data-i18n-content="mpp.withdraw_title">회원 탈퇴</button>
       </div>
     </section>
   </div>
@@ -204,10 +223,23 @@
       <p data-i18n-content="mpp.leave_modal_body" data-i18n-content-html>정말 탈퇴하시겠습니까?<br><br>
       <strong>탈퇴 시 진행 중인 접수 내역이 모두 취소</strong>됩니다.
       취소된 접수에 대한 환불은 응시료 규정에 따라 처리됩니다.</p>
+      <div id="leave-pw-section" style="display:none; margin-top: 16px;">
+        <label class="label" for="leave-pw" data-i18n-content="mpp.leave_pw">비밀번호</label>
+        <input class="input" type="password" id="leave-pw" autocomplete="current-password">
+        <span class="hint" data-i18n-content="mpp.leave_pw_hint">본인 확인을 위해 비밀번호를 입력해 주세요.</span>
+      </div>
+      <div class="leave-or" id="leave-hybrid-or" style="display:none;" data-i18n-content="mpp.leave_or">또는</div>
+      <div id="leave-google-section" style="display:none;">
+        <p class="body-sm" style="margin: 0 0 10px; color: var(--text-3);" data-i18n-content="mpp.leave_google_hint">Google 계정으로 본인 확인 후 탈퇴합니다.</p>
+        <div id="leaveGoogleArea">
+          <div id="leaveGoogleMount"></div>
+        </div>
+      </div>
+      <p class="body-sm" id="leave-google-disabled" style="display:none; margin-top:12px; color:var(--text-3);" data-i18n-content="mpp.leave_google_disabled">Google 본인 확인은 운영 OAuth 설정 후 이용 가능합니다.</p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalLeave')" data-i18n-content="btn.cancel">취소</button>
-      <button class="btn btn-danger" id="btnLeaveConfirm" data-i18n-content="mpp.leave_confirm">탈퇴 진행</button>
+      <button class="btn btn-secondary" type="button" onclick="TPKM.closeModal('modalLeave')" data-i18n-content="btn.cancel">취소</button>
+      <button class="btn btn-danger" type="button" id="btnLeaveConfirm" data-i18n-content="mpp.leave_confirm">탈퇴 진행</button>
     </div>
   </div>
 </div>
@@ -222,6 +254,9 @@
     'mpp.pw_last_changed': { ko: '마지막 변경일:', my: 'နောက်ဆုံး ပြောင်းလဲသည့်နေ့-', en: 'Last changed:' },
     'mpp.tab_basic': { ko: '기본정보·사진', my: 'အချက်အလက် · ဓာတ်ပုံ', en: 'Basic info & photo' },
     'mpp.tab_account': { ko: '계정·비밀번호', my: 'အကောင့် · စကားဝှက်', en: 'Account & password' },
+    'mpp.tab_account_google': { ko: '계정', my: 'အကောင့်', en: 'Account' },
+    'mpp.google_notice_title': { ko: 'Google 계정으로 가입', my: 'Google အကောင့်ဖြင့် မှတ်ပုံတင်ထားသည်', en: 'Signed up with Google' },
+    'mpp.google_notice_body': { ko: ' — 비밀번호는 Google에서 관리됩니다. 로그인·보안 설정은 Google 계정에서 변경해 주세요.', my: ' — စကားဝှက်ကို Google က စီမံပါသည်။ ဝင်ရောက်မှုနှင့် လုံခြုံရေးဆက်တင်များကို Google အကောင့်တွင် ပြောင်းလဲပါ။', en: ' — Your password is managed by Google. Change sign-in and security settings in your Google account.' },
     'mpp.photo_title': { ko: '증명사진', my: 'သက်သေခံ ဓာတ်ပုံ', en: 'ID photo' },
     'mpp.photo_desc1': { ko: '시험 접수 시 자동 사용됩니다.', my: 'စာမေးပွဲ လျှောက်ထားရာတွင် အလိုအလျောက် အသုံးပြုသည်။', en: 'It is used automatically when you register for the exam.' },
     'mpp.photo_desc2': { ko: '새 사진 등록 시 진행 중인 접수 건에도 즉시 반영되며, 사진 심사가 자동으로 재실행(재심사)됩니다.', my: 'ဓာတ်ပုံအသစ် တင်ပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများတွင်လည်း ချက်ချင်း သက်ရောက်ပြီး၊ ဓာတ်ပုံစိစစ်မှု အလိုအလျောက် ပြန်လည်စစ်ဆေးပါမည်။', en: 'When you upload a new photo, it is immediately applied to applications in progress, and the photo review runs again automatically (re-review).' },
@@ -249,7 +284,7 @@
     'su.purpose': { ko: '응시목적', my: 'ဖြေဆိုရခြင်း ရည်ရွယ်ချက်', en: 'Purpose of taking' },
     'mpp.save_basic': { ko: '기본정보 저장', my: 'အချက်အလက် သိမ်းရန်', en: 'Save basic info' },
     'mpp.email_login_id': { ko: '이메일 (로그인 ID)', my: 'အီးမေးလ် (ဝင်ရောက်ရန် ID)', en: 'Email (login ID)' },
-    'mpp.email_hint': { ko: '이메일 변경 시 변경된 주소로 재인증이 필요합니다.', my: 'အီးမေးလ် ပြောင်းလဲပါက ပြောင်းထားသော လိပ်စာဖြင့် ပြန်လည်အတည်ပြုရန် လိုအပ်ပါသည်။', en: 'If you change your email, re-verification is required at the new address.' },
+    'mpp.email_hint': { ko: '이메일(로그인 ID)은 변경할 수 없습니다.', my: 'အီးမေးလ် (ဝင်ရောက်ရန် ID) ကို ပြောင်းလဲ၍မရပါ။', en: 'Your email (login ID) cannot be changed.' },
     'mpp.pw_change': { ko: '비밀번호 변경', my: 'စကားဝှက် ပြောင်းလဲခြင်း', en: 'Change password' },
     'mpp.cur_pw': { ko: '현재 비밀번호', my: 'လက်ရှိ စကားဝှက်', en: 'Current password' },
     'mpp.new_pw': { ko: '새 비밀번호', my: 'စကားဝှက်အသစ်', en: 'New password' },
@@ -260,7 +295,14 @@
     'mpp.withdraw_desc': { ko: '탈퇴 시 진행 중인 접수 내역이 <strong>모두 취소</strong>됩니다. 탈퇴 후 동일 이메일로 재가입은 일정 기간 제한될 수 있습니다.', my: 'အကောင့်ပိတ်ပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများ <strong>အားလုံး ပယ်ဖျက်</strong>ခံရပါမည်။ ပိတ်ပြီးနောက် တူညီသော အီးမေးလ်ဖြင့် ပြန်လည်မှတ်ပုံတင်ခြင်းကို ကာလအတိုင်းအတာတစ်ခု ကန့်သတ်နိုင်ပါသည်။', en: 'When you delete your account, all applications in progress are <strong>cancelled</strong>. Re-registration with the same email may be restricted for a certain period.' },
     'mpp.leave_modal_body': { ko: '정말 탈퇴하시겠습니까?<br><br><strong>탈퇴 시 진행 중인 접수 내역이 모두 취소</strong>됩니다. 취소된 접수에 대한 환불은 응시료 규정에 따라 처리됩니다.', my: 'အကောင့်ကို တကယ် ပိတ်မှာ သေချာပါသလား။<br><br><strong>အကောင့်ပိတ်ပါက ဆောင်ရွက်ဆဲ လျှောက်လွှာများ အားလုံး ပယ်ဖျက်</strong>ခံရပါမည်။ ပယ်ဖျက်ခံရသော လျှောက်လွှာများ၏ ငွေပြန်အမ်းမှုကို ဖြေဆိုကြေး စည်းမျဉ်းအတိုင်း ဆောင်ရွက်ပါမည်။', en: 'Are you sure you want to delete your account?<br><br><strong>All applications in progress will be cancelled</strong> when you delete your account. Refunds for cancelled applications are handled according to the test fee policy.' },
     'btn.cancel': { ko: '취소', my: 'ပယ်ဖျက်', en: 'Cancel' },
-    'mpp.leave_confirm': { ko: '탈퇴 진행', my: 'ပိတ်ရန် ဆက်လုပ်မည်', en: 'Proceed to delete' }
+    'mpp.leave_confirm': { ko: '탈퇴 진행', my: 'ပိတ်ရန် ဆက်လုပ်မည်', en: 'Proceed to delete' },
+    'mpp.leave_pw': { ko: '비밀번호', my: 'စကားဝှက်', en: 'Password' },
+    'mpp.leave_pw_hint': { ko: '본인 확인을 위해 비밀번호를 입력해 주세요.', my: 'ကိုယ်တိုင် အတည်ပြုရန် စကားဝှက် ထည့်ပါ။', en: 'Enter your password to confirm your identity.' },
+    'mpp.leave_or': { ko: '또는', my: 'သို့မဟုတ်', en: 'or' },
+    'mpp.leave_google_hint': { ko: 'Google 계정으로 본인 확인 후 탈퇴합니다.', my: 'Google အကောင့်ဖြင့် အတည်ပြုပြီးမှ အကောင့်ပိတ်ပါ။', en: 'Verify with your Google account to delete your account.' },
+    'mpp.leave_google_disabled': { ko: 'Google 본인 확인은 운영 OAuth 설정 후 이용 가능합니다.', my: 'Google အတည်ပြုခြင်းကို OAuth ပြင်ဆင်ပြီးမှ အသုံးပြုနိုင်ပါမည်။', en: 'Google verification will be available after OAuth setup.' },
+    'mpp.leave_pw_required': { ko: '비밀번호를 입력해 주세요.', my: 'စကားဝှက် ထည့်ပါ။', en: 'Please enter your password.' },
+    'mpp.leave_google_fail': { ko: 'Google 본인 확인에 실패했습니다. 다시 시도해 주세요.', my: 'Google အတည်ပြုခြင်း မအောင်မြင်ပါ။ ထပ်စမ်းကြည့်ပါ။', en: 'Google verification failed. Please try again.' }
   };
 </script>
 <script src="shared/api-client.js"></script>
@@ -278,6 +320,9 @@
 
   var photoChanged = false;
   var lastKnownPhotoFileId = null;
+  var profileUser = null;
+  var leaveGoogleClientId = null;
+  var leaveGoogleReady = false;
   var profilePhotoCtrl = TPKMPhoto.bind({
     zone: document.getElementById('profilePhotoZone'),
     placeholder: '현재 사진',
@@ -337,6 +382,34 @@
     return y + '.' + m + '.' + day;
   }
 
+  function pageLang() {
+    try { return (localStorage.getItem('tpkm_lang') || 'ko').toLowerCase(); }
+    catch (e) { return 'ko'; }
+  }
+
+  function i18nText(key) {
+    var L = window.TPKM_PAGE_I18N && window.TPKM_PAGE_I18N[key];
+    if (!L) return '';
+    var lang = pageLang();
+    return L[lang] || L.ko || '';
+  }
+
+  function applyAccountUi(signupProvider) {
+    var isGoogle = signupProvider === 'google';
+    var pwNotice = $('pf-pw-notice');
+    var googleNotice = $('pf-google-notice');
+    var pwSection = $('pf-pw-section');
+    var accountTab = document.querySelector('.profile-tabs button[data-tab="account"]');
+    if (pwNotice) pwNotice.style.display = isGoogle ? 'none' : '';
+    if (googleNotice) googleNotice.style.display = isGoogle ? '' : 'none';
+    if (pwSection) pwSection.style.display = isGoogle ? 'none' : '';
+    if (accountTab) {
+      var tabKey = isGoogle ? 'mpp.tab_account_google' : 'mpp.tab_account';
+      accountTab.setAttribute('data-i18n-content', tabKey);
+      accountTab.textContent = i18nText(tabKey);
+    }
+  }
+
   // ---- 회원정보 로드 (GET /me) ----
   function loadProfile() {
     if (!window.TopikApi || !TopikApi.canUseApi() || !TopikApi.isLoggedIn()) return;
@@ -354,6 +427,8 @@
       setSelectValue($('pf-motive'), u.motive_code);
       setSelectValue($('pf-purpose'), u.purpose_code);
       $('pf-email').value = u.email || '';
+      profileUser = u;
+      applyAccountUi(u.signup_provider || 'email');
       var pwEl = $('pf-pw-changed');
       if (pwEl) pwEl.textContent = formatPwChangedAt(u.password_changed_at);
       lastKnownPhotoFileId = u.photo_file_id != null ? Number(u.photo_file_id) : null;
@@ -456,10 +531,11 @@
       btn.disabled = false;
       btn.textContent = prev;
       if (!res.ok) { alert(TopikApi.parseError(res)); return; }
-      $('pf-cur-pw').value = ''; $('pf-new-pw').value = ''; $('pf-new-pw2').value = '';
-      var pwEl = $('pf-pw-changed');
-      if (pwEl) pwEl.textContent = formatPwChangedAt(new Date().toISOString());
-      alert((res.body && res.body.message) || '비밀번호가 변경되었습니다.');
+      if (window.TPKMAuth && TPKMAuth.logout) TPKMAuth.logout();
+      else if (window.TopikApi && TopikApi.logout) TopikApi.logout();
+      if (window.__tpkmRebuildNav) __tpkmRebuildNav();
+      alert('비밀번호가 변경되었습니다.\n보안을 위해 다시 로그인해 주세요.');
+      location.href = 'login.html?reset=ok';
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;
@@ -467,32 +543,150 @@
     });
   });
 
-  // ---- 회원 탈퇴 (POST /me/withdraw) ----
-  document.getElementById('btnLeaveConfirm')?.addEventListener('click', function () {
+  function gisLocale() {
+    var l = pageLang();
+    return l === 'en' ? 'en' : (l === 'my' ? 'my' : 'ko');
+  }
+
+  function applyWithdrawUi() {
+    var u = profileUser || {};
+    var showPw = !!u.has_password;
+    var showGoogle = !!u.google_linked;
+    var hybrid = showPw && showGoogle;
+    var pwSection = $('leave-pw-section');
+    var googleSection = $('leave-google-section');
+    var hybridOr = $('leave-hybrid-or');
+    var confirmBtn = $('btnLeaveConfirm');
+    var googleDisabled = $('leave-google-disabled');
+    if (pwSection) pwSection.style.display = showPw ? '' : 'none';
+    if (googleSection) googleSection.style.display = showGoogle ? '' : 'none';
+    if (hybridOr) hybridOr.style.display = hybrid ? '' : 'none';
+    if (confirmBtn) confirmBtn.style.display = showPw ? '' : 'none';
+    if ($('leave-pw')) $('leave-pw').value = '';
+    if (googleDisabled) googleDisabled.style.display = 'none';
+    if (showGoogle) initLeaveGoogleButton();
+  }
+
+  function openLeaveModal() {
+    applyWithdrawUi();
+    if (window.TPKM && TPKM.openModal) TPKM.openModal('modalLeave');
+  }
+
+  function finishWithdraw(res, btn) {
+    if (btn) btn.disabled = false;
+    if (!res.ok) {
+      alert(TopikApi.parseError(res) || i18nText('mpp.leave_google_fail'));
+      return;
+    }
+    TPKM.closeModal('modalLeave');
+    if (window.TPKMAuth) TPKMAuth.logout();
+    alert('회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.');
+    location.href = 'index.html';
+  }
+
+  function doWithdraw(payload, btn) {
     if (!window.TopikApi || !TopikApi.canUseApi()) {
       TPKM.closeModal('modalLeave');
       if (window.TPKMAuth) TPKMAuth.logout();
       location.href = 'index.html';
       return;
     }
-    var pw = window.prompt('회원 탈퇴를 위해 비밀번호를 입력해 주세요.');
-    if (pw === null) return;
-    var btn = this;
-    btn.disabled = true;
-    TopikApi.apiFetch('/api/v1/me/withdraw', {
-      method: 'POST',
-      body: JSON.stringify({ password: pw })
-    }).then(function (res) {
-      btn.disabled = false;
-      if (!res.ok) { alert(TopikApi.parseError(res)); return; }
-      TPKM.closeModal('modalLeave');
-      if (window.TPKMAuth) TPKMAuth.logout();
-      alert('회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.');
-      location.href = 'index.html';
+    if (btn) btn.disabled = true;
+    TopikApi.withdraw(payload).then(function (res) {
+      finishWithdraw(res, btn);
     }).catch(function () {
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
       alert('네트워크 오류입니다.');
     });
+  }
+
+  function initLeaveGoogleButton() {
+    var mount = $('leaveGoogleMount');
+    var disabled = $('leave-google-disabled');
+    if (!mount || !window.TopikApi || !TopikApi.getGoogleConfig) return;
+    mount.innerHTML = '';
+    if (leaveGoogleReady && leaveGoogleClientId) {
+      renderLeaveGoogleButton(leaveGoogleClientId);
+      return;
+    }
+    TopikApi.getGoogleConfig().then(function (res) {
+      if (!res.ok || !res.body || !res.body.enabled || !res.body.client_id) {
+        if (disabled) disabled.style.display = '';
+        return;
+      }
+      leaveGoogleClientId = res.body.client_id;
+      loadLeaveGis(res.body.client_id);
+    }).catch(function () {
+      if (disabled) disabled.style.display = '';
+    });
+  }
+
+  function loadLeaveGis(clientId) {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      renderLeaveGoogleButton(clientId);
+      return;
+    }
+    var existing = document.getElementById('gis-script');
+    var s = existing || document.createElement('script');
+    s.id = 'gis-script';
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = function () { renderLeaveGoogleButton(clientId); };
+    s.onerror = function () {
+      var disabled = $('leave-google-disabled');
+      if (disabled) disabled.style.display = '';
+    };
+    if (!existing) document.head.appendChild(s);
+  }
+
+  function renderLeaveGoogleButton(clientId) {
+    var mount = $('leaveGoogleMount');
+    var disabled = $('leave-google-disabled');
+    if (!mount || !window.google || !window.google.accounts || !window.google.accounts.id) return;
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleLeaveGoogleCredential,
+        ux_mode: 'popup',
+        context: 'signin',
+        auto_select: false,
+        use_fedcm_for_prompt: false,
+        use_fedcm_for_button: false
+      });
+      mount.innerHTML = '';
+      var area = $('leaveGoogleArea');
+      var width = Math.min((area && area.offsetWidth) || 320, 360);
+      window.google.accounts.id.renderButton(mount, {
+        theme: 'outline', size: 'large', type: 'standard',
+        text: 'continue_with', shape: 'rectangular', logo_alignment: 'center',
+        width: width, locale: gisLocale()
+      });
+      leaveGoogleReady = true;
+      if (disabled) disabled.style.display = 'none';
+    } catch (e) {
+      if (disabled) disabled.style.display = '';
+    }
+  }
+
+  function handleLeaveGoogleCredential(response) {
+    var idToken = response && response.credential;
+    if (!idToken) {
+      alert(i18nText('mpp.leave_google_fail'));
+      return;
+    }
+    doWithdraw({ google_id_token: idToken }, null);
+  }
+
+  $('btnOpenLeave')?.addEventListener('click', openLeaveModal);
+
+  // ---- 회원 탈퇴 (POST /me/withdraw) ----
+  $('btnLeaveConfirm')?.addEventListener('click', function () {
+    var pw = ($('leave-pw') && $('leave-pw').value) || '';
+    if (!pw.trim()) {
+      alert(i18nText('mpp.leave_pw_required'));
+      return;
+    }
+    doWithdraw({ password: pw }, this);
   });
 </script>
 </body>

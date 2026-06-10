@@ -162,7 +162,7 @@ sequenceDiagram
 | 사진 변경(0527) | `photo_base64` | 새 사진 저장 → `users.photo_file_id` 갱신 → **진행 중(취소·반려 제외) `applications`에 즉시 반영**(`photo_file_id` 교체 + `photo_review_status='pending'`로 BO 재심사). | `PATCH /api/v1/me`(photo 포함) | `users.photo_file_id`, `applications.photo_file_id/photo_review_status` | jpg 200KB~2MB |
 | 비밀번호 변경 | `current_password`, `new_password`, `confirm` | 현재 비번 검증 → 새 비번 규칙(8+ 영문·숫자·특수)·확인 일치 → `password_hash` + `password_changed_at` 갱신. | `POST /api/v1/me/change-password` | `users.password_hash` | 400 `INVALID_CREDENTIALS`/`VALIDATION_ERROR` |
 | 비번 6개월 배너 | `password_changed_at` | 마지막 변경 180일 경과 시 변경 권고 배너(FE 계산). | (`GET /me` 값) | `users.password_changed_at` | — |
-| 이메일 변경 | 새 이메일(중복 검증) | 정의서상 수정 가능. **구현 PATCH /me 본문에 email 미포함 → 현재 이메일 변경 미지원(§6)**. | (미지원) | — | (합의/구현) |
+| 이메일(로그인 ID) | — | **변경 불가**(가입 시 인증·확정). FO·BO 모두 수정 차단. | — | `users.email` | `400 EMAIL_NOT_EDITABLE`(BO 직접 변경 시) |
 | 회원 탈퇴 | `password` | confirm("탈퇴 시 진행 중 접수 모두 취소") → 비번 검증 → `status=withdrawn`, `withdrawn_at`. **진행 중 submission·application 자동 취소**(cancel_reason="회원 탈퇴"). 계정 상태 메일. | `POST /api/v1/me/withdraw` | `users.status`, `application_submissions`, `applications` | 비번 오류 400 |
 
 > 0527 검증: 성명 수정 후 BO 접수자 목록 즉시 반영, 생년월일·성별·국적 수정 후 접수 STEP2 readonly 주입값 갱신, 사진 변경 후 진행 중 접수 사진 즉시 변경 + 재심사 대기. (구현은 `applications` 직접 UPDATE로 충족; `profile_snapshot` 미보관이므로 과거 접수 표기는 현재 `users` 기준 — §6)
@@ -257,7 +257,7 @@ flowchart TD
 | `/auth/email/verify/send`·`/confirm` | `/auth/send-verification-code`·`/auth/verify-email` | 경로 차이 |
 | `PATCH /me/password` | `POST /me/change-password` | 경로/메서드 차이 |
 | `POST /me/photo` 별도 업로드 | `PATCH /me`의 `photo_base64`(presign 흐름 아님) | 사진 교체 방식 차이 |
-| 내정보수정 이메일 변경 가능 | `PATCH /me` 본문에 email 필드 없음 | 이메일 변경 미지원 — 추가 필요 (합의) |
+| 내정보수정 이메일 변경 가능(구 정의서) | **변경 불가 확정** — `PATCH /me`·BO 회원 수정 모두 `email` 차단 | 이메일 = 로그인 ID (합의 완료 2026-06-10) |
 | `term_agreements`(정본 테이블) | `terms_consents`(`TermConsent` 모델) | 약관 동의 테이블 명칭 차이 |
 | `GET /me` 응답 `password_change_due` | `password_changed_at` 반환(FE 계산) | 필드 차이 |
 | (정의서 미명시) | 가입 시 **만 N세 미만 차단**(`AGE_RESTRICTED` 422) | 신규 제약 — 최소 연령 정책 (합의 필요) |

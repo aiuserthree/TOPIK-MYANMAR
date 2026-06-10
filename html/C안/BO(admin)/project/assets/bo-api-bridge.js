@@ -167,6 +167,7 @@
       email: row.email || "",
       tel: row.phone || "",
       accommodation: !!row.accommodation_requested,
+      rev: row.rev != null ? row.rev : null,
     };
   }
 
@@ -206,18 +207,36 @@
     };
   }
 
+  function toDatetimeLocalKst(iso) {
+    if (!iso) return "";
+    return fmtKst(iso).replace(" ", "T");
+  }
+
+  function fromDatetimeLocalKst(local) {
+    if (!local || !String(local).trim()) return null;
+    return String(local).trim() + ":00+09:00";
+  }
+
   function mapNotice(row, idx, author) {
     return {
       id: String(row.id),
       no: idx + 1,
       cat: row.category,
       title: row.title,
+      titleMy: row.title_my || "",
+      titleEn: row.title_en || "",
       body: row.body_html || "",
+      bodyMy: row.body_my || "",
+      bodyEn: row.body_en || "",
       author: author || "admin",
       createdAt: fmtKst(row.created_at || row.published_at),
       views: row.view_count || 0,
       public: !!row.is_published,
       pin: !!row.is_pinned,
+      showStart: toDatetimeLocalKst(row.display_start_at),
+      showEnd: toDatetimeLocalKst(row.display_end_at),
+      deleted: !!row.is_deleted,
+      deletedAt: fmtKst(row.deleted_at),
       attachments: (row.attachments || []).map(function (a) {
         return {
           file_id: a.file_id,
@@ -318,13 +337,8 @@
       assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
       attachments: [],
-      comments: row.admin_reply ? [{
-        author: resolveAdminLabel(row.admin_replier_id) || "관리자",
-        body: row.admin_reply,
-        public: false,
-        ts: fmtKst(row.admin_replied_at),
-        kind: "reply",
-      }] : [],
+      replies: mapOfficialReplies(row),
+      comments: [],
     };
   }
 
@@ -341,30 +355,52 @@
       status: done ? "done" : "wait",
       assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
-      comments: row.admin_reply ? [{
-        author: resolveAdminLabel(row.admin_replier_id) || "관리자",
-        body: row.admin_reply,
-        public: !row.is_secret,
-        ts: fmtKst(row.admin_replied_at),
-        kind: "reply",
-      }] : [],
+      replies: mapOfficialReplies(row),
+      comments: [],
     };
   }
 
-  // 게시판 댓글/대댓글 — FO 응답 계약(계약서 5절 #3): comments[]{author,is_admin,content,created_at_label,replies[]}
+  function mapOfficialReply(r) {
+    return {
+      id: r.id != null ? String(r.id) : undefined,
+      author: r.author || "관리자",
+      body: r.body || "",
+      ts: r.created_at_label || fmtKst(r.created_at),
+      kind: "reply",
+    };
+  }
+
+  function mapOfficialReplies(row) {
+    if (row.admin_replies && row.admin_replies.length) {
+      return row.admin_replies.map(mapOfficialReply);
+    }
+    if (row.admin_reply) {
+      return [{
+        author: resolveAdminLabel(row.admin_replier_id) || "관리자",
+        body: row.admin_reply,
+        ts: fmtKst(row.admin_replied_at),
+        kind: "reply",
+      }];
+    }
+    return [];
+  }
+
+  // 게시판 댓글/대댓글 — FO 응답 계약: comments[]{author,is_admin,replies[]}
   function mapComment(c) {
     return {
       id: c.id != null ? String(c.id) : undefined,
-      parentId: c.parent_id != null ? String(c.parent_id) : null,
+      parentId: c.parent_comment_id != null ? String(c.parent_comment_id)
+        : (c.parent_id != null ? String(c.parent_id) : null),
       author: c.author || c.author_name || (c.is_admin ? "관리자" : (c.author_email || "작성자")),
       body: c.content || c.body || "",
       public: c.is_public != null ? !!c.is_public : (c.is_secret != null ? !c.is_secret : true),
       ts: c.created_at_label || fmtKst(c.created_at),
-      kind: c.is_admin ? "reply" : "comment",
+      kind: "comment",
+      replies: (c.replies || []).map(mapComment),
     };
   }
 
-  // 중첩(replies) 구조를 BO 표시용 평면 목록으로 — 부모 다음에 자식 배치
+  // 중첩(replies) 구조를 BO 표시용 평면 목록으로 — 부모 다음에 자식 배치 (레거시)
   function flattenComments(items) {
     var out = [];
     (items || []).forEach(function (c) {
@@ -399,6 +435,7 @@
       lastLogin: fmtKst(row.last_login_at) || "—",
       status: memberStatusUi(row.status || "active"),
       marketing: !!row.marketing_opt_in,
+      signupProvider: row.signup_provider || "email",
       reason: "",
     };
   }
@@ -453,6 +490,7 @@
     DS.state.sessions = [];
     DS.state.venues = [];
     DS.state.notices = [];
+    DS.state.noticeTrash = [];
     DS.state.faqs = [];
     DS.state.refunds = [];
     DS.state.inquiries = [];
@@ -469,6 +507,7 @@
     DS.state.sessions = [];
     DS.state.venues = [];
     DS.state.notices = [];
+    DS.state.noticeTrash = [];
     DS.state.faqs = [];
     DS.state.refunds = [];
     DS.state.inquiries = [];
@@ -480,6 +519,31 @@
 
   function toastErr(msg) {
     if (typeof global.toastErr === "function") global.toastErr(msg);
+  }
+
+  function applicantRev(id) {
+    var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
+    return a && a.rev != null ? a.rev : undefined;
+  }
+
+  function handleMutation(res, reloadFn) {
+    if (Api.isConflict && Api.isConflict(res)) {
+      toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+      if (reloadFn) return reloadFn().then(function () { return false; });
+      return Promise.resolve(false);
+    }
+    if (!res.ok) {
+      toastErr(TopikBoApi.parseError(res));
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(true);
+  }
+
+  function applyRevFromResponse(id, res) {
+    if (res.body && res.body.rev != null) {
+      var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
+      if (a) a.rev = res.body.rev;
+    }
   }
 
   function regionNameMap(items) {
@@ -626,29 +690,44 @@
   }
 
   DS.apiPhotoApprove = function (id) {
-    return Api.photoReview(id, { action: "approve" }).then(function (res) {
-      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
-      applyLocalApplicant(id, {
-        photoStatus: "approved",
-        photoOk: true,
-        status: a && a.paid ? "applied" : "pay",
+    var sessionId = DS.state.activeSessionId;
+    return Api.photoReview(id, { action: "approve" }, { rev: applicantRev(id) }).then(function (res) {
+      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
+        if (!ok) return false;
+        applyRevFromResponse(id, res);
+        var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
+        applyLocalApplicant(id, {
+          photoStatus: "approved",
+          photoOk: true,
+          status: a && a.paid ? "applied" : "pay",
+        });
+        return true;
       });
-      return true;
     });
   };
 
   DS.apiPhotoReject = function (id, reason) {
-    return Api.photoReview(id, { action: "reject", photo_reject_note: reason }).then(function (res) {
-      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      applyLocalApplicant(id, { photoStatus: "rejected", photoOk: false, status: "photo", rejectReason: reason });
-      return true;
+    var sessionId = DS.state.activeSessionId;
+    return Api.photoReview(id, { action: "reject", photo_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
+      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
+        if (!ok) return false;
+        applyRevFromResponse(id, res);
+        applyLocalApplicant(id, { photoStatus: "rejected", photoOk: false, status: "photo", rejectReason: reason });
+        return true;
+      });
     });
   };
 
   DS.apiApprove = function (ids) {
     var sessionId = DS.state.activeSessionId;
-    return Promise.all(ids.map(function (id) { return Api.approveApplication(id); })).then(function (ress) {
+    return Promise.all(ids.map(function (id) {
+      return Api.approveApplication(id, {}, { rev: applicantRev(id) });
+    })).then(function (ress) {
+      var conflict = ress.find(function (r) { return Api.isConflict(r); });
+      if (conflict) {
+        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+        return DS.reloadApplicants(sessionId).then(function () { return 0; });
+      }
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
       return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
@@ -656,29 +735,34 @@
   };
 
   DS.apiReject = function (ids, reason) {
-    return Promise.all(ids.map(function (id) { return Api.rejectApplication(id, { reject_reason: reason }); })).then(function (ress) {
+    var sessionId = DS.state.activeSessionId;
+    return Promise.all(ids.map(function (id) {
+      return Api.rejectApplication(id, { reject_reason: reason }, { rev: applicantRev(id) });
+    })).then(function (ress) {
+      var conflict = ress.find(function (r) { return Api.isConflict(r); });
+      if (conflict) {
+        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+        return DS.reloadApplicants(sessionId).then(function () { return 0; });
+      }
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      ids.forEach(function (id) { applyLocalApplicant(id, { status: "rejected", rejectReason: reason }); });
-      return ids.length;
+      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
     });
   };
 
   DS.apiPay = function (ids, info) {
+    var sessionId = DS.state.activeSessionId;
     return Promise.all(ids.map(function (id) {
-      return Api.paymentApplication(id, { receipt_no: info.receipt, payment_memo: info.memo });
+      return Api.paymentApplication(id, { receipt_no: info.receipt, payment_memo: info.memo }, { rev: applicantRev(id) });
     })).then(function (ress) {
+      var conflict = ress.find(function (r) { return Api.isConflict(r); });
+      if (conflict) {
+        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+        return DS.reloadApplicants(sessionId).then(function () { return 0; });
+      }
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      ids.forEach(function (id) {
-        applyLocalApplicant(id, {
-          paid: true,
-          paidAt: fmtKst(new Date().toISOString()),
-          receipt: info.receipt || "",
-          status: "applied",
-        });
-      });
-      return ids.length;
+      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
     });
   };
 
@@ -749,13 +833,41 @@
     });
   };
 
+  DS.reloadNotices = function (opts) {
+    opts = opts || {};
+    if (!DS.isApiMode()) return Promise.resolve();
+    var q = opts.trash ? { trash: "true" } : {};
+    return Api.getNotices(q).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return false;
+      }
+      var list = ((res.body && res.body.items) || []).map(function (n, i) {
+        return mapNotice(n, i, currentAdminLabel());
+      });
+      if (opts.trash) {
+        DS.state.noticeTrash = list;
+      } else {
+        DS.state.notices = list;
+      }
+      DS.notify();
+      return true;
+    });
+  };
+
   DS.apiSaveNotice = function (data) {
     var payload = {
       category: data.cat,
       title: data.title,
+      title_my: data.titleMy || null,
+      title_en: data.titleEn || null,
       body_html: data.body || "",
+      body_my: data.bodyMy || null,
+      body_en: data.bodyEn || null,
       is_pinned: !!data.pin,
       is_published: !!data.public,
+      display_start_at: fromDatetimeLocalKst(data.showStart),
+      display_end_at: fromDatetimeLocalKst(data.showEnd),
       attachment_file_ids: data.attachmentFileIds || [],
       remove_attachment_file_ids: data.removeAttachmentFileIds || [],
     };
@@ -780,11 +892,21 @@
   };
 
   DS.apiDeleteNotice = function (id) {
-    return Api.updateNotice(id, { is_published: false }).then(function (res) {
+    return Api.deleteNotice(id).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       DS.state.notices = DS.state.notices.filter(function (n) { return n.id !== String(id); });
       DS.notify();
       return true;
+    });
+  };
+
+  DS.apiRestoreNotice = function (id) {
+    return Api.restoreNotice(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      if (DS.state.noticeTrash) {
+        DS.state.noticeTrash = DS.state.noticeTrash.filter(function (n) { return n.id !== String(id); });
+      }
+      return DS.reloadNotices();
     });
   };
 
@@ -820,17 +942,16 @@
 
   DS.apiBoardReply = function (id, body, boardKind, opts) {
     opts = opts || {};
-    return Api.replyBoardPost(id, { body: body, mark_complete: opts.markDone !== false }).then(function (res) {
+      return Api.replyBoardPost(id, { body: body, mark_complete: opts.markDone !== false }).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       var list = boardKind === "inquiry" ? DS.state.inquiries : DS.state.refunds;
       var row = list.find(function (x) { return x.id === String(id); });
       if (row) {
         row.hasAnswer = true;
-        row.comments = row.comments || [];
-        row.comments.push({
+        row.replies = row.replies || [];
+        row.replies.push({
           author: currentAdminLabel(),
           body: body,
-          public: !!opts.public,
           ts: new Date().toISOString().slice(0, 16).replace("T", " "),
           kind: "reply",
         });
@@ -839,6 +960,7 @@
         row.assignee = currentAdminLabel();
       }
       DS.notify();
+      if (DS.apiLoadBoardDetail) DS.apiLoadBoardDetail(id, boardKind);
       return true;
     });
   };
@@ -874,17 +996,35 @@
     });
   };
 
+  // 게시판 상세(답변 이력 + 댓글) — 조회
+  DS.apiLoadBoardDetail = function (id, boardKind) {
+    if (!DS.isApiMode()) return Promise.resolve(null);
+    return Api.getBoardPost(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return null; }
+      var post = (res.body && res.body.post) || res.body;
+      var list = boardKind === "inquiry" ? DS.state.inquiries : DS.state.refunds;
+      var row = list.find(function (x) { return x.id === String(id); });
+      if (row && post) {
+        row.replies = mapOfficialReplies(post);
+        row.comments = (post.comments || []).map(mapComment);
+        row.hasAnswer = !!(row.replies && row.replies.length);
+        if (post.body) row.body = post.body;
+      }
+      DS.notify();
+      return post;
+    });
+  };
+
   // 게시판 댓글/대댓글 — 조회/작성 (계약서 6.3)
   DS.apiLoadComments = function (id, boardKind) {
     if (!DS.isApiMode()) return Promise.resolve(null);
     return Api.getBoardComments(id).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return null; }
-      var comments = flattenComments((res.body && res.body.comments) || res.body && res.body.items || []);
+      var comments = ((res.body && res.body.comments) || (res.body && res.body.items) || []).map(mapComment);
       var list = boardKind === "inquiry" ? DS.state.inquiries : DS.state.refunds;
       var row = list.find(function (x) { return x.id === String(id); });
       if (row) {
         row.comments = comments;
-        row.hasAnswer = comments.some(function (c) { return c.kind === "reply"; });
       }
       DS.notify();
       return comments;
@@ -894,11 +1034,12 @@
   DS.apiAddComment = function (id, content, parentId, boardKind, isPublic) {
     if (!DS.isApiMode()) return Promise.resolve(false);
     var payload = { content: content };
-    if (parentId) payload.parent_id = parentId;
+    if (parentId != null && parentId !== "") payload.parent_id = Number(parentId);
     if (isPublic != null) payload.is_public = !!isPublic;
     return Api.createBoardComment(id, payload).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      return DS.apiLoadComments(id, boardKind).then(function () { return true; });
+      var reload = DS.apiLoadBoardDetail || DS.apiLoadComments;
+      return reload(id, boardKind).then(function () { return true; });
     });
   };
 
@@ -931,14 +1072,14 @@
     return Api.downloadPhotosZip(query || {});
   };
 
-  DS.apiSaveMember = function (id, data) {
+  DS.apiSaveMember = function (id, data, memo) {
     return Api.updateUser(id, {
       name_ko: data.nameKo,
       name_en: data.nameEn,
-      email: data.email,
       phone: data.tel,
       nationality: data.nation,
       marketing_opt_in: data.marketing,
+      memo: (memo || "").trim() || undefined,
     }).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       return DS.initFromApi();
@@ -948,6 +1089,7 @@
   DS.apiMemberStatus = function (id, status, reason) {
     return Api.updateUser(id, {
       status: memberStatusApi(status),
+      memo: (reason || "").trim() || undefined,
     }).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       var m = DS.state.members.find(function (x) { return x.id === String(id); });

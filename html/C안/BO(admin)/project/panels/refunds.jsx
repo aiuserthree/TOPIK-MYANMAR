@@ -8,6 +8,8 @@ const REF_STATUS = ['접수','검토중','처리완료','반려'];
 
 function RefundsPanel() {
   const state = useStore();
+  const canAnswer = DataStore.can('refunds', 'answer');
+  const canDelete = DataStore.can('refunds', 'delete');
   const [typeF, setTypeF] = useState('all');
   const [stF, setStF] = useState('all');
   const [ansF, setAnsF] = useState('all'); // all|none|has
@@ -105,7 +107,7 @@ function RefundsPanel() {
                   <td>
                     <div className="row-actions">
                       <button className="ibtn" onClick={() => setDetailId(r.id)}><I.Eye style={{ width: 12, height: 12 }}/></button>
-                      <button className="ibtn danger" onClick={() => setDelId(r.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                      <button className="ibtn danger" disabled={!canDelete} onClick={() => setDelId(r.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
                     </div>
                   </td>
                 </tr>
@@ -115,7 +117,7 @@ function RefundsPanel() {
         </div>
       </div>
 
-      {detailId && <RefundDetailLP id={detailId} onClose={() => setDetailId(null)}/>}
+      {detailId && <RefundDetailLP id={detailId} onClose={() => setDetailId(null)} canAnswer={canAnswer}/>}
       {delId && (
         <Modal open onClose={() => setDelId(null)} title="신청글 삭제" danger
           footer={<>
@@ -129,19 +131,18 @@ function RefundsPanel() {
   );
 }
 
-function RefundDetailLP({ id, onClose }) {
+function RefundDetailLP({ id, onClose, canAnswer = true }) {
   const state = useStore();
   const r = state.refunds.find(x => x.id === id);
   const [status, setStatus] = useState(r.status);
   const [reply, setReply] = useState('');
-  const [comment, setComment] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
   const [refundMethod, setRefundMethod] = useState('계좌이체');
 
   // 열람 이력 기록 (비밀글) — API 모드에서는 서버가 audit 기록. 댓글은 실제 API 조회.
   useEffect(() => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      if (DataStore.apiLoadComments) DataStore.apiLoadComments(id, 'refund');
+      if (DataStore.apiLoadBoardDetail) DataStore.apiLoadBoardDetail(id, 'refund');
       return;
     }
     DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', memo: '비밀글 열람' });
@@ -162,25 +163,12 @@ function RefundDetailLP({ id, onClose }) {
     r.hasAnswer = true;
     r.assignee = state.me?.id || 'admin01';
     r.status = status;
-    r.comments.push({ author: state.me?.id, body: reply, public: false, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
+    r.replies = r.replies || [];
+    r.replies.push({ author: state.me?.id, body: reply, public: false, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
     DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', before, after: { hasAnswer: true, status }, memo: '답변 등록' });
     DataStore.notify();
     setReply('');
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
-  };
-
-  const addComment = async () => {
-    if (!comment.trim()) return;
-    if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const ok = await DataStore.apiAddComment(id, comment, null, 'refund', false);
-      if (ok) { setComment(''); toastOk('댓글이 등록되었습니다.'); }
-      return;
-    }
-    r.comments.push({ author: state.me?.id, body: comment, public: false, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'comment' });
-    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', memo: '댓글 등록(비밀글—자동 비공개)' });
-    DataStore.notify();
-    setComment('');
-    toastOk('댓글이 등록되었습니다.');
   };
 
   const applyMemberFix = () => {
@@ -189,11 +177,13 @@ function RefundDetailLP({ id, onClose }) {
     location.hash = 'members';
   };
 
+  const replies = r.replies || [];
+
   return (
     <LP open size="wide" title={r.title} sub={`작성자 ${r.author} · 작성일 ${r.createdAt} · 비밀글`} onClose={onClose}
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        <button className="btn btn-primary" onClick={submitReply} disabled={!reply.trim()}>답변 등록 · 상태 저장</button>
+        <button className="btn btn-primary" onClick={submitReply} disabled={!canAnswer || !reply.trim()}>답변 등록 · 상태 저장</button>
       </>}>
       <FieldSet legend="신청 내용" cols={1}>
         <KV k="유형" v={<span className={`pill ${r.type === '환불' ? 'pill-pay' : 'pill-applied'}`}>{r.type}</span>}/>
@@ -229,29 +219,34 @@ function RefundDetailLP({ id, onClose }) {
         )}
       </FieldSet>
 
+      <FieldSet legend={`답변 이력 (${replies.length})`} cols={1}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {replies.map((rep, idx) => (
+            <div key={rep.id || idx} style={{ padding: 10, background: 'var(--info-50, #eef4ff)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
+                <span><b>{rep.author}</b> · <span className="code-id" style={{ color: 'var(--primary)' }}>공식 답변</span></span>
+                <span className="code-id">{rep.ts}</span>
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{rep.body}</div>
+            </div>
+          ))}
+          {!replies.length && <div className="empty" style={{ padding: '12px 0' }}>등록된 답변이 없습니다</div>}
+        </div>
+      </FieldSet>
+
       <FieldSet legend="답변 작성" cols={1}>
         <FormRow label="답변 내용" required>
-          <textarea className="textarea" rows="5" value={reply} onChange={e => setReply(e.target.value)} placeholder="작성자에게 보낼 답변을 입력하세요."/>
+          <textarea className="textarea" rows="5" value={reply} onChange={e => setReply(e.target.value)} placeholder="작성자에게 보낼 답변을 입력하세요. (추가 답변 가능)"/>
         </FormRow>
       </FieldSet>
 
-      <FieldSet legend={`댓글/대댓글 (${r.comments.length})`} cols={1}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {r.comments.map((c, idx) => (
-            <div key={idx} style={{ padding: 10, background: 'var(--bg-2)', borderRadius: 6, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
-                <span><b>{c.author}</b> · <span className="code-id">{c.kind === 'reply' ? '답변' : '댓글'}</span></span>
-                <span className="code-id">{c.ts}</span>
-              </div>
-              <div>{c.body}</div>
-            </div>
-          ))}
-          {!r.comments.length && <div className="empty" style={{ padding: '20px 0' }}>등록된 댓글이 없습니다</div>}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input className="input" placeholder="댓글 추가(비밀글—자동 비공개)" value={comment} onChange={e => setComment(e.target.value)}/>
-            <button className="btn btn-secondary" onClick={addComment} disabled={!comment.trim()}>등록</button>
-          </div>
-        </div>
+      <FieldSet legend={`댓글/대댓글 (${(r.comments || []).length})`} cols={1}>
+        <BoCommentThread
+          postId={id}
+          comments={r.comments || []}
+          boardKind="refund"
+          isSecret={true}
+        />
       </FieldSet>
     </LP>
   );

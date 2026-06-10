@@ -55,6 +55,7 @@ class BoardComment(Base):
         Integer, ForeignKey("admin_users.id", ondelete="SET NULL")
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    is_official_reply: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_secret: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(

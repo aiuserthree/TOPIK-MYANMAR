@@ -8,15 +8,30 @@ function NoticesPanel() {
   const state = useStore();
   const [q, setQ] = useState('');
   const [catF, setCatF] = useState('all');
+  const [viewTab, setViewTab] = useState('list'); // list | trash
   const [edit, setEdit] = useState(null);
   const [delId, setDelId] = useState(null);
+  const [restoreId, setRestoreId] = useState(null);
+
+  const canCreate = DataStore.can('notices', 'create');
+  const canEdit = DataStore.can('notices', 'edit');
+  const canDelete = DataStore.can('notices', 'delete');
+  const isReadonly = DataStore.isReadonly();
+
+  useEffect(() => {
+    if (viewTab === 'trash' && DataStore.isApiMode && DataStore.isApiMode() && DataStore.reloadNotices) {
+      DataStore.reloadNotices({ trash: true });
+    }
+  }, [viewTab]);
+
+  const source = viewTab === 'trash' ? (state.noticeTrash || []) : state.notices;
 
   const filtered = useMemo(() => {
-    let r = state.notices.slice();
+    let r = source.slice();
     if (catF !== 'all') r = r.filter(n => n.cat === catF);
     if (q) r = r.filter(n => n.title.toLowerCase().includes(q.toLowerCase()));
     return r.sort((a,b) => (b.pin?1:0) - (a.pin?1:0) || b.createdAt.localeCompare(a.createdAt));
-  }, [state.notices, q, catF]);
+  }, [source, q, catF]);
 
   const save = async (data) => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
@@ -51,10 +66,19 @@ function NoticesPanel() {
     setEdit(null);
   };
 
+  const restore = async () => {
+    if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.apiRestoreNotice) {
+      const ok = await DataStore.apiRestoreNotice(restoreId);
+      if (ok) { setRestoreId(null); toastOk('공지가 복구되었습니다.'); }
+      return;
+    }
+    setRestoreId(null);
+  };
+
   const remove = async () => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       const ok = await DataStore.apiDeleteNotice(delId);
-      if (ok) { setDelId(null); toastOk('공지가 삭제되었습니다.'); }
+      if (ok) { setDelId(null); toastOk('공지가 휴지통으로 이동되었습니다.'); }
       return;
     }
     const n = state.notices.find(x => x.id === delId);
@@ -74,13 +98,21 @@ function NoticesPanel() {
           <div className="sub">FO 공지사항과 직접 연동 · 신규 게시 시 마케팅 동의 회원에 이메일 알림 발송</div>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 공지 작성</button>
+          <button className="btn btn-primary" disabled={!canCreate} onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 공지 작성</button>
         </div>
       </div>
 
+      {isReadonly && (
+        <div style={{ padding: 14, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
+          ⓘ 조회 전용 계정입니다. 작성·수정·삭제 버튼이 비활성화됩니다.
+        </div>
+      )}
+
       <div className="filterbar">
         <div className="chips">
-          <button className={`chip ${catF === 'all' ? 'active' : ''}`} onClick={() => setCatF('all')}>전체<span className="cnt">{state.notices.length}</span></button>
+          <button className={`chip ${viewTab === 'list' ? 'active' : ''}`} onClick={() => setViewTab('list')}>목록<span className="cnt">{state.notices.length}</span></button>
+          <button className={`chip ${viewTab === 'trash' ? 'active' : ''}`} onClick={() => setViewTab('trash')}>휴지통<span className="cnt">{(state.noticeTrash || []).length}</span></button>
+          <button className={`chip ${catF === 'all' ? 'active' : ''}`} onClick={() => setCatF('all')}>전체<span className="cnt">{source.length}</span></button>
           {NOTICE_CATS.map(c => (
             <button key={c} className={`chip ${catF === c ? 'active' : ''}`} onClick={() => setCatF(c)}>{c}<span className="cnt">{state.notices.filter(n => n.cat === c).length}</span></button>
           ))}
@@ -95,6 +127,7 @@ function NoticesPanel() {
           <table className="dg">
             <thead><tr>
               <th className="num">번호</th><th>카테고리</th><th>제목</th><th>작성자</th><th>작성일</th>
+              {viewTab === 'trash' && <th>삭제일</th>}
               <th className="num">조회</th><th>노출</th><th>관리</th>
             </tr></thead>
             <tbody>
@@ -105,12 +138,19 @@ function NoticesPanel() {
                   <td>{n.pin && <I.Bookmark style={{ width: 12, height: 12, color: 'var(--accent)', display: 'inline', verticalAlign: '-2px', marginRight: 4 }}/>}<b>{n.title}</b></td>
                   <td className="muted">{n.author}</td>
                   <td className="code muted">{n.createdAt}</td>
+                  {viewTab === 'trash' && <td className="code muted">{n.deletedAt || '—'}</td>}
                   <td className="num muted">{DataStore.fmtNum(n.views)}</td>
                   <td><Pill kind={n.public ? 'active' : 'inactive'}>{n.public ? '공개' : '비공개'}</Pill></td>
                   <td>
                     <div className="row-actions">
-                      <button className="ibtn" onClick={() => setEdit({ id: n.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>
-                      <button className="ibtn danger" onClick={() => setDelId(n.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                      {viewTab === 'trash' ? (
+                        <button className="ibtn" disabled={!canEdit} onClick={() => setRestoreId(n.id)}><I.RefreshCcw style={{ width: 12, height: 12 }}/> 복구</button>
+                      ) : (
+                        <>
+                          <button className="ibtn" disabled={!canEdit} onClick={() => setEdit({ id: n.id })}><I.Edit style={{ width: 12, height: 12 }}/></button>
+                          <button className="ibtn danger" disabled={!canDelete} onClick={() => setDelId(n.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -120,21 +160,30 @@ function NoticesPanel() {
         </div>
       </div>
 
-      {edit && <NoticeEditLP edit={edit} onClose={() => setEdit(null)} onSave={save}/>}
+      {edit && (edit.id ? canEdit : canCreate) && <NoticeEditLP edit={edit} onClose={() => setEdit(null)} onSave={save} canSave={edit.id ? canEdit : canCreate}/>}
       {delId && (
         <Modal open onClose={() => setDelId(null)} title="공지 삭제" danger
           footer={<>
             <button className="btn btn-secondary" onClick={() => setDelId(null)}>취소</button>
             <button className="btn btn-danger" onClick={remove}>삭제</button>
           </>}>
-          <div>공지를 삭제하시겠습니까? 30일 동안 휴지통에 보관됩니다(soft-delete).</div>
+          <div>공지를 삭제하시겠습니까? 30일 동안 휴지통에 보관되며, 이후 영구 삭제됩니다.</div>
+        </Modal>
+      )}
+      {restoreId && (
+        <Modal open onClose={() => setRestoreId(null)} title="공지 복구"
+          footer={<>
+            <button className="btn btn-secondary" onClick={() => setRestoreId(null)}>취소</button>
+            <button className="btn btn-primary" onClick={restore}>복구</button>
+          </>}>
+          <div>휴지통에서 공지를 복구하시겠습니까? 복구 후 공개 여부를 다시 설정해 주세요.</div>
         </Modal>
       )}
     </>
   );
 }
 
-function NoticeEditLP({ edit, onClose, onSave }) {
+function NoticeEditLP({ edit, onClose, onSave, canSave = true }) {
   const state = useStore();
   const n = edit.id ? state.notices.find(x => x.id === edit.id) : null;
   const [f, setF] = useState(n ? { ...n } : {
@@ -210,12 +259,25 @@ function NoticeEditLP({ edit, onClose, onSave }) {
     return () => { attachCtrlRef.current = null; };
   }, [n && n.id]);
 
+  const validateDisplayWindow = (start, end) => {
+    if (!start || !end) return true;
+    const s = new Date(start);
+    const e = new Date(end);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return true;
+    if (e <= s) {
+      toastErr('노출 종료는 노출 시작 이후여야 합니다.');
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = () => {
     const ctrl = attachCtrlRef.current;
     if (ctrl && ctrl.hasPending()) {
       toastErr('첨부파일 업로드가 완료될 때까지 기다려 주세요.');
       return;
     }
+    if (!validateDisplayWindow(f.showStart, f.showEnd)) return;
     const bodyHtml = editorRef.current ? editorRef.current.getHtml() : (f[bodyKey] || '');
     const bodies = {
       body: bodyKey === 'body' ? bodyHtml : (f.body || ''),
@@ -247,7 +309,7 @@ function NoticeEditLP({ edit, onClose, onSave }) {
     <LP open title={n ? `공지 수정 — ${n.title}` : '공지 작성'} onClose={onClose} size="wide"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" disabled={!valid} onClick={handleSave}>{n ? '저장' : '게시'}</button>
+        <button className="btn btn-primary" disabled={!valid || !canSave} onClick={handleSave}>{n ? '저장' : '게시'}</button>
       </>}>
       <FieldSet legend="기본 정보" cols={2}>
         <FormRow label="카테고리" required>
@@ -266,10 +328,24 @@ function NoticeEditLP({ edit, onClose, onSave }) {
           </div>
         </FormRow>
         <FormRow label="노출 시작">
-          <input type="datetime-local" className="input" value={f.showStart} onChange={e => set('showStart', e.target.value)}/>
+          <input type="datetime-local" className="input" value={f.showStart} onChange={e => {
+            const v = e.target.value;
+            if (f.showEnd && v && new Date(f.showEnd) <= new Date(v)) {
+              toastErr('노출 종료는 노출 시작 이후여야 합니다.');
+              return;
+            }
+            set('showStart', v);
+          }}/>
         </FormRow>
         <FormRow label="노출 종료">
-          <input type="datetime-local" className="input" value={f.showEnd} onChange={e => set('showEnd', e.target.value)}/>
+          <input type="datetime-local" className="input" value={f.showEnd} onChange={e => {
+            const v = e.target.value;
+            if (f.showStart && v && new Date(v) <= new Date(f.showStart)) {
+              toastErr('노출 종료는 노출 시작 이후여야 합니다.');
+              return;
+            }
+            set('showEnd', v);
+          }}/>
         </FormRow>
       </FieldSet>
 

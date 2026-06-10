@@ -107,7 +107,7 @@
 | `[ ]` | **수험번호 채번 원자성(`exam_number_sequences`)** | 초안 시퀀스 테이블+`FOR UPDATE` ↔ 실제 단일 트랜잭션 in-memory 배치(super 단독·재배정 가드만) | 동시 최초 부여 경합 방지(advisory lock 또는 시퀀스 도입) 여부 | P1 | [database](database.md) §1·5.2·7.2 · [bo-02](services/bo-02-applications.md) §2.7·§5 |
 | `[ ]` | **서버 세션/강제 로그아웃(`user_sessions`)** | 미구현 — 무상태 JWT(로그아웃은 클라 토큰 폐기) | 무상태 유지 vs 세션 테이블·블랙리스트 도입(즉시 강제 로그아웃) | P1 | [database](database.md) §1·7.2 · [fo-00](services/fo-00-common.md) §5 · [bo-00](services/bo-00-common.md) §2.2·§5 |
 | `[ ]` | **첨부 다운로드 권한 점검** | `GET /files/{id}`는 user_photo/application_photo 본인·관리자만 → **공개 공지/게시판 첨부가 비관리자에게 403 가능** | 공개 공지 첨부 접근 보장(권한 분기) 점검·보강 | P1 | [fo-05](services/fo-05-board.md) §5 · [database](database.md) §4.17 |
-| `[ ]` | **내정보 이메일 변경** | `PATCH /me` 본문에 email 필드 없음 → 변경 미지원(정의서는 가능) | 이메일 변경 지원 여부·중복 검증·재인증 절차 | P1 | [fo-06](services/fo-06-account.md) §2.3·§6 |
+| `[x]` | **회원 이메일(로그인 ID) 변경** | **변경 불가 확정** — FO `PATCH /me`·BO `PATCH /admin/users/{id}` 모두 `email` 수정 차단. 인증된 이메일 = 로그인 ID(가입 시 확정) | — (합의 완료 2026-06-10) | P1 | [fo-06](services/fo-06-account.md) §2.3·§6 · [bo-05](services/bo-05-members-terms.md) §2.3 |
 | `[ ]` | **회원 목록 필터·검색·페이지네이션** | 현재 최근 200건·무필터 | 서버 필터(상태/가입일/국적/검색)·페이징 구현 | P1 | [bo-05](services/bo-05-members-terms.md) §2.1·§5 |
 | `[ ]` | **대시보드 요약·배지 집계 API** | `GET /admin/dashboard/summary`·badges 미구현(클라가 목록 API로 산출) | 전용 집계 API 신설 여부(SSOT·캐시) | P1 | [bo-01](services/bo-01-dashboard.md) §2.1·§5 · [bo-00](services/bo-00-common.md) §2.5 |
 | `[ ]` | **처리 이력 필터·CSV·가시성 RBAC** | 현재 200건 무필터, 전 등급 전체 열람. 필터·CSV·페이징·본인 이력 제한 미구현 | 필터/CSV(super)/페이징 + admin·readonly 본인 이력만 제한 구현 | P1 | [bo-06](services/bo-06-system.md) §2.3·§5 · [bo-00](services/bo-00-common.md) §5 |

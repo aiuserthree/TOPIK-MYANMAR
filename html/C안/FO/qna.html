@@ -85,11 +85,21 @@
   .write-form { max-width: 760px; margin: 0 auto; }
   .detail-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   .detail-head { padding: 22px 24px; border-bottom: 1px solid var(--border); }
+  .detail-head-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .detail-head-top .status { flex-shrink: 0; }
+  .detail-actions-bar { display: flex; gap: 8px; padding: 0 24px 16px; }
   .detail-head h2 { font-size: 20px; line-height: 1.4; }
   .detail-head .meta { display: flex; gap: 12px; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--text-3); flex-wrap: wrap; }
   .detail-body { padding: 24px; font-size: 14.5px; line-height: 1.8; color: var(--text-2); }
   .detail-body p { margin-bottom: 14px; }
 
+  .reply-history { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
   .reply-block {
     margin: 0 24px 24px;
     border: 1px solid #cfe0f1; border-radius: var(--radius);
@@ -305,7 +315,7 @@
 
       <article class="detail-card">
         <div class="detail-head">
-          <div style="display:flex; gap: 8px; margin-bottom: 10px;">
+          <div class="detail-head-top">
             <span class="badge badge-outline" id="bdBadge"></span>
             <span class="status" id="bdStatus"></span>
           </div>
@@ -313,14 +323,9 @@
           <div class="meta" id="bdMeta"></div>
         </div>
         <div class="detail-body" id="bdBody"></div>
+        <div class="detail-actions-bar" id="bdActions" style="display:none;"></div>
 
-        <div class="reply-block" id="bdReply" style="display:none;">
-          <div class="who">
-            <span class="reply-badge" data-i18n-content="board.admin_reply">답변</span>
-            <span class="when" id="bdReplyWhen"></span>
-          </div>
-          <div class="body-r" id="bdReplyBody"></div>
-        </div>
+        <div class="reply-history" id="bdReply" style="display:none;"></div>
 
         <div class="comments" id="bdComments"></div>
       </article>
@@ -332,7 +337,7 @@
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
 
-<!-- 비밀글 잠금 해제 -->
+<!-- 비밀글 안내 (작성자·관리자 외 열람 불가) -->
 <div class="modal-backdrop" id="modalSecretLock">
   <div class="modal">
     <div class="modal-head"><h3 data-i18n-content="board.secret_label">비밀글</h3></div>
@@ -340,17 +345,10 @@
       <div class="secret-lock">
         <div class="ico-lock">🔒</div>
         <p data-i18n-content="board.locked_msg">비밀글입니다. 작성자·관리자만 열람할 수 있습니다.</p>
-        <p class="body-sm" style="margin-top: 6px;" data-i18n-content="board.unlock_enter_pw">비밀번호를 입력해 주세요.</p>
       </div>
-      <div class="form-row" style="margin-top: 12px;">
-        <input class="input" type="password" id="secretPw" placeholder="비밀번호" data-i18n-content="form.password_ph" data-i18n-content-placeholder>
-        <span class="hint" id="secretPwErr" style="display:none; color: var(--danger);"></span>
-      </div>
-      <p class="body-sm" style="text-align: center; font-size: 11.5px;" data-i18n-content="board.unlock_warn">최대 5회 실패 시 일시적으로 잠깁니다.</p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-secondary" onclick="TPKM.closeModal('modalSecretLock')" data-i18n-content="btn.close">닫기</button>
-      <button class="btn btn-primary" id="btnSecretUnlock" data-i18n-content="btn.confirm">확인</button>
+      <button class="btn btn-primary" onclick="TPKM.closeModal('modalSecretLock')" data-i18n-content="btn.confirm">확인</button>
     </div>
   </div>
 </div>
@@ -402,6 +400,7 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   // ---- 목록/상세 (API) ----
+  var editingPostId = null;
   var board = TPKMBoard.initBoard({
     boardType: 'inquiry',
     listBody: document.getElementById('qnaListBody'),
@@ -420,9 +419,23 @@
       meta: document.getElementById('bdMeta'),
       body: document.getElementById('bdBody'),
       reply: document.getElementById('bdReply'),
-      replyWhen: document.getElementById('bdReplyWhen'),
-      replyBody: document.getElementById('bdReplyBody'),
       comments: document.getElementById('bdComments'),
+      actions: document.getElementById('bdActions'),
+    },
+    onEdit: function (p) {
+      editingPostId = p.id;
+      document.getElementById('qnaTitle').value = p.title || '';
+      document.getElementById('qnaBody').value = p.body || '';
+      var catSel = document.getElementById('qnaCategory');
+      if (catSel && p.category) catSel.value = p.category;
+      document.getElementById('visNormal').checked = !p.is_secret;
+      document.getElementById('visSecret').checked = !!p.is_secret;
+      toggleSecretPwRow();
+      document.getElementById('qnaSecretPw').value = '';
+      qnaAttach.reset();
+      document.querySelector('#writePane .h2').textContent =
+        (window.TPKMLang && TPKMLang.t('board.edit_title')) || '글 수정';
+      show('writePane');
     },
     show: window.show,
   });
@@ -478,7 +491,16 @@
     secretRadio: document.getElementById('visSecret'),
     secretPwEl: document.getElementById('qnaSecretPw'),
     attachmentCtrl: qnaAttach,
-    onSuccess: function () { show('listPane'); board.load(1); },
+    getEditingId: function () { return editingPostId; },
+    clearEditing: function () {
+      editingPostId = null;
+      document.querySelector('#writePane .h2').textContent =
+        (window.TPKMLang && TPKMLang.t('qna.write_title')) || '문의 작성';
+    },
+    onSuccess: function () {
+      show('listPane');
+      board.load(1);
+    },
   });
 
   // 최초 로드

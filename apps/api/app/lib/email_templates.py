@@ -315,13 +315,10 @@ TRANSACTIONAL_LAYOUTS: dict[str, dict[str, EmailLayout]] = {
                 },
                 {
                     "type": "paragraph",
-                    "text": "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 또는 문의 게시판으로 연락해 주세요.",
+                    "text": "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 으로 문의해 주세요.",
                 },
             ],
-            ctas=[
-                {"label": "문의 게시판", "href": "{supportBoardUrl}", "kind": "primary"},
-                {"label": "사이트 바로가기", "href": "{siteUrlFull}", "kind": "secondary"},
-            ],
+            ctas=[],
         ),
     },
     "member_info_changed": {

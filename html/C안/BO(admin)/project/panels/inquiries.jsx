@@ -7,6 +7,8 @@ const INQ_CATS = ['접수','시험','기타'];
 
 function InquiriesPanel() {
   const state = useStore();
+  const canAnswer = DataStore.can('inquiries', 'answer');
+  const canDelete = DataStore.can('inquiries', 'delete');
   const [tab, setTab] = useState('all'); // all|public|secret
   const [catF, setCatF] = useState('all');
   const [stF, setStF] = useState('all');
@@ -90,7 +92,7 @@ function InquiriesPanel() {
                   <td>
                     <div className="row-actions">
                       <button className="ibtn" onClick={() => setDetailId(i.id)}><I.Eye style={{ width: 12, height: 12 }}/></button>
-                      <button className="ibtn danger" onClick={() => setDelId(i.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                      <button className="ibtn danger" disabled={!canDelete} onClick={() => setDelId(i.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
                     </div>
                   </td>
                 </tr>
@@ -100,7 +102,7 @@ function InquiriesPanel() {
         </div>
       </div>
 
-      {detailId && <InquiryDetailLP id={detailId} onClose={() => setDetailId(null)}/>}
+      {detailId && <InquiryDetailLP id={detailId} onClose={() => setDetailId(null)} canAnswer={canAnswer}/>}
       {delId && (
         <Modal open onClose={() => setDelId(null)} title="문의 삭제" danger
           footer={<>
@@ -114,17 +116,15 @@ function InquiriesPanel() {
   );
 }
 
-function InquiryDetailLP({ id, onClose }) {
+function InquiryDetailLP({ id, onClose, canAnswer = true }) {
   const state = useStore();
   const q = state.inquiries.find(x => x.id === id);
   const [reply, setReply] = useState('');
-  const [comment, setComment] = useState('');
   const [commentPublic, setCommentPublic] = useState(!q.secret);
 
   useEffect(() => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      // 댓글/대댓글은 실제 API로 조회. 비밀글 열람 audit는 서버가 기록.
-      if (DataStore.apiLoadComments) DataStore.apiLoadComments(id, 'inquiry');
+      if (DataStore.apiLoadBoardDetail) DataStore.apiLoadBoardDetail(id, 'inquiry');
       return;
     }
     if (q.secret) {
@@ -143,7 +143,8 @@ function InquiryDetailLP({ id, onClose }) {
       return;
     }
     const before = { status: q.status };
-    q.comments.push({ author: state.me?.id, body: reply, public: !q.secret, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
+    q.replies = q.replies || [];
+    q.replies.push({ author: state.me?.id, body: reply, public: !q.secret, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
     q.assignee = state.me?.id;
     q.status = 'done';
     DataStore.addAudit({ type: '문의', targetId: id, action: '수정', before, after: { status: q.status }, memo: '답변 등록·답변완료 처리' });
@@ -152,61 +153,49 @@ function InquiryDetailLP({ id, onClose }) {
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
   };
 
-  const addComment = async () => {
-    if (!comment.trim()) return;
-    // 비밀글의 댓글·대댓글은 자동 비밀글 (강제)
-    const isPub = q.secret ? false : commentPublic;
-    if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const ok = await DataStore.apiAddComment(id, comment, null, 'inquiry', isPub);
-      if (ok) { setComment(''); toastOk('댓글이 등록되었습니다.'); }
-      return;
-    }
-    q.comments.push({ author: state.me?.id, body: comment, public: isPub, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'comment' });
-    DataStore.addAudit({ type: '문의', targetId: id, action: '수정', memo: `댓글 등록(${isPub ? '공개' : '비공개'})` });
-    DataStore.notify();
-    setComment('');
-    toastOk('댓글이 등록되었습니다.');
-  };
+  const replies = q.replies || [];
 
   return (
     <LP open size="wide" title={q.title} sub={`작성자 ${q.author} · 작성일 ${q.createdAt} · ${q.secret ? '비밀글' : '일반글'}`} onClose={onClose}
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        <button className="btn btn-primary" onClick={submit} disabled={!reply.trim()}>답변 등록 · 완료 처리</button>
+        <button className="btn btn-primary" onClick={submit} disabled={!canAnswer || !reply.trim()}>답변 등록 · 완료 처리</button>
       </>}>
       <FieldSet legend="문의 내용" cols={1}>
         <KV k="카테고리" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{q.cat}</span>}/>
         <KV k="본문" v={<pre style={{ background: 'var(--bg-2)', padding: 10, borderRadius: 6, fontSize: 13, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: 'var(--text)' }}>{q.body}</pre>}/>
       </FieldSet>
 
+      <FieldSet legend={`답변 이력 (${replies.length})`} cols={1}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {replies.map((r, idx) => (
+            <div key={r.id || idx} style={{ padding: 10, background: 'var(--info-50, #eef4ff)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
+                <span><b>{r.author}</b> · <span className="code-id" style={{ color: 'var(--primary)' }}>공식 답변</span></span>
+                <span className="code-id">{r.ts}</span>
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{r.body}</div>
+            </div>
+          ))}
+          {!replies.length && <div className="empty" style={{ padding: '12px 0' }}>등록된 답변이 없습니다</div>}
+        </div>
+      </FieldSet>
+
       <FieldSet legend="답변 작성" cols={1}>
         <FormRow label="답변 내용" required>
-          <textarea className="textarea" rows="5" value={reply} onChange={e => setReply(e.target.value)} placeholder="답변 내용을 입력하세요."/>
+          <textarea className="textarea" rows="5" value={reply} onChange={e => setReply(e.target.value)} placeholder="답변 내용을 입력하세요. (추가 답변 가능)"/>
         </FormRow>
       </FieldSet>
 
-      <FieldSet legend={`댓글/대댓글 (${q.comments.length})`} cols={1}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {q.comments.map((c, idx) => (
-            <div key={idx} style={{ padding: 10, background: 'var(--bg-2)', borderRadius: 6, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>
-                <span><b>{c.author}</b> · <span className="code-id">{c.kind === 'reply' ? '답변' : '댓글'}</span> · {c.public ? '공개' : '비공개'}</span>
-                <span className="code-id">{c.ts}</span>
-              </div>
-              <div>{c.body}</div>
-            </div>
-          ))}
-          {!q.comments.length && <div className="empty" style={{ padding: '20px 0' }}>등록된 댓글이 없습니다</div>}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input className="input" placeholder={q.secret ? '댓글 추가(비밀글—자동 비공개)' : '댓글 추가'} value={comment} onChange={e => setComment(e.target.value)}/>
-            {!q.secret && (
-              <label style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={commentPublic} onChange={e => setCommentPublic(e.target.checked)}/> 공개
-              </label>
-            )}
-            <button className="btn btn-secondary" onClick={addComment} disabled={!comment.trim()}>등록</button>
-          </div>
-        </div>
+      <FieldSet legend={`댓글/대댓글 (${(q.comments || []).length})`} cols={1}>
+        <BoCommentThread
+          postId={id}
+          comments={q.comments || []}
+          boardKind="inquiry"
+          isSecret={q.secret}
+          commentPublic={commentPublic}
+          setCommentPublic={setCommentPublic}
+        />
       </FieldSet>
     </LP>
   );

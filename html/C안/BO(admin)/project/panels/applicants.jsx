@@ -61,7 +61,7 @@ function ApplicantsPanel() {
     if (levelF !== 'all')  r = r.filter(a => a.level === levelF);
     if (q) {
       const qq = q.trim().toLowerCase();
-      r = r.filter(a => a.nameKo.includes(qq) || a.nameEn.toLowerCase().includes(qq) || a.dob.includes(qq) || (a.exam && a.exam.includes(qq)));
+      r = r.filter(a => a.nameKo.includes(qq) || a.nameEn.toLowerCase().includes(qq) || (a.email && a.email.toLowerCase().includes(qq)) || a.dob.includes(qq) || (a.exam && a.exam.includes(qq)));
     }
     // sort
     r = r.slice().sort((a, b) => {
@@ -340,9 +340,13 @@ function ApplicantsPanel() {
     return { result, targets: targets.length };
   };
 
-  const myRole = state.me?.role || 'super';
-  const canAssignExam = myRole === 'super';                 // 슈퍼 관리자만
-  const canDownload = myRole !== 'viewer';                  // 조회자는 불가
+  const canAssignExam = DataStore.can('applicants', 'exam');
+  const canDownload = DataStore.can('applicants', 'export');
+  const canPhoto = DataStore.can('applicants', 'photo');
+  const canPay = DataStore.can('applicants', 'pay');
+  const canApprove = DataStore.can('applicants', 'approve');
+  const canReject = DataStore.can('applicants', 'reject');
+  const isReadonly = DataStore.isReadonly();
 
   // bulk action helpers
   const bulkIds = Array.from(selected);
@@ -395,7 +399,7 @@ function ApplicantsPanel() {
             <option value="Ⅱ">TOPIK Ⅱ</option>
             <option value="동시">동시(Ⅰ+Ⅱ)</option>
           </select>
-          <input className="input search" type="text" placeholder="한글·영문 성명/생년월일/수험번호"
+          <input className="input search" type="text" placeholder="한글·영문 성명/이메일/생년월일/수험번호"
             value={q} onChange={e => setQ(e.target.value)}/>
           {(statusF !== 'all' || venueF !== 'all' || levelF !== 'all' || q) && (
             <button className="ibtn ghost" onClick={() => { setStatusF('all'); setVenueF('all'); setLevelF('all'); setQ(''); }}>
@@ -405,13 +409,19 @@ function ApplicantsPanel() {
         </div>
       </div>
 
+      {isReadonly && (
+        <div style={{ padding: 12, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
+          ⓘ 조회 전용 계정입니다. 사진 심사·수납·승인·반려 등 변경 작업이 비활성화됩니다.
+        </div>
+      )}
+
       {/* Bulk action bar */}
       <BulkBar count={bulkIds.length} onClear={() => setSelected(new Set())}>
-        <button className="ibtn" onClick={() => doBulkPhotoApprove(bulkIds)}>사진 일괄 승인</button>
-        <button className="ibtn" onClick={() => setPayModal({ ids: bulkIds, mode: 'pay' })}>오프라인 수납</button>
-        <button className="ibtn" onClick={() => setApproveModal({ ids: bulkIds })}>승인</button>
-        <button className="ibtn danger" onClick={() => setRejectModal({ ids: bulkIds })}>반려</button>
-        <button className="ibtn" onClick={() => setPayModal({ ids: bulkIds.filter(id => state.applicants.find(a => a.id === id)?.paid), mode: 'cancel' })}>수납 취소(환불)</button>
+        <button className="ibtn" disabled={!canPhoto} onClick={() => doBulkPhotoApprove(bulkIds)}>사진 일괄 승인</button>
+        <button className="ibtn" disabled={!canPay} onClick={() => setPayModal({ ids: bulkIds, mode: 'pay' })}>오프라인 수납</button>
+        <button className="ibtn" disabled={!canApprove} onClick={() => setApproveModal({ ids: bulkIds })}>승인</button>
+        <button className="ibtn danger" disabled={!canReject} onClick={() => setRejectModal({ ids: bulkIds })}>반려</button>
+        <button className="ibtn" disabled={!canPay} onClick={() => setPayModal({ ids: bulkIds.filter(id => state.applicants.find(a => a.id === id)?.paid), mode: 'cancel' })}>수납 취소(환불)</button>
       </BulkBar>
 
       {/* Data grid — TPKM_BO_2_1_2 연명부 컬럼 정합 */}
@@ -425,6 +435,7 @@ function ApplicantsPanel() {
                 <th>사진</th>
                 <th className="sortable" onClick={() => sortBy('nameKo')}>한글성명</th>
                 <th className="sortable" onClick={() => sortBy('nameEn')}>영문성명</th>
+                <th className="sortable" onClick={() => sortBy('email')}>이메일</th>
                 <th>급수</th>
                 <th className="sortable" onClick={() => sortBy('appliedAt')}>접수일</th>
                 <th>사진심사</th>
@@ -444,6 +455,7 @@ function ApplicantsPanel() {
                   </td>
                   <td><a style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }} onClick={() => setDetailId(a.id)}>{a.nameKo}</a></td>
                   <td>{a.nameEn}</td>
+                  <td className="muted">{a.email || '—'}</td>
                   <td><span className="code-id">{a.level}</span></td>
                   <td className="code muted">{a.appliedAt}</td>
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
@@ -458,7 +470,7 @@ function ApplicantsPanel() {
                 </tr>
               ))}
               {!pageRows.length && (
-                <tr><td colSpan="12">
+                <tr><td colSpan="13">
                   <div className="empty">
                     <div className="icon"><I.Search/></div>
                     <div className="ttl">조건에 맞는 접수자가 없습니다</div>
@@ -690,6 +702,7 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
 function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject }) {
   const state = useStore();
   const a = state.applicants.find(x => x.id === id);
+  const isReadonly = DataStore.isReadonly();
   const [tab, setTab] = useState('profile');
   const [memo, setMemo] = useState('');
   const [photoMode, setPhotoMode] = useState(null);
@@ -732,9 +745,11 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
       sub={<span>회차 컨텍스트 · 접수ID <code className="code-id">{a.id}</code> · 상태 <Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></span>}
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
-        <button className="btn btn-secondary" onClick={onPay} disabled={locked}>{a.paid ? '수납 취소' : '수납'}</button>
-        <button className="btn btn-primary" onClick={onApprove} disabled={locked}>승인</button>
+        {!isReadonly && <>
+          <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
+          <button className="btn btn-secondary" onClick={onPay} disabled={locked}>{a.paid ? '수납 취소' : '수납'}</button>
+          <button className="btn btn-primary" onClick={onApprove} disabled={locked}>승인</button>
+        </>}
       </>}
       tabs={
         <div className="lp-tabs">
@@ -748,8 +763,8 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
           <div>
             <PhotoLarge status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl} rotate={rotate} onClick={a.photoUrl ? () => setZoom(true) : null}/>
             <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-              <button className="ibtn" style={{ flex: 1 }} onClick={downloadOriginal} disabled={!a.photoFileId}><I.Download style={{ width: 12, height: 12 }}/> 원본 받기</button>
-              <button className="ibtn" style={{ flex: 1 }} onClick={() => setRotate(r => (r + 90) % 360)} disabled={!a.photoUrl}>회전 보정</button>
+              <button className="ibtn" style={{ flex: 1 }} onClick={downloadOriginal} disabled={isReadonly || !a.photoFileId}><I.Download style={{ width: 12, height: 12 }}/> 원본 받기</button>
+              <button className="ibtn" style={{ flex: 1 }} onClick={() => setRotate(r => (r + 90) % 360)} disabled={isReadonly || !a.photoUrl}>회전 보정</button>
             </div>
             <div style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
@@ -757,20 +772,20 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
                 <PhotoStatusPill status={a.photoStatus}/>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button className="ibtn" style={{ flex: 1 }} onClick={() => setPhotoMode(photoMode === 'reject' ? null : 'reject')} disabled={locked}>사진 반려</button>
-                <button className="ibtn" style={{ flex: 1 }} onClick={approvePhoto} disabled={locked || a.photoStatus === 'approved'}>사진 승인</button>
+                <button className="ibtn" style={{ flex: 1 }} onClick={() => setPhotoMode(photoMode === 'reject' ? null : 'reject')} disabled={isReadonly || locked}>사진 반려</button>
+                <button className="ibtn" style={{ flex: 1 }} onClick={approvePhoto} disabled={isReadonly || locked || a.photoStatus === 'approved'}>사진 승인</button>
               </div>
               {photoMode === 'reject' && (
                 <div style={{ marginTop: 10 }}>
                   <FormRow label="사진 반려 사유" required>
-                    <select className="select" value={photoReason} onChange={e => setPhotoReason(e.target.value)} disabled={locked}>
+                    <select className="select" value={photoReason} onChange={e => setPhotoReason(e.target.value)} disabled={isReadonly || locked}>
                       {PHOTO_REJECT_REASONS.map(r => <option key={r}>{r}</option>)}
                     </select>
                   </FormRow>
                   <FormRow label={photoReason === '기타' ? '상세 사유' : '추가 안내(선택)'} required={photoReason === '기타'}>
-                    <textarea className="textarea" rows="2" value={photoOther} onChange={e => setPhotoOther(e.target.value)} placeholder="예) 정면 사진이 아닙니다. 사진을 다시 등록해주세요." disabled={locked}></textarea>
+                    <textarea className="textarea" rows="2" value={photoOther} onChange={e => setPhotoOther(e.target.value)} placeholder="예) 정면 사진이 아닙니다. 사진을 다시 등록해주세요." disabled={isReadonly || locked}></textarea>
                   </FormRow>
-                  <button className="btn btn-secondary btn-block" onClick={rejectPhoto} disabled={locked || (photoReason === '기타' && !photoOther.trim())}>사진 반려 처리</button>
+                  <button className="btn btn-secondary btn-block" onClick={rejectPhoto} disabled={isReadonly || locked || (photoReason === '기타' && !photoOther.trim())}>사진 반려 처리</button>
                 </div>
               )}
             </div>
@@ -815,9 +830,9 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
       {tab === 'memo' && (
         <div>
           <FormRow label="새 메모 추가">
-            <textarea className="textarea" rows="3" value={memo} onChange={e => setMemo(e.target.value)} placeholder="이 응시자에 대한 관리자 메모를 입력하세요"></textarea>
+            <textarea className="textarea" rows="3" value={memo} onChange={e => setMemo(e.target.value)} placeholder="이 응시자에 대한 관리자 메모를 입력하세요" disabled={isReadonly}></textarea>
           </FormRow>
-          <button className="btn btn-primary" onClick={addMemo} disabled={!memo.trim()}>메모 추가</button>
+          <button className="btn btn-primary" onClick={addMemo} disabled={isReadonly || !memo.trim()}>메모 추가</button>
           <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid var(--border)' }}/>
           <div>
             <div className="label" style={{ fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>지난 메모</div>

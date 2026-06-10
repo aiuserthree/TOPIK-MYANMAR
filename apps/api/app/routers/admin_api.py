@@ -7,7 +7,7 @@ import secrets
 import string
 import zipfile
 from urllib.parse import quote
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
 from app.lib.audit import write_audit
+from app.lib.board_helpers import build_comment_tree, official_replies_for_post, parse_parent_comment_id, resolve_comment_is_secret
 from app.lib.deps import (
     AuthUser,
     get_client_ip,
@@ -129,14 +130,84 @@ class ReplyBody(BaseModel):
     mark_complete: bool = True
 
 
+def _parse_optional_datetime(val) -> datetime | None:
+    if val is None or val == "":
+        return None
+    if isinstance(val, datetime):
+        return val if val.tzinfo else val.replace(tzinfo=timezone.utc)
+    if isinstance(val, str):
+        text = val.strip()
+        if not text:
+            return None
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(text)
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            raise api_error("VALIDATION_ERROR", "날짜 형식이 올바르지 않습니다.", 400)
+    raise api_error("VALIDATION_ERROR", "날짜 형식이 올바르지 않습니다.", 400)
+
+
+def _validate_notice_display_window(start: datetime | None, end: datetime | None) -> None:
+    if start and end and end <= start:
+        raise api_error("VALIDATION_ERROR", "노출 종료는 노출 시작 이후여야 합니다.", 400)
+
+
 class NoticeBody(BaseModel):
     category: str
     title: str
+    title_my: str | None = None
+    title_en: str | None = None
     body_html: str = ""
+    body_my: str | None = None
+    body_en: str | None = None
     is_pinned: bool = False
     is_published: bool = False
+    display_start_at: datetime | None = None
+    display_end_at: datetime | None = None
     attachment_file_ids: list[int] = []
     remove_attachment_file_ids: list[int] = []
+
+
+_NOTICE_TRASH_RETENTION_DAYS = 30
+
+
+def _notice_row_dict(n: Notice, attachments: list[dict] | None = None) -> dict:
+    return {
+        "id": n.id,
+        "category": n.category,
+        "title": n.title,
+        "title_my": n.title_my,
+        "title_en": n.title_en,
+        "body_html": n.body_html,
+        "body_my": n.body_my,
+        "body_en": n.body_en,
+        "is_published": n.is_published,
+        "is_pinned": n.is_pinned,
+        "display_start_at": n.display_start_at.isoformat() if n.display_start_at else None,
+        "display_end_at": n.display_end_at.isoformat() if n.display_end_at else None,
+        "is_deleted": n.is_deleted,
+        "deleted_at": n.deleted_at.isoformat() if n.deleted_at else None,
+        "published_at": n.published_at.isoformat() if n.published_at else None,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+        "view_count": n.view_count,
+        "attachments": attachments or [],
+    }
+
+
+async def _purge_expired_notice_trash(db: AsyncSession) -> int:
+    """휴지통 30일 경과 공지 영구 삭제."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=_NOTICE_TRASH_RETENTION_DAYS)
+    expired = (
+        await db.execute(
+            select(Notice.id).where(Notice.is_deleted.is_(True), Notice.deleted_at.isnot(None), Notice.deleted_at < cutoff)
+        )
+    ).scalars().all()
+    if not expired:
+        return 0
+    await db.execute(delete(Notice).where(Notice.id.in_(expired)))
+    return len(expired)
 
 
 def _notice_attachment_dict(row: FileAttachment) -> dict:
@@ -307,6 +378,7 @@ class UserPatchBody(BaseModel):
     marketing_opt_in: bool | None = None
     status: str | None = None
     rev: int | None = None
+    memo: str | None = None  # 처리 사유(BO 회원 수정·정지·탈퇴) — audit 기록용
 
 
 class AdminUserBody(BaseModel):
@@ -1247,8 +1319,18 @@ async def create_venue(
 
 
 @router.get("/notices")
-async def admin_notices(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
-    result = await db.execute(select(Notice).order_by(Notice.id.desc()))
+async def admin_notices(
+    trash: bool = Query(False),
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    if trash:
+        await _purge_expired_notice_trash(db)
+        await db.commit()
+    stmt = select(Notice).where(Notice.is_deleted.is_(trash)).order_by(
+        Notice.deleted_at.desc().nullslast() if trash else Notice.id.desc()
+    )
+    result = await db.execute(stmt)
     notices = result.scalars().all()
     notice_ids = [n.id for n in notices]
     att_map: dict[int, list[dict]] = {nid: [] for nid in notice_ids}
@@ -1262,21 +1344,7 @@ async def admin_notices(_: AuthUser = Depends(require_any_admin), db: AsyncSessi
         for row in att_res.scalars().all():
             att_map.setdefault(row.owner_id, []).append(_notice_attachment_dict(row))
     return {
-        "items": [
-            {
-                "id": n.id,
-                "category": n.category,
-                "title": n.title,
-                "body_html": n.body_html,
-                "is_published": n.is_published,
-                "is_pinned": n.is_pinned,
-                "published_at": n.published_at.isoformat() if n.published_at else None,
-                "created_at": n.created_at.isoformat() if n.created_at else None,
-                "view_count": n.view_count,
-                "attachments": att_map.get(n.id, []),
-            }
-            for n in notices
-        ]
+        "items": [_notice_row_dict(n, att_map.get(n.id, [])) for n in notices]
     }
 
 
@@ -1287,12 +1355,19 @@ async def create_notice(
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    _validate_notice_display_window(body.display_start_at, body.display_end_at)
     notice = Notice(
         category=body.category,
         title=body.title,
+        title_my=body.title_my,
+        title_en=body.title_en,
         body_html=body.body_html,
+        body_my=body.body_my,
+        body_en=body.body_en,
         is_pinned=body.is_pinned,
         is_published=body.is_published,
+        display_start_at=body.display_start_at,
+        display_end_at=body.display_end_at,
         author_admin_id=admin.id,
         published_at=datetime.now(timezone.utc) if body.is_published else None,
     )
@@ -1416,9 +1491,17 @@ async def update_notice(
     notice = (await db.execute(select(Notice).where(Notice.id == notice_id))).scalar_one_or_none()
     if not notice:
         raise api_error("NOT_FOUND", "공지를 찾을 수 없습니다.", 404)
-    for key in ("category", "title", "body_html", "is_pinned", "is_published"):
+    datetime_keys = {"display_start_at", "display_end_at"}
+    for key in (
+        "category", "title", "title_my", "title_en",
+        "body_html", "body_my", "body_en",
+        "is_pinned", "is_published",
+        "display_start_at", "display_end_at",
+    ):
         if key in body:
-            setattr(notice, key, body[key])
+            val = _parse_optional_datetime(body[key]) if key in datetime_keys else body[key]
+            setattr(notice, key, val)
+    _validate_notice_display_window(notice.display_start_at, notice.display_end_at)
     if body.get("is_published") and not notice.published_at:
         notice.published_at = datetime.now(timezone.utc)
     add_ids = body.get("attachment_file_ids") or []
@@ -1437,6 +1520,50 @@ async def update_notice(
     )
     await db.commit()
     return {"updated": True}
+
+
+@router.delete("/notices/{notice_id}")
+async def delete_notice(
+    notice_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """공지 soft-delete — 휴지통 30일 보관."""
+    notice = (await db.execute(select(Notice).where(Notice.id == notice_id, Notice.is_deleted.is_(False)))).scalar_one_or_none()
+    if not notice:
+        raise api_error("NOT_FOUND", "공지를 찾을 수 없습니다.", 404)
+    notice.is_deleted = True
+    notice.deleted_at = datetime.now(timezone.utc)
+    notice.is_published = False
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="notice_delete",
+        target_type="notices", target_id=notice_id,
+        before_data={"title": notice.title}, ip_address=ip,
+    )
+    await db.commit()
+    return {"deleted": True, "id": notice_id}
+
+
+@router.post("/notices/{notice_id}/restore")
+async def restore_notice(
+    notice_id: int,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    notice = (await db.execute(select(Notice).where(Notice.id == notice_id, Notice.is_deleted.is_(True)))).scalar_one_or_none()
+    if not notice:
+        raise api_error("NOT_FOUND", "휴지통에 공지가 없습니다.", 404)
+    notice.is_deleted = False
+    notice.deleted_at = None
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="notice_restore",
+        target_type="notices", target_id=notice_id,
+        after_data={"title": notice.title}, ip_address=ip,
+    )
+    await db.commit()
+    return {"restored": True, "id": notice_id}
 
 
 @router.get("/faq")
@@ -1713,20 +1840,26 @@ async def admin_get_board_post(
         .where(BoardComment.board_post_id == post_id, BoardComment.is_deleted.is_(False))
         .order_by(BoardComment.created_at, BoardComment.id)
     )
-    comments = [
-        {
-            "id": c.id,
-            "body": c.body,
-            "parent_comment_id": c.parent_comment_id,
-            "author_admin_id": c.author_admin_id,
-            "author_user_id": c.author_user_id,
-            "is_admin": c.author_admin_id is not None,
-            "is_secret": c.is_secret,
-            "created_at": c.created_at.isoformat(),
-            "created_at_label": fmt_datetime(c.created_at),
-        }
-        for c in comments_res.scalars().all()
-    ]
+    raw_comments = comments_res.scalars().all()
+    user_ids = {c.author_user_id for c in raw_comments if c.author_user_id}
+    admin_ids = {c.author_admin_id for c in raw_comments if c.author_admin_id}
+    users: dict[int, str] = {}
+    admins: dict[int, str] = {}
+    if user_ids:
+        ures = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users = {u.id: u.name_ko for u in ures.scalars().all()}
+    if admin_ids:
+        ares = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
+        admins = {a.id: a.name for a in ares.scalars().all()}
+
+    def author_for(c: BoardComment) -> str | None:
+        if c.author_admin_id:
+            return admins.get(c.author_admin_id) or "관리자"
+        if c.author_user_id:
+            return users.get(c.author_user_id)
+        return None
+
+    comments = build_comment_tree(raw_comments, author_for=author_for)
     att_res = await db.execute(
         select(FileAttachment).where(
             FileAttachment.owner_type == "board_post", FileAttachment.owner_id == post_id
@@ -1737,6 +1870,8 @@ async def admin_get_board_post(
         for f in att_res.scalars().all()
     ]
     data = _board_post_dict(post, user)
+    data["admin_replies"] = await official_replies_for_post(db, post)
+    data["has_admin_reply"] = bool(data["admin_replies"] or post.admin_reply)
     data["comments"] = comments
     data["attachments"] = attachments
     # 관리자가 비밀글 열람 시 audit 기록(계약서 6.2).
@@ -1763,22 +1898,27 @@ async def admin_list_board_comments(
         .where(BoardComment.board_post_id == post_id, BoardComment.is_deleted.is_(False))
         .order_by(BoardComment.created_at, BoardComment.id)
     )
-    return {
-        "items": [
-            {
-                "id": c.id,
-                "body": c.body,
-                "parent_comment_id": c.parent_comment_id,
-                "author_admin_id": c.author_admin_id,
-                "author_user_id": c.author_user_id,
-                "is_admin": c.author_admin_id is not None,
-                "is_secret": c.is_secret,
-                "created_at": c.created_at.isoformat(),
-                "created_at_label": fmt_datetime(c.created_at),
-            }
-            for c in comments_res.scalars().all()
-        ]
-    }
+    raw_comments = comments_res.scalars().all()
+    user_ids = {c.author_user_id for c in raw_comments if c.author_user_id}
+    admin_ids = {c.author_admin_id for c in raw_comments if c.author_admin_id}
+    users: dict[int, str] = {}
+    admins: dict[int, str] = {}
+    if user_ids:
+        ures = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users = {u.id: u.name_ko for u in ures.scalars().all()}
+    if admin_ids:
+        ares = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
+        admins = {a.id: a.name for a in ares.scalars().all()}
+
+    def author_for(c: BoardComment) -> str | None:
+        if c.author_admin_id:
+            return admins.get(c.author_admin_id) or "관리자"
+        if c.author_user_id:
+            return users.get(c.author_user_id)
+        return None
+
+    roots = build_comment_tree(raw_comments, author_for=author_for)
+    return {"comments": roots, "items": roots}
 
 
 @router.post("/board/posts/{post_id}/comments")
@@ -1795,17 +1935,22 @@ async def admin_create_board_comment(
     content = (body.get("content") or body.get("body") or "").strip()
     if not content:
         raise api_error("VALIDATION_ERROR", "댓글 내용을 입력해 주세요.")
-    parent_id = body.get("parent_id") or body.get("parent_comment_id")
+    parent_raw = body.get("parent_id") if body.get("parent_id") is not None else body.get("parent_comment_id")
+    parent_id = parse_parent_comment_id(parent_raw)
+    if parent_raw is not None and parent_raw != "" and parent_id is None:
+        raise api_error("VALIDATION_ERROR", "parent_comment_id가 올바르지 않습니다.", 400)
+    is_public_raw = body.get("is_public")
+    is_public = None if is_public_raw is None else bool(is_public_raw)
     comment = BoardComment(
         board_post_id=post_id,
         author_admin_id=admin.id,
         body=content,
         parent_comment_id=parent_id,
+        is_secret=resolve_comment_is_secret(post, is_public),
     )
     db.add(comment)
     user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
     if user:
-        parent_id = body.get("parent_id") or body.get("parent_comment_id")
         await notify_board_reply(
             db, post, user, activity_type="댓글" if not parent_id else "대댓글"
         )
@@ -1881,6 +2026,13 @@ async def reply_post(
     post.admin_reply = body.body.strip()
     post.admin_replied_at = datetime.now(timezone.utc)
     post.admin_replier_id = admin.id
+    db.add(BoardComment(
+        board_post_id=post_id,
+        author_admin_id=admin.id,
+        body=body.body.strip(),
+        is_official_reply=True,
+        is_secret=post.is_secret,
+    ))
     if body.mark_complete:
         post.workflow_status = "answered" if post.board_type == "inquiry" else "completed"
     user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
@@ -1905,6 +2057,7 @@ async def admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSession
                 "nationality": u.nationality,
                 "status": u.status,
                 "marketing_opt_in": u.marketing_opt_in,
+                "signup_provider": u.signup_provider or "email",
                 "created_at": u.created_at.isoformat() if u.created_at else None,
                 "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
             }
@@ -1931,15 +2084,31 @@ async def update_user(
     before = {"status": user.status, "email": user.email}
     data = body.model_dump(exclude_unset=True)
     data.pop("rev", None)
+    memo = (data.pop("memo", None) or "").strip() or None
+    if "email" in data:
+        requested = (data.pop("email") or "").strip().lower()
+        if requested and requested != (user.email or "").strip().lower():
+            raise api_error(
+                "EMAIL_NOT_EDITABLE",
+                "이메일(로그인 ID)은 변경할 수 없습니다.",
+                400,
+            )
     field_labels = {
         "name_ko": "한글성명",
         "name_en": "영문성명",
-        "email": "이메일",
         "phone": "연락처",
         "nationality": "국적",
         "marketing_opt_in": "마케팅수신",
         "status": "상태",
     }
+
+    def _format_diff_value(key: str, val) -> str:
+        if key == "marketing_opt_in":
+            if val is True:
+                return "동의"
+            if val is False:
+                return "미동의"
+        return str(val)
     changed_fields: list[str] = []
     diff_lines: list[str] = []
     if "status" in data and data["status"] not in ("active", "suspended", "withdrawn"):
@@ -1952,7 +2121,7 @@ async def update_user(
         if old != val:
             label = field_labels.get(key, key)
             changed_fields.append(label)
-            diff_lines.append(f"{label}: {old} → {val}")
+            diff_lines.append(f"{label}: {_format_diff_value(key, old)} → {_format_diff_value(key, val)}")
         setattr(user, key, val)
     canceled_count = 0
     if data.get("status") == "withdrawn":
@@ -1986,6 +2155,10 @@ async def update_user(
             action="withdrawn",
             canceled_applications=canceled_count,
         )
+    audit_memo = memo
+    if data.get("status") == "withdrawn" and canceled_count > 0:
+        suffix = f"진행 중 접수 {canceled_count}건 자동 취소"
+        audit_memo = f"{memo} · {suffix}" if memo else suffix
     await write_audit(
         db,
         admin_user_id=admin.id,
@@ -1994,6 +2167,7 @@ async def update_user(
         target_id=user_id,
         before_data=before,
         after_data=data,
+        memo=audit_memo,
         ip_address=ip,
     )
     await db.commit()
@@ -2009,6 +2183,12 @@ async def reset_user_password(
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "회원을 찾을 수 없습니다.", 404)
+    if user.signup_provider != "email" or not user.password_hash:
+        raise api_error(
+            "VALIDATION_ERROR",
+            "Google 간편가입 회원은 비밀번호 초기화를 사용할 수 없습니다.",
+            400,
+        )
     alphabet = string.ascii_letters + string.digits
     temp = "tpkm" + "".join(secrets.choice(alphabet) for _ in range(8))
     user.password_hash = hash_password(temp)
@@ -2052,12 +2232,19 @@ async def create_admin_user(
 ) -> dict:
     _require_super(admin)
     email = body.email.strip().lower()
+    password = body.password.strip()
+    if not is_valid_password(password):
+        raise api_error(
+            "VALIDATION_ERROR",
+            "초기 비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.",
+            400,
+        )
     exists = await db.execute(select(AdminUser).where(AdminUser.email == email))
     if exists.scalar_one_or_none():
         raise api_error("DUPLICATE", "이미 사용 중인 이메일입니다.", 409)
     row = AdminUser(
         email=email,
-        password_hash=hash_password(body.password),
+        password_hash=hash_password(password),
         name=body.name.strip(),
         role=_normalize_admin_role(body.role),
         status=body.status,
@@ -2167,11 +2354,16 @@ async def admin_change_password(
 ) -> dict:
     """관리자 본인 비밀번호 변경(첫 로그인 must_change_password 해제 포함)."""
     row = (await db.execute(select(AdminUser).where(AdminUser.id == admin.id))).scalar_one_or_none()
-    if not row or not verify_password(body.current_password, row.password_hash):
+    current_password = body.current_password.strip()
+    new_password = body.new_password.strip()
+    new_password_confirm = body.new_password_confirm.strip()
+    if not row or not verify_password(current_password, row.password_hash):
         raise api_error("INVALID_CREDENTIALS", "현재 비밀번호가 올바르지 않습니다.", 400)
-    if not is_valid_password(body.new_password) or body.new_password != body.new_password_confirm:
+    if not is_valid_password(new_password) or new_password != new_password_confirm:
         raise api_error("VALIDATION_ERROR", "새 비밀번호 규칙을 확인해 주세요.")
-    row.password_hash = hash_password(body.new_password)
+    if verify_password(new_password, row.password_hash):
+        raise api_error("VALIDATION_ERROR", "새 비밀번호는 현재 비밀번호와 달라야 합니다.", 400)
+    row.password_hash = hash_password(new_password)
     row.password_changed_at = datetime.now(timezone.utc)
     row.must_change_password = False
     await write_audit(

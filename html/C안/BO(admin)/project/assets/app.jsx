@@ -47,32 +47,83 @@ const CRUMB = {
 };
 
 // ===== 첫 로그인 비밀번호 변경 강제 (must_change_password) =====
+function PasswordField({ label, value, onChange, show, onToggleShow, placeholder, autoComplete, required }) {
+  return (
+    <div className="form-row">
+      <label className="label">{label}{required && <span className="req"> *</span>}</label>
+      <div className="pw-wrap">
+        <input
+          className="input"
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+        />
+        <button type="button" className="pw-toggle" onClick={onToggleShow}>
+          {show ? '숨기기' : '표시'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ChangePasswordGate({ onDone }) {
   const [cur, setCur] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
+  const [showCur, setShowCur] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const pwRuleOk = /[A-Za-z]/.test(pw) && /\d/.test(pw) && /[^A-Za-z0-9]/.test(pw);
   const valid = pw.length >= 8 && pwRuleOk && pw === pw2;
 
+  const goToLogin = () => {
+    if (window.TopikBoApi) TopikBoApi.logout();
+    location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+  };
+
+  useEffect(() => {
+    if (!window.TopikBoApi || !TopikBoApi.isAuthenticated()) {
+      goToLogin();
+    }
+  }, []);
+
+  const finishPasswordChange = () => {
+    try {
+      if (typeof window.toastOk === 'function') {
+        window.toastOk('비밀번호가 변경되었습니다. 다시 로그인해 주세요.');
+      }
+    } catch (e) { /* toast optional */ }
+    if (window.TopikBoApi) TopikBoApi.logout();
+    location.replace('admin-login.html?pw_changed=1');
+  };
+
   const submit = (e) => {
     e.preventDefault();
     setErr('');
-    if (pw.length < 8) { setErr('새 비밀번호는 8자 이상이어야 합니다.'); return; }
-    if (!pwRuleOk) { setErr('새 비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.'); return; }
-    if (pw !== pw2) { setErr('새 비밀번호가 일치하지 않습니다.'); return; }
+    const curPw = cur.trim();
+    const newPw = pw.trim();
+    const newPw2 = pw2.trim();
+    if (!curPw) { setErr('현재(임시) 비밀번호를 입력해 주세요.'); return; }
+    if (newPw.length < 8) { setErr('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    if (!/[A-Za-z]/.test(newPw) || !/\d/.test(newPw) || !/[^A-Za-z0-9]/.test(newPw)) {
+      setErr('새 비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.'); return;
+    }
+    if (newPw !== newPw2) { setErr('새 비밀번호가 일치하지 않습니다.'); return; }
+    if (newPw === curPw) { setErr('새 비밀번호는 현재 비밀번호와 달라야 합니다.'); return; }
     if (!window.TopikBoApi || !TopikBoApi.changeMyPassword) { setErr('API 클라이언트를 불러오지 못했습니다.'); return; }
     setBusy(true);
-    TopikBoApi.changeMyPassword(cur, pw, pw2).then(function (res) {
-      setBusy(false);
+    TopikBoApi.changeMyPassword(curPw, newPw, newPw2).then(function (res) {
       if (res.ok) {
-        try {
-          const raw = TopikBoApi.getSessionRaw();
-          const s = JSON.parse(raw); s.must_change_password = false;
-          sessionStorage.setItem('bo_session', JSON.stringify(s));
-        } catch (e) {}
-        onDone();
+        finishPasswordChange();
+        return;
+      }
+      setBusy(false);
+      if (res.status === 401) {
+        setErr('로그인 세션이 만료되었습니다. 아래 「로그인 페이지로」에서 다시 로그인한 뒤 비밀번호를 변경해 주세요.');
         return;
       }
       setErr(TopikBoApi.parseError(res) || '비밀번호 변경에 실패했습니다.');
@@ -85,20 +136,38 @@ function ChangePasswordGate({ onDone }) {
         <h2 style={{ fontSize: 19, marginBottom: 6 }}>비밀번호 변경이 필요합니다</h2>
         <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 18 }}>첫 로그인(또는 비밀번호 초기화) 후에는 보안을 위해 비밀번호를 변경해야 합니다. 변경 전에는 다른 기능을 사용할 수 없습니다.</p>
         {err && <div style={{ padding: '9px 12px', background: 'var(--danger-50)', border: '1px solid #f5c8ce', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5, marginBottom: 12 }}>{err}</div>}
-        <div className="form-row">
-          <label className="label">현재(임시) 비밀번호</label>
-          <input className="input" type="password" value={cur} onChange={e => setCur(e.target.value)} autoComplete="current-password"/>
-        </div>
-        <div className="form-row">
-          <label className="label">새 비밀번호 <span className="req">*</span></label>
-          <input className="input" type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="8자 이상 · 영문+숫자+특수문자" autoComplete="new-password"/>
-        </div>
-        <div className="form-row">
-          <label className="label">새 비밀번호 확인 <span className="req">*</span></label>
-          <input className="input" type="password" value={pw2} onChange={e => setPw2(e.target.value)} autoComplete="new-password"/>
-        </div>
+        <PasswordField
+          label="현재(임시) 비밀번호"
+          value={cur}
+          onChange={e => setCur(e.target.value)}
+          show={showCur}
+          onToggleShow={() => setShowCur(s => !s)}
+          autoComplete="current-password"
+        />
+        <PasswordField
+          label="새 비밀번호"
+          value={pw}
+          onChange={e => setPw(e.target.value)}
+          show={showPw}
+          onToggleShow={() => setShowPw(s => !s)}
+          placeholder="8자 이상 · 영문+숫자+특수문자"
+          autoComplete="new-password"
+          required
+        />
+        <PasswordField
+          label="새 비밀번호 확인"
+          value={pw2}
+          onChange={e => setPw2(e.target.value)}
+          show={showPw2}
+          onToggleShow={() => setShowPw2(s => !s)}
+          autoComplete="new-password"
+          required
+        />
         <button className="btn btn-primary btn-block" style={{ marginTop: 16, height: 44 }} type="submit" disabled={!valid || busy}>
           {busy ? '변경 중…' : '비밀번호 변경'}
+        </button>
+        <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 10, height: 40 }} onClick={goToLogin}>
+          로그인 페이지로
         </button>
       </form>
     </div>
@@ -128,12 +197,13 @@ function App() {
       location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
       return;
     }
+    if (DataStore.normalizeRole) me.role = DataStore.normalizeRole(me.role);
     DataStore.state.me = me;
     DataStore.notify();
     setMustChange(!!me.must_change_password);
     try { sessionStorage.setItem('tpkm_bo_admin', JSON.stringify({ role: me.role || 'super', name: me.name || me.id })); } catch (e) {}
     if (window.TOPIKBoCore) TOPIKBoCore.startSessionHeartbeat(me.id || me.name, me.name);
-    if (DataStore.initFromApi) DataStore.initFromApi();
+    if (!me.must_change_password && DataStore.initFromApi) DataStore.initFromApi();
   }, []);
 
   useEffect(() => {

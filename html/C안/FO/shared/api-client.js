@@ -355,7 +355,7 @@
             else {
               try { global.localStorage.removeItem("tpkm_user"); } catch (e) { /* ignore */ }
             }
-            return { ok: true, status: res.status, user: body.user, body: body };
+            return { ok: true, status: res.status, user: body.user, body: body, password_change_due: !!body.password_change_due };
           });
       })
       .catch(function (err) {
@@ -638,10 +638,17 @@
     });
   }
 
-  function withdraw(password) {
+  function withdraw(payload) {
+    var body = payload || {};
+    if (typeof payload === "string") {
+      body = { password: payload };
+    }
     return apiFetch("/api/v1/me/withdraw", {
       method: "POST",
-      body: JSON.stringify({ password: password || "" }),
+      body: JSON.stringify({
+        password: body.password || null,
+        google_id_token: body.google_id_token || null,
+      }),
     });
   }
 
@@ -650,6 +657,7 @@
     var parts = [];
     if (q.category) parts.push("category=" + encodeURIComponent(q.category));
     if (q.q) parts.push("q=" + encodeURIComponent(q.q));
+    if (q.lang) parts.push("lang=" + encodeURIComponent(q.lang));
     if (q.page) parts.push("page=" + encodeURIComponent(q.page));
     if (q.page_size) parts.push("page_size=" + encodeURIComponent(q.page_size));
     if (q.home_preview) parts.push("home_preview=1");
@@ -657,10 +665,11 @@
     return apiFetch("/api/v1/notices" + qs, { auth: false });
   }
 
-  function getNotice(id, sessionKey) {
-    var qs = sessionKey
-      ? "?session_key=" + encodeURIComponent(sessionKey)
-      : "";
+  function getNotice(id, sessionKey, lang) {
+    var parts = [];
+    if (sessionKey) parts.push("session_key=" + encodeURIComponent(sessionKey));
+    if (lang) parts.push("lang=" + encodeURIComponent(lang));
+    var qs = parts.length ? "?" + parts.join("&") : "";
     return apiFetch("/api/v1/notices/" + encodeURIComponent(id) + qs, {
       auth: false,
     });
@@ -690,6 +699,19 @@
     return apiFetch("/api/v1/board/posts", {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  }
+
+  function updateBoardPost(id, payload) {
+    return apiFetch("/api/v1/board/posts/" + encodeURIComponent(id), {
+      method: "PATCH",
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  function deleteBoardPost(id) {
+    return apiFetch("/api/v1/board/posts/" + encodeURIComponent(id), {
+      method: "DELETE",
     });
   }
 
@@ -835,6 +857,8 @@
     getBoardPosts: getBoardPosts,
     getBoardPost: getBoardPost,
     createBoardPost: createBoardPost,
+    updateBoardPost: updateBoardPost,
+    deleteBoardPost: deleteBoardPost,
     uploadBoardAttachment: uploadBoardAttachment,
     unlockBoardPost: unlockBoardPost,
     getTerms: getTerms,

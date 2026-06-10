@@ -468,13 +468,10 @@
             },
             {
               type: "paragraph",
-              text: "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 또는 문의 게시판으로 연락해 주세요.",
+              text: "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 으로 문의해 주세요.",
             },
           ],
-          ctas: [
-            { label: "문의 게시판", href: "{supportBoardUrl}", kind: "primary" },
-            { label: "사이트 바로가기", href: "{siteUrlFull}", kind: "secondary" },
-          ],
+          ctas: [],
         },
         my: {
           subject: "[TOPIK Myanmar] အဖွဲ့ဝင်အကောင့် {accountStatusLabel} အကြောင်းကြားချက်",
@@ -508,13 +505,10 @@
             },
             {
               type: "paragraph",
-              text: "ဤလုပ်ဆောင်ချက်ကို သင်တောင်းဆိုခြင်းမရှိပါက {supportEmail} သို့မဟုတ် မေးမြန်းစာမျက်နှာသို့ ဆက်သွယ်ပါ။",
+              text: "ဤလုပ်ဆောင်ချက်ကို သင်တောင်းဆိုခြင်းမရှိပါက ချက်ချင်း {supportEmail} သို့ ဆက်သွယ်ပါ။",
             },
           ],
-          ctas: [
-            { label: "မေးမြန်းစာမျက်နှာ", href: "{supportBoardUrl}", kind: "primary" },
-            { label: "ဝဘ်ဆိုက်သို့", href: "{siteUrlFull}", kind: "secondary" },
-          ],
+          ctas: [],
         },
         en: {
           subject: "[TOPIK Myanmar] Account {accountStatusLabel} notice",
@@ -548,13 +542,10 @@
             },
             {
               type: "paragraph",
-              text: "If you did not request this action, contact us at {supportEmail} or via the inquiry board.",
+              text: "If you did not request this action, please contact us immediately at {supportEmail}.",
             },
           ],
-          ctas: [
-            { label: "Inquiry board", href: "{supportBoardUrl}", kind: "primary" },
-            { label: "Visit website", href: "{siteUrlFull}", kind: "secondary" },
-          ],
+          ctas: [],
         },
       },
     },

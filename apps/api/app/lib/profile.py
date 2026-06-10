@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.lib.validation import validate_roster_codes
@@ -8,6 +10,7 @@ from app.models.user import User
 PROFILE_INCOMPLETE_BIRTH = "00000000"
 SIGNUP_PENDING_STATUS = "pending"
 AUTH_USER_STATUSES: tuple[str, ...] = ("active", SIGNUP_PENDING_STATUS)
+WITHDRAW_REREGISTRATION_DAYS = 30
 
 
 def is_profile_incomplete(user: User) -> bool:
@@ -28,5 +31,32 @@ def is_full_member(user: User) -> bool:
 
 
 async def remove_incomplete_signup_user(db: AsyncSession, user: User) -> None:
+    await db.delete(user)
+    await db.flush()
+
+
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def withdrawn_rejoin_days_remaining(user: User) -> int | None:
+    """탈퇴 후 재가입 제한 잔여 일수. 제한 없으면 None."""
+    if user.status != "withdrawn":
+        return None
+    withdrawn_at = user.withdrawn_at or user.updated_at or user.created_at
+    if not withdrawn_at:
+        return WITHDRAW_REREGISTRATION_DAYS
+    elapsed_days = (datetime.now(timezone.utc) - _as_utc(withdrawn_at)).days
+    remaining = WITHDRAW_REREGISTRATION_DAYS - elapsed_days
+    if remaining <= 0:
+        return None
+    return remaining
+
+
+async def remove_withdrawn_user_for_reregister(db: AsyncSession, user: User) -> None:
+    if user.status != "withdrawn":
+        return
     await db.delete(user)
     await db.flush()

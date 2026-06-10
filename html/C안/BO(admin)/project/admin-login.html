@@ -159,6 +159,11 @@
       <h2>관리자 로그인</h2>
       <p class="lead">발급받은 관리자 아이디로 로그인하세요.</p>
 
+      <div class="err-banner" id="okBanner" style="display:none;background:var(--st-approved-bg);border-color:#b7e4c7;color:var(--st-approved);">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+        <div><strong>비밀번호 변경 완료</strong> · 새 비밀번호로 다시 로그인해 주세요.</div>
+      </div>
+
       <div class="err-banner" id="errBanner">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
         <div><strong>로그인 실패</strong> · 아이디 또는 비밀번호가 올바르지 않습니다. <span id="attempts" style="font-family:'Inter',sans-serif;"></span></div>
@@ -215,6 +220,10 @@
     const params = new URLSearchParams(location.search);
     const next = params.get('next');
     location.replace(next && next.startsWith('admin') ? next : 'admin.html');
+  }
+
+  if (new URLSearchParams(location.search).get('pw_changed') === '1') {
+    document.getElementById('okBanner').style.display = 'flex';
   }
 
   if (window.TopikBoApi && TopikBoApi.isAuthenticated()) {

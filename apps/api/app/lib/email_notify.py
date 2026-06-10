@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.models.admin import AdminUser
 from app.models.application import Application
 from app.models.board import BoardPost
 from app.models.exam import ExamRound, ExamVenue
+from app.lib.profile import WITHDRAW_REREGISTRATION_DAYS
 from app.models.user import User
 
 BOARD_NAMES = {
@@ -21,6 +22,31 @@ BOARD_NAMES = {
     "refund": "환불·정보정정신청",
     "inquiry": "1:1 문의",
 }
+
+
+def _withdraw_status_until(user: User, locale: str) -> str:
+    start = user.withdrawn_at or datetime.now(timezone.utc)
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    end = start + timedelta(days=WITHDRAW_REREGISTRATION_DAYS)
+    start_s = fmt_date(start)
+    end_s = fmt_date(end)
+    lang = (locale or "ko")[:2].lower()
+    if lang == "my":
+        return f"{start_s} ~ {end_s} (ပြန်လည်မှတ်ပုံတင်ခြင်း ကန့်သတ် {WITHDRAW_REREGISTRATION_DAYS} ရက်)"
+    if lang == "en":
+        return f"{start_s} ~ {end_s} ({WITHDRAW_REREGISTRATION_DAYS}-day re-registration restriction)"
+    return f"{start_s} ~ {end_s} (재가입 제한 {WITHDRAW_REREGISTRATION_DAYS}일)"
+
+
+def _account_status_until(user: User, action: str, locale: str, status_until: str | None) -> str:
+    if status_until:
+        return status_until
+    if action == "suspended":
+        return "관리자 해제 시까지"
+    if action == "withdrawn":
+        return _withdraw_status_until(user, locale)
+    return "—"
 
 
 def _fo_base(settings: Settings | None = None) -> str:
@@ -327,13 +353,14 @@ async def notify_account_status(
 ) -> None:
     cfg = get_settings()
     base = _fo_base(cfg)
+    locale = user.preferred_lang or "ko"
     label = "정지" if action == "suspended" else "탈퇴"
-    until = status_until or ("관리자 해제 시까지" if action == "suspended" else "—")
+    until = _account_status_until(user, action, locale, status_until)
     await enqueue_email(
         db,
         template_key="account_status",
         to_email=user.email,
-        locale=user.preferred_lang,
+        locale=locale,
         user_id=user.id,
         variables={
             **_common_site_vars(cfg),

@@ -68,7 +68,7 @@
 | 02 접수 | 사진심사·수납 통합, 채번, xlsx/zip | `applicants.jsx` + `admin_api` |
 | 03 시험 | 회차·시험장 CRUD | `sessions.jsx`, `venues.jsx` |
 | 04 콘텐츠 | 공지·FAQ·환불·문의 | `notices.jsx` 등 + bridge |
-| 05 회원·약관 | 회원·약관·동의 이력 | `members.jsx`, `terms.jsx` |
+| 05 회원·약관 | 회원·약관·동의 이력, **이메일(로그인 ID) 수정 불가** | `members.jsx`, `terms.jsx` |
 | 06 시스템 | 관리자·처리 이력 | `admins.jsx`, `audit.jsx` |
 
 ---

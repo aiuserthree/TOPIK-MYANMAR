@@ -155,11 +155,11 @@ function AuditDetailLP({ id, onClose }) {
         <KV k="로그 ID" v={<code className="code-id">{l.id}</code>}/>
       </FieldSet>
 
-      {l.memo && (
-        <FieldSet legend="메모" cols={1}>
-          <div style={{ background: 'var(--bg-2)', padding: 10, borderRadius: 6, fontSize: 13, color: 'var(--text-2)' }}>{l.memo}</div>
-        </FieldSet>
-      )}
+      <FieldSet legend="처리 사유" cols={1}>
+        <div style={{ background: 'var(--bg-2)', padding: 10, borderRadius: 6, fontSize: 13, color: 'var(--text-2)', whiteSpace: 'pre-wrap' }}>
+          {l.memo || '—'}
+        </div>
+      </FieldSet>
 
       {(l.before || l.after) && (
         <FieldSet legend="변경 내용 (Diff)" cols={1}>

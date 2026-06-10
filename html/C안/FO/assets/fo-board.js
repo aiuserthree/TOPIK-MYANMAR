@@ -196,11 +196,10 @@
   // -------------------------------------------------------------------------
   // 댓글/대댓글 (스레드)
   // -------------------------------------------------------------------------
-  function adminBadge(isAdmin) {
-    return isAdmin
-      ? ' <span class="badge badge-info" style="height:18px; padding:0 6px; font-size:10px;">' +
-        esc(bt('board.admin', '관리자')) + '</span>'
-      : '';
+  /** FO — 관리자 작성(답변·댓글·대댓글)은 실명 대신 '관리자'만 표시 */
+  function boardAuthorLabel(item) {
+    if (item && item.is_admin) return bt('board.admin', '관리자');
+    return item && item.author ? item.author : bt('board.mine', '작성자');
   }
 
   function countComments(list) {
@@ -212,10 +211,10 @@
   }
 
   function commentNodeHtml(c, isReply) {
-    var lock = c.is_secret ? '<span class="lock">🔒</span> ' : '';
+    var lock = (!isReply && c.is_secret) ? '<span class="lock">🔒</span> ' : '';
     var head =
       '<div class="c-head">' + lock +
-        '<span class="author">' + esc(c.author) + '</span>' + adminBadge(c.is_admin) +
+        '<span class="author">' + esc(boardAuthorLabel(c)) + '</span>' +
         '<span>·</span><span>' + esc(c.created_at_label || '') + '</span>' +
       '</div>';
     var bodyHtml = '<div class="c-body">' + nl2br(c.body) + '</div>';
@@ -242,6 +241,25 @@
         '</div>' +
       '</div>';
     return html;
+  }
+
+  function buildAdminRepliesHtml(replies) {
+    if (!replies || !replies.length) return '';
+    return replies.map(function (r) {
+      var when = r.created_at_label || (r.created_at
+        ? new Date(r.created_at).toLocaleDateString('ko-KR')
+        : '');
+      return (
+        '<div class="reply-block">' +
+          '<div class="who">' +
+            '<span class="reply-badge">' + esc(bt('board.admin_reply', '답변')) + '</span>' +
+            '<span>' + esc(bt('board.admin', '관리자')) + '</span>' +
+            (when ? '<span class="when">' + esc(when) + '</span>' : '') +
+          '</div>' +
+          '<div class="body-r">' + nl2br(r.body) + '</div>' +
+        '</div>'
+      );
+    }).join('');
   }
 
   function buildCommentsHtml(list) {
@@ -367,9 +385,15 @@
 
       // 비밀글 비밀번호 (작성 시) — 페이지가 secretPwEl 을 제공하면 사용
       var secretPassword = '';
+      var editingId = typeof opts.getEditingId === 'function' ? opts.getEditingId() : null;
       if (isSecret && opts.secretPwEl) {
         secretPassword = (opts.secretPwEl.value || '').trim();
-        if (!secretPassword || secretPassword.length < 4) {
+        if (!editingId) {
+          if (!secretPassword || secretPassword.length < 4) {
+            alert(bt('board.write_pw', '비밀글 비밀번호를 4자 이상 입력해 주세요.'));
+            return;
+          }
+        } else if (secretPassword && secretPassword.length < 4) {
           alert(bt('board.write_pw', '비밀글 비밀번호를 4자 이상 입력해 주세요.'));
           return;
         }
@@ -377,7 +401,7 @@
 
       // 첨부파일 업로드 진행 중이면 대기
       var attachmentIds = [];
-      if (opts.attachmentCtrl) {
+      if (opts.attachmentCtrl && !editingId) {
         if (opts.attachmentCtrl.hasPending()) {
           alert(bt('board.upload_wait', '파일 업로드가 끝날 때까지 기다려 주세요.'));
           return;
@@ -387,32 +411,40 @@
 
       btn.disabled = true;
       var prev = btn.textContent;
-      btn.textContent = bt('board.submitting', '제출 중…');
+      btn.textContent = editingId ? bt('board.updating', '수정 중…') : bt('board.submitting', '제출 중…');
 
       var payload = {
-        board_type: opts.boardType,
         title: title,
         body: body,
         category: category || null,
         is_secret: isSecret,
-        attachment_file_ids: attachmentIds,
       };
+      if (!editingId) {
+        payload.board_type = opts.boardType;
+        payload.attachment_file_ids = attachmentIds;
+      }
       if (isSecret && secretPassword) payload.secret_password = secretPassword;
 
-      TopikApi.createBoardPost(payload).then(function (res) {
+      var req = editingId && TopikApi.updateBoardPost
+        ? TopikApi.updateBoardPost(editingId, payload)
+        : TopikApi.createBoardPost(payload);
+
+      req.then(function (res) {
         btn.disabled = false;
         btn.textContent = prev;
         if (!res.ok) {
           alert(TopikApi.parseError(res));
           return;
         }
-        alert((res.body && res.body.message) || bt('board.submitted', '접수되었습니다.'));
-        // 입력값 초기화
+        alert((res.body && res.body.message) || (editingId
+          ? bt('board.updated', '수정되었습니다.')
+          : bt('board.submitted', '접수되었습니다.')));
         if (opts.titleEl) opts.titleEl.value = '';
         if (opts.bodyEl) opts.bodyEl.value = '';
         if (opts.secretPwEl) opts.secretPwEl.value = '';
         if (opts.attachmentCtrl) opts.attachmentCtrl.reset();
-        if (opts.onSuccess) opts.onSuccess();
+        if (typeof opts.clearEditing === 'function') opts.clearEditing();
+        if (opts.onSuccess) opts.onSuccess(editingId ? res.body : null);
         else if (opts.listPaneId && window.show) window.show(opts.listPaneId);
       }).catch(function () {
         btn.disabled = false;
@@ -497,7 +529,6 @@
     };
     var deepLinkConsumed = false;
     var listPaneId = opts.listPaneId || 'listPane';
-    var pendingUnlockId = null;
 
     function findListItem(id) {
       var sid = String(id);
@@ -585,7 +616,7 @@
       listBody.querySelectorAll('tr[data-id]').forEach(function (tr) {
         tr.addEventListener('click', function () {
           if (tr.getAttribute('data-locked') === '1') {
-            openSecretModal(tr.getAttribute('data-id'));
+            openSecretModal();
             return;
           }
           openDetail(tr.getAttribute('data-id'));
@@ -644,7 +675,7 @@
           var deepId = getDeepLinkPostId();
           if (deepId) {
             var cached = findListItem(deepId);
-            if (cached && isPostLocked(cached)) openSecretModal(deepId);
+            if (cached && isPostLocked(cached)) openSecretModal();
             else openDetail(deepId);
           }
         }
@@ -689,6 +720,43 @@
       refreshCommentsI18n();
     }
 
+    function renderPostActions(p, id) {
+      if (!d.actions) return;
+      var canEdit = !!(p.can_edit || (p.is_mine && !p.admin_reply && !p.has_admin_reply));
+      if (!canEdit) {
+        d.actions.innerHTML = '';
+        d.actions.style.display = 'none';
+        return;
+      }
+      d.actions.style.display = '';
+      d.actions.innerHTML =
+        '<button type="button" class="btn btn-secondary btn-sm" data-board-edit>' +
+          esc(bt('board.edit', '수정')) + '</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" data-board-delete>' +
+          esc(bt('board.delete', '삭제')) + '</button>';
+      var editBtn = d.actions.querySelector('[data-board-edit]');
+      var delBtn = d.actions.querySelector('[data-board-delete]');
+      if (editBtn) {
+        editBtn.addEventListener('click', function () {
+          if (typeof opts.onEdit === 'function') opts.onEdit(p);
+        });
+      }
+      if (delBtn) {
+        delBtn.addEventListener('click', function () {
+          if (!window.TopikApi || !TopikApi.deleteBoardPost) return;
+          if (!confirm(bt('board.delete_confirm', '이 글을 삭제하시겠습니까?'))) return;
+          TopikApi.deleteBoardPost(id).then(function (res) {
+            if (!res.ok) { alert(TopikApi.parseError(res)); return; }
+            alert((res.body && res.body.message) || bt('board.deleted', '삭제되었습니다.'));
+            showListPane();
+            load(state.page);
+          }).catch(function () {
+            alert(bt('board.network_err', '네트워크 오류입니다.'));
+          });
+        });
+      }
+    }
+
     // 상세 렌더 — 글 객체(p)를 받아 상세 영역을 채운다. (조회 / 잠금해제 공용)
     function renderPostDetail(p, id) {
       state.activePostId = id;
@@ -718,19 +786,26 @@
         d.body.innerHTML = '<p>' + nl2br(p.body) + '</p>' + attachmentsDetailHtml(p.attachments);
       }
       if (d.reply) {
-        if (p.admin_reply) {
+        var replies = p.admin_replies && p.admin_replies.length
+          ? p.admin_replies
+          : (p.admin_reply ? [{
+              body: p.admin_reply,
+              author: bt('board.admin', '관리자'),
+              created_at: p.admin_replied_at,
+              created_at_label: p.admin_replied_at
+                ? new Date(p.admin_replied_at).toLocaleDateString('ko-KR')
+                : '',
+            }] : []);
+        if (replies.length) {
           d.reply.style.display = '';
-          if (d.replyBody) d.replyBody.innerHTML = nl2br(p.admin_reply);
-          if (d.replyWhen) {
-            d.replyWhen.textContent = p.admin_replied_at
-              ? new Date(p.admin_replied_at).toLocaleDateString('ko-KR')
-              : '';
-          }
+          d.reply.innerHTML = buildAdminRepliesHtml(replies);
         } else {
           d.reply.style.display = 'none';
+          d.reply.innerHTML = '';
         }
       }
       if (d.comments) renderComments(id);
+      renderPostActions(p, id);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -742,12 +817,13 @@
       if (d.status) { d.status.textContent = ''; d.status.className = 'status'; }
       if (d.meta) d.meta.innerHTML = '';
       if (d.comments) d.comments.innerHTML = '';
+      if (d.actions) { d.actions.innerHTML = ''; d.actions.style.display = 'none'; }
     }
 
     function openDetail(id) {
       var cached = findListItem(id);
       if (cached && isPostLocked(cached)) {
-        openSecretModal(id);
+        openSecretModal();
         return;
       }
       show(opts.detailPaneId || 'detailPane');
@@ -762,7 +838,7 @@
         var p = res.body;
         if (p.locked) {
           showListPane();
-          openSecretModal(id);
+          openSecretModal();
           return;
         }
         renderPostDetail(p, id);
@@ -772,79 +848,18 @@
       });
     }
 
-    // ---- 비밀글 잠금해제 모달 ----
+    // ---- 비밀글 안내 모달 (작성자·관리자 외 — 비밀번호 입력 없음) ----
     var modal = document.getElementById(secretModalId);
-    var pwInput = modal ? modal.querySelector('#secretPw, input[type="password"]') : null;
-    var pwErr = modal ? modal.querySelector('#secretPwErr') : null;
-    var unlockBtn = modal ? modal.querySelector('#btnSecretUnlock, .modal-foot .btn-primary') : null;
 
-    function setUnlockErr(msg) {
-      if (!pwErr) { if (msg) alert(msg); return; }
-      pwErr.textContent = msg || '';
-      pwErr.style.display = msg ? 'block' : 'none';
-    }
-
-    function openSecretModal(id) {
-      pendingUnlockId = id;
+    function openSecretModal() {
       clearDetailDeepLink();
+      showListPane();
       if (!modal) {
         alert(bt('board.locked_msg', '비밀글입니다. 작성자·관리자만 열람할 수 있습니다.'));
-        showListPane();
         return;
       }
-      if (pwInput) pwInput.value = '';
-      setUnlockErr('');
       if (window.TPKM && TPKM.openModal) TPKM.openModal(secretModalId);
       else modal.classList.add('open');
-      if (pwInput) setTimeout(function () { pwInput.focus(); }, 50);
-    }
-
-    function submitUnlock() {
-      if (!pendingUnlockId) { return; }
-      var pw = pwInput ? (pwInput.value || '').trim() : '';
-      if (!pw) { setUnlockErr(bt('board.unlock_enter_pw', '비밀번호를 입력해 주세요.')); return; }
-      if (!window.TopikApi || !TopikApi.unlockBoardPost) {
-        setUnlockErr(bt('board.server_err', '서버에 연결할 수 없습니다.'));
-        return;
-      }
-      var prev = unlockBtn ? unlockBtn.textContent : '';
-      if (unlockBtn) { unlockBtn.disabled = true; unlockBtn.textContent = bt('board.unlocking', '확인 중…'); }
-      TopikApi.unlockBoardPost(pendingUnlockId, pw).then(function (res) {
-        if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = prev; }
-        if (res.ok && res.body) {
-          var id = pendingUnlockId;
-          pendingUnlockId = null;
-          if (window.TPKM && TPKM.closeModal) TPKM.closeModal(secretModalId);
-          else if (modal) modal.classList.remove('open');
-          renderPostDetail(res.body, id);
-          return;
-        }
-        var body = res.body || {};
-        var code = (body.error && body.error.code) || '';
-        if (res.status === 423 || res.status === 429 || code === 'LOCKED' || body.locked) {
-          setUnlockErr(bt('board.unlock_locked', '비밀번호를 여러 번 잘못 입력하여 일시적으로 잠겼습니다. 잠시 후 다시 시도해 주세요.'));
-          return;
-        }
-        var left = (body.attempts_left != null) ? body.attempts_left
-          : (body.error && body.error.attempts_left);
-        if (left != null) {
-          setUnlockErr(btf('board.unlock_wrong_left', '비밀번호가 일치하지 않습니다. (남은 횟수 {n}회)', left));
-        } else {
-          setUnlockErr(bt('board.unlock_wrong', '비밀번호가 일치하지 않습니다.'));
-        }
-      }).catch(function () {
-        if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = prev; }
-        setUnlockErr(bt('board.network_err', '네트워크 오류입니다.'));
-      });
-    }
-
-    if (unlockBtn) {
-      unlockBtn.addEventListener('click', submitUnlock);
-    }
-    if (pwInput) {
-      pwInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); submitUnlock(); }
-      });
     }
 
     function setFilter(fn) {

@@ -60,14 +60,14 @@
 | 항목 | 내용 |
 | --- | --- |
 | 액션/트리거 | 정보 수정 저장(정보정정신청 처리 포함) |
-| 입력 & 검증 | `name_ko/name_en/email/phone/nationality/marketing_opt_in`, `rev`(필수). `status`는 본 화면 외 정지/탈퇴와 동일 엔드포인트 |
+| 입력 & 검증 | `name_ko/name_en/phone/nationality/marketing_opt_in`, `rev`(필수). **`email` 변경 불가**(로그인 ID·가입 시 확정). `status`는 본 화면 외 정지/탈퇴와 동일 엔드포인트 |
 | 처리 | `rev` 검증 → 변경 필드 setattr + `rev+1`. 변경 필드 diff 산출 |
 | 권한 | `require_admin`(※ 기능정의서는 super 권고 — 합의) |
 | 이력 기록 | ✅ `audit('user_update', before={status,email}, after=diff)` |
 | 알림 | ✅ 비(非)상태 변경 시 `member_info_changed`(변경 필드·diff·처리자) 통지 |
 | 연동 API | `PATCH /api/v1/admin/users/{id}` |
 | 연동 DB | `users` |
-| 동시성/예외 | `rev` 불일치 → `409 CONFLICT`. 신원정보(이름/생년월일/사진) 수정 시 사유·diff 기록(사유 입력 강제는 합의) |
+| 동시성/예외 | `rev` 불일치 → `409 CONFLICT`. `email` 변경 요청 → `400 EMAIL_NOT_EDITABLE`. 신원정보(이름/생년월일/사진) 수정 시 사유·diff 기록(사유 입력 강제는 합의) |
 
 ### 2.4 회원 정지 / 탈퇴 — `TPKM_BO_5_1_5 / 5_1_6`
 

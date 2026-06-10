@@ -15,6 +15,13 @@ from app.lib.email_notify import (
     notify_board_post_created,
     resolve_admin_notify_email,
 )
+from app.lib.board_helpers import (
+    build_comment_tree,
+    filter_visible_comments,
+    official_replies_for_post,
+    parse_parent_comment_id,
+    resolve_comment_is_secret,
+)
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_upload
@@ -59,6 +66,15 @@ class UnlockBody(BaseModel):
     password: str
 
 
+class UpdatePostBody(BaseModel):
+    title: str | None = None
+    body: str | None = None
+    category: str | None = None
+    post_type: str | None = None
+    is_secret: bool | None = None
+    secret_password: str | None = None
+
+
 def _default_workflow(board_type: str) -> str:
     return "awaiting_reply" if board_type == "inquiry" else "received"
 
@@ -66,6 +82,10 @@ def _default_workflow(board_type: str) -> str:
 def _is_locked_secret(post: BoardPost, auth: AuthUser) -> bool:
     """비밀글이고 본인 글이 아닌 경우 잠김(목록/상세에서 본문 비노출)."""
     return bool(post.is_secret) and post.user_id != auth.id
+
+
+def _can_author_edit(post: BoardPost, auth: AuthUser) -> bool:
+    return post.user_id == auth.id and not post.admin_reply
 
 
 def _post_list_item(post: BoardPost, author_name: str | None, auth: AuthUser) -> dict:
@@ -85,6 +105,7 @@ def _post_list_item(post: BoardPost, author_name: str | None, auth: AuthUser) ->
         "workflow_status": post.workflow_status,
         "status_label": board_status_label(post.workflow_status),
         "has_admin_reply": bool(post.admin_reply),
+        "can_edit": _can_author_edit(post, auth),
         "created_at": post.created_at.isoformat() if post.created_at else None,
         "date_formatted": fmt_date(post.created_at),
     }
@@ -108,8 +129,16 @@ async def _attachments_for_post(db: AsyncSession, post_id: int) -> list[dict]:
     ]
 
 
-def _full_post_dict(post: BoardPost, author_name: str | None, auth: AuthUser, attachments: list[dict]) -> dict:
+async def _full_post_dict(
+    db: AsyncSession,
+    post: BoardPost,
+    author_name: str | None,
+    auth: AuthUser,
+    attachments: list[dict],
+) -> dict:
     is_mine = post.user_id == auth.id
+    admin_replies = await official_replies_for_post(db, post)
+    latest = admin_replies[-1] if admin_replies else None
     return {
         "id": post.id,
         "board_type": post.board_type,
@@ -123,8 +152,13 @@ def _full_post_dict(post: BoardPost, author_name: str | None, auth: AuthUser, at
         "author_name": author_name or ("본인" if is_mine else "—"),
         "workflow_status": post.workflow_status,
         "status_label": board_status_label(post.workflow_status),
-        "admin_reply": post.admin_reply,
-        "admin_replied_at": post.admin_replied_at.isoformat() if post.admin_replied_at else None,
+        "admin_reply": latest["body"] if latest else post.admin_reply,
+        "admin_replied_at": latest["created_at"] if latest else (
+            post.admin_replied_at.isoformat() if post.admin_replied_at else None
+        ),
+        "admin_replies": admin_replies,
+        "has_admin_reply": bool(admin_replies or post.admin_reply),
+        "can_edit": _can_author_edit(post, auth),
         "created_at": post.created_at.isoformat() if post.created_at else None,
         "date_formatted": fmt_date(post.created_at),
         "attachments": attachments,
@@ -204,7 +238,7 @@ async def get_post(
             "date_formatted": fmt_date(post.created_at),
         }
     attachments = await _attachments_for_post(db, post_id)
-    return _full_post_dict(post, user.name_ko, auth, attachments)
+    return await _full_post_dict(db, post, user.name_ko, auth, attachments)
 
 
 @router.post("/posts")
@@ -250,6 +284,63 @@ async def create_post(
     await db.commit()
     await db.refresh(post)
     return {"id": post.id, "workflow_status": post.workflow_status, "message": "접수되었습니다."}
+
+
+@router.patch("/posts/{post_id}")
+async def update_post(
+    post_id: int,
+    body: UpdatePostBody,
+    auth: AuthUser = Depends(require_complete_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    post, user = await _load_post_with_author(db, post_id)
+    if not _can_author_edit(post, auth):
+        raise api_error("FORBIDDEN", "답변이 등록된 글은 수정할 수 없습니다.", 403)
+    data = body.model_dump(exclude_unset=True)
+    secret_password = data.pop("secret_password", None)
+    if "title" in data:
+        title = (data["title"] or "").strip()
+        if not title or len(title) > 100:
+            raise api_error("VALIDATION_ERROR", "제목을 100자 이내로 입력해 주세요.", 400)
+        post.title = title
+    if "body" in data:
+        content = (data["body"] or "").strip()
+        if not content or len(content) < 10:
+            raise api_error("VALIDATION_ERROR", "내용을 10자 이상 입력해 주세요.", 400)
+        post.body = content
+    if "category" in data:
+        post.category = data["category"]
+    if "post_type" in data:
+        post.post_type = data["post_type"]
+    if "is_secret" in data and data["is_secret"] is not None:
+        post.is_secret = bool(data["is_secret"])
+    if secret_password is not None:
+        pw = secret_password.strip()
+        if post.is_secret and pw:
+            if len(pw) < 4:
+                raise api_error("VALIDATION_ERROR", "비밀글 비밀번호를 4자 이상 입력해 주세요.", 400)
+            post.secret_password_hash = hash_password(pw)
+        elif not pw:
+            post.secret_password_hash = None
+    await db.commit()
+    attachments = await _attachments_for_post(db, post_id)
+    data = await _full_post_dict(db, post, user.name_ko, auth, attachments)
+    data["message"] = "수정되었습니다."
+    return data
+
+
+@router.delete("/posts/{post_id}")
+async def delete_post(
+    post_id: int,
+    auth: AuthUser = Depends(require_complete_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    post, _ = await _load_post_with_author(db, post_id)
+    if not _can_author_edit(post, auth):
+        raise api_error("FORBIDDEN", "답변이 등록된 글은 삭제할 수 없습니다.", 403)
+    await db.delete(post)
+    await db.commit()
+    return {"deleted": True, "message": "삭제되었습니다."}
 
 
 @router.post("/attachments")
@@ -311,7 +402,7 @@ async def unlock_post(
     # 본인 글/일반글은 잠금 없음.
     if not _is_locked_secret(post, auth):
         attachments = await _attachments_for_post(db, post_id)
-        return _full_post_dict(post, user.name_ko, auth, attachments)
+        return await _full_post_dict(db, post, user.name_ko, auth, attachments)
 
     # 비밀번호가 설정되지 않은 비밀글은 작성자·관리자만 열람 가능(unlock 불가).
     if not post.secret_password_hash:
@@ -326,7 +417,7 @@ async def unlock_post(
         post.secret_locked_until = None
         await db.commit()
         attachments = await _attachments_for_post(db, post_id)
-        data = _full_post_dict(post, user.name_ko, auth, attachments)
+        data = await _full_post_dict(db, post, user.name_ko, auth, attachments)
         data["unlocked"] = True
         return data
 
@@ -339,22 +430,6 @@ async def unlock_post(
         raise api_error("LOCKED", f"비밀번호 {SECRET_MAX_FAIL}회 오류로 {SECRET_LOCK_MINUTES}분간 잠겼습니다.", 423)
     await db.commit()
     raise api_error("INVALID_PASSWORD", f"비밀번호가 올바르지 않습니다. (남은 시도 {max(0, remaining)}회)", 400)
-
-
-def _comment_node(c: BoardComment, author_name: str | None) -> dict:
-    return {
-        "id": c.id,
-        "parent_comment_id": c.parent_comment_id,
-        "body": c.body,
-        "is_secret": c.is_secret,
-        "is_admin": c.author_admin_id is not None,
-        "author": author_name or ("관리자" if c.author_admin_id else "작성자"),
-        "author_user_id": c.author_user_id,
-        "author_admin_id": c.author_admin_id,
-        "created_at": c.created_at.isoformat() if c.created_at else None,
-        "created_at_label": fmt_datetime(c.created_at),
-        "replies": [],
-    }
 
 
 @router.get("/posts/{post_id}/comments")
@@ -373,6 +448,7 @@ async def list_comments(
         .order_by(BoardComment.created_at, BoardComment.id)
     )
     comments = result.scalars().all()
+    comments = filter_visible_comments(comments, post, auth.id)
 
     user_ids = {c.author_user_id for c in comments if c.author_user_id}
     admin_ids = {c.author_admin_id for c in comments if c.author_admin_id}
@@ -392,16 +468,7 @@ async def list_comments(
             return users.get(c.author_user_id)
         return None
 
-    nodes: dict[int, dict] = {}
-    roots: list[dict] = []
-    for c in comments:
-        nodes[c.id] = _comment_node(c, author_for(c))
-    for c in comments:
-        node = nodes[c.id]
-        if c.parent_comment_id and c.parent_comment_id in nodes:
-            nodes[c.parent_comment_id]["replies"].append(node)
-        else:
-            roots.append(node)
+    roots = build_comment_tree(comments, author_for=author_for)
     return {"comments": roots, "items": roots}
 
 
@@ -418,16 +485,20 @@ async def create_comment(
     content = body.body.strip()
     if not content:
         raise api_error("VALIDATION_ERROR", "댓글 내용을 입력해 주세요.")
+    parent_id = parse_parent_comment_id(body.parent_comment_id)
+    if body.parent_comment_id is not None and parent_id is None:
+        raise api_error("VALIDATION_ERROR", "parent_comment_id가 올바르지 않습니다.", 400)
     comment = BoardComment(
         board_post_id=post_id,
         author_user_id=auth.id,
         body=content,
-        parent_comment_id=body.parent_comment_id,
+        parent_comment_id=parent_id,
+        is_secret=bool(post.is_secret),
     )
     db.add(comment)
     commenter = (await db.execute(select(User).where(User.id == auth.id))).scalar_one_or_none()
     if commenter:
-        parent_label = "대댓글" if body.parent_comment_id else "댓글"
+        parent_label = "대댓글" if parent_id else "댓글"
         await notify_board_activity_to_operator(
             db,
             post,

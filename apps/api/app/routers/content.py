@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
@@ -12,6 +14,32 @@ from app.models.content import FaqItem, Notice, Term
 from app.models.system import FileAttachment
 
 router = APIRouter(tags=["content"])
+
+
+def _notice_visible_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _notice_display_window_clause(now: datetime):
+    """노출 시작/종료 일시 — 미설정 시 즉시·무기한."""
+    return (
+        Notice.is_deleted.is_(False),
+        or_(Notice.display_start_at.is_(None), Notice.display_start_at <= now),
+        or_(Notice.display_end_at.is_(None), Notice.display_end_at >= now),
+    )
+
+
+def _notice_localized(n: Notice, lang: str) -> tuple[str, str]:
+    lang = (lang or "ko").lower()
+    title = n.title
+    body = n.body_html or ""
+    if lang == "my":
+        title = n.title_my or title
+        body = n.body_my or body
+    elif lang == "en":
+        title = n.title_en or title
+        body = n.body_en or body
+    return title, body
 
 
 def _notice_attachments(rows: list[FileAttachment]) -> list[dict]:
@@ -30,12 +58,17 @@ def _notice_attachments(rows: list[FileAttachment]) -> list[dict]:
 async def list_notices(
     category: str | None = Query(None),
     q: str | None = Query(None),
+    lang: str = Query("ko"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     home_preview: int | None = Query(None),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    base = select(Notice).where(Notice.is_published.is_(True))
+    now = _notice_visible_now()
+    base = select(Notice).where(
+        Notice.is_published.is_(True),
+        *_notice_display_window_clause(now),
+    )
     # FO 필터 칩(imp/apply 등)과 저장 카테고리 별칭 흡수.
     if category and category not in ("all", ""):
         aliases = {
@@ -68,20 +101,22 @@ async def list_notices(
         ares = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
         admins = {a.id: a.name for a in ares.scalars().all()}
 
-    items = [
-        {
-            "id": n.id,
-            "category": n.category,
-            "category_label": notice_category_label(n.category),
-            "title": n.title,
-            "is_pinned": n.is_pinned,
-            "published_at": n.published_at.isoformat() if n.published_at else None,
-            "date_formatted": fmt_date(n.published_at or n.created_at),
-            "author_name": admins.get(n.author_admin_id, "관리자") if n.author_admin_id else "관리자",
-            "view_count": n.view_count,
-        }
-        for n in rows
-    ]
+    items = []
+    for n in rows:
+        title, _ = _notice_localized(n, lang)
+        items.append(
+            {
+                "id": n.id,
+                "category": n.category,
+                "category_label": notice_category_label(n.category),
+                "title": title,
+                "is_pinned": n.is_pinned,
+                "published_at": n.published_at.isoformat() if n.published_at else None,
+                "date_formatted": fmt_date(n.published_at or n.created_at),
+                "author_name": admins.get(n.author_admin_id, "관리자") if n.author_admin_id else "관리자",
+                "view_count": n.view_count,
+            }
+        )
     total_pages = max(1, (total + page_size - 1) // page_size)
     return {
         "items": items,
@@ -96,12 +131,47 @@ async def list_notices(
     }
 
 
+async def _notice_neighbors(db: AsyncSession, notice: Notice, lang: str = "ko") -> tuple[dict | None, dict | None]:
+    """목록과 동일한 정렬(고정↓ · 게시일↓ · id↓) 기준 이전/다음 글."""
+    now = _notice_visible_now()
+    pub_col = func.coalesce(Notice.published_at, Notice.created_at)
+    res = await db.execute(
+        select(Notice)
+        .where(Notice.is_published.is_(True), *_notice_display_window_clause(now))
+        .order_by(Notice.is_pinned.desc(), pub_col.desc().nullslast(), Notice.id.desc())
+    )
+    ordered_rows = res.scalars().all()
+    ordered = [
+        {"id": row.id, "title": _notice_localized(row, lang)[0]}
+        for row in ordered_rows
+    ]
+    idx = next((i for i, row in enumerate(ordered) if row["id"] == notice.id), None)
+    if idx is None:
+        return None, None
+    # 이전글 = 목록에서 아래(더 오래된 글), 다음글 = 위(더 최신 글)
+    prev_post = ordered[idx + 1] if idx + 1 < len(ordered) else None
+    next_post = ordered[idx - 1] if idx > 0 else None
+    return prev_post, next_post
+
+
 @router.get("/notices/{notice_id}")
-async def get_notice(notice_id: int, db: AsyncSession = Depends(get_db_session)) -> dict:
-    result = await db.execute(select(Notice).where(Notice.id == notice_id, Notice.is_published.is_(True)))
+async def get_notice(
+    notice_id: int,
+    lang: str = Query("ko"),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    now = _notice_visible_now()
+    result = await db.execute(
+        select(Notice).where(
+            Notice.id == notice_id,
+            Notice.is_published.is_(True),
+            *_notice_display_window_clause(now),
+        )
+    )
     notice = result.scalar_one_or_none()
     if not notice:
         raise api_error("NOT_FOUND", "공지를 찾을 수 없습니다.", 404)
+    title, body_html = _notice_localized(notice, lang)
     notice.view_count += 1
     author_name = "관리자"
     if notice.author_admin_id:
@@ -114,19 +184,22 @@ async def get_notice(notice_id: int, db: AsyncSession = Depends(get_db_session))
             FileAttachment.owner_type == "notice", FileAttachment.owner_id == notice.id
         )
     )
+    prev_post, next_post = await _notice_neighbors(db, notice, lang)
     await db.commit()
     return {
         "id": notice.id,
         "category": notice.category,
         "category_label": notice_category_label(notice.category),
-        "title": notice.title,
-        "body_html": notice.body_html,
+        "title": title,
+        "body_html": body_html,
         "is_pinned": notice.is_pinned,
         "published_at": notice.published_at.isoformat() if notice.published_at else None,
         "date_formatted": fmt_date(notice.published_at or notice.created_at),
         "author_name": author_name,
         "view_count": notice.view_count,
         "attachments": _notice_attachments(att_res.scalars().all()),
+        "prev": prev_post,
+        "next": next_post,
     }
 
 

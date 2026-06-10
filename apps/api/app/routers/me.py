@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, Request
 
@@ -16,6 +16,7 @@ from app.lib.email_notify import count_active_applications, notify_account_statu
 from app.lib.errors import api_error
 from app.lib.consents import persist_term_consents
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
+from app.lib.google_auth import verify_google_id_token
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_photo
 from app.lib.validation import (
@@ -30,6 +31,7 @@ from app.models.user import User
 
 router = APIRouter(tags=["me"])
 settings = get_settings()
+WITHDRAW_GOOGLE_TOKEN_MAX_AGE_SECONDS = 300
 
 
 class UpdateMeBody(BaseModel):
@@ -56,7 +58,8 @@ class ChangePasswordBody(BaseModel):
 
 
 class WithdrawBody(BaseModel):
-    password: str
+    password: str | None = None
+    google_id_token: str | None = None
 
 
 def serialize_user(user: User) -> dict:
@@ -77,9 +80,56 @@ def serialize_user(user: User) -> dict:
         "preferred_lang": user.preferred_lang,
         "marketing_opt_in": user.marketing_opt_in,
         "password_changed_at": user.password_changed_at.isoformat() if user.password_changed_at else None,
+        "signup_provider": user.signup_provider or "email",
+        "google_linked": bool(user.google_sub),
+        "has_password": bool(user.password_hash),
         "status": user.status,
         "rev": user.rev,
     }
+
+
+def _verify_withdraw_google(user: User, raw_token: str) -> None:
+    if not user.google_sub:
+        raise api_error("VALIDATION_ERROR", "Google 계정이 연동되지 않았습니다.", 400)
+    if not settings.google_oauth_enabled:
+        raise api_error("SERVICE_UNAVAILABLE", "Google 인증이 설정되지 않았습니다.", 503)
+    token = raw_token.strip()
+    if not token:
+        raise api_error("VALIDATION_ERROR", "Google 인증 토큰이 필요합니다.", 400)
+    try:
+        claims = verify_google_id_token(token, settings.google_client_id.strip())
+    except ValueError as exc:
+        raise api_error("INVALID_TOKEN", "Google 인증에 실패했습니다.", 401) from exc
+    sub = claims.get("sub")
+    email = (claims.get("email") or "").strip().lower()
+    if sub != user.google_sub or email != user.email:
+        raise api_error("INVALID_TOKEN", "Google 계정이 일치하지 않습니다.", 401)
+    iat = claims.get("iat")
+    if iat is not None:
+        issued = datetime.fromtimestamp(int(iat), tz=timezone.utc)
+        if datetime.now(timezone.utc) - issued > timedelta(seconds=WITHDRAW_GOOGLE_TOKEN_MAX_AGE_SECONDS):
+            raise api_error("INVALID_TOKEN", "Google 인증이 만료되었습니다. 다시 시도해 주세요.", 401)
+
+
+def _verify_withdraw_password(user: User, password: str) -> None:
+    if not user.password_hash or not verify_password(password, user.password_hash):
+        raise api_error("INVALID_CREDENTIALS", "비밀번호가 올바르지 않습니다.", 400)
+
+
+def _verify_withdraw_identity(user: User, body: WithdrawBody) -> None:
+    google_token = (body.google_id_token or "").strip()
+    password = (body.password or "").strip()
+    if google_token:
+        _verify_withdraw_google(user, google_token)
+        return
+    if password:
+        _verify_withdraw_password(user, password)
+        return
+    if user.google_sub and (user.signup_provider == "google" or not user.password_hash):
+        raise api_error("VALIDATION_ERROR", "Google 계정으로 본인 확인이 필요합니다.", 400)
+    if user.password_hash:
+        raise api_error("VALIDATION_ERROR", "비밀번호를 입력해 주세요.", 400)
+    raise api_error("VALIDATION_ERROR", "본인 확인이 필요합니다.", 400)
 
 
 @router.get("/me")
@@ -194,8 +244,9 @@ async def withdraw(
 ) -> dict:
     result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(body.password, user.password_hash):
-        raise api_error("INVALID_CREDENTIALS", "비밀번호가 올바르지 않습니다.", 400)
+    if not user:
+        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+    _verify_withdraw_identity(user, body)
     now = datetime.now(timezone.utc)
     canceled_count = await count_active_applications(db, user.id)
     user.status = "withdrawn"

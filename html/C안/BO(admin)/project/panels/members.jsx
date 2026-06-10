@@ -3,8 +3,18 @@
    - 고객사 수정 0526: 탈퇴 시 진행 중 접수 자동 취소 안내
 */
 
+function signupLabel(provider) {
+  return provider === 'google' ? 'Google 간편가입' : '일반 가입';
+}
+function isGoogleMember(m) {
+  return m && m.signupProvider === 'google';
+}
+
 function MembersPanel() {
   const state = useStore();
+  const canEdit = DataStore.can('members', 'edit');
+  const canSuspend = DataStore.can('members', 'suspend');
+  const canReset = DataStore.can('members', 'reset');
   const [stF, setStF] = useState('all');
   const [natF, setNatF] = useState('all');
   const [q, setQ] = useState('');
@@ -43,8 +53,8 @@ function MembersPanel() {
 
   const statusKo = (s) => s === 'active' ? '활성' : s === 'inactive' ? '정지' : '탈퇴';
   const exportCSV = () => {
-    const headers = ['번호', '한글성명', '영문성명', '이메일', '연락처', '국적', '가입일', '마지막 로그인', '상태', '마케팅수신'];
-    const rows = filtered.map(m => [m.no, m.nameKo, m.nameEn, m.email, m.tel, m.nation, m.joinedAt, m.lastLogin, statusKo(m.status), m.marketing ? '동의' : '미동의']);
+    const headers = ['번호', '한글성명', '영문성명', '이메일', '연락처', '국적', '가입유형', '가입일', '마지막 로그인', '상태', '마케팅수신'];
+    const rows = filtered.map(m => [m.no, m.nameKo, m.nameEn, m.email, m.tel, m.nation, signupLabel(m.signupProvider), m.joinedAt, m.lastLogin, statusKo(m.status), m.marketing ? '동의' : '미동의']);
     const fn = '회원목록_' + new Date().toISOString().slice(0, 10) + '.csv';
     const after = () => {
       DataStore.addAudit({ type: '회원', targetId: '—', action: '게시', memo: `회원 CSV 내보내기(${filtered.length}건)` });
@@ -87,7 +97,7 @@ function MembersPanel() {
           <table className="dg">
             <thead><tr>
               <th className="num">번호</th><th>한글성명</th><th>영문성명</th><th>이메일</th>
-              <th>연락처</th><th>국적</th><th>가입일</th><th>마지막 로그인</th><th>상태</th><th>관리</th>
+              <th>연락처</th><th>국적</th><th>가입유형</th><th>가입일</th><th>마지막 로그인</th><th>상태</th><th>관리</th>
             </tr></thead>
             <tbody>
               {pageRows.map(m => (
@@ -98,6 +108,9 @@ function MembersPanel() {
                   <td className="muted">{m.email}</td>
                   <td className="code muted">{m.tel}</td>
                   <td>{m.nation}</td>
+                  <td>
+                    <Pill kind={isGoogleMember(m) ? 'pay' : 'active'}>{signupLabel(m.signupProvider)}</Pill>
+                  </td>
                   <td className="code muted">{m.joinedAt}</td>
                   <td className="code muted">{m.lastLogin}</td>
                   <td>
@@ -108,10 +121,15 @@ function MembersPanel() {
                   <td>
                     <div className="row-actions">
                       <button className="ibtn ghost" onClick={() => setDetailId(m.id)}><I.Eye style={{ width: 12, height: 12 }}/></button>
-                      <button className="ibtn" onClick={() => setEditId(m.id)} disabled={m.status === 'withdrawn'}>수정</button>
-                      <button className="ibtn" onClick={() => setResetId(m.id)} disabled={m.status === 'withdrawn'}>PW</button>
-                      {m.status === 'active' && <button className="ibtn danger" onClick={() => setSuspendId(m.id)}>정지</button>}
-                      {m.status === 'inactive' && <button className="ibtn" onClick={async () => {
+                      <button className="ibtn" onClick={() => setEditId(m.id)} disabled={!canEdit || m.status === 'withdrawn'}>수정</button>
+                      <button
+                        className="ibtn"
+                        onClick={() => setResetId(m.id)}
+                        disabled={!canReset || m.status === 'withdrawn' || isGoogleMember(m)}
+                        title={isGoogleMember(m) ? 'Google 간편가입 회원은 비밀번호 초기화를 사용할 수 없습니다.' : '비밀번호 초기화'}
+                      >PW</button>
+                      {m.status === 'active' && <button className="ibtn danger" disabled={!canSuspend} onClick={() => setSuspendId(m.id)}>정지</button>}
+                      {m.status === 'inactive' && <button className="ibtn" disabled={!canSuspend} onClick={async () => {
                         if (DataStore.isApiMode && DataStore.isApiMode()) {
                           if (await DataStore.apiMemberStatus(m.id, 'active', '정지 해제')) toastOk('정지가 해제되었습니다.');
                           return;
@@ -122,7 +140,7 @@ function MembersPanel() {
                         DataStore.notify();
                         toastOk('정지가 해제되었습니다.');
                       }}>해제</button>}
-                      {m.status !== 'withdrawn' && <button className="ibtn danger" onClick={() => setWithdrawId(m.id)}>탈퇴</button>}
+                      {m.status !== 'withdrawn' && <button className="ibtn danger" disabled={!canSuspend} onClick={() => setWithdrawId(m.id)}>탈퇴</button>}
                     </div>
                   </td>
                 </tr>
@@ -163,6 +181,7 @@ function MemberDetailLP({ id, onClose, onEdit }) {
         <KV k="이메일" v={m.email}/>
         <KV k="연락처" v={<span className="code-id">{m.tel}</span>}/>
         <KV k="국적" v={m.nation}/>
+        <KV k="가입 유형" v={<Pill kind={isGoogleMember(m) ? 'pay' : 'active'}>{signupLabel(m.signupProvider)}</Pill>}/>
         <KV k="가입일" v={<span className="code-id">{m.joinedAt}</span>}/>
         <KV k="마지막 로그인" v={<span className="code-id">{m.lastLogin}</span>}/>
         <KV k="상태" v={<Pill kind={m.status === 'active' ? 'active' : m.status === 'inactive' ? 'pay' : 'cancel'}>{m.status === 'active' ? '활성' : m.status === 'inactive' ? '정지' : '탈퇴'}</Pill>}/>
@@ -218,7 +237,7 @@ function MemberEditLP({ id, onClose }) {
   const save = async () => {
     if (!reason.trim()) { toastErr('수정 사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const ok = await DataStore.apiSaveMember(id, f);
+      const ok = await DataStore.apiSaveMember(id, f, reason);
       if (ok) { toastOk('회원 정보가 수정되었습니다.'); onClose(); }
       return;
     }
@@ -238,7 +257,9 @@ function MemberEditLP({ id, onClose }) {
       <FieldSet legend="신원 정보" cols={2}>
         <FormRow label="한글 성명"><input className="input" value={f.nameKo} onChange={e => set('nameKo', e.target.value)}/></FormRow>
         <FormRow label="영문 성명"><input className="input" value={f.nameEn} onChange={e => set('nameEn', e.target.value)}/></FormRow>
-        <FormRow label="이메일"><input className="input" value={f.email} onChange={e => set('email', e.target.value)}/></FormRow>
+        <FormRow label="이메일 (로그인 ID)" hint="변경 불가 · 가입 시 확정된 계정 식별자">
+          <input className="input" value={f.email} readOnly/>
+        </FormRow>
         <FormRow label="연락처"><input className="input" value={f.tel} onChange={e => set('tel', e.target.value)}/></FormRow>
         <FormRow label="국적"><input className="input" value={f.nation} onChange={e => set('nation', e.target.value)}/></FormRow>
         <FormRow label="마케팅 수신">
@@ -361,6 +382,16 @@ function PwResetLP({ id, onClose }) {
   const [issued, setIssued] = useState(false);
   const [issuedPw, setIssuedPw] = useState('');
   const tempPw = useMemo(() => 'tpkm' + Math.random().toString(36).slice(2, 8), [id]);
+  if (isGoogleMember(m)) {
+    return (
+      <LP open size="sm" title={`비밀번호 초기화 — ${m.nameKo}`} sub={m.email} onClose={onClose}
+        footer={<button className="btn btn-secondary" onClick={onClose}>닫기</button>}>
+        <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
+          Google 간편가입 회원은 비밀번호가 Google에서 관리됩니다. 비밀번호 초기화 대신 Google 로그인을 안내해 주세요.
+        </div>
+      </LP>
+    );
+  }
   const issue = async () => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       const temp = await DataStore.apiResetMemberPassword(id);
