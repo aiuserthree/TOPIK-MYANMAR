@@ -98,7 +98,17 @@
   }
 
   function isIdleExpired() {
+    // 로그인 페이지 등: 세션 없이 남은 activity 타임스탬프만으로 유휴 판정하지 않음
+    if (!getSessionRaw()) return false;
     return Date.now() - getLastActivity() > IDLE_MS;
+  }
+
+  function getSessionRaw() {
+    try {
+      return global.sessionStorage.getItem("bo_session");
+    } catch (e) {
+      return null;
+    }
   }
 
   function tokenExpiresAtMs(token) {
@@ -155,7 +165,10 @@
   }
 
   function ensureSession() {
-    if (!getSessionRaw()) return Promise.resolve(false);
+    if (!getSessionRaw()) {
+      try { global.sessionStorage.removeItem(ACTIVITY_KEY); } catch (e) { /* ignore */ }
+      return Promise.resolve(false);
+    }
     if (isIdleExpired()) {
       clearSession();
       return Promise.resolve(false);
@@ -184,6 +197,29 @@
 
   function expireIdleSession() {
     handleSessionExpired();
+  }
+
+  /** 로그인 페이지 진입 시 — 유휴 만료 잔여 상태·감시 정리 */
+  function prepareLoginPage() {
+    stopIdleWatch();
+    idleExpireHandled = false;
+    idleOnExpired = null;
+    clearAuthStorage();
+  }
+
+  function initLoginPage(onReady) {
+    stopIdleWatch();
+    idleExpireHandled = false;
+    idleOnExpired = null;
+    if (getSessionRaw() && !isIdleExpired()) {
+      return ensureSession().then(function (ok) {
+        if (typeof onReady === "function") onReady(!!ok);
+        return ok;
+      });
+    }
+    clearAuthStorage();
+    if (typeof onReady === "function") onReady(false);
+    return Promise.resolve(false);
   }
 
   function stopIdleWatch() {
@@ -224,14 +260,6 @@
     idleInterval = global.setInterval(function () {
       if (isIdleExpired()) handleSessionExpired();
     }, 10000);
-  }
-
-  function getSessionRaw() {
-    try {
-      return global.sessionStorage.getItem("bo_session");
-    } catch (e) {
-      return null;
-    }
   }
 
   function isTokenExpired(token) {
@@ -291,6 +319,7 @@
         loginAt: new Date().toISOString(),
       }));
       touchActivity();
+      idleExpireHandled = false;
       return isAuthenticated();
     } catch (e) {
       return false;
@@ -335,7 +364,7 @@
 
     if (!useAuth) return runFetch();
 
-    if (isIdleExpired()) {
+    if (getSessionRaw() && isIdleExpired()) {
       clearSession();
       return Promise.resolve({
         ok: false,
@@ -362,7 +391,7 @@
   }
 
   function authBlobFetch(url, headers, isRetry) {
-    if (isIdleExpired()) {
+    if (getSessionRaw() && isIdleExpired()) {
       clearSession();
       return Promise.resolve({ ok: false, status: 401, body: { error: { message: "세션이 만료되었습니다." } } });
     }
@@ -567,6 +596,8 @@
     stopIdleWatch: stopIdleWatch,
     isIdleExpired: isIdleExpired,
     expireIdleSession: expireIdleSession,
+    prepareLoginPage: prepareLoginPage,
+    initLoginPage: initLoginPage,
     touchActivity: touchActivity,
     apiFetch: apiFetch,
     parseError: parseError,

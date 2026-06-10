@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends
 from sqlalchemy import select
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
@@ -146,13 +147,31 @@ def validate_matrix_payload(raw: dict[str, Any]) -> dict[str, dict[str, list[str
     return _normalize_matrix(raw)
 
 
+def _default_matrix_copy() -> dict[str, dict[str, list[str]]]:
+    return {k: {mk: mv[:] for mk, mv in v.items()} for k, v in DEFAULT_MATRIX.items()}
+
+
 async def load_matrix(db: AsyncSession) -> dict[str, dict[str, list[str]]]:
-    row = (
-        await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
-    ).scalar_one_or_none()
+    try:
+        row = (
+            await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
+        ).scalar_one_or_none()
+    except ProgrammingError:
+        await db.rollback()
+        return _default_matrix_copy()
     if not row or not row.matrix:
-        return {k: {mk: mv[:] for mk, mv in v.items()} for k, v in DEFAULT_MATRIX.items()}
+        return _default_matrix_copy()
     return _normalize_matrix(row.matrix)
+
+
+async def get_matrix_row(db: AsyncSession) -> AdminPermissionMatrix | None:
+    try:
+        return (
+            await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
+        ).scalar_one_or_none()
+    except ProgrammingError:
+        await db.rollback()
+        return None
 
 
 def role_has(
@@ -233,9 +252,17 @@ async def save_matrix(
     admin_user_id: int,
 ) -> AdminPermissionMatrix:
     normalized = validate_matrix_payload(matrix)
-    row = (
-        await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
-    ).scalar_one_or_none()
+    try:
+        row = (
+            await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
+        ).scalar_one_or_none()
+    except ProgrammingError:
+        await db.rollback()
+        raise api_error(
+            "MIGRATION_REQUIRED",
+            "권한 매트릭스 테이블이 없습니다. DB 마이그레이션(V011)을 실행해 주세요.",
+            503,
+        )
     if row:
         row.matrix = normalized
         row.updated_by_admin_id = admin_user_id

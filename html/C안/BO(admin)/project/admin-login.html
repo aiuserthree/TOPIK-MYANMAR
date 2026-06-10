@@ -230,12 +230,12 @@
     showError('세션 만료', '30분간 활동이 없어 로그아웃되었습니다. 다시 로그인해 주세요.');
   }
 
-  if (window.TopikBoApi && TopikBoApi.ensureSession) {
-    TopikBoApi.ensureSession().then(function (ok) {
+  if (window.TopikBoApi && TopikBoApi.initLoginPage) {
+    TopikBoApi.initLoginPage(function (ok) {
       if (ok) goAdmin();
     });
-  } else if (window.TopikBoApi && TopikBoApi.isAuthenticated()) {
-    goAdmin();
+  } else if (window.TopikBoApi && TopikBoApi.prepareLoginPage) {
+    TopikBoApi.prepareLoginPage();
   }
 
   form.addEventListener('submit', (e) => {
@@ -258,7 +258,7 @@
     TopikBoApi.login(email, pwv, { persist: remember })
       .then(function (res) {
         if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
-        if (res.ok && TopikBoApi.isAuthenticated()) {
+        if (res.ok) {
           goAdmin();
           return;
         }

@@ -53,6 +53,7 @@ from app.lib.validation import is_valid_password
 from app.lib.admin_permissions import (
     assert_perm,
     board_menu_for_type,
+    get_matrix_row,
     load_matrix,
     matrix_perm,
     perm_schema,
@@ -2362,9 +2363,7 @@ async def get_permissions_matrix(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     matrix = await load_matrix(db)
-    row = (
-        await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
-    ).scalar_one_or_none()
+    row = await get_matrix_row(db)
     return {
         "matrix": matrix,
         "schema": perm_schema(),
@@ -2381,9 +2380,7 @@ async def put_permissions_matrix(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)
-    before_row = (
-        await db.execute(select(AdminPermissionMatrix).where(AdminPermissionMatrix.id == 1))
-    ).scalar_one_or_none()
+    before_row = await get_matrix_row(db)
     before = before_row.matrix if before_row else await load_matrix(db)
     row = await save_matrix(db, matrix=body.matrix, admin_user_id=admin.id)
     await write_audit(

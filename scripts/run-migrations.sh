@@ -13,7 +13,7 @@ ENV_FILE="${ENV_FILE:-${APP_ROOT}/apps/api/.env}"
 if [[ -z "${DATABASE_URL_SYNC:-}" && -f "${ENV_FILE}" ]]; then
   _raw="$(grep -E '^DATABASE_URL=' "${ENV_FILE}" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
   if [[ -n "${_raw}" ]]; then
-    DATABASE_URL_SYNC="${_raw/postgresql+asyncpg:\/\//postgresql:\/\/}"
+    DATABASE_URL_SYNC="$(printf '%s' "${_raw}" | sed 's|^postgresql+asyncpg://|postgresql://|')"
   fi
 fi
 
