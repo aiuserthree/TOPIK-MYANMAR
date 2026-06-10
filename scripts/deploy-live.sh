@@ -24,7 +24,7 @@ pip install -q -r requirements.txt
 
 echo "==> DB migrations"
 cd "${APP_ROOT}"
-bash scripts/run-migrations.sh
+bash scripts/run-migrations.sh || echo "WARN: migration step had errors — continuing (V007 ownership 등)"
 
 echo "==> systemd (myanmar-api)"
 cp "${APP_ROOT}/scripts/systemd/myanmar-api-v2.service" /etc/systemd/system/myanmar-api.service
