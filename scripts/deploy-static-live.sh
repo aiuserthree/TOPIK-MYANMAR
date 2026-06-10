@@ -14,7 +14,9 @@ echo "==> Build BO → public-bo/"
 python3 build-bo.py
 
 echo "==> Verify sample pages"
-for f in guide-overview.html guide-intro.html rules-fee.html apply-howto.html ticket.html notice.html; do
+HTML_COUNT="$(find "${APP_ROOT}/public" -maxdepth 1 -name '*.html' 2>/dev/null | wc -l | tr -d ' ')"
+echo "  HTML pages: ${HTML_COUNT} (expect ~25)"
+for f in index.html login.html guide-overview.html guide-intro.html rules-fee.html apply-howto.html ticket.html notice.html assets/styles.css assets/common.js; do
   if [[ -f "${APP_ROOT}/public/${f}" ]]; then
     echo "  ok ${f} ($(wc -c < "${APP_ROOT}/public/${f}") bytes)"
   else
