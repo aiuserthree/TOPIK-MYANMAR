@@ -37,10 +37,10 @@ cp scripts/systemd/myanmar-api-v2.service /etc/systemd/system/myanmar-api.servic
 systemctl daemon-reload
 systemctl restart myanmar-api
 sleep 2
-systemctl is-active myanmar-api
-curl -sf http://127.0.0.1:8000/health
+systemctl is-active myanmar-api || { echo "ERROR: myanmar-api not running" >&2; exit 1; }
+curl -sf http://127.0.0.1:8000/health || echo "WARN: /health check failed — continuing build"
 
-echo "==> Build FO + BO static"
+echo "==> Build FO + BO static (필수 — nginx는 public/ public-bo/ 만 서빙)"
 python3 build.py
 python3 build-bo.py
 
