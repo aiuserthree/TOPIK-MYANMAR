@@ -299,6 +299,17 @@
     return ymdDot(start) + ' — ' + mdDot(end);
   }
 
+  function mergeWithStatic(apiItems) {
+    /* 안내 페이지: 정적 마케팅 일정(106·107) 유지. API에만 있는 추가 회차만 append */
+    var rows = STATIC_ROWS.map(function (r) { return Object.assign({}, r); });
+    var known = {};
+    rows.forEach(function (r) { known[r.round_no] = true; });
+    (apiItems || []).forEach(function (api) {
+      if (!known[api.round_no]) rows.push(api);
+    });
+    return rows.sort(function (a, b) { return (a.round_no || 0) - (b.round_no || 0); });
+  }
+
   function rowHtml(r) {
     var active = r.registration_status === 'open' ? ' class="row-active"' : '';
     var reg, pay, exam;
@@ -319,6 +330,29 @@
       '</tr>';
   }
 
+  function mergeWithStatic(apiItems) {
+    var byNo = {};
+    STATIC_ROWS.forEach(function (r) {
+      byNo[r.round_no] = Object.assign({}, r);
+    });
+    (apiItems || []).forEach(function (api) {
+      var no = api.round_no;
+      if (byNo[no]) {
+        // 안내 페이지: 정적 일정(마케팅) 유지, API는 접수중 하이라이트만 반영
+        byNo[no].registration_status = api.registration_status;
+      } else {
+        byNo[no] = api;
+      }
+    });
+    var ordered = STATIC_ROWS.map(function (r) { return byNo[r.round_no]; });
+    (apiItems || []).forEach(function (api) {
+      if (!byNo[api.round_no] || !STATIC_ROWS.some(function (s) { return s.round_no === api.round_no; })) {
+        if (!ordered.some(function (x) { return x.round_no === api.round_no; })) ordered.push(api);
+      }
+    });
+    return ordered;
+  }
+
   function paint() {
     var items = scheduleItems || STATIC_ROWS;
     if (!items.length) return;
@@ -332,7 +366,7 @@
   if (!window.TopikApi || !TopikApi.canUseApi()) return;
   TopikApi.getExamRounds().then(function (res) {
     if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) return;
-    scheduleItems = res.body.items;
+    scheduleItems = mergeWithStatic(res.body.items);
     paint();
   }).catch(function () { /* 정적 폴백 유지 */ });
 })();

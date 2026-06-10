@@ -42,6 +42,8 @@
   }
   .flow-step .tag.online  { background: var(--info-50);    color: var(--info); }
   .flow-step .tag.offline { background: var(--warning-50); color: var(--warning); }
+  .flow-step .tag.external { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border); }
+  .flow-step .tag.external { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border); }
 
   .checklist {
     background: #fff;
@@ -135,7 +137,7 @@
           <div>
             <h3 data-i18n-content="apply.step6_title">수험표 출력</h3>
             <p data-i18n-content="apply.step6_desc" data-i18n-content-html>시험일 2주 전부터 <strong>TOPIK 본부(topik.go.kr)</strong>에서 수험표를 출력합니다. 시험 당일 신분증과 함께 지참해 주세요.</p>
-            <span class="tag online" data-i18n-content="apply.tag_external">외부 사이트</span>
+            <span class="tag external" data-i18n-content="apply.tag_external">외부 사이트</span>
           </div>
         </div>
       </div>
@@ -300,6 +302,7 @@ window.TPKM_PAGE_I18N = {
   }
 };
 </script>
+<script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 </body>
 </html>
