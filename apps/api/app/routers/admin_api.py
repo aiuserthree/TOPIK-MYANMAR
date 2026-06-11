@@ -831,6 +831,10 @@ async def approve_application(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev if body else None, if_match), label="접수")
+    if app.photo_review_status != "approved":
+        raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 승인 처리할 수 있습니다.", 400)
+    if app.payment_status != "paid":
+        raise api_error("PAYMENT_REQUIRED", "수납 완료 후 승인 처리할 수 있습니다.", 400)
     before = app.status
     app.status = "approved"
     app.approved_at = datetime.now(timezone.utc)

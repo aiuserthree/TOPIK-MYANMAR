@@ -31,6 +31,11 @@ function isFoCancelled(a) {
   return !!(a && a.status === 'cancel');
 }
 
+/** 승인 가능: 사진 심사 승인 + 수납 완료 */
+function applicantReadyForApprove(a) {
+  return !!a && a.photoStatus === 'approved' && !!a.paid;
+}
+
 function ApplicantsPanel() {
   const state = useStore();
   const sessionId = state.activeSessionId;
@@ -174,13 +179,20 @@ function ApplicantsPanel() {
     setSelected(new Set());
   };
   const doApprove = async (ids) => {
-    // 사진 미심사 행 가드 — 사진 승인 완료 건만 승인 가능
-    const blocked = ids.filter(id => {
+    const blockedPhoto = ids.filter(id => {
       const a = state.applicants.find(x => x.id === id);
       return a && a.photoStatus !== 'approved';
     });
-    if (blocked.length) {
-      toastErr(`사진 미심사 ${blocked.length}건이 포함되어 있습니다. 상세보기에서 먼저 심사해주세요.`, { title: '승인 불가' });
+    if (blockedPhoto.length) {
+      toastErr(`사진 미심사 ${blockedPhoto.length}건이 포함되어 있습니다. 상세보기에서 먼저 심사해주세요.`, { title: '승인 불가' });
+      return;
+    }
+    const blockedPay = ids.filter(id => {
+      const a = state.applicants.find(x => x.id === id);
+      return a && !a.paid;
+    });
+    if (blockedPay.length) {
+      toastErr(`미수납 ${blockedPay.length}건이 포함되어 있습니다. 수납 완료 후 승인해주세요.`, { title: '승인 불가' });
       return;
     }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
@@ -777,7 +789,7 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
         {!isReadonly && <>
           <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
           <button className="btn btn-secondary" onClick={onPay} disabled={locked}>{a.paid ? '수납 취소' : '수납'}</button>
-          <button className="btn btn-primary" onClick={onApprove} disabled={locked}>승인</button>
+          <button className="btn btn-primary" onClick={onApprove} disabled={locked || !applicantReadyForApprove(a)} title={!applicantReadyForApprove(a) ? '사진 승인·수납 완료 후 승인할 수 있습니다' : ''}>승인</button>
         </>}
       </>}
       tabs={
@@ -1013,21 +1025,31 @@ function ApproveModal({ modal, onClose, onConfirm }) {
   const state = useStore();
   const ids = modal.ids;
   const rows = ids.map(id => state.applicants.find(a => a.id === id)).filter(Boolean);
-  const blocked = rows.filter(a => a.photoStatus !== 'approved');
+  const blockedPhoto = rows.filter(a => a.photoStatus !== 'approved');
+  const blockedPay = rows.filter(a => !a.paid);
+  const blocked = blockedPhoto.length > 0 || blockedPay.length > 0;
   return (
     <Modal open onClose={onClose} title="접수자 승인 처리"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" onClick={onConfirm} disabled={blocked.length > 0}>승인 완료</button>
+        <button className="btn btn-primary" onClick={onConfirm} disabled={blocked}>승인 완료</button>
       </>}>
       <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-        대상 <b>{rows.length}</b>건을 승인합니다. 승인 완료 시 FO 마이페이지·접수확인에 반영됩니다.
+        대상 <b>{rows.length}</b>건을 승인합니다. <b>사진 승인·수납 완료</b>된 건만 승인할 수 있습니다.
       </div>
-      {blocked.length > 0 && (
+      {blockedPhoto.length > 0 && (
         <div style={{ marginTop: 12, padding: 10, background: 'var(--danger-50)', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5 }}>
-          ⚠ 사진 미심사 <b>{blocked.length}</b>건이 포함되어 있습니다. 접수자 목록에서 먼저 심사해 주세요.
+          ⚠ 사진 미심사 <b>{blockedPhoto.length}</b>건이 포함되어 있습니다. 접수자 목록에서 먼저 심사해 주세요.
           <ul style={{ marginTop: 6, paddingLeft: 16 }}>
-            {blocked.slice(0, 5).map(a => <li key={a.id}>{a.nameKo} ({a.nameEn})</li>)}
+            {blockedPhoto.slice(0, 5).map(a => <li key={a.id}>{a.nameKo} ({a.nameEn})</li>)}
+          </ul>
+        </div>
+      )}
+      {blockedPay.length > 0 && (
+        <div style={{ marginTop: 12, padding: 10, background: 'var(--danger-50)', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5 }}>
+          ⚠ 미수납 <b>{blockedPay.length}</b>건이 포함되어 있습니다. 수납 완료 후 승인해 주세요.
+          <ul style={{ marginTop: 6, paddingLeft: 16 }}>
+            {blockedPay.slice(0, 5).map(a => <li key={a.id}>{a.nameKo} ({a.nameEn})</li>)}
           </ul>
         </div>
       )}
