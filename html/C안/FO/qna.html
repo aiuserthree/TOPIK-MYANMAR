@@ -22,11 +22,20 @@
   .qna-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 
   .board-tools {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
     margin-bottom: 16px;
   }
-  .board-tools .left { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-  .board-tools .search { flex: 1; min-width: 160px; position: relative; }
+  .board-tools-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+  }
+  .board-tools .search { flex: 1; min-width: 0; position: relative; }
+  .board-tools .write { flex: 0 0 auto; }
   .board-tools .search input {
     width: 100%; height: 38px; padding: 0 14px 0 38px;
     border: 1px solid var(--border); border-radius: 99px;
@@ -218,16 +227,16 @@
       </div>
 
       <div class="board-tools">
-        <div class="left">
-          <select class="select cat-select">
-            <option data-i18n-content="qna.cat_all">전체 카테고리</option>
-            <option data-i18n-content="qna.cat_apply">접수</option>
-            <option data-i18n-content="qna.cat_exam">시험</option>
-            <option data-i18n-content="qna.cat_etc">기타</option>
-          </select>
+        <select class="select cat-select">
+          <option value="" data-i18n-content="qna.cat_all">전체</option>
+          <option data-i18n-content="qna.cat_apply">접수</option>
+          <option data-i18n-content="qna.cat_exam">시험</option>
+          <option data-i18n-content="qna.cat_etc">기타</option>
+        </select>
+        <div class="board-tools-row">
           <div class="search"><input type="search" placeholder="제목·작성자 검색" data-i18n-content="qna.search_ph" data-i18n-content-placeholder></div>
+          <button class="btn btn-primary btn-sm write" onclick="show('writePane')" data-i18n-content="qna.write_btn">문의하기</button>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="show('writePane')" data-i18n-content="qna.write_btn">문의하기</button>
       </div>
 
       <div class="card" style="padding: 0; overflow: hidden;">
@@ -359,7 +368,7 @@
     'qna.tab_all': { ko: '전체', my: 'အားလုံး', en: 'All' },
     'qna.tab_normal': { ko: '일반', my: 'သာမန်', en: 'Public' },
     'qna.tab_secret': { ko: '비밀', my: 'လျှို့ဝှက်', en: 'Secret' },
-    'qna.cat_all': { ko: '전체 카테고리', my: 'အမျိုးအစား အားလုံး', en: 'All categories' },
+    'qna.cat_all': { ko: '전체', my: 'အားလုံး', en: 'All' },
     'qna.cat_apply': { ko: '접수', my: 'လျှောက်ထားမှု', en: 'Registration' },
     'qna.cat_exam': { ko: '시험', my: 'စာမေးပွဲ', en: 'Exam' },
     'qna.cat_etc': { ko: '기타', my: 'အခြား', en: 'Other' },
@@ -448,7 +457,7 @@
     board.setFilter(function (p) {
       if (tabMode === 'normal' && p.is_secret) return false;
       if (tabMode === 'secret' && !p.is_secret) return false;
-      if (cat && cat !== '전체 카테고리' && (p.category || '') !== cat) return false;
+      if (cat && (p.category || '') !== cat) return false;
       if (q && (p.title || '').toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
