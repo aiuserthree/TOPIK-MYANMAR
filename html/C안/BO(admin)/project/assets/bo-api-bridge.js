@@ -670,6 +670,10 @@
     DS.state.apiError = null;
     DS.notify();
 
+    var CRITICAL_NAMES = [
+      "region-codes", "exam-venues", "exam-rounds", "applications", "notices", "faq",
+      "refund_correction", "inquiry", "users", "terms", "admin-users",
+    ];
     return Promise.all([
       Api.getRegionCodes(),
       Api.getExamVenues(),
@@ -700,10 +704,12 @@
       var permRes = results[12];
 
       var critical = [regRes, venRes, rndRes, appRes, notRes, faqRes, refRes, inqRes, memRes, termRes, admRes];
-      var bad = critical.find(function (r) { return !r.ok; });
-      if (bad) {
+      var badIdx = critical.findIndex(function (r) { return !r.ok; });
+      if (badIdx >= 0) {
         DS.apiLoading = false;
-        return fail(TopikBoApi.parseError(bad) || "API 데이터를 불러오지 못했습니다.");
+        var label = CRITICAL_NAMES[badIdx] || ("#" + badIdx);
+        var msg = TopikBoApi.parseError(critical[badIdx]) || "API 데이터를 불러오지 못했습니다.";
+        return fail("[" + label + "] " + msg);
       }
 
       var regions = (regRes.body && regRes.body.items) || [];
@@ -776,6 +782,9 @@
           if (extra[2].ok && extra[2].body && extra[2].body.items) {
             DS.state.permHistory = extra[2].body.items.map(mapPermHistory);
           }
+          return finishInit();
+        }).catch(function () {
+          /* 접근 로그·권한 이력은 부가 기능 — 실패해도 BO 본화면은 사용 가능 */
           return finishInit();
         });
       }

@@ -14,6 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -2585,6 +2586,14 @@ async def _serialize_perm_history(db: AsyncSession, logs: list[AdminAuditLog]) -
     return out
 
 
+def _access_log_migration_error() -> None:
+    raise api_error(
+        "MIGRATION_REQUIRED",
+        "접근 로그 테이블이 없습니다. DB 마이그레이션(V012)을 실행해 주세요.",
+        503,
+    )
+
+
 @router.get("/access-logs/admins")
 async def admin_access_logs(
     page: int = Query(1, ge=1),
@@ -2598,21 +2607,25 @@ async def admin_access_logs(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)
-    stmt = select(AdminAccessLog).order_by(AdminAccessLog.created_at.desc())
-    if admin_user_id is not None:
-        stmt = stmt.where(AdminAccessLog.admin_user_id == admin_user_id)
-    if action_type:
-        stmt = stmt.where(AdminAccessLog.action_type == action_type)
-    if success is not None:
-        stmt = stmt.where(AdminAccessLog.success == success)
-    cutoff = _access_days_filter(days)
-    if cutoff is not None:
-        stmt = stmt.where(AdminAccessLog.created_at >= cutoff)
-    if ip:
-        stmt = stmt.where(AdminAccessLog.ip_address.ilike(f"%{ip}%"))
-    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
-    result = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
-    logs = result.scalars().all()
+    try:
+        stmt = select(AdminAccessLog).order_by(AdminAccessLog.created_at.desc())
+        if admin_user_id is not None:
+            stmt = stmt.where(AdminAccessLog.admin_user_id == admin_user_id)
+        if action_type:
+            stmt = stmt.where(AdminAccessLog.action_type == action_type)
+        if success is not None:
+            stmt = stmt.where(AdminAccessLog.success == success)
+        cutoff = _access_days_filter(days)
+        if cutoff is not None:
+            stmt = stmt.where(AdminAccessLog.created_at >= cutoff)
+        if ip:
+            stmt = stmt.where(AdminAccessLog.ip_address.ilike(f"%{ip}%"))
+        total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+        result = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+        logs = result.scalars().all()
+    except ProgrammingError:
+        await db.rollback()
+        _access_log_migration_error()
     return {
         "items": await _serialize_admin_access_logs(db, logs),
         "page": page,
@@ -2634,21 +2647,25 @@ async def member_access_logs(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)
-    stmt = select(MemberAccessLog).order_by(MemberAccessLog.created_at.desc())
-    if user_id is not None:
-        stmt = stmt.where(MemberAccessLog.user_id == user_id)
-    if email:
-        stmt = stmt.where(MemberAccessLog.email.ilike(f"%{email.strip()}%"))
-    if action_type:
-        stmt = stmt.where(MemberAccessLog.action_type == action_type)
-    if success is not None:
-        stmt = stmt.where(MemberAccessLog.success == success)
-    cutoff = _access_days_filter(days)
-    if cutoff is not None:
-        stmt = stmt.where(MemberAccessLog.created_at >= cutoff)
-    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
-    result = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
-    logs = result.scalars().all()
+    try:
+        stmt = select(MemberAccessLog).order_by(MemberAccessLog.created_at.desc())
+        if user_id is not None:
+            stmt = stmt.where(MemberAccessLog.user_id == user_id)
+        if email:
+            stmt = stmt.where(MemberAccessLog.email.ilike(f"%{email.strip()}%"))
+        if action_type:
+            stmt = stmt.where(MemberAccessLog.action_type == action_type)
+        if success is not None:
+            stmt = stmt.where(MemberAccessLog.success == success)
+        cutoff = _access_days_filter(days)
+        if cutoff is not None:
+            stmt = stmt.where(MemberAccessLog.created_at >= cutoff)
+        total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+        result = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+        logs = result.scalars().all()
+    except ProgrammingError:
+        await db.rollback()
+        _access_log_migration_error()
     return {
         "items": await _serialize_member_access_logs(logs),
         "page": page,
@@ -2678,17 +2695,20 @@ async def permission_history(
     cutoff = _access_days_filter(days)
     if cutoff is not None:
         stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
-    result_all = await db.execute(stmt)
-    all_logs = result_all.scalars().all()
     if change_type:
-        filtered = [
-            l for l in all_logs
+        # change_type는 파생 값이라 SQL 필터 대신 상한 조회 후 메모리 필터
+        cap = min(2000, page * page_size * 4)
+        result_all = await db.execute(stmt.limit(cap))
+        all_logs = [
+            l for l in result_all.scalars().all()
             if _perm_history_change_type(l.action_type, l.before_data, l.after_data) == change_type
         ]
+        total = len(all_logs)
+        page_logs = all_logs[(page - 1) * page_size : page * page_size]
     else:
-        filtered = all_logs
-    total = len(filtered)
-    page_logs = filtered[(page - 1) * page_size : page * page_size]
+        total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+        result_page = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+        page_logs = result_page.scalars().all()
     return {
         "items": await _serialize_perm_history(db, page_logs),
         "page": page,
