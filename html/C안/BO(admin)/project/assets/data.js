@@ -416,7 +416,8 @@
     const s = state.activeSessionId;
     const apps = state.applicants.filter(a => a.sessionId === s);
     return {
-      unreviewed: apps.filter(a => a.status === 'applied').length,
+      // 접수자 목록 사이드바 배지 — 현재 회차·미수납(!paid)만 (취소/반려/환불 제외)
+      unpaid: apps.filter(a => !a.paid && !['cancel', 'rejected', 'refund'].includes(a.status)).length,
       photoWait: apps.filter(a => a.photoStatus === 'pending' && a.status !== 'cancel').length,
       refundNew: state.refunds.filter(r => r.status === '접수' || r.status === '검토중').length,
       inquiryWait: state.inquiries.filter(q => q.status === 'wait').length,

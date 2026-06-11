@@ -1253,6 +1253,21 @@
     });
   };
 
+  /** 접수자 상세 LP — 해당 접수 건(target_type=applications) 처리 이력만 조회 */
+  DS.fetchApplicantAudit = function (appId) {
+    if (!DS.isApiMode()) return Promise.resolve(null);
+    var id = String(appId);
+    return Api.getApplication(id).then(function (res) {
+      if (res.ok && res.body && res.body.audit_logs) {
+        return res.body.audit_logs.map(mapAudit);
+      }
+      return Api.getAuditLogs({ target_type: "applications", target_id: id }).then(function (audRes) {
+        if (!audRes.ok) return [];
+        return ((audRes.body && audRes.body.items) || []).map(mapAudit);
+      });
+    });
+  };
+
   DS.apiSavePermissionMatrix = function (draft) {
     return Api.putPermissionMatrix({ matrix: permsDraftToApi(draft) }).then(function (res) {
       if (!res.ok) {

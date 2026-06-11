@@ -444,7 +444,13 @@
       });
       return apiFetch("/api/v1/admin/notices" + (parts.length ? "?" + parts.join("&") : ""));
     },
-    getAuditLogs: function () { return apiFetch("/api/v1/admin/audit-logs"); },
+    getAuditLogs: function (q) {
+      var parts = [];
+      Object.keys(q || {}).forEach(function (k) {
+        if (q[k] != null && q[k] !== "") parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(q[k]));
+      });
+      return apiFetch("/api/v1/admin/audit-logs" + (parts.length ? "?" + parts.join("&") : ""));
+    },
     getBoardPosts: function (boardType, q) {
       var parts = ["board_type=" + encodeURIComponent(boardType)];
       Object.keys(q || {}).forEach(function (k) {

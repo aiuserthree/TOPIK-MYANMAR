@@ -818,7 +818,13 @@
         body: "{}",
       });
     },
-    getAuditLogs: function () { return apiFetch("/api/v1/admin/audit-logs"); },
+    getAuditLogs: function (q) {
+      var parts = [];
+      Object.keys(q || {}).forEach(function (k) {
+        if (q[k] != null && q[k] !== "") parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(q[k]));
+      });
+      return apiFetch("/api/v1/admin/audit-logs" + (parts.length ? "?" + parts.join("&") : ""));
+    },
     getPermissionMatrix: function () { return apiFetch("/api/v1/admin/permissions/matrix"); },
     putPermissionMatrix: function (payload) {
       return apiFetch("/api/v1/admin/permissions/matrix", {

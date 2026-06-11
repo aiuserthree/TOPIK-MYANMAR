@@ -7,7 +7,7 @@ const NAV = [
   { id: 'dashboard',   label: '대시보드',       icon: 'Dashboard' },
 
   { section: '접수' },
-  { id: 'applicants',  label: '접수자 목록',     icon: 'Users',  badge: 'unreviewed' },
+  { id: 'applicants',  label: '접수자 목록',     icon: 'Users',  badge: 'unpaid' },
 
   { section: '시험 운영' },
   { id: 'sessions',    label: '회차 관리',       icon: 'Calendar' },

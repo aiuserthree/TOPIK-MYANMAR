@@ -698,11 +698,20 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
   );
 }
 
+// 접수자 상세 처리 이력 — 접수 건(접수자·사진)만. targetId 숫자만 맞추면 회원 이력이 섞이지 않도록 유형도 필터.
+const APPLICANT_AUDIT_TYPES = new Set(['접수자', '사진']);
+function filterApplicantAudit(audit, appId) {
+  const sid = String(appId);
+  return audit.filter(l => APPLICANT_AUDIT_TYPES.has(l.type) && String(l.targetId) === sid);
+}
+
 // ===== Detail LP =====
 function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject }) {
   const state = useStore();
-  const a = state.applicants.find(x => x.id === id);
+  const appId = String(id);
+  const a = state.applicants.find(x => x.id === appId);
   const isReadonly = DataStore.isReadonly();
+  const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
   const [tab, setTab] = useState('profile');
   const [memo, setMemo] = useState('');
   const [photoMode, setPhotoMode] = useState(null);
@@ -710,6 +719,27 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
   const [photoOther, setPhotoOther] = useState('');
   const [rotate, setRotate] = useState(0);
   const [zoom, setZoom] = useState(false);
+  const [detailLog, setDetailLog] = useState(null);
+
+  const loadDetailLog = useCallback(() => {
+    if (isApi && DataStore.fetchApplicantAudit) {
+      return DataStore.fetchApplicantAudit(appId).then(rows => { setDetailLog(rows || []); });
+    }
+    setDetailLog(null);
+    return Promise.resolve();
+  }, [appId, isApi]);
+
+  // 상세 LP 열릴 때 바로 해당 접수 건 이력 조회(탭 숫자가 전역 audit 오매칭으로 (2)처럼 보이지 않게)
+  useEffect(() => {
+    setDetailLog(null);
+    loadDetailLog();
+  }, [appId, loadDetailLog, state.applicants]);
+
+  const log = useMemo(() => {
+    if (isApi) return detailLog !== null ? detailLog : [];
+    return filterApplicantAudit(state.audit, appId);
+  }, [state.audit, appId, detailLog, isApi]);
+
   if (!a) return null;
   const locked = isFoCancelled(a);
   const downloadOriginal = () => {
@@ -718,13 +748,12 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
     }
   };
   const venue = state.venues.find(v => v.id === a.venueId);
-  const log = state.audit.filter(l => l.targetId === id);
   const photoRejectReason = photoReason === '기타' ? photoOther : (photoOther ? `${photoReason} — ${photoOther}` : photoReason);
 
   const addMemo = () => {
     if (!memo.trim()) return;
     a.memo = (a.memo || '') + `[${new Date().toISOString().slice(0,16).replace('T',' ')}/${state.me?.id}] ${memo}\n`;
-    DataStore.addAudit({ type: '접수자', targetId: id, action: '수정', memo: '관리자 메모 추가' });
+    DataStore.addAudit({ type: '접수자', targetId: appId, action: '수정', memo: '관리자 메모 추가' });
     DataStore.notify();
     setMemo('');
     toastOk('메모가 추가되었습니다.');
@@ -766,7 +795,7 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
               <button className="ibtn" style={{ flex: 1 }} onClick={downloadOriginal} disabled={isReadonly || !a.photoFileId}><I.Download style={{ width: 12, height: 12 }}/> 원본 받기</button>
               <button className="ibtn" style={{ flex: 1 }} onClick={() => setRotate(r => (r + 90) % 360)} disabled={isReadonly || !a.photoUrl}>회전 보정</button>
             </div>
-            <div style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
+            <div id="photo-review-box" style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>사진 심사</div>
                 <PhotoStatusPill status={a.photoStatus}/>
@@ -928,7 +957,7 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
       </div>
 
       {/* 사진/기본정보 동시 확인 (고객사 수정 0526) — 사진 미심사 건은 모달 내 사진 승인 가능 */}
-      <div style={{ maxHeight: 240, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 14 }}>
+      <div id="pay-target-table" style={{ maxHeight: 240, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 14 }}>
         <table className="dg" style={{ fontSize: 12 }}>
           <thead><tr><th>사진</th><th>한글성명</th><th>영문성명</th><th>생년월일</th><th>급수</th><th>시험장</th><th>사진심사</th><th>현 상태</th></tr></thead>
           <tbody>
@@ -1083,7 +1112,7 @@ function ExamAssignModal({ onClose, doAssign }) {
         <div className="kpi"><div className="label">부여 대상</div><div className="val">{preview.result.length}</div></div>
         <div className="kpi"><div className="label">제외(누락 사유)</div><div className="val">{preview.skipped || 0}</div></div>
       </div>
-      <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 6 }}>
+      <div id="exam-preview-table" style={{ maxHeight: 260, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 6 }}>
         <table className="dg" style={{ fontSize: 12 }}>
           <thead><tr><th>한글성명</th><th>영문성명</th><th>급수</th><th>수험번호(미리보기)</th></tr></thead>
           <tbody>

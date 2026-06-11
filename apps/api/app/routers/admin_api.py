@@ -747,6 +747,30 @@ async def export_round_photos_zip(
     )
 
 
+async def _serialize_audit_logs(db: AsyncSession, logs: list[AdminAuditLog]) -> list[dict]:
+    admin_ids = {l.admin_user_id for l in logs if l.admin_user_id}
+    admins: dict[int, AdminUser] = {}
+    if admin_ids:
+        res = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
+        admins = {a.id: a for a in res.scalars().all()}
+    return [
+        {
+            "id": l.id,
+            "admin_user_id": l.admin_user_id,
+            "admin_email": admins[l.admin_user_id].email if l.admin_user_id and l.admin_user_id in admins else None,
+            "action_type": l.action_type,
+            "target_type": l.target_type,
+            "target_id": l.target_id,
+            "memo": l.memo,
+            "before_data": l.before_data,
+            "after_data": l.after_data,
+            "ip_address": l.ip_address,
+            "created_at": l.created_at.isoformat(),
+        }
+        for l in logs
+    ]
+
+
 @router.get("/applications/{app_id}")
 async def admin_get_application(
     app_id: int,
@@ -763,6 +787,16 @@ async def admin_get_application(
     user = user_res.scalar_one_or_none()
     venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == app.exam_venue_id))).scalar_one_or_none()
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
+    audit_res = await db.execute(
+        select(AdminAuditLog)
+        .where(
+            AdminAuditLog.target_type == "applications",
+            AdminAuditLog.target_id == str(app_id),
+        )
+        .order_by(AdminAuditLog.created_at.desc())
+        .limit(100)
+    )
+    audit_logs = audit_res.scalars().all()
     return {
         "application": _app_row_dict(app, user, venue, rnd),
         "user": {
@@ -780,6 +814,7 @@ async def admin_get_application(
         if user
         else None,
         "memos": [{"id": m.id, "body": m.body, "created_at": m.created_at.isoformat()} for m in app.memos],
+        "audit_logs": await _serialize_audit_logs(db, audit_logs),
     }
 
 
@@ -2402,40 +2437,29 @@ async def put_permissions_matrix(
 
 
 @router.get("/audit-logs")
-async def audit_logs(admin: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def audit_logs(
+    target_type: str | None = Query(None),
+    target_id: str | None = Query(None),
+    admin: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     matrix = await load_matrix(db)
     if admin.role != "super":
         can_all = role_has(matrix, admin.role, "audit", "viewAll")
         can_own = role_has(matrix, admin.role, "audit", "viewOwn")
         if not can_all and not can_own:
             raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
-    result = await db.execute(select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(200))
+    stmt = select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc())
+    if target_type:
+        stmt = stmt.where(AdminAuditLog.target_type == target_type)
+    if target_id is not None:
+        stmt = stmt.where(AdminAuditLog.target_id == str(target_id))
+    limit = 100 if (target_type or target_id is not None) else 200
+    result = await db.execute(stmt.limit(limit))
     logs = result.scalars().all()
     if admin.role != "super" and not role_has(matrix, admin.role, "audit", "viewAll"):
         logs = [l for l in logs if l.admin_user_id == admin.id]
-    admin_ids = {l.admin_user_id for l in logs if l.admin_user_id}
-    admins = {}
-    if admin_ids:
-        res = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
-        admins = {a.id: a for a in res.scalars().all()}
-    return {
-        "items": [
-            {
-                "id": l.id,
-                "admin_user_id": l.admin_user_id,
-                "admin_email": admins[l.admin_user_id].email if l.admin_user_id and l.admin_user_id in admins else None,
-                "action_type": l.action_type,
-                "target_type": l.target_type,
-                "target_id": l.target_id,
-                "memo": l.memo,
-                "before_data": l.before_data,
-                "after_data": l.after_data,
-                "ip_address": l.ip_address,
-                "created_at": l.created_at.isoformat(),
-            }
-            for l in logs
-        ]
-    }
+    return {"items": await _serialize_audit_logs(db, logs)}
 
 
 class AdminChangePasswordBody(BaseModel):
