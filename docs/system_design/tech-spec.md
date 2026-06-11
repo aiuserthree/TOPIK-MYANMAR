@@ -271,7 +271,7 @@ Myanmar_v2.0/
 
 | 항목 | 내용 |
 | --- | --- |
-| 다국어 | UI ko/my/en(`data-i18n`, MY→EN→KO 폴백), FAQ·약관·이메일 다국어. 공지 본문은 KO 단일(후속) |
+| 다국어 | UI ko/my/en — `topik-i18n-content.js`·`TPKMBt`·`X-TPKM-Locale`·`fo_messages`(MY→EN→KO 폴백). FAQ·약관·이메일·**FO API 오류** 다국어. 공지 본문은 KO 단일(후속) |
 | 성능 | 비동기(FastAPI/asyncpg), 접수 그리드 페이지네이션, pgvector HNSW(검색 후속). 대량 조회용 추가 인덱스는 합의/후속 |
 | 백업 | DB VPS 일 1회 `pg_dump` cron(`/var/backups/topik_myanmar/`). RTO/RPO 미확정(합의) |
 | 가용성 | 단일 Web/DB VPS(이중화 없음). 접수 기간 Feature Freeze(D-3~마감) |

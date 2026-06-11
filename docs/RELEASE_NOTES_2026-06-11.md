@@ -1,6 +1,6 @@
 # 릴리스 노트 — 2026-06-11
 
-> Git 커밋: `7d6a400` (P0) · `9903690` (P1·비밀번호) · `eb43c28` (P2) · 편의지원 UI 제거(후속)
+> Git 커밋: `7d6a400` (P0) · `9903690` (P1·비밀번호) · `eb43c28` (P2) · `8a81cb1` (P1 i18n) · `188dd07` (P2 i18n) · 편의지원 UI 제거(후속)
 
 운영 URL: `https://www.topik-myanmar.com` · `https://admin.topik-myanmar.com`
 
@@ -52,11 +52,32 @@
 | Google 로그인/가입 | 코드 완료, **`GOOGLE_CLIENT_ID` 운영 env 필요** |
 | 이메일 OTP·알림 | 코드 완료, **SMTP·`ENABLE_EMAIL_WORKER` 운영 env 필요** |
 | 일반글 댓글 공개/비공개 | 미구현 |
-| i18n 전 페이지 완전 검수 | 일부 잔여 |
+| FO API 오류·동적 UI i18n | **2026-06-11 완료** (`188dd07`) — BO admin API 한글 오류는 FO 범위 밖 |
+| i18n 육안 최종 검수 | 고객사·QA 전 페이지 MY/EN 검수 권장 |
 
 ---
 
-## 3. DB 마이그레이션
+## 3. FO P2 i18n (API 오류·동적 UI)
+
+### API (`apps/api/app/lib/fo_messages.py`)
+
+| 항목 | 내용 |
+|------|------|
+| 로케일 헤더 | FO `api-client.js` → `X-TPKM-Locale: ko\|my\|en` (`resolve_request_locale`) |
+| 오류 헬퍼 | `fo_api_error(code, msg_key, lang, **params)` — auth·applications·me·board·content·files |
+| 메시지 카탈로그 | KO/MY/EN `_CATALOG` — OTP 잔여 횟수, 약관 누락, 접수 상태 등 동적 치환 |
+
+### FO 클라이언트
+
+| 항목 | 내용 |
+|------|------|
+| 정적 UI | `shared/topik-i18n-content.js` + `[data-i18n-content]` |
+| 동적 UI | `window.TPKMBt.bt()` / `btf()` — login·signup·register·mypage·ticket·refund·photo-upload 등 |
+| 오류 표시 | `parseError()` → `err.{code}` 우선, 서버 `message` 폴백 |
+
+---
+
+## 4. DB 마이그레이션
 
 - **V013** — `email_verification_codes.failed_attempts`, `password_reset_tokens.failed_attempts`
 
@@ -64,7 +85,7 @@
 
 ---
 
-## 4. 운영 배포
+## 5. 운영 배포
 
 ```bash
 cd /opt/myanmar-v2
@@ -81,7 +102,7 @@ grep -n "OTP_MAX_FAIL\|form-validation" apps/api/app/routers/auth.py html/C안/F
 
 ---
 
-## 5. 관련 문서
+## 6. 관련 문서
 
 - [FO 사용 가이드](./사용가이드/FO_사용가이드.md)
 - [통합 테스트 시나리오](./통합테스트/통합테스트_시나리오.md)

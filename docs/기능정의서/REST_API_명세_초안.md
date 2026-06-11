@@ -3,7 +3,7 @@
 > **목적**: 프로덕션 HTTP API 초안. 백엔드·프론트 연동 기준 문서.  
 > **근거**: `기능정의서/DB스키마_초안.md`, FO/BO 기능정의서, `html/shared/api-client.js`  
 > **상태**: v0.1 초안 — **실제 구현 정본은 `apps/api`** ([`docs/system_design/tech-spec.md`](../system_design/tech-spec.md) §4)  
-> **갱신:** 2026-06-11 — FastAPI FO/BO API 대부분 구현 완료. 초안과 다른 경로·필드는 tech-spec §4.2 「초안 대비 차이」 참고.
+> **갱신:** 2026-06-11 — FastAPI FO/BO API 대부분 구현 완료. FO API 오류 메시지 KO/MY/EN (`fo_messages.py`, `X-TPKM-Locale`). 초안과 다른 경로·필드는 tech-spec §4.2 「초안 대비 차이」 참고.
 
 ### 구현 현황 (2026-06-11)
 
@@ -28,7 +28,8 @@
 | Base URL | `https://{host}/api/v1` |
 | Content-Type | `application/json; charset=utf-8` |
 | Accept | `application/json` |
-| 다국어 | 요청 헤더 `Accept-Language: ko` \| `my` \| `en` (기본 `ko`) |
+| FO 로케일 | 요청 헤더 **`X-TPKM-Locale: ko`** \| **`my`** \| **`en`** (기본 `ko`). FO `api-client.js`가 `localStorage.tpkm_lang`에서 자동 전송 |
+| FO API 오류 | `fo_api_error(code, msg_key, lang, **params)` → `error.message` KO/MY/EN (`apps/api/app/lib/fo_messages.py`) |
 | FO 정적 | HTML/CSS/JS는 Nginx 등에서 별도 서빙 (본 API와 분리) |
 
 ### 1.2 인증 (권장: 이중 토큰 + 경로 분리)

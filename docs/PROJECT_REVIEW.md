@@ -73,10 +73,14 @@
 ### A.4 i18n (KO / MY / EN)
 
 - **UI 언어 저장:** `localStorage.tpkm_lang` (`KO`|`MY`|`EN`, 기본 `KO`)
-- **메커니즘:** `common.js` → 동적 로드 `shared/topik-i18n-content.js` → `[data-i18n-content="key"]` 갱신
+- **정적 UI:** `common.js` → 동적 로드 `shared/topik-i18n-content.js` → `[data-i18n-content="key"]` 갱신
+- **동적 UI:** `window.TPKMBt.bt(key, fallback)` / `btf(key, fallback, {n: v})` — login·signup·register·mypage·ticket·refund·photo-upload 등
 - **폴백:** MY→EN→KO, EN→KO
-- **API 다국어:** FAQ `?lang=`, 약관 `?lang=ko|my|en`, Google 로그인 `preferred_lang`
+- **API 로케일:** FO `api-client.js` → `X-TPKM-Locale` 헤더 → `resolve_request_locale()` → `fo_api_error()` + `fo_messages._CATALOG`
+- **오류 표시:** `parseError()` — `err.{code}` 키 우선, 서버 `message` 폴백 (동적 `{remaining}`, `{levels}` 등)
+- **API 콘텐츠 다국어:** FAQ `?lang=`, 약관 `?lang=ko|my|en`, 공지 `category_label`, Google `preferred_lang`
 - **메뉴 i18n:** `common.js`의 `MENU_I18N` / `SUB_I18N` 키
+- **상태 (2026-06-11):** FO P2 i18n **구현 완료** (`188dd07`). 고객사·QA 육안 검수 권장. BO admin API 한글 오류는 FO 범위 밖.
 
 ### A.5 정책·구현 차이 (주의)
 

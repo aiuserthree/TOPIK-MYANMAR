@@ -17,7 +17,7 @@
 |  | ↓ |
 |  | [GNB 렌더링] → 로고 + 메뉴 7종 + 회원 액션 + 햄버거 |
 |  | ↓ |
-|  | [i18n.boot] → localStorage.tm_lang 로 텍스트/속성 치환 |
+|  | [i18n.boot] → localStorage.tpkm_lang 로 텍스트/속성 치환 (`topik-i18n-content.js`, `TPKMBt`) |
 |  | ↓ |
 |  | [모바일-메뉴.내용 로딩 직후] |
 |  | ├ 햄버거/드로어 wiring |

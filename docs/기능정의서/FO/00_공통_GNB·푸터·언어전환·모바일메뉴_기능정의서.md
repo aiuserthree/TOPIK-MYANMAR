@@ -83,3 +83,18 @@
 |  | - 알림 배지(예: 마이페이지 미확인 결과) 헤더 우측 회원 영역에 추가 |
 |  | - 검색(공지/자주 묻는 질문 통합) 단축 입력 헤더 통합 |
 |  | - 다크모드 토글 (localStorage tm_theme) |
+
+---
+
+## 구현 반영 (2026-06-11 · P2 i18n)
+
+| 항목 | 구현 |
+| --- | --- |
+| 언어 저장 | `localStorage.tpkm_lang` (`KO`/`MY`/`EN`) |
+| 정적 UI | `html/C안/FO/shared/topik-i18n-content.js` + `[data-i18n-content]` |
+| 동적 UI | `window.TPKMBt.bt()` / `btf()` — 로그인·가입·접수·마이페이지·수험표·환불·사진 업로드 등 |
+| API 로케일 | FO `api-client.js` → `X-TPKM-Locale` → `apps/api/app/lib/locale.py` `resolve_request_locale()` |
+| API 오류 | `fo_api_error()` + `fo_messages._CATALOG` (KO/MY/EN, 동적 `{remaining}`·`{levels}` 등) |
+| 클라이언트 오류 | `parseError()` — `err.{code}` 키 우선, 서버 `message` 폴백 |
+
+> 고객사·QA **전 페이지 MY/EN 육안 검수** 권장. BO admin API 한글 오류 메시지는 FO 범위 밖.

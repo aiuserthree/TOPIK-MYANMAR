@@ -82,10 +82,11 @@
 
 | 액션/트리거 | 입력 & 검증 | 처리(비즈니스 규칙) | 연동 API | 연동 DB | 결과/예외 |
 | --- | --- | --- | --- | --- | --- |
-| 언어 버튼 클릭 | code ∈ {ko, my, en} | `i18n.setLang(code)` → `data-i18n` 키 일괄 치환 + `localStorage`에 언어 저장(새로고침/이동 후 유지). | — (클라이언트 i18n) | — | DOM 즉시 갱신 |
-| 다국어 폴백 | 선택 언어 사전 키 부재 | **폴백 체인 MY→EN→KO** 적용(최종 KO). 즉, MY 키 누락 시 EN, EN도 없으면 KO 노출. | — | — | 깨진 키 노출 방지 |
+| 언어 버튼 클릭 | code ∈ {KO, MY, EN} | `setLang()` → `[data-i18n-content]`·`MENU_I18N` 갱신 + `localStorage.tpkm_lang` 저장. 동적 UI는 `TPKMBt.bt()`/`btf()` 재호출. | — (클라이언트 i18n) | — | DOM 즉시 갱신 |
+| 다국어 폴백 | 선택 언어 사전 키 부재 | **폴백 체인 MY→EN→KO** 적용(최종 KO). `topik-i18n-content.js` + `err.*` 오류 키 동일. | — | — | 깨진 키 노출 방지 |
+| API 요청 로케일 | FO API 호출 시 | `api-client.js`가 `X-TPKM-Locale: ko|my|en` 자동 전송 → `resolve_request_locale()` → `fo_api_error()` 메시지. | FO 보호 API 전반 | — | 오류 `message` KO/MY/EN |
 | 가입/프로필 언어 연동 | 회원 선택 언어 | 회원가입·프로필 저장 시 `preferred_lang`(ko/my/en)에 반영 → 트랜잭션 메일 기본 언어로 사용. | `POST /api/v1/auth/register`, `PATCH /api/v1/me` | `users.preferred_lang` | 메일 `email_outbox.locale` 기본값 |
-| 콘텐츠 API 언어 | `lang` 쿼리/`Accept-Language` | FAQ·약관 등 다국어 콘텐츠는 서버에서 언어별 컬럼 선택(`question_my` 등), 없으면 `_ko` 폴백. | `GET /api/v1/faq?lang=`, `GET /api/v1/terms/{type}?lang=` | `faq_items.*_my/_en/_ko`, `terms.body_*` | 서버측 KO 폴백 |
+| 콘텐츠 API 언어 | `lang` 쿼리 + `X-TPKM-Locale` | FAQ·약관·공지 카테고리 등 — 서버 언어별 컬럼 선택, 없으면 `_ko` 폴백. | `GET /api/v1/faq?lang=`, `GET /api/v1/terms/{type}?lang=`, `GET /api/v1/notices` | `faq_items.*`, `terms.body_*`, `notices` | 서버측 KO 폴백 |
 
 > 폴백 정책 정합: 기능정의서 00은 "누락 시 KO 대체", 핵심 도메인 컨텍스트는 "MY→EN→KO". 본 설계는 **MY→EN→KO(최종 KO)** 로 통일. 서버 콘텐츠 API 구현은 현재 "선택 언어 없으면 KO 직접 폴백"이므로 MY→EN 중간 단계는 클라이언트 i18n 사전에서 처리한다. (합의 필요: 서버측도 EN 중간 폴백 적용 여부)
 

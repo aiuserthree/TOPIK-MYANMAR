@@ -7,6 +7,7 @@
 ### 최근 업데이트 (2026-06-11)
 
 - 응시자 FO: 비밀번호·OTP·증명사진(2MB)·필수 약관 검증 강화 — 접수 데이터 품질에 영향
+- 응시자 FO: **KO/MY/EN** UI·API 오류 메시지 i18n 완료 — 응시자가 영어·미얀마어로 오류를 확인 가능
 - **편의지원(장애인)**: FO 접수 UI **없음** — BO 채번(`TC-APPLY-BO-020`)만 사용. `accommodation_requested`는 API 기본 `false`
 - 접수 동시 수정: `If-Match`·409 안내 유지
 - 상세: [`RELEASE_NOTES_2026-06-11.md`](../RELEASE_NOTES_2026-06-11.md)
