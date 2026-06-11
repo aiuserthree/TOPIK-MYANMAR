@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,7 @@ from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user
 from app.lib.errors import api_error
 from app.lib.exam_round_status import sync_exam_round_status
+from app.lib.locale import resolve_request_locale
 from app.lib.formatting import (
     card_status_label,
     derive_card_status_for_app,
@@ -391,6 +392,7 @@ def _serialize_level_item(
     app: Application,
     rounds: dict[int, ExamRound],
     venues: dict[int, ExamVenue],
+    lang: str = "ko",
 ) -> dict:
     """FO 마이페이지·수험표용 — 급수(application) 1건당 카드 1개."""
     rnd = rounds.get(sub.exam_round_id)
@@ -424,7 +426,7 @@ def _serialize_level_item(
         "exam_number_visible": level["exam_number_visible"],
         "tab": "past" if is_past else "active",
         "fo_card_status": card_status,
-        "card_status_label": card_status_label(card_status),
+        "card_status_label": card_status_label(card_status, lang),
         "rejection_type": rejection["type"] if rejection else None,
         "rejection_reason": rejection["reason"] if rejection else None,
         "levels": [level],
@@ -466,13 +468,19 @@ def _serialize_submission_items(
     sub: ApplicationSubmission,
     rounds: dict[int, ExamRound],
     venues: dict[int, ExamVenue],
+    lang: str = "ko",
 ) -> list[dict]:
     apps_sorted = sorted(sub.applications, key=lambda a: 0 if a.exam_level == "I" else 1)
-    return [_serialize_level_item(sub, a, rounds, venues) for a in apps_sorted]
+    return [_serialize_level_item(sub, a, rounds, venues, lang) for a in apps_sorted]
 
 
 @router.get("/applications")
-async def my_applications(auth: AuthUser = Depends(require_complete_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def my_applications(
+    request: Request,
+    lang: str | None = Query(None),
+    auth: AuthUser = Depends(require_complete_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     result = await db.execute(
         select(ApplicationSubmission)
         .where(ApplicationSubmission.user_id == auth.id)
@@ -492,9 +500,10 @@ async def my_applications(auth: AuthUser = Depends(require_complete_user), db: A
         vres = await db.execute(select(ExamVenue).where(ExamVenue.id.in_(venue_ids)))
         venues = {v.id: v for v in vres.scalars().all()}
 
+    locale = resolve_request_locale(request, lang)
     items: list[dict] = []
     for s in submissions:
-        items.extend(_serialize_submission_items(s, rounds, venues))
+        items.extend(_serialize_submission_items(s, rounds, venues, locale))
     active = [i for i in items if i["tab"] == "active"]
     past = [i for i in items if i["tab"] == "past"]
     return {"items": items, "active": active, "past": past}

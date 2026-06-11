@@ -52,6 +52,7 @@ from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
 from app.lib.validation import is_valid_password
 from app.lib.admin_permissions import (
+    PERM_MENUS,
     assert_perm,
     board_menu_for_type,
     get_matrix_row,
@@ -2312,10 +2313,40 @@ async def list_admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSe
     }
 
 
+_PERM_MENU_LABELS: dict[str, str] = {
+    menu["id"]: menu["label"]
+    for section in perm_schema()["sections"]
+    for menu in section["menus"]
+}
+
+
+def _perm_matrix_diff_summary(
+    before: dict | None, after: dict | None
+) -> tuple[str, str]:
+    """권한 매트릭스 변경 시 (등급, 메뉴) 요약."""
+    b_matrix = (before or {}).get("matrix") or {}
+    a_matrix = (after or {}).get("matrix") or {}
+    changes: list[tuple[str, str]] = []
+    for matrix_role in ("admin", "readonly"):
+        before_role = b_matrix.get(matrix_role) or {}
+        after_role = a_matrix.get(matrix_role) or {}
+        for menu_id in PERM_MENUS:
+            if set(before_role.get(menu_id, []) or []) != set(after_role.get(menu_id, []) or []):
+                changes.append((matrix_role, menu_id))
+    if not changes:
+        return "—", "—"
+    role, menu_id = changes[0]
+    menu_label = _PERM_MENU_LABELS.get(menu_id, menu_id)
+    if len(changes) > 1:
+        menu_label = f"{menu_label} 외 {len(changes) - 1}건"
+    return role, menu_label
+
+
 @router.post("/admin-users")
 async def create_admin_user(
     body: AdminUserBody,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)
@@ -2347,6 +2378,7 @@ async def create_admin_user(
         target_type="admin_users",
         target_id=row.id,
         after_data={"role": row.role, "name": row.name, "email": row.email, "status": row.status},
+        ip_address=ip,
     )
     await db.commit()
     return {"id": row.id}
@@ -2357,6 +2389,7 @@ async def update_admin_user(
     admin_id: int,
     body: AdminUserPatchBody,
     admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)
@@ -2383,6 +2416,7 @@ async def update_admin_user(
         before_data=before_data,
         after_data=after_data,
         memo="등급 변경" if "role" in data else None,
+        ip_address=ip,
     )
     await db.commit()
     return {"updated": True}
@@ -2520,13 +2554,21 @@ async def _serialize_admin_access_logs(db: AsyncSession, logs: list[AdminAccessL
     return out
 
 
-async def _serialize_member_access_logs(logs: list[MemberAccessLog]) -> list[dict]:
-    return [
-        {
+async def _serialize_member_access_logs(db: AsyncSession, logs: list[MemberAccessLog]) -> list[dict]:
+    user_ids = {l.user_id for l in logs if l.user_id}
+    users: dict[int, User] = {}
+    if user_ids:
+        res = await db.execute(select(User).where(User.id.in_(user_ids)))
+        users = {u.id: u for u in res.scalars().all()}
+    out = []
+    for l in logs:
+        user = users.get(l.user_id) if l.user_id else None
+        out.append({
             "id": l.id,
             "user_id": l.user_id,
-            "member_id": str(l.user_id) if l.user_id else "—",
             "email": l.email,
+            "name_ko": user.name_ko if user else None,
+            "name_en": user.name_en if user else None,
             "action_type": l.action_type,
             "path": l.path,
             "success": l.success,
@@ -2534,9 +2576,8 @@ async def _serialize_member_access_logs(logs: list[MemberAccessLog]) -> list[dic
             "user_agent": l.user_agent,
             "memo": l.memo,
             "created_at": l.created_at.isoformat(),
-        }
-        for l in logs
-    ]
+        })
+    return out
 
 
 def _perm_history_change_type(action_type: str, before: dict | None, after: dict | None) -> str:
@@ -2562,13 +2603,16 @@ async def _serialize_perm_history(db: AsyncSession, logs: list[AdminAuditLog]) -
         role = "—"
         menu = "—"
         if raw.action_type == "permission_matrix_update":
-            role = "—"
-            menu = "—"
-        elif raw.action_type == "admin_update" and raw.after_data and raw.after_data.get("role"):
-            role = raw.after_data.get("role")
-            menu = "—"
-        elif raw.action_type == "admin_create" and raw.after_data is None:
-            role = "—"
+            role, menu = _perm_matrix_diff_summary(raw.before_data, raw.after_data)
+        elif raw.action_type == "admin_update" and raw.after_data:
+            if raw.after_data.get("role"):
+                role = raw.after_data.get("role")
+            if raw.after_data.get("email"):
+                target = raw.after_data["email"]
+        elif raw.action_type == "admin_create" and raw.after_data:
+            role = raw.after_data.get("role", "—")
+            if raw.after_data.get("email"):
+                target = raw.after_data["email"]
         out.append({
             "id": raw.id,
             "admin_user_id": raw.admin_user_id,
@@ -2667,7 +2711,7 @@ async def member_access_logs(
         await db.rollback()
         _access_log_migration_error()
     return {
-        "items": await _serialize_member_access_logs(logs),
+        "items": await _serialize_member_access_logs(db, logs),
         "page": page,
         "page_size": page_size,
         "total_items": total,

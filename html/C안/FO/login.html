@@ -296,6 +296,11 @@
 <script src="shared/form-validation.js"></script>
 <script src="assets/common.js"></script>
 <script>
+  function bt(key, fallback) {
+    if (window.TPKMBt && TPKMBt.bt) return TPKMBt.bt(key, fallback) || fallback;
+    if (window.TOPIKPageI18n && TOPIKPageI18n.bt) return TOPIKPageI18n.bt(key, fallback) || fallback;
+    return fallback;
+  }
   function maybeShowPwExpiry(due, thenGo) {
     if (!due) { if (thenGo) thenGo(); return; }
     var modal = document.getElementById('modalPwExpiry');
@@ -322,7 +327,7 @@
     const pw = document.getElementById('password');
     const isPw = pw.type === 'password';
     pw.type = isPw ? 'text' : 'password';
-    this.textContent = isPw ? '숨김' : '표시';
+    this.textContent = isPw ? bt('pwr.js_hide', '숨김') : bt('pwr.js_show', '표시');
   });
 
   // Login submit — API first (Phase 0); legacy demo if USE_API=false or unreachable + fallbackOnError
@@ -334,15 +339,15 @@
     const btn = this.querySelector('button[type="submit"]');
     if (!email || !pw) {
       err.classList.add('show');
-      err.querySelector('span').textContent = '이메일과 비밀번호를 모두 입력해 주세요.';
+      err.querySelector('span').textContent = bt('login.js_fields_required', '이메일과 비밀번호를 모두 입력해 주세요.');
       return;
     }
     err.classList.remove('show');
-    if (btn) { btn.disabled = true; btn.textContent = '로그인 중…'; }
+    if (btn) { btn.disabled = true; btn.textContent = bt('login.js_signing_in', '로그인 중…'); }
 
     const remember = document.getElementById('remember').checked;
     const finish = function () {
-      if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
+      if (btn) { btn.disabled = false; btn.textContent = bt('login.btn_login', '로그인'); }
     };
 
     const goNext = function () {
@@ -575,15 +580,15 @@
   function renderFindIdResult(matches) {
     var body = document.getElementById('findIdResultBody');
     if (!matches || !matches.length) {
-      body.innerHTML = '<p style="margin:4px 0; font-size:13px; color:var(--text-3);">입력하신 정보와 일치하는 계정을 찾을 수 없습니다. 입력 내용을 다시 확인해 주세요.</p>';
+      body.innerHTML = '<p style="margin:4px 0; font-size:13px; color:var(--text-3);">' + esc(bt('login.js_find_none', '입력하신 정보와 일치하는 계정을 찾을 수 없습니다. 입력 내용을 다시 확인해 주세요.')) + '</p>';
       return;
     }
     body.innerHTML =
-      '<p style="margin-bottom:8px; font-size:13px;">입력하신 정보와 일치하는 계정입니다.</p>' +
+      '<p style="margin-bottom:8px; font-size:13px;">' + esc(bt('login.js_find_match', '입력하신 정보와 일치하는 계정입니다.')) + '</p>' +
       matches.map(function (m) {
         var isG = m.provider === 'google';
         return '<div class="acct"><span class="mail">' + esc(m.email_masked) + '</span>' +
-          '<span class="type' + (isG ? ' google' : '') + '">' + (isG ? 'Google 계정' : '일반 가입') + '</span></div>';
+          '<span class="type' + (isG ? ' google' : '') + '">' + (isG ? bt('login.js_acct_google', 'Google 계정') : bt('login.js_acct_email', '일반 가입')) + '</span></div>';
       }).join('');
   }
   if (window.TPKMValidate) {
@@ -596,24 +601,24 @@
     var n = document.getElementById('fi-name').value.trim();
     var b = document.getElementById('fi-bd').value.trim();
     var t = document.getElementById('fi-tel').value.trim();
-    if (!n || !b || !t) { alert('이름, 생년월일, 연락처를 모두 입력해 주세요.'); return; }
+    if (!n || !b || !t) { alert(bt('login.js_find_fields', '이름, 생년월일, 연락처를 모두 입력해 주세요.')); return; }
     if (window.TPKMValidate) {
       var birthCheck = TPKMValidate.validateBirthYmd(b);
       if (!birthCheck.ok) { alert(birthCheck.message); return; }
       b = birthCheck.value;
     }
-    if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
-    btn.disabled = true; var prev = btn.textContent; btn.textContent = '확인 중…';
+    if (!window.TopikApi || !TopikApi.canUseApi()) { alert(bt('common.no_server', '서버에 연결할 수 없습니다.')); return; }
+    btn.disabled = true; var prev = btn.textContent; btn.textContent = bt('common.checking', '확인 중…');
     TopikApi.findEmail({ name_ko: n, birth_date: b, phone: t }).then(function (res) {
       btn.disabled = false;
       if (!res.ok) { btn.textContent = prev; alert(TopikApi.parseError(res)); return; }
       renderFindIdResult(res.body.matches || []);
       document.getElementById('findIdForm').classList.add('hidden');
       document.getElementById('findIdResult').classList.remove('hidden');
-      btn.textContent = '로그인하러 가기';
+      btn.textContent = bt('login.js_go_login', '로그인하러 가기');
       btn.onclick = function () { TPKM.closeModal('modalFindId'); resetFindId(); };
     }).catch(function () {
-      btn.disabled = false; btn.textContent = prev; alert('네트워크 오류입니다.');
+      btn.disabled = false; btn.textContent = prev; alert(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
   function resetFindId() {
@@ -632,7 +637,7 @@
     if (errEl) errEl.style.display = 'none';
     var e = document.getElementById('fp-email').value.trim();
     if (!e || (window.TPKMValidate ? !TPKMValidate.isValidEmail(e) : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))) {
-      alert('유효한 이메일을 입력해 주세요.'); return;
+      alert(bt('val.email', '유효한 이메일을 입력해 주세요.')); return;
     }
 
     function goReset() {
@@ -644,7 +649,7 @@
 
     var prev = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '발송 중…';
+    btn.textContent = bt('common.sending', '발송 중…');
     TopikApi.forgotPassword(e).then(function (res) {
       btn.disabled = false;
       btn.textContent = prev;
@@ -660,11 +665,11 @@
       }
       var b = res.body || {};
       if (b.registered === false) {
-        alert('입력하신 이메일로 가입된 계정이 없습니다.');
+        alert(bt('login.js_no_email', '입력하신 이메일로 가입된 계정이 없습니다.'));
         return;
       }
       if (b.provider === 'google') {
-        alert('입력하신 이메일은 Google 계정으로 가입된 계정입니다. 구글 로그인을 이용해 주세요.');
+        alert(bt('login.js_google_only', '입력하신 이메일은 Google 계정으로 가입된 계정입니다. 구글 로그인을 이용해 주세요.'));
         return;
       }
       if (b.dev_code && b.mail_delivered === false) {
@@ -674,7 +679,7 @@
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;
-      alert('네트워크 오류입니다.');
+      alert(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
   function resetFindPw() {

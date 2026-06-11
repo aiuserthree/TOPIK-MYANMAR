@@ -778,20 +778,35 @@
     );
   }
 
+  function i18nErr(code, fallback) {
+    if (!code) return fallback;
+    var key = "err." + code;
+    if (global.TPKMBt && global.TPKMBt.bt) {
+      var mapped = global.TPKMBt.bt(key, "");
+      if (mapped) return mapped;
+    }
+    return fallback;
+  }
+
   function parseError(res) {
-    if (!res) return "요청을 처리할 수 없습니다.";
+    if (!res) return i18nErr("GENERIC", "요청을 처리할 수 없습니다.");
     var b = res.body || {};
+    var code = b.error && b.error.code;
+    if (code) {
+      var byCode = i18nErr(code, null);
+      if (byCode) return byCode;
+    }
     if (b.error && b.error.message) return b.error.message;
     if (b.error && typeof b.error === "string") return b.error;
     if (b.message) return b.message;
-    if (res.status === 401) return "로그인이 필요합니다.";
-    if (res.status === 409) return "이미 처리된 요청입니다.";
-    if (res.status === 429) return "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.";
+    if (res.status === 401) return i18nErr("UNAUTHORIZED", "로그인이 필요합니다.");
+    if (res.status === 409) return i18nErr("CONFLICT", "이미 처리된 요청입니다.");
+    if (res.status === 429) return i18nErr("RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
     if (res.status === 0 || res.error === "network_error") {
-      return "네트워크 오류입니다. 연결 상태를 확인해 주세요.";
+      return i18nErr("NETWORK", "네트워크 오류입니다. 연결 상태를 확인해 주세요.");
     }
-    if (res.error === "api_disabled") return "API 연결이 설정되지 않았습니다.";
-    return "요청을 처리할 수 없습니다. (" + (res.status || "오류") + ")";
+    if (res.error === "api_disabled") return i18nErr("API_DISABLED", "API 연결이 설정되지 않았습니다.");
+    return i18nErr("GENERIC", "요청을 처리할 수 없습니다.") + " (" + (res.status || "오류") + ")";
   }
 
   function canUseApi() {

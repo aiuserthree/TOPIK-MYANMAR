@@ -25,7 +25,7 @@ function MemberAccessLogPanel() {
 
   const filtered = useMemo(() => {
     let r = baseLog.slice();
-    if (memberF !== 'all') r = r.filter(l => l.memberId === memberF);
+    if (memberF !== 'all') r = r.filter(l => l.email === memberF);
     if (actionF !== 'all') r = r.filter(l => l.action === actionF);
     if (resultF !== 'all') r = r.filter(l => l.result === resultF);
     if (range > 0) {
@@ -42,8 +42,8 @@ function MemberAccessLogPanel() {
   const rows = filtered.slice((page - 1) * PER, page * PER);
 
   const exportCSV = () => {
-    const headers = ['시각', '회원 ID', '이메일', 'IP', '액션', '경로', '결과', 'User-Agent', '메모'];
-    const csvRows = filtered.map(l => [l.ts, l.memberId, l.email, l.ip, l.action, l.path || '', l.result, l.userAgent || '', l.memo || '']);
+    const headers = ['시각', '한글성명', '영문성명', '이메일', 'IP', '액션', '경로', '결과', 'User-Agent', '메모'];
+    const csvRows = filtered.map(l => [l.ts, l.nameKo, l.nameEn, l.email, l.ip, l.action, l.path || '', l.result, l.userAgent || '', l.memo || '']);
     const fn = '회원접근로그_' + new Date().toISOString().slice(0, 10) + '.csv';
     const after = () => {
       DataStore.addAudit({ type: '관리자계정', targetId: '—', action: '게시', memo: `회원 접근 로그 CSV보내기(${filtered.length}건)` });
@@ -88,7 +88,7 @@ function MemberAccessLogPanel() {
           <select className="select" value={memberF} onChange={e => setMemberF(e.target.value)}>
             <option value="all">전체 회원</option>
             {state.members.filter(m => m.status === 'active').slice(0, 20).map(m => (
-              <option key={m.id} value={m.id}>{m.id} · {m.email}</option>
+              <option key={m.id} value={m.email}>{m.nameKo || m.name} · {m.email}</option>
             ))}
           </select>
           <select className="select" value={actionF} onChange={e => setActionF(e.target.value)}>
@@ -108,15 +108,14 @@ function MemberAccessLogPanel() {
         <div className="dg-scroll">
           <table className="dg">
             <thead><tr>
-              <th>시각</th><th>회원 ID</th><th>이메일</th><th>IP</th>
+              <th>시각</th><th>이메일</th><th>IP</th>
               <th>액션</th><th>경로</th><th>결과</th><th>상세</th>
             </tr></thead>
             <tbody>
               {rows.map(l => (
                 <tr key={l.id}>
                   <td className="code">{l.ts}</td>
-                  <td><code className="code-id">{l.memberId}</code></td>
-                  <td className="muted" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.email}</td>
+                  <td className="muted" style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.email}</td>
                   <td className="code muted">{l.ip}</td>
                   <td><span className={`pill ${l.action === '로그인' ? 'pill-approved' : l.action === '로그인실패' ? 'pill-rejected' : 'pill-applied'}`}>{l.action}</span></td>
                   <td className="code">{l.path || '—'}</td>
@@ -127,7 +126,7 @@ function MemberAccessLogPanel() {
                 </tr>
               ))}
               {!rows.length && (
-                <tr><td colSpan="8"><div className="empty"><div className="ttl">조건에 맞는 로그가 없습니다</div></div></td></tr>
+                <tr><td colSpan="7"><div className="empty"><div className="ttl">조건에 맞는 로그가 없습니다</div></div></td></tr>
               )}
             </tbody>
           </table>
@@ -148,15 +147,16 @@ function MemberAccessDetailLP({ id, onClose }) {
   const l = (state.memberAccessLogs || []).find(x => x.id === id);
   if (!l) return null;
   return (
-    <LP open size="wide" title={`회원 접근 로그 상세 — ${l.action}`} sub={`${l.memberId} · ${l.email}`} onClose={onClose}
+    <LP open size="wide" title={`회원 접근 로그 상세 — ${l.action}`} sub={`${l.email} · ${l.ts}`} onClose={onClose}
       footer={<>
-        {l.memberId !== '—' && <a className="btn btn-secondary" href="#members" onClick={onClose}>회원 관리 바로가기 →</a>}
+        {l.memberId && <a className="btn btn-secondary" href="#members" onClick={onClose}>회원 관리 바로가기 →</a>}
         <button className="btn btn-primary" onClick={onClose}>닫기</button>
       </>}>
       <FieldSet legend="기본" cols={2}>
         <KV k="접근 시각" v={<code className="code-id">{l.ts}</code>}/>
         <KV k="액션" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{l.action}</span>}/>
-        <KV k="회원 ID" v={<code className="code-id">{l.memberId}</code>}/>
+        <KV k="한글성명" v={l.nameKo || '—'}/>
+        <KV k="영문성명" v={l.nameEn || '—'}/>
         <KV k="이메일" v={l.email}/>
         <KV k="IP" v={<code className="code-id">{l.ip}</code>}/>
         <KV k="경로" v={<code className="code-id">{l.path || '—'}</code>}/>

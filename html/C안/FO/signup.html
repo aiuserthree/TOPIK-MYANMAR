@@ -538,6 +538,11 @@
   var confirmBtnBusy = false;
   var isGoogleSignup = false;
 
+  function bt(key, fallback) {
+    if (window.TPKMBt && TPKMBt.bt) return TPKMBt.bt(key, fallback) || fallback;
+    if (window.TOPIKPageI18n && TOPIKPageI18n.bt) return TOPIKPageI18n.bt(key, fallback) || fallback;
+    return fallback;
+  }
   function i18nText(key) {
     try {
       if (window.TPKMLang && typeof TPKMLang.t === 'function') {
@@ -652,7 +657,6 @@
 
   /** Policy: 정책_합의_워크시트 §2.9 — API MIN_SIGNUP_AGE_YEARS 와 동일 */
   var MIN_SIGNUP_AGE_YEARS = 14;
-  var AGE_RESTRICTED_MSG = '만 ' + MIN_SIGNUP_AGE_YEARS + '세 미만은 회원가입할 수 없습니다.';
 
   function showSignupErr(msg) {
     alert(msg);
@@ -725,16 +729,27 @@
 
   function validateSignupBirth(showAlert) {
     var raw = document.getElementById('su-birth').value.trim();
+    if (window.TPKMValidate) {
+      var check = TPKMValidate.validateBirthYmd(raw);
+      if (!check.ok) {
+        setBirthFieldError(check.message);
+        if (showAlert) showSignupErr(check.message);
+        return false;
+      }
+      setBirthFieldError('');
+      return true;
+    }
     var birth = normalizeBirthYmd(raw);
     if (!birth) {
-      var fmtMsg = '생년월일을 YYYYMMDD 8자리로 입력해 주세요.';
+      var fmtMsg = bt('val.birth_format', '생년월일을 YYYYMMDD 8자리로 입력해 주세요.');
       setBirthFieldError(fmtMsg);
       if (showAlert) showSignupErr(fmtMsg);
       return false;
     }
     if (isUnderMinimumAge(birth)) {
-      setBirthFieldError(AGE_RESTRICTED_MSG);
-      if (showAlert) showSignupErr(AGE_RESTRICTED_MSG);
+      var ageMsg = bt('val.birth_age', '만 ' + MIN_SIGNUP_AGE_YEARS + '세 미만은 회원가입할 수 없습니다.');
+      setBirthFieldError(ageMsg);
+      if (showAlert) showSignupErr(ageMsg);
       return false;
     }
     setBirthFieldError('');
@@ -839,37 +854,37 @@
       var pw = document.getElementById('su-pw').value;
       var pw2 = document.getElementById('su-pw2').value;
       if (!document.getElementById('su-name-ko').value.trim()) {
-        showSignupErr('한글 성명을 입력해 주세요.'); return;
+        showSignupErr(bt('su.err_name_ko', '한글 성명을 입력해 주세요.')); return;
       }
       if (!document.getElementById('su-name-en').value.trim()) {
-        showSignupErr('영문 성명을 입력해 주세요.'); return;
+        showSignupErr(bt('su.err_name_en', '영문 성명을 입력해 주세요.')); return;
       }
       if (!validateSignupBirth(true)) return;
       if (!document.getElementById('su-gender').value ||
           !document.getElementById('su-nationality').value ||
           !document.getElementById('su-lang1').value) {
-        showSignupErr('성별·국적·제1언어를 선택해 주세요.'); return;
+        showSignupErr(bt('su.err_profile_codes', '성별·국적·제1언어를 선택해 주세요.')); return;
       }
       if (!document.getElementById('su-phone').value.trim()) {
-        showSignupErr('연락처를 입력해 주세요.'); return;
+        showSignupErr(bt('su.err_phone', '연락처를 입력해 주세요.')); return;
       }
       if (!document.getElementById('su-job').value ||
           !document.getElementById('su-motive').value ||
           !document.getElementById('su-purpose').value) {
-        showSignupErr('직업·응시동기·응시목적을 선택해 주세요.'); return;
+        showSignupErr(bt('val.roster_codes', '직업·응시동기·응시목적을 선택해 주세요.')); return;
       }
       if (!isGoogleSignup) {
         if (!isValidPassword(pw)) {
-          showSignupErr('비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.'); return;
+          showSignupErr(bt('val.password_rule', '비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.')); return;
         }
         if (pw !== pw2) {
-          showSignupErr('비밀번호 확인이 일치하지 않습니다.'); return;
+          showSignupErr(bt('val.password_mismatch', '비밀번호 확인이 일치하지 않습니다.')); return;
         }
       }
       var photoState = signupPhotoCtrl && signupPhotoCtrl.getState ? signupPhotoCtrl.getState() : {};
       var dataUrl = photoState.dataUrl || '';
       if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {
-        showSignupErr('증명사진을 등록해 주세요.'); return;
+        showSignupErr(bt('su.err_photo', '증명사진을 등록해 주세요.')); return;
       }
     }
     go(cur + 1);
@@ -883,12 +898,12 @@
   document.getElementById('btnSendCode').addEventListener('click', function () {
     var btn = this;
     var e = document.getElementById('su-email').value.trim();
-    if (!e) { showSignupErr('이메일을 입력해 주세요.'); return; }
+    if (!e) { showSignupErr(bt('su.err_email', '이메일을 입력해 주세요.')); return; }
     if (window.TPKMValidate && !TPKMValidate.isValidEmail(e)) {
-      showSignupErr('올바른 이메일 형식을 입력해 주세요.'); return;
+      showSignupErr(bt('su.err_email_fmt', '올바른 이메일 형식을 입력해 주세요.')); return;
     }
     if (!TopikApi.canUseApi()) {
-      showSignupErr('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+      showSignupErr(bt('su.err_server_retry', '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'));
       return;
     }
     if (signupBusy) return;
@@ -916,9 +931,9 @@
       var hint = document.getElementById('otpHint');
       if (pending) pending.classList.toggle('hidden', mailOk);
       if (hint && !mailOk) {
-        hint.textContent = '이메일 발송이 지연될 수 있습니다. 메일이 오면 6자리 코드를 입력해 주세요. (유효 5분)';
+        hint.textContent = bt('su.otp_hint_delay', '이메일 발송이 지연될 수 있습니다. 메일이 오면 6자리 코드를 입력해 주세요. (유효 5분)');
       } else if (hint) {
-        hint.textContent = '이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)';
+        hint.textContent = bt('su.otp_hint', '이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)');
       }
       var t = 300;
       var tm = document.getElementById('otpTimer');
@@ -932,8 +947,8 @@
       if (!document.getElementById('otpRow').classList.contains('hidden')) otpCodeSent = true;
       setSendCodeBtnState(false);
       showSignupErr(err && err.message === 'timeout'
-        ? '서버 응답이 지연되고 있습니다. 잠시 후 재발송을 눌러 주세요.'
-        : '네트워크 오류입니다.');
+        ? bt('su.err_timeout', '서버 응답이 지연되고 있습니다. 잠시 후 재발송을 눌러 주세요.')
+        : bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
 
@@ -942,11 +957,11 @@
     var e = document.getElementById('su-email').value.trim();
     var code = document.getElementById('su-otp').value.trim();
     if (!e || code.length !== 6) {
-      showSignupErr('6자리 인증코드를 입력해 주세요.');
+      showSignupErr(bt('val.code_6', '6자리 인증코드를 입력해 주세요.'));
       return;
     }
     if (!TopikApi.canUseApi()) {
-      showSignupErr('서버에 연결할 수 없습니다.');
+      showSignupErr(bt('common.no_server', '서버에 연결할 수 없습니다.'));
       return;
     }
     setConfirmBtnState(true);
@@ -978,15 +993,15 @@
       clearInterval(timerId);
     }).catch(function () {
       setConfirmBtnState(false);
-      showSignupErr('네트워크 오류입니다.');
+      showSignupErr(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
 
   document.getElementById('btnGoStep2').addEventListener('click', function () {
     if (!step1CanProceed()) {
       showSignupErr(isGoogleSignup
-        ? 'Google 인증이 만료되었습니다. 다시 시도해 주세요.'
-        : '이메일 인증을 완료해 주세요.');
+        ? bt('su.err_google_retry', 'Google 인증이 만료되었습니다. 다시 시도해 주세요.')
+        : bt('su.err_email_verify', '이메일 인증을 완료해 주세요.'));
       return;
     }
     go(2);
@@ -1320,20 +1335,20 @@
   document.getElementById('btnFinish').addEventListener('click', function () {
     var btn = this;
     var reqOk = Array.prototype.slice.call(reqs).every(function (r) { return r.checked; });
-    if (!reqOk) { showSignupErr('필수 약관에 동의해 주세요.'); return; }
+    if (!reqOk) { showSignupErr(bt('su.err_terms', '필수 약관에 동의해 주세요.')); return; }
     if (!isGoogleSignup && !verificationToken) {
-      showSignupErr('이메일 인증을 완료해 주세요.');
+      showSignupErr(bt('su.err_email_verify', '이메일 인증을 완료해 주세요.'));
       return;
     }
     if (!TopikApi.hasSession() && isGoogleSignup) {
-      showSignupErr('Google 인증이 만료되었습니다. Step 1에서 다시 시도해 주세요.');
+      showSignupErr(bt('su.err_google_expired', 'Google 인증이 만료되었습니다. Step 1에서 다시 시도해 주세요.'));
       return;
     }
     if (!validateSignupBirth(true)) return;
     var photoState = signupPhotoCtrl && signupPhotoCtrl.getState ? signupPhotoCtrl.getState() : {};
     var dataUrl = photoState.dataUrl || '';
     if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {
-      showSignupErr('증명사진을 등록해 주세요.');
+      showSignupErr(bt('su.err_photo', '증명사진을 등록해 주세요.'));
       return;
     }
     var photoB64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : dataUrl;
@@ -1355,19 +1370,19 @@
     };
 
     if (!TopikApi.canUseApi()) {
-      showSignupErr('서버에 연결할 수 없습니다.');
+      showSignupErr(bt('common.no_server', '서버에 연결할 수 없습니다.'));
       return;
     }
     if (!isGoogleSignup) {
       var finishPw = document.getElementById('su-pw').value;
       var finishPw2 = document.getElementById('su-pw2').value;
       if (!isValidPassword(finishPw)) {
-        showSignupErr('비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.');
+        showSignupErr(bt('val.password_rule', '비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.'));
         go(2);
         return;
       }
       if (finishPw !== finishPw2) {
-        showSignupErr('비밀번호 확인이 일치하지 않습니다.');
+        showSignupErr(bt('val.password_mismatch', '비밀번호 확인이 일치하지 않습니다.'));
         go(2);
         return;
       }
@@ -1386,7 +1401,7 @@
       setBusy(btn, false, '가입 완료');
       var errBody = res.body && res.body.error;
       if (res.status === 422 && errBody && errBody.code === 'AGE_RESTRICTED') {
-        setBirthFieldError(errBody.message || AGE_RESTRICTED_MSG);
+        setBirthFieldError(errBody.message || bt('val.birth_age', '만 14세 미만은 회원가입할 수 없습니다.'));
         go(2);
       }
       showSignupErr(TopikApi.parseError(res));
@@ -1398,7 +1413,7 @@
         finishSignup();
       }).catch(function () {
         setBusy(btn, false, '가입 완료');
-        showSignupErr('네트워크 오류입니다.');
+        showSignupErr(bt('common.network_err', '네트워크 오류입니다.'));
       });
       return;
     }
@@ -1417,7 +1432,7 @@
       finishSignup();
     }).catch(function () {
       setBusy(btn, false, '가입 완료');
-      showSignupErr('네트워크 오류입니다.');
+      showSignupErr(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
 </script>

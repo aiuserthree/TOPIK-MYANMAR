@@ -223,7 +223,7 @@ async def list_faq(
         item = {
             "id": row.id,
             "category": row.category,
-            "category_label": faq_category_label(row.category),
+            "category_label": faq_category_label(row.category, lang),
             "question": question,
             "answer": answer,
             "sort_order": row.sort_order,
@@ -233,7 +233,7 @@ async def list_faq(
         if grp is None:
             grp = {
                 "category": row.category,
-                "category_label": faq_category_label(row.category),
+                "category_label": faq_category_label(row.category, lang),
                 "items": [],
             }
             groups_map[row.category] = grp

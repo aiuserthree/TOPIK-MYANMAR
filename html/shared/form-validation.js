@@ -4,6 +4,14 @@
 
   var MIN_SIGNUP_AGE_YEARS = 14;
 
+  function i18n(key, fallback, vars) {
+    var fn = (typeof window !== 'undefined' && window.TPKMBt) ? window.TPKMBt : null;
+    if (!fn) return fallback;
+    if (vars && fn.btf) return fn.btf(key, fallback, vars);
+    if (fn.bt) return fn.bt(key, fallback);
+    return fallback;
+  }
+
   function bindDigitsOnlyInput(inputEl, maxLen) {
     if (!inputEl) return;
     function strip() {
@@ -52,10 +60,16 @@
   function validateBirthYmd(raw) {
     var birth = normalizeBirthYmd(raw);
     if (!birth) {
-      return { ok: false, message: '생년월일을 YYYYMMDD 8자리로 입력해 주세요.' };
+      return {
+        ok: false,
+        message: i18n('val.birth_format', '생년월일을 YYYYMMDD 8자리로 입력해 주세요.')
+      };
     }
     if (isUnderMinimumAge(birth)) {
-      return { ok: false, message: '만 ' + MIN_SIGNUP_AGE_YEARS + '세 미만은 회원가입할 수 없습니다.' };
+      return {
+        ok: false,
+        message: i18n('val.birth_age', '만 ' + MIN_SIGNUP_AGE_YEARS + '세 미만은 회원가입할 수 없습니다.', { age: MIN_SIGNUP_AGE_YEARS })
+      };
     }
     return { ok: true, value: birth };
   }
@@ -76,7 +90,9 @@
     var j = Number(job);
     var m = Number(motive);
     var p = Number(purpose);
-    if (!j || !m || !p) return '직업·응시동기·응시목적을 선택해 주세요.';
+    if (!j || !m || !p) {
+      return i18n('val.roster_codes', '직업·응시동기·응시목적을 선택해 주세요.');
+    }
     return null;
   }
 

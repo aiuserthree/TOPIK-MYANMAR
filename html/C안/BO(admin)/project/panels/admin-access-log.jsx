@@ -25,7 +25,7 @@ function AdminAccessLogPanel() {
 
   const filtered = useMemo(() => {
     let r = baseLog.slice();
-    if (adminF !== 'all') r = r.filter(l => l.adminId === adminF);
+    if (adminF !== 'all') r = r.filter(l => l.adminEmail === adminF || l.name === adminF);
     if (actionF !== 'all') r = r.filter(l => l.action === actionF);
     if (resultF !== 'all') r = r.filter(l => l.result === resultF);
     if (range > 0) {
@@ -42,8 +42,8 @@ function AdminAccessLogPanel() {
   const rows = filtered.slice((page - 1) * PER, page * PER);
 
   const exportCSV = () => {
-    const headers = ['시각', '관리자 ID', '이름', 'IP', '액션', '결과', 'User-Agent', '메모'];
-    const csvRows = filtered.map(l => [l.ts, l.adminId, l.name, l.ip, l.action, l.result, l.userAgent || '', l.memo || '']);
+    const headers = ['시각', '이름', '이메일', 'IP', '액션', '결과', 'User-Agent', '메모'];
+    const csvRows = filtered.map(l => [l.ts, l.name, l.adminEmail || '', l.ip, l.action, l.result, l.userAgent || '', l.memo || '']);
     const fn = '관리자접근로그_' + new Date().toISOString().slice(0, 10) + '.csv';
     const after = () => {
       DataStore.addAudit({ type: '관리자계정', targetId: '—', action: '게시', memo: `관리자 접근 로그 CSV보내기(${filtered.length}건)` });
@@ -87,7 +87,7 @@ function AdminAccessLogPanel() {
         <div className="controls">
           <select className="select" value={adminF} onChange={e => setAdminF(e.target.value)}>
             <option value="all">전체 관리자</option>
-            {state.admins.map(a => <option key={a.id} value={a.id}>{a.id} · {a.name}</option>)}
+            {state.admins.map(a => <option key={a.id} value={a.email}>{a.name} · {a.email}</option>)}
           </select>
           <select className="select" value={actionF} onChange={e => setActionF(e.target.value)}>
             <option value="all">전체 액션</option>
@@ -106,15 +106,15 @@ function AdminAccessLogPanel() {
         <div className="dg-scroll">
           <table className="dg">
             <thead><tr>
-              <th>시각</th><th>관리자 ID</th><th>이름</th><th>IP</th>
+              <th>시각</th><th>이름</th><th>이메일</th><th>IP</th>
               <th>액션</th><th>결과</th><th>메모</th><th>상세</th>
             </tr></thead>
             <tbody>
               {rows.map(l => (
                 <tr key={l.id}>
                   <td className="code">{l.ts}</td>
-                  <td><code className="code-id">{l.adminId}</code></td>
-                  <td>{l.name}</td>
+                  <td><b>{l.name}</b></td>
+                  <td className="muted" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.adminEmail || '—'}</td>
                   <td className="code muted">{l.ip}</td>
                   <td><span className={`pill ${l.action === '로그인' ? 'pill-approved' : l.action === '로그인실패' ? 'pill-rejected' : 'pill-applied'}`}>{l.action}</span></td>
                   <td><span className={`pill ${l.result === '성공' ? 'pill-approved' : 'pill-rejected'}`}>{l.result}</span></td>
@@ -146,16 +146,16 @@ function AdminAccessDetailLP({ id, onClose }) {
   const l = (state.adminAccessLogs || []).find(x => x.id === id);
   if (!l) return null;
   return (
-    <LP open size="wide" title={`관리자 접근 로그 상세 — ${l.action}`} sub={`${l.adminId} · ${l.ts}`} onClose={onClose}
+    <LP open size="wide" title={`관리자 접근 로그 상세 — ${l.action}`} sub={`${l.name} · ${l.ts}`} onClose={onClose}
       footer={<>
-        {l.adminId !== 'unknown' && <a className="btn btn-secondary" href="#admins" onClick={onClose}>관리자 계정 바로가기 →</a>}
+        {l.adminEmail && l.adminEmail !== '—' && <a className="btn btn-secondary" href="#admins" onClick={onClose}>관리자 계정 바로가기 →</a>}
         <button className="btn btn-primary" onClick={onClose}>닫기</button>
       </>}>
       <FieldSet legend="기본" cols={2}>
         <KV k="접근 시각" v={<code className="code-id">{l.ts}</code>}/>
         <KV k="액션" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{l.action}</span>}/>
-        <KV k="관리자 ID" v={<code className="code-id">{l.adminId}</code>}/>
         <KV k="이름" v={l.name}/>
+        <KV k="이메일" v={l.adminEmail || '—'}/>
         <KV k="IP" v={<code className="code-id">{l.ip}</code>}/>
         <KV k="결과" v={<span className={`pill ${l.result === '성공' ? 'pill-approved' : 'pill-rejected'}`}>{l.result}</span>}/>
         <KV k="로그 ID" v={<code className="code-id">{l.id}</code>}/>

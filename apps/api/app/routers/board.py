@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ from app.lib.board_helpers import (
     resolve_comment_is_secret,
 )
 from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
+from app.lib.locale import resolve_request_locale
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_upload
 from app.models.admin import AdminUser
@@ -88,7 +89,17 @@ def _can_author_edit(post: BoardPost, auth: AuthUser) -> bool:
     return post.user_id == auth.id and not post.admin_reply
 
 
-def _post_list_item(post: BoardPost, author_name: str | None, auth: AuthUser) -> dict:
+def _author_display(is_mine: bool, author_name: str | None, lang: str) -> str:
+    if is_mine:
+        if lang == "my":
+            return "ကိုယ်တိုင်"
+        if lang == "en":
+            return "Me"
+        return "본인"
+    return author_name or "—"
+
+
+def _post_list_item(post: BoardPost, author_name: str | None, auth: AuthUser, lang: str = "ko") -> dict:
     is_mine = post.user_id == auth.id
     locked = _is_locked_secret(post, auth)
     return {
@@ -101,9 +112,9 @@ def _post_list_item(post: BoardPost, author_name: str | None, auth: AuthUser) ->
         "is_mine": is_mine,
         "locked": locked,
         "is_secret_to_viewer": locked,
-        "author_name": "본인" if is_mine else (author_name or "—"),
+        "author_name": _author_display(is_mine, author_name, lang),
         "workflow_status": post.workflow_status,
-        "status_label": board_status_label(post.workflow_status),
+        "status_label": board_status_label(post.workflow_status, lang),
         "has_admin_reply": bool(post.admin_reply),
         "can_edit": _can_author_edit(post, auth),
         "created_at": post.created_at.isoformat() if post.created_at else None,
@@ -135,6 +146,7 @@ async def _full_post_dict(
     author_name: str | None,
     auth: AuthUser,
     attachments: list[dict],
+    lang: str = "ko",
 ) -> dict:
     is_mine = post.user_id == auth.id
     admin_replies = await official_replies_for_post(db, post)
@@ -149,9 +161,9 @@ async def _full_post_dict(
         "is_secret": post.is_secret,
         "is_mine": is_mine,
         "locked": False,
-        "author_name": author_name or ("본인" if is_mine else "—"),
+        "author_name": _author_display(is_mine, author_name, lang) if is_mine else (author_name or "—"),
         "workflow_status": post.workflow_status,
-        "status_label": board_status_label(post.workflow_status),
+        "status_label": board_status_label(post.workflow_status, lang),
         "admin_reply": latest["body"] if latest else post.admin_reply,
         "admin_replied_at": latest["created_at"] if latest else (
             post.admin_replied_at.isoformat() if post.admin_replied_at else None
@@ -167,11 +179,14 @@ async def _full_post_dict(
 
 @router.get("/posts")
 async def list_posts(
+    request: Request,
     board_type: str = Query(...),
     page: int = Query(1, ge=1),
+    lang: str | None = Query(None),
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    locale = resolve_request_locale(request, lang)
     # 일반글은 누구나 열람(목록 노출). 비밀글은 목록엔 노출하되 본문 잠금.
     total = (
         await db.execute(
@@ -190,7 +205,7 @@ async def list_posts(
         .limit(PAGE_SIZE)
     )
     rows = result.all()
-    items = [_post_list_item(post, user.name_ko, auth) for post, user in rows]
+    items = [_post_list_item(post, user.name_ko, auth, locale) for post, user in rows]
     total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
     return {
         "items": items,
@@ -216,10 +231,13 @@ async def _load_post_with_author(db: AsyncSession, post_id: int):
 
 @router.get("/posts/{post_id}")
 async def get_post(
+    request: Request,
     post_id: int,
+    lang: str | None = Query(None),
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    locale = resolve_request_locale(request, lang)
     post, user = await _load_post_with_author(db, post_id)
     if _is_locked_secret(post, auth):
         # 잠긴 비밀글: 본문 비노출. unlock 으로 열람.
@@ -234,11 +252,11 @@ async def get_post(
             "locked": True,
             "author_name": user.name_ko,
             "workflow_status": post.workflow_status,
-            "status_label": board_status_label(post.workflow_status),
+            "status_label": board_status_label(post.workflow_status, locale),
             "date_formatted": fmt_date(post.created_at),
         }
     attachments = await _attachments_for_post(db, post_id)
-    return await _full_post_dict(db, post, user.name_ko, auth, attachments)
+    return await _full_post_dict(db, post, user.name_ko, auth, attachments, locale)
 
 
 @router.post("/posts")

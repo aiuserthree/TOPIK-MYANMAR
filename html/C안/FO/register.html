@@ -738,10 +738,10 @@
 
   function levelLockReason(app) {
     var st = app.fo_card_status || '';
-    if (st === 'photo' || st === 'photo_rejected') return '사진 심사중';
-    if (st === 'pay') return '수납 대기';
-    if (st === 'approved' || st === 'number' || st === 'applied') return '접수 진행중';
-    return '심사 진행중';
+    if (st === 'photo' || st === 'photo_rejected') return bt('card.photo', '사진 심사중');
+    if (st === 'pay') return bt('card.pay', '수납 대기');
+    if (st === 'approved' || st === 'number' || st === 'applied') return bt('card.in_progress', '접수 진행중');
+    return bt('card.review', '심사 진행중');
   }
 
   function isRejectedLevelApp(app) {
@@ -1244,32 +1244,32 @@
     // STEP1 validation
     if (cur === 1) {
       const levels = getSelectableLevels();
-      if (!levels.length) { alert('응시 급수를 1개 이상 선택해 주세요.'); return; }
+      if (!levels.length) { alert(bt('reg.err_level', '응시 급수를 1개 이상 선택해 주세요.')); return; }
       var mode = getReapplyMode();
       if (REG_STATE.levelLocksPending) {
-        alert('접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.');
+        alert(bt('common.processing', '접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.'));
         return;
       }
       var l1 = document.getElementById('lvl1');
       var l2 = document.getElementById('lvl2');
       if ((l1 && l1.checked && l1.disabled) || (l2 && l2.checked && l2.disabled)) {
-        alert('진행 중인 급수는 선택할 수 없습니다.');
+        alert(bt('reg.err_level_locked', '진행 중인 급수는 선택할 수 없습니다.'));
         return;
       }
       if (mode && mode.reapply && REG_STATE.reapplySelectableLevels) {
         var invalidReapply = getInvalidReapplyLevels(levels);
         if (invalidReapply.length) {
-          alert('심사 진행 중인 급수는 재접수할 수 없습니다.');
+          alert(bt('reg.err_reapply_locked', '심사 진행 중인 급수는 재접수할 수 없습니다.'));
           return;
         }
       }
       if (!document.querySelector('.round-card.selected')) {
-        alert('응시 회차를 선택해 주세요.'); return;
+        alert(bt('reg.err_round', '응시 회차를 선택해 주세요.')); return;
       }
       const venue = REG_STATE.reapplyLockedVenueId
         ? String(REG_STATE.reapplyLockedVenueId)
         : document.getElementById('venueSelect').value;
-      if (!venue) { alert('시험장을 선택해 주세요.'); return; }
+      if (!venue) { alert(bt('reg.err_venue', '시험장을 선택해 주세요.')); return; }
     }
     if (cur === 4) return;
     // Update STEP4 summary on STEP3 → 4
@@ -1412,30 +1412,30 @@
   // Submit — API (Phase 1); demo token falls back to modal only
   document.getElementById('btnSubmit').addEventListener('click', function () {
     if (!document.getElementById('agreeTerms').checked) {
-      alert('약관에 동의해 주세요.'); return;
+      alert(bt('reg.err_terms', '약관에 동의해 주세요.')); return;
     }
     if (!portraitState.hasPhoto) {
-      alert('증명사진이 등록되어 있지 않습니다. 마이페이지에서 사진을 등록한 뒤 접수해 주세요.');
+      alert(bt('reg.err_no_photo', '증명사진이 등록되어 있지 않습니다. 마이페이지에서 사진을 등록한 뒤 접수해 주세요.'));
       return;
     }
     showSubmitError('');
 
     if (REG_STATE.levelLocksPending) {
-      alert('접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.');
+      alert(bt('common.processing', '접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.'));
       return;
     }
 
     var submitLevels = getSelectableLevels();
     if (!submitLevels.length) {
-      alert('응시 급수를 1개 이상 선택해 주세요.'); return;
+      alert(bt('reg.err_level', '응시 급수를 1개 이상 선택해 주세요.')); return;
     }
     if (getInvalidReapplyLevels(submitLevels).length) {
-      alert('심사 진행 중인 급수는 재접수할 수 없습니다.');
+      alert(bt('reg.err_reapply_locked', '심사 진행 중인 급수는 재접수할 수 없습니다.'));
       return;
     }
 
     if (!window.TopikApi || !TopikApi.isLoggedIn()) {
-      alert('로그인이 필요합니다.'); location.href = 'login.html?next=' + encodeURIComponent('register.html'); return;
+      alert(bt('common.login_required', '로그인이 필요합니다.')); location.href = 'login.html?next=' + encodeURIComponent('register.html'); return;
     }
 
     var token = TopikApi.getAccessToken();
@@ -1472,7 +1472,7 @@
       var err = (res.body && res.body.error) || {};
       var msg = err.message || '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
       if (res.status === 401) {
-        alert('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        alert(bt('common.session_expired', '로그인이 만료되었습니다. 다시 로그인해 주세요.'));
         location.href = 'login.html?next=' + encodeURIComponent('register.html');
         return;
       }
@@ -1554,7 +1554,7 @@
     var saved = false;
 
     function done() {
-      alert('작성 중인 접수 정보가 임시 저장되었습니다.\n다음에 시험 접수 화면에 다시 들어오시면 이어서 작성할 수 있습니다.');
+      alert(bt('reg.err_draft_saved', '작성 중인 접수 정보가 임시 저장되었습니다.\n다음에 시험 접수 화면에 다시 들어오시면 이어서 작성할 수 있습니다.'));
       location.href = 'mypage.html';
     }
 

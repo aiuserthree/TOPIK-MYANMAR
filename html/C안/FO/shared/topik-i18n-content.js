@@ -227,6 +227,131 @@
     'photo.preview_alt': { ko: '증명사진 미리보기', my: 'သက်သေခံ ဓာတ်ပုံ အစမ်းကြည့်', en: 'ID photo preview' },
 
     /* ── 공지/FAQ (fo-notices.js 등 공용 동적 렌더 — ko/my/en) ── */
+    /* ── 폼 검증 (val.*) ── */
+    'val.birth_format': { ko: '생년월일을 YYYYMMDD 8자리로 입력해 주세요.', my: 'မွေးနေ့ကို YYYYMMDD ၈ လုံးဖြင့် ထည့်ပါ။', en: 'Enter your date of birth as 8 digits (YYYYMMDD).' },
+    'val.birth_age': { ko: '만 {age}세 미만은 회원가입할 수 없습니다.', my: 'အသက် {age} နှစ်အောက် မှတ်ပုံတင်၍ မရပါ။', en: 'You must be at least {age} years old to sign up.' },
+    'val.roster_codes': { ko: '직업·응시동기·응시목적을 선택해 주세요.', my: 'အလုပ်အကိုင်·ဖြေဆိုရခြင်း အကြောင်းရင်း·ရည်ရွယ်ချက်ကို ရွေးပါ။', en: 'Please select occupation, reason, and purpose.' },
+    'val.email': { ko: '유효한 이메일을 입력해 주세요.', my: 'မှန်ကန်သော အီးမေးလ် ထည့်ပါ။', en: 'Please enter a valid email address.' },
+    'val.password_rule': { ko: '비밀번호는 8자 이상, 영문·숫자·특수문자를 각각 포함해야 합니다.', my: 'စကားဝှက်သည် အနည်းဆုံး ၈ လုံး၊ အက္ခရာ·ဂဏန်း·သင်္ကေတ တစ်ခုစီ ပါရမည်။', en: 'Password must be 8+ characters and include a letter, number, and symbol.' },
+    'val.password_mismatch': { ko: '비밀번호 확인이 일치하지 않습니다.', my: 'စကားဝှက် အတည်ပြုချက် မကိုက်ညီပါ။', en: 'Password confirmation does not match.' },
+    'val.pw_min': { ko: '영문·숫자·특수문자를 각각 포함하여 8자 이상 입력해 주세요.', my: 'အက္ခရာ·ဂဏန်း·သင်္ကေတ တစ်ခုစီ ပါဝင်သော ၈ လုံးအထက် ထည့်ပါ။', en: 'Enter 8+ characters including a letter, number, and symbol.' },
+    'val.pw_new_mismatch': { ko: '새 비밀번호가 서로 일치하지 않습니다.', my: 'စကားဝှက်အသစ် မကိုက်ညီပါ။', en: 'New passwords do not match.' },
+    'val.code_6': { ko: '6자리 인증코드를 입력해 주세요.', my: '၆ လုံး အတည်ပြုကုဒ် ထည့်ပါ။', en: 'Enter the 6-digit verification code.' },
+    'val.required_fields': { ko: '한글 성명, 영문 성명, 연락처는 필수입니다.', my: 'ကိုရီးယားအမည်၊ အင်္ဂလိပ်အမည်၊ ဆက်သွယ်ရန်နံပါတ် လိုအပ်သည်။', en: 'Korean name, English name, and phone are required.' },
+    'val.verify_first': { ko: '먼저 인증코드를 확인해 주세요.', my: 'အရင် အတည်ပြုကုဒ် စစ်ဆေးပါ။', en: 'Please verify the code first.' },
+
+    /* ── 공통 메시지 (common.*) ── */
+    'common.no_server': { ko: '서버에 연결할 수 없습니다.', my: 'ဆာဗာနှင့် ချိတ်ဆက်၍ မရပါ။', en: 'Cannot connect to the server.' },
+    'common.no_server_retry': { ko: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.', my: 'ဆာဗာနှင့် ချိတ်ဆက်၍ မရပါ။ ခဏနေ ပြန်စမ်းပါ။', en: 'Cannot connect to the server. Please try again shortly.' },
+    'common.network_err': { ko: '네트워크 오류입니다.', my: 'ကွန်ရက် အမှားဖြစ်သည်။', en: 'Network error.' },
+    'common.network_err_detail': { ko: '네트워크 오류입니다. 연결 상태를 확인해 주세요.', my: 'ကွန်ရက် အမှားဖြစ်သည်။ ချိတ်ဆက်မှု စစ်ဆေးပါ။', en: 'Network error. Please check your connection.' },
+    'common.checking': { ko: '확인 중…', my: 'စစ်ဆေးနေသည်…', en: 'Checking…' },
+    'common.sending': { ko: '발송 중…', my: 'ပို့နေသည်…', en: 'Sending…' },
+    'common.verifying': { ko: '확인 중…', my: 'အတည်ပြုနေသည်…', en: 'Verifying…' },
+    'common.saving': { ko: '저장 중…', my: 'သိမ်းနေသည်…', en: 'Saving…' },
+    'common.resend_ok': { ko: '인증코드를 다시 발송했습니다.', my: 'အတည်ပြုကုဒ် ပြန်ပို့ပြီးပါပြီ။', en: 'Verification code resent.' },
+    'common.login_required': { ko: '로그인이 필요합니다.', my: 'ဝင်ရောက်ရန် လိုအပ်သည်။', en: 'Sign-in required.' },
+    'common.session_expired': { ko: '로그인이 만료되었습니다. 다시 로그인해 주세요.', my: 'ဝင်ရောက်မှု သက်တမ်းကုန်ပြီ။ ပြန်ဝင်ပါ။', en: 'Your session expired. Please sign in again.' },
+    'common.processing': { ko: '접수 정보를 확인하는 중입니다. 잠시 후 다시 시도해 주세요.', my: 'လျှောက်လွှာ အချက်အလက် စစ်ဆေးနေသည်။ ခဏနေ ပြန်စမ်းပါ။', en: 'Checking registration info. Please try again shortly.' },
+    'common.generic_err': { ko: '요청을 처리할 수 없습니다.', my: 'တောင်းဆိုမှုကို ဆောင်ရွက်၍ မရပါ။', en: 'Unable to process the request.' },
+    'common.conflict': { ko: '이미 처리된 요청입니다.', my: 'ဤတောင်းဆိုမှုကို ပြီးသား ဆောင်ရွက်ပြီးပါပြီ။', en: 'This request was already processed.' },
+    'common.rate_limit': { ko: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', my: 'တောင်းဆိုမှု များလွန်းသည်။ ခဏနေ ပြန်စမ်းပါ။', en: 'Too many requests. Please try again later.' },
+    'common.api_disabled': { ko: 'API 연결이 설정되지 않았습니다.', my: 'API ချိတ်ဆက်မှု မပြင်ဆင်ရသေးပါ။', en: 'API connection is not configured.' },
+
+    /* ── API 오류 코드 (err.*) ── */
+    'err.GENERIC': { ko: '요청을 처리할 수 없습니다.', my: 'တောင်းဆိုမှုကို ဆောင်ရွက်၍ မရပါ။', en: 'Unable to process the request.' },
+    'err.UNAUTHORIZED': { ko: '로그인이 필요합니다.', my: 'ဝင်ရောက်ရန် လိုအပ်သည်။', en: 'Sign-in required.' },
+    'err.INVALID_CREDENTIALS': { ko: '이메일 또는 비밀번호가 올바르지 않습니다.', my: 'အီးမေးလ် သို့မဟုတ် စကားဝှက် မမှန်ပါ။', en: 'Incorrect email or password.' },
+    'err.ACCOUNT_LOCKED': { ko: '로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.', my: 'ဝင်ရောက်မှု ကြိုးပမ်းချက် များလွန်းသည်။ ခဏနေ ပြန်စမ်းပါ။', en: 'Too many sign-in attempts. Please try again later.' },
+    'err.ACCOUNT_INACTIVE': { ko: '이용이 제한된 계정입니다.', my: 'ဤအကောင့်ကို အသုံးပြု၍မရပါ။', en: 'This account is restricted.' },
+    'err.OTP_EXCEEDED': { ko: '인증코드 확인에 6회 실패했습니다. [재발송]으로 새 코드를 받아 주세요.', my: 'အတည်ပြုကုဒ် ၆ ကြိမ် မအောင်မြင်ပါ။ [ပြန်ပို့ရန်] ဖြင့် ကုဒ်အသစ် ရယူပါ။', en: '6 failed code attempts. Use [Resend] to get a new code.' },
+    'err.INVALID_CODE': { ko: '인증코드가 올바르지 않거나 만료되었습니다.', my: 'အတည်ပြုကုဒ် မမှန်ပါ သို့မဟုတ် သက်တမ်းကုန်ပြီ။', en: 'Invalid or expired verification code.' },
+    'err.INVALID_TOKEN': { ko: '인증이 만료되었습니다. 다시 시도해 주세요.', my: 'အတည်ပြုမှု သက်တမ်းကုန်ပြီ။ ပြန်စမ်းပါ။', en: 'Authentication expired. Please try again.' },
+    'err.EMAIL_ALREADY_REGISTERED': { ko: '이미 가입된 이메일입니다.', my: 'ဤအီးမေးလ်ဖြင့် မှတ်ပုံတင်ပြီးသားဖြစ်သည်။', en: 'This email is already registered.' },
+    'err.SERVICE_UNAVAILABLE': { ko: '서비스를 일시적으로 이용할 수 없습니다.', my: 'ဝန်ဆောင်မှုကို ယာယီ အသုံးပြု၍မရပါ။', en: 'Service temporarily unavailable.' },
+    'err.VALIDATION_ERROR': { ko: '입력값을 확인해 주세요.', my: 'ထည့်သွင်းချက်ကို စစ်ဆေးပါ။', en: 'Please check your input.' },
+    'err.NOT_FOUND': { ko: '요청한 정보를 찾을 수 없습니다.', my: 'တောင်းဆိုထားသော အချက်အလက် မတွေ့ပါ။', en: 'Requested information not found.' },
+    'err.AGE_RESTRICTED': { ko: '만 14세 미만은 회원가입할 수 없습니다.', my: 'အသက် ၁၄ နှစ်အောက် မှတ်ပုံတင်၍ မရပါ။', en: 'You must be at least 14 years old to sign up.' },
+    'err.ROUND_NOT_OPEN': { ko: '접수 가능한 회차가 아닙니다.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေ မဟုတ်ပါ။', en: 'This session is not open for registration.' },
+    'err.INVALID_VENUE': { ko: '유효하지 않은 시험장입니다.', my: 'မမှန်သော စာစစ်ဌာန ဖြစ်သည်။', en: 'Invalid exam venue.' },
+    'err.ALREADY_SUBMITTED': { ko: '이미 접수 진행 중인 내역이 있습니다.', my: 'လျှောက်ထားမှု ဆောင်ရွက်ဆဲ ရှိပြီးသားဖြစ်သည်။', en: 'You already have a registration in progress.' },
+    'err.ALREADY_CANCELLED': { ko: '이미 취소된 접수입니다.', my: 'ပယ်ဖျက်ပြီးသား လျှောက်လွှာဖြစ်သည်။', en: 'This registration is already cancelled.' },
+    'err.CANNOT_CANCEL': { ko: '수납 완료된 접수는 취소할 수 없습니다.', my: 'ကြေးသွင်းပြီးသော လျှောက်လွှာကို ပယ်ဖျက်၍ မရပါ။', en: 'Paid registrations cannot be cancelled.' },
+    'err.RATE_LIMITED': { ko: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.', my: 'တောင်းဆိုမှု များလွန်းသည်။ ခဏနေ ပြန်စမ်းပါ။', en: 'Too many requests. Please try again later.' },
+    'err.NETWORK': { ko: '네트워크 오류입니다. 연결 상태를 확인해 주세요.', my: 'ကွန်ရက် အမှားဖြစ်သည်။ ချိတ်ဆက်မှု စစ်ဆေးပါ။', en: 'Network error. Please check your connection.' },
+    'err.API_DISABLED': { ko: 'API 연결이 설정되지 않았습니다.', my: 'API ချိတ်ဆက်မှု မပြင်ဆင်ရသေးပါ။', en: 'API connection is not configured.' },
+    'err.CONFLICT': { ko: '이미 처리된 요청입니다.', my: 'ဤတောင်းဆိုမှုကို ပြီးသား ဆောင်ရွက်ပြီးပါပြီ။', en: 'This request was already processed.' },
+
+    /* ── 카드 상태 (card.*) ── */
+    'card.photo': { ko: '사진 심사중', my: 'ဓာတ်ပုံ စိစစ်နေဆဲ', en: 'Photo review' },
+    'card.pay': { ko: '수납 대기', my: 'ကြေးသွင်း စောင့်ဆိုင်း', en: 'Payment pending' },
+    'card.in_progress': { ko: '접수 진행중', my: 'လျှောက်ထားမှု ဆောင်ရွက်ဆဲ', en: 'Registration in progress' },
+    'card.review': { ko: '심사 진행중', my: 'စိစစ်မှု ဆောင်ရွက်ဆဲ', en: 'Under review' },
+
+    /* ── 회원가입 JS (su.err_*) ── */
+    'su.err_name_ko': { ko: '한글 성명을 입력해 주세요.', my: 'ကိုရီးယား အမည် ထည့်ပါ။', en: 'Please enter your Korean name.' },
+    'su.err_name_en': { ko: '영문 성명을 입력해 주세요.', my: 'အင်္ဂလိပ် အမည် ထည့်ပါ။', en: 'Please enter your English name.' },
+    'su.err_profile_codes': { ko: '성별·국적·제1언어를 선택해 주세요.', my: 'ကျား/မ·နိုင်ငံသား·ပထမဘာသာစကား ရွေးပါ။', en: 'Please select gender, nationality, and first language.' },
+    'su.err_phone': { ko: '연락처를 입력해 주세요.', my: 'ဆက်သွယ်ရန်နံပါတ် ထည့်ပါ။', en: 'Please enter your phone number.' },
+    'su.err_photo': { ko: '증명사진을 등록해 주세요.', my: 'သက်သေခံ ဓာတ်ပုံ တင်ပါ။', en: 'Please upload an ID photo.' },
+    'su.err_email': { ko: '이메일을 입력해 주세요.', my: 'အီးမေးလ် ထည့်ပါ။', en: 'Please enter your email.' },
+    'su.err_email_fmt': { ko: '올바른 이메일 형식을 입력해 주세요.', my: 'မှန်ကန်သော အီးမေးလ် ပုံစံ ထည့်ပါ။', en: 'Please enter a valid email format.' },
+    'su.err_otp_timeout': { ko: '인증 시간이 초과되었습니다. [재발송]을 눌러 주세요.', my: 'အတည်ပြုချိန် ကျော်လွန်ပြီ။ [ပြန်ပို့ရန်] နှိပ်ပါ။', en: 'Verification timed out. Press [Resend].' },
+    'su.err_google_expired': { ko: 'Google 인증이 만료되었습니다. Step 1에서 다시 시도해 주세요.', my: 'Google အတည်ပြုမှု သက်တမ်းကုန်ပြီ။ အဆင့် ၁ တွင် ပြန်စမ်းပါ။', en: 'Google authentication expired. Try again in Step 1.' },
+    'su.err_terms': { ko: '필수 약관에 동의해 주세요.', my: 'လိုအပ်သော စည်းကမ်းများကို သဘောတူပါ။', en: 'Please agree to the required terms.' },
+    'su.err_email_verify': { ko: '이메일 인증을 완료해 주세요.', my: 'အီးမေးလ် အတည်ပြုမှု ပြီးမြောက်အောင် လုပ်ပါ။', en: 'Please complete email verification.' },
+    'su.err_google_step1': { ko: 'Google 계정으로 Step 1을 완료해 주세요.', my: 'Google အကောင့်ဖြင့် အဆင့် ၁ ပြီးမြောက်အောင် လုပ်ပါ။', en: 'Complete Step 1 with your Google account.' },
+    'su.err_google_retry': { ko: 'Google 인증이 만료되었습니다. 다시 시도해 주세요.', my: 'Google အတည်ပြုမှု သက်တမ်းကုန်ပြီ။ ပြန်စမ်းပါ။', en: 'Google authentication expired. Please try again.' },
+    'su.err_server_retry': { ko: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.', my: 'ဆာဗာနှင့် ချိတ်ဆက်၍ မရပါ။ ခဏနေ ပြန်စမ်းပါ။', en: 'Cannot connect to the server. Please try again shortly.' },
+    'su.err_timeout': { ko: '서버 응답이 지연되고 있습니다. 잠시 후 재발송을 눌러 주세요.', my: 'ဆာဗာ တုံ့ပြန်မှု နောက်ကျနေသည်။ ခဏနေ ပြန်ပို့ရန် နှိပ်ပါ။', en: 'Server response is delayed. Press resend shortly.' },
+    'su.otp_hint_delay': { ko: '이메일 발송이 지연될 수 있습니다. 메일이 오면 6자리 코드를 입력해 주세요. (유효 5분)', my: 'အီးမေးလ် ပို့ဆောင်မှု နောက်ကျနိုင်သည်။ ရောက်လျှင် ၆ လုံးကုဒ် ထည့်ပါ။ (သက်တမ်း ၅ မိနစ်)', en: 'Email delivery may be delayed. Enter the 6-digit code when it arrives. (valid 5 min)' },
+    'su.otp_hint': { ko: '이메일로 발송된 6자리 코드를 입력해 주세요. (유효 5분)', my: 'အီးမေးလ်သို့ ပို့ထားသော ၆ လုံးကုဒ် ထည့်ပါ။ (သက်တမ်း ၅ မိနစ်)', en: 'Enter the 6-digit code sent to your email. (valid 5 min)' },
+
+    /* ── 로그인 JS (login.js_*) ── */
+    'login.js_find_fields': { ko: '이름, 생년월일, 연락처를 모두 입력해 주세요.', my: 'အမည်၊ မွေးနေ့၊ ဆက်သွယ်ရန်နံပါတ် အားလုံး ထည့်ပါ။', en: 'Please enter name, date of birth, and phone.' },
+    'login.js_go_login': { ko: '로그인하러 가기', my: 'ဝင်ရောက်ရန် သွားမည်', en: 'Go to sign in' },
+    'login.js_find_none': { ko: '입력하신 정보와 일치하는 계정을 찾을 수 없습니다. 입력 내용을 다시 확인해 주세요.', my: 'ထည့်ထားသော အချက်အလက်နှင့် ကိုက်ညီသော အကောင့် မတွေ့ပါ။ ပြန်စစ်ဆေးပါ။', en: 'No account matches the information entered. Please check again.' },
+    'login.js_find_match': { ko: '입력하신 정보와 일치하는 계정입니다.', my: 'ထည့်ထားသော အချက်အလက်နှင့် ကိုက်ညီသော အကောင့်ဖြစ်သည်။', en: 'Accounts matching your information:' },
+    'login.js_acct_google': { ko: 'Google 계정', my: 'Google အကောင့်', en: 'Google account' },
+    'login.js_acct_email': { ko: '일반 가입', my: 'အီးမေးလ် မှတ်ပုံတင်', en: 'Email sign-up' },
+    'login.js_no_email': { ko: '입력하신 이메일로 가입된 계정이 없습니다.', my: 'ဤအီးမေးလ်ဖြင့် မှတ်ပုံတင်ထားသော အကောင့် မရှိပါ။', en: 'No account is registered with this email.' },
+    'login.js_google_only': { ko: '입력하신 이메일은 Google 계정으로 가입된 계정입니다. 구글 로그인을 이용해 주세요.', my: 'ဤအီးမေးလ်သည် Google အကောင့်ဖြင့် မှတ်ပုံတင်ထားသည်။ Google ဖြင့် ဝင်ပါ။', en: 'This email was registered with Google. Please use Google sign-in.' },
+    'login.js_fields_required': { ko: '이메일과 비밀번호를 모두 입력해 주세요.', my: 'အီးမေးလ်နှင့် စကားဝှက် နှစ်ခုလုံး ထည့်ပါ။', en: 'Please enter both email and password.' },
+    'login.js_signing_in': { ko: '로그인 중…', my: 'ဝင်ရောက်နေသည်…', en: 'Signing in…' },
+
+    /* ── 비밀번호 재설정 JS (pwr.js_*) ── */
+    'pwr.js_verify_ok': { ko: '✓ 인증이 완료되었습니다. 새 비밀번호를 설정해 주세요.', my: '✓ အတည်ပြုပြီး။ စကားဝှက်အသစ် သတ်မှတ်ပါ။', en: '✓ Verified. Please set a new password.' },
+    'pwr.js_verified': { ko: '인증 완료', my: 'အတည်ပြုပြီး', en: 'Verified' },
+    'pwr.js_otp_exceeded': { ko: '인증코드 확인에 6회 실패했습니다. [재발송]으로 새 코드를 받아 주세요.', my: 'အတည်ပြုကုဒ် ၆ ကြိမ် မအောင်မြင်ပါ။ [ပြန်ပို့ရန်] ဖြင့် ကုဒ်အသစ် ရယူပါ။', en: '6 failed attempts. Use [Resend] for a new code.' },
+    'pwr.js_pw_weak': { ko: '약함', my: 'အားနည်း', en: 'Weak' },
+    'pwr.js_pw_mid': { ko: '보통', my: 'အလယ်အလတ်', en: 'Fair' },
+    'pwr.js_pw_good': { ko: '강함', my: 'အားကောင်း', en: 'Strong' },
+    'pwr.js_pw_very': { ko: '매우 강함', my: 'အလွန်အားကောင်း', en: 'Very strong' },
+    'pwr.js_pw_meta': { ko: ' · 영문+숫자+특수문자 8자 이상 필수', my: ' · အက္ခရာ+ဂဏန်း+သင်္ကေတ ၈ လုံးအထက် လိုအပ်', en: ' · Letters + numbers + symbols, 8+ chars required' },
+    'pwr.js_show': { ko: '표시', my: 'ပြရန်', en: 'Show' },
+    'pwr.js_hide': { ko: '숨김', my: 'ဖျောက်ရန်', en: 'Hide' },
+
+    /* ── 접수 JS (reg.err_*) ── */
+    'reg.err_level': { ko: '응시 급수를 1개 이상 선택해 주세요.', my: 'ဖြေဆိုအဆင့် အနည်းဆုံး တစ်ခု ရွေးပါ။', en: 'Select at least one test level.' },
+    'reg.err_level_locked': { ko: '진행 중인 급수는 선택할 수 없습니다.', my: 'ဆောင်ရွက်ဆဲ အဆင့်ကို ရွေးလို့ မရပါ။', en: 'In-progress levels cannot be selected.' },
+    'reg.err_reapply_locked': { ko: '심사 진행 중인 급수는 재접수할 수 없습니다.', my: 'စိစစ်နေဆဲ အဆင့်ကို ပြန်လျှောက်လို့ မရပါ။', en: 'Levels under review cannot be re-applied.' },
+    'reg.err_round': { ko: '응시 회차를 선택해 주세요.', my: 'ဖြေဆိုမည့် အကြိမ်ရေ ရွေးပါ။', en: 'Please select an exam session.' },
+    'reg.err_venue': { ko: '시험장을 선택해 주세요.', my: 'စာစစ်ဌာန ရွေးပါ။', en: 'Please select a venue.' },
+    'reg.err_terms': { ko: '약관에 동의해 주세요.', my: 'စည်းကမ်းများကို သဘောတူပါ။', en: 'Please agree to the terms.' },
+    'reg.err_no_photo': { ko: '증명사진이 등록되어 있지 않습니다. 마이페이지에서 사진을 등록한 뒤 접수해 주세요.', my: 'သက်သေခံ ဓာတ်ပုံ မတင်ရသေးပါ။ ကျွန်ုပ်စာမျက်နှာတွင် တင်ပြီး လျှောက်ထားပါ။', en: 'No ID photo on file. Upload one on My page before registering.' },
+    'reg.err_draft_saved': { ko: '작성 중인 접수 정보가 임시 저장되었습니다.\n다음에 시험 접수 화면에 다시 들어오시면 이어서 작성할 수 있습니다.', my: 'လျှောက်လွှာ အချက်အလက် ယာယီသိမ်းပြီးပါပြီ။\nနောက်တစ်ကြိမ် ပြန်ဝင်ပါက ဆက်လက် ရေးသားနိုင်ပါသည်။', en: 'Your draft was saved.\nReturn to registration later to continue.' },
+
+    /* ── 마이페이지 프로필 JS (mpp.js_*) ── */
+    'mpp.js_saved': { ko: '회원정보가 저장되었습니다.', my: 'အဖွဲ့ဝင် အချက်အလက် သိမ်းပြီးပါပြီ။', en: 'Profile saved.' },
+    'mpp.js_pw_changed': { ko: '비밀번호가 변경되었습니다.\n보안을 위해 다시 로그인해 주세요.', my: 'စကားဝှက် ပြောင်းလဲပြီးပါပြီ။\nလုံခြုံရေးအတွက် ပြန်ဝင်ပါ။', en: 'Password changed.\nPlease sign in again for security.' },
+    'mpp.js_pw_empty': { ko: '변경할 비밀번호를 입력해 주세요.', my: 'ပြောင်းလဲမည့် စကားဝှက် ထည့်ပါ။', en: 'Enter a new password to change.' },
+    'mpp.js_pw_cur': { ko: '현재 비밀번호를 입력해 주세요.', my: 'လက်ရှိ စကားဝှက် ထည့်ပါ။', en: 'Enter your current password.' },
+    'mpp.js_pw_same': { ko: '새 비밀번호는 현재 비밀번호와 달라야 합니다.', my: 'စကားဝှက်အသစ်သည် လက်ရှိစကားဝှက်နှင့် မတူရပါ။', en: 'New password must differ from the current one.' },
+    'mpp.js_pw_confirm': { ko: '새 비밀번호 확인이 일치하지 않습니다.', my: 'စကားဝှက်အသစ် အတည်ပြုချက် မကိုက်ညီပါ။', en: 'New password confirmation does not match.' },
+    'mpp.js_leave_done': { ko: '회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.', my: 'အဖွဲ့ဝင် မှတ်ပုံတင်မှု ပယ်ဖျက်ပြီးပါပြီ။\nဆောင်ရွက်ဆဲ လျှောက်လွှာများ ပယ်ဖျက်ပြီးပါပြီ။ ကျေးဇူးတင်ပါသည်။', en: 'Your account was deleted.\nIn-progress registrations were cancelled. Thank you.' },
+    'mpp.js_photo_fail': { ko: '기본정보는 저장되었지만 사진 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.', my: 'အချက်အလက် သိမ်းပြီးသော်လည်း ဓာတ်ပုံ တင်ခြင်း မအောင်မြင်ပါ။ ခဏနေ ပြန်စမ်းပါ။', en: 'Profile saved but photo upload failed. Please try again shortly.' },
+    'mpp.js_changing': { ko: '변경 중…', my: 'ပြောင်းလဲနေသည်…', en: 'Changing…' },
+
     'nt.loading': { ko: '공지를 불러오는 중…', my: 'ကြေညာချက် ဖွင့်နေသည်…', en: 'Loading notices…' },
     'nt.fail': { ko: '공지를 불러올 수 없습니다.', my: 'ကြေညာချက် ဖွင့်၍မရပါ။', en: 'Could not load notices.' },
     'nt.none': { ko: '공지가 없습니다.', my: 'ကြေညာချက် မရှိပါ။', en: 'No notices.' },
@@ -296,6 +421,27 @@
     try {
       document.dispatchEvent(new CustomEvent('tpkm:langchange', { detail: { lang: lang } }));
     } catch (e) { /* old browsers */ }
+  }
+
+  function currentLang() {
+    if (g.TPKMLang && g.TPKMLang.get) return normLang(g.TPKMLang.get());
+    if (g.TMI18N && g.TMI18N.getLang) return normLang(g.TMI18N.getLang());
+    if (g.TMI18n && g.TMI18n.getLang) return normLang(g.TMI18n.getLang());
+    return 'ko';
+  }
+
+  function bt(key, fallback) {
+    var v = text(key, currentLang());
+    return hasText(v) ? v : (fallback || '');
+  }
+
+  function btf(key, fallback, vars) {
+    var s = bt(key, fallback);
+    if (!vars) return s;
+    Object.keys(vars).forEach(function (k) {
+      s = s.split('{' + k + '}').join(String(vars[k]));
+    });
+    return s;
   }
 
   function skipI18nContent(el) {
@@ -370,7 +516,8 @@
     apply(lang);
   }
 
-  g.TOPIKPageI18n = { T: T, text: text, apply: apply, normLang: normLang, boot: boot, mergePageDict: mergePageDict };
+  g.TPKMBt = { bt: bt, btf: btf, text: text, currentLang: currentLang, normLang: normLang };
+  g.TOPIKPageI18n = { T: T, text: text, bt: bt, btf: btf, apply: apply, normLang: normLang, boot: boot, mergePageDict: mergePageDict };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {

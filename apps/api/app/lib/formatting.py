@@ -99,6 +99,56 @@ _FAQ_CATEGORY_LABELS = {
     "general": "일반",
 }
 
+_FAQ_CATEGORY_LABELS_MY = {
+    "account": "အကောင့်",
+    "apply": "လျှောက်ထားခြင်း",
+    "registration": "လျှောက်ထားခြင်း",
+    "payment": "ကြေးသွင်း",
+    "photo": "ဓာတ်ပုံ",
+    "exam": "စာမေးပွဲ",
+    "result": "ရလဒ်",
+    "etc": "အခြား",
+    "other": "အခြား",
+    "general": "ယေဘုယျ",
+}
+
+_FAQ_CATEGORY_LABELS_EN = {
+    "account": "Account",
+    "apply": "Registration",
+    "registration": "Registration",
+    "payment": "Payment",
+    "photo": "Photo",
+    "exam": "Exam",
+    "result": "Results",
+    "etc": "Other",
+    "other": "Other",
+    "general": "General",
+}
+
+
+def _label_for_lang(
+    key: str | None,
+    ko_map: dict[str, str],
+    my_map: dict[str, str],
+    en_map: dict[str, str],
+    lang: str | None,
+    default_ko: str,
+    default_my: str,
+    default_en: str,
+) -> str:
+    lang = (lang or "ko").lower()
+    if not key:
+        if lang == "my":
+            return default_my
+        if lang == "en":
+            return default_en
+        return default_ko
+    if lang == "my":
+        return my_map.get(key, ko_map.get(key, key))
+    if lang == "en":
+        return en_map.get(key, ko_map.get(key, key))
+    return ko_map.get(key, key)
+
 
 def notice_category_label(category: str | None, lang: str | None = None) -> str:
     lang = (lang or "ko").lower()
@@ -115,10 +165,17 @@ def notice_category_label(category: str | None, lang: str | None = None) -> str:
     return _NOTICE_CATEGORY_LABELS.get(category, category)
 
 
-def faq_category_label(category: str | None) -> str:
-    if not category:
-        return "기타"
-    return _FAQ_CATEGORY_LABELS.get(category, category)
+def faq_category_label(category: str | None, lang: str | None = None) -> str:
+    return _label_for_lang(
+        category,
+        _FAQ_CATEGORY_LABELS,
+        _FAQ_CATEGORY_LABELS_MY,
+        _FAQ_CATEGORY_LABELS_EN,
+        lang,
+        "기타",
+        "အခြား",
+        "Other",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -133,10 +190,33 @@ _BOARD_STATUS_LABELS = {
     "rejected": "반려",
 }
 
+_BOARD_STATUS_LABELS_MY = {
+    "received": "လက်ခံပြီး",
+    "in_review": "စီမံဆောင်ရွက်နေဆဲ",
+    "awaiting_reply": "အဖြေစောင့်ဆိုင်း",
+    "answered": "အဖြေပြီး",
+    "completed": "ပြီးမြောက်",
+    "rejected": "ပယ်ချ",
+}
 
-def board_status_label(workflow_status: str | None) -> str:
+_BOARD_STATUS_LABELS_EN = {
+    "received": "Received",
+    "in_review": "In review",
+    "awaiting_reply": "Awaiting reply",
+    "answered": "Answered",
+    "completed": "Completed",
+    "rejected": "Rejected",
+}
+
+
+def board_status_label(workflow_status: str | None, lang: str | None = None) -> str:
     if not workflow_status:
         return ""
+    lang = (lang or "ko").lower()
+    if lang == "my":
+        return _BOARD_STATUS_LABELS_MY.get(workflow_status, _BOARD_STATUS_LABELS.get(workflow_status, workflow_status))
+    if lang == "en":
+        return _BOARD_STATUS_LABELS_EN.get(workflow_status, _BOARD_STATUS_LABELS.get(workflow_status, workflow_status))
     return _BOARD_STATUS_LABELS.get(workflow_status, workflow_status)
 
 
@@ -155,6 +235,28 @@ _CARD_STATUS_LABELS = {
     "cancelled": "접수 취소",
 }
 
+_CARD_STATUS_LABELS_MY = {
+    "applied": "လျှောက်ထားပြီး",
+    "photo": "ဓာတ်ပုံ စိစစ်နေဆဲ",
+    "pay": "ကြေးသွင်း စောင့်ဆိုင်း",
+    "approved": "ကြေးသွင်း ပြီး",
+    "number": "ဖြေဆိုသူနံပါတ် ပေးအပ်",
+    "photo_rejected": "ဓာတ်ပုံ ပယ်ချ",
+    "app_rejected": "ပယ်ချ",
+    "cancelled": "လျှောက်ထား ပယ်ဖျက်",
+}
+
+_CARD_STATUS_LABELS_EN = {
+    "applied": "Submitted",
+    "photo": "Photo review",
+    "pay": "Payment pending",
+    "approved": "Payment complete",
+    "number": "Exam number assigned",
+    "photo_rejected": "Photo rejected",
+    "app_rejected": "Rejected",
+    "cancelled": "Cancelled",
+}
+
 # 단계 진행 순서(작은 값 = 덜 진행됨). 카드는 "가장 덜 진행된 활성 급수" 기준으로 표시.
 _CARD_STAGE_RANK = {
     "applied": 0,
@@ -165,7 +267,12 @@ _CARD_STAGE_RANK = {
 }
 
 
-def card_status_label(card_status: str) -> str:
+def card_status_label(card_status: str, lang: str | None = None) -> str:
+    lang = (lang or "ko").lower()
+    if lang == "my":
+        return _CARD_STATUS_LABELS_MY.get(card_status, _CARD_STATUS_LABELS.get(card_status, card_status))
+    if lang == "en":
+        return _CARD_STATUS_LABELS_EN.get(card_status, _CARD_STATUS_LABELS.get(card_status, card_status))
     return _CARD_STATUS_LABELS.get(card_status, card_status)
 
 

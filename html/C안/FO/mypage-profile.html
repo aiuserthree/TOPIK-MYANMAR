@@ -400,6 +400,15 @@
     return L[lang] || L.ko || '';
   }
 
+  function bt(key, fallback) {
+    if (window.TPKMBt && TPKMBt.bt) {
+      var central = TPKMBt.bt(key, '');
+      if (central) return central;
+    }
+    var page = i18nText(key);
+    return page || fallback;
+  }
+
   function applyAccountUi(signupProvider) {
     var isGoogle = signupProvider === 'google';
     var pwNotice = $('pf-pw-notice');
@@ -446,7 +455,7 @@
   // ---- 기본정보 저장 (PATCH /me) ----
   $('pf-save-basic').addEventListener('click', function () {
     var btn = this;
-    if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
+    if (!window.TopikApi || !TopikApi.canUseApi()) { alert(bt('common.no_server', '서버에 연결할 수 없습니다.')); return; }
     var birthRaw = $('pf-birth').value.trim();
     var phoneRaw = $('pf-phone').value.trim();
     var birthNorm = birthRaw;
@@ -470,7 +479,7 @@
       purpose_code: Number($('pf-purpose').value)
     };
     if (!payload.name_ko || !payload.name_en || !payload.phone) {
-      alert('한글 성명, 영문 성명, 연락처는 필수입니다.');
+      alert(bt('val.required_fields', '한글 성명, 영문 성명, 연락처는 필수입니다.'));
       return;
     }
     var photoAttempted = false;
@@ -484,7 +493,7 @@
     var photoIdBeforeSave = lastKnownPhotoFileId;
     btn.disabled = true;
     var prev = btn.textContent;
-    btn.textContent = '저장 중…';
+    btn.textContent = bt('common.saving', '저장 중…');
     TopikApi.updateMe(payload).then(function (res) {
       btn.disabled = false;
       btn.textContent = prev;
@@ -507,10 +516,10 @@
       }
       if (photoFailed) {
         alert((res.body && res.body.message) ||
-          '기본정보는 저장되었지만 사진 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+          bt('mpp.js_photo_fail', '기본정보는 저장되었지만 사진 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.'));
         return;
       }
-      alert('회원정보가 저장되었습니다.');
+      alert(bt('mpp.js_saved', '회원정보가 저장되었습니다.'));
       try {
         if (u) sessionStorage.setItem('tpkm_mypage_profile_seed', JSON.stringify(u));
       } catch (e) { /* ignore */ }
@@ -518,7 +527,7 @@
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;
-      alert('네트워크 오류입니다.');
+      alert(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
 
@@ -528,18 +537,18 @@
     var cur = $('pf-cur-pw').value;
     var n1 = $('pf-new-pw').value;
     var n2 = $('pf-new-pw2').value;
-    if (!cur && !n1 && !n2) { alert('변경할 비밀번호를 입력해 주세요.'); return; }
-    if (!cur) { alert('현재 비밀번호를 입력해 주세요.'); return; }
-    if (cur === n1) { alert('새 비밀번호는 현재 비밀번호와 달라야 합니다.'); return; }
+    if (!cur && !n1 && !n2) { alert(bt('mpp.js_pw_empty', '변경할 비밀번호를 입력해 주세요.')); return; }
+    if (!cur) { alert(bt('mpp.js_pw_cur', '현재 비밀번호를 입력해 주세요.')); return; }
+    if (cur === n1) { alert(bt('mpp.js_pw_same', '새 비밀번호는 현재 비밀번호와 달라야 합니다.')); return; }
     if (n1.length < 8 || !/[A-Za-z]/.test(n1) || !/\d/.test(n1) || !/[^A-Za-z0-9]/.test(n1)) {
-      alert('새 비밀번호는 영문·숫자·특수문자를 포함하여 8자 이상이어야 합니다.');
+      alert(bt('val.password_rule', '새 비밀번호는 영문·숫자·특수문자를 포함하여 8자 이상이어야 합니다.'));
       return;
     }
-    if (n1 !== n2) { alert('새 비밀번호 확인이 일치하지 않습니다.'); return; }
-    if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
+    if (n1 !== n2) { alert(bt('mpp.js_pw_confirm', '새 비밀번호 확인이 일치하지 않습니다.')); return; }
+    if (!window.TopikApi || !TopikApi.canUseApi()) { alert(bt('common.no_server', '서버에 연결할 수 없습니다.')); return; }
     btn.disabled = true;
     var prev = btn.textContent;
-    btn.textContent = '변경 중…';
+    btn.textContent = bt('mpp.js_changing', '변경 중…');
     TopikApi.changePassword({
       current_password: cur,
       new_password: n1,
@@ -551,12 +560,12 @@
       if (window.TPKMAuth && TPKMAuth.logout) TPKMAuth.logout();
       else if (window.TopikApi && TopikApi.logout) TopikApi.logout();
       if (window.__tpkmRebuildNav) __tpkmRebuildNav();
-      alert('비밀번호가 변경되었습니다.\n보안을 위해 다시 로그인해 주세요.');
+      alert(bt('mpp.js_pw_changed', '비밀번호가 변경되었습니다.\n보안을 위해 다시 로그인해 주세요.'));
       location.href = 'login.html?reset=ok';
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;
-      alert('네트워크 오류입니다.');
+      alert(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });
 
@@ -597,7 +606,7 @@
     }
     TPKM.closeModal('modalLeave');
     if (window.TPKMAuth) TPKMAuth.logout();
-    alert('회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.');
+    alert(bt('mpp.js_leave_done', '회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.'));
     location.href = 'index.html';
   }
 
@@ -613,7 +622,7 @@
       finishWithdraw(res, btn);
     }).catch(function () {
       if (btn) btn.disabled = false;
-      alert('네트워크 오류입니다.');
+      alert(bt('common.network_err', '네트워크 오류입니다.'));
     });
   }
 

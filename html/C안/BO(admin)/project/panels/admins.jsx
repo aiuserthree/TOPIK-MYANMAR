@@ -218,7 +218,7 @@ function AdminEditLP({ edit, onClose, onSave }) {
         </FormRow>
         {f._isNew && (
           <FormRow label="초기 비밀번호" required hint="8자 이상 · 영문+숫자+특수문자 · 첫 로그인 시 변경 강제">
-            <input className="input" type="password" value={f.pw} onChange={e => set('pw', e.target.value)} minLength={8} autoComplete="new-password" placeholder="예) Temp1234!"/>
+            <input className="input" type="text" value={f.pw} onChange={e => set('pw', e.target.value)} minLength={8} autoComplete="new-password" placeholder="예) Temp1234!"/>
           </FormRow>
         )}
         <FormRow label="비고" span={2}>

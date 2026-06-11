@@ -320,16 +320,17 @@ async def google_login(
         _reset_login_state(user)
 
     ua = _user_agent(request)
-    await write_member_access(
-        db,
-        action_type="google_login" if not is_new_user else "register",
-        user_id=user.id,
-        email=user.email,
-        path="/login",
-        ip_address=ip,
-        user_agent=ua,
-        memo="google" if not is_new_user else "google_register",
-    )
+    if is_full_member(user):
+        await write_member_access(
+            db,
+            action_type="google_login",
+            user_id=user.id,
+            email=user.email,
+            path="/login",
+            ip_address=ip,
+            user_agent=ua,
+            memo="google",
+        )
     await db.commit()
     await db.refresh(user)
     out = _user_token_response(user)
