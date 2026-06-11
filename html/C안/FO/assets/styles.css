@@ -575,6 +575,7 @@ p { margin: 0; }
 .footer .ft-contact { margin-top: 16px; }
 .footer .ft-policy { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; font-size: 12px; }
 .footer .ft-policy a { color: #8FA0B8; }
+.footer .ft-policy a.ft-policy-privacy { font-weight: 700; color: #DDE3EC; }
 .footer .ft-policy a:hover { color: #fff; }
 .footer-compact { padding: 24px 0; text-align: center; }
 .footer-compact .meta { margin-bottom: 10px; }

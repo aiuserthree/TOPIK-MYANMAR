@@ -377,7 +377,7 @@
             운영기관 <strong>주미얀마 대한민국 대사관</strong>
           </p>
           <div class="ft-policy">
-            <a href="privacy.html" data-i18n-content="foot.privacy">개인정보처리방침</a>
+            <a href="privacy.html" class="ft-policy-privacy" data-i18n-content="foot.privacy">개인정보처리방침</a>
             <a href="terms.html" data-i18n-content="foot.terms">이용약관</a>
           </div>
           <p class="copy" data-i18n-content="foot.copy">© 2025–2026 Embassy of the Republic of Korea in Myanmar. All rights reserved.</p>
@@ -397,7 +397,7 @@
                 운영기관 <strong>주미얀마 대한민국 대사관</strong>
               </p>
               <div class="ft-policy">
-                <a href="privacy.html" data-i18n-content="foot.privacy">개인정보처리방침</a>
+                <a href="privacy.html" class="ft-policy-privacy" data-i18n-content="foot.privacy">개인정보처리방침</a>
                 <a href="terms.html" data-i18n-content="foot.terms">이용약관</a>
               </div>
             </div>
