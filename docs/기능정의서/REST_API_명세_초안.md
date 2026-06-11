@@ -3,9 +3,9 @@
 > **목적**: 프로덕션 HTTP API 초안. 백엔드·프론트 연동 기준 문서.  
 > **근거**: `기능정의서/DB스키마_초안.md`, FO/BO 기능정의서, `html/shared/api-client.js`  
 > **상태**: v0.1 초안 — **실제 구현 정본은 `apps/api`** ([`docs/system_design/tech-spec.md`](../system_design/tech-spec.md) §4)  
-> **갱신:** 2026-06-09 — FastAPI FO/BO API 대부분 구현 완료. 초안과 다른 경로·필드는 tech-spec §4.2 「초안 대비 차이」 참고.
+> **갱신:** 2026-06-11 — FastAPI FO/BO API 대부분 구현 완료. 초안과 다른 경로·필드는 tech-spec §4.2 「초안 대비 차이」 참고.
 
-### 구현 현황 (2026-06-09)
+### 구현 현황 (2026-06-11)
 
 | 영역 | 구현 (`apps/api`) | 초안과 다른 점 |
 | --- | --- | --- |
@@ -15,6 +15,7 @@
 | Export | 동기 `roster.xlsx`, `photos.zip` | 초안 비동기 Job |
 | Google OAuth | **구현** (`GOOGLE_CLIENT_ID` 설정 시) | 초안 redirect flow |
 | Internal | `/internal/notifications/*` | **미구현** |
+| BO 접근 로그 | `GET /admin/access-logs/admins`, `/members`, `/permission-history` | **구현** (super, V012) |
 
 ---
 

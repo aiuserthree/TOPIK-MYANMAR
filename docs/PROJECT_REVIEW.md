@@ -1,7 +1,7 @@
 # TOPIK Myanmar 프로젝트 종합 리뷰
 
 **기준 디자인 소스:** `html/C안/FO/`, `html/C안/BO(admin)/project/`  
-**검토일:** 2026-06-09  
+**검토일:** 2026-06-11  
 **방법:** 실제 파일 glob/grep·소스 읽기 기준 (추정 없음)  
 **API 정본:** `apps/api/` (FastAPI) — 레거시 `api/` Fastify는 참조용
 
@@ -97,7 +97,7 @@ html/C안/BO(admin)/project/
 │   ├── admin.css, fo-styles.css
 │   ├── app.jsx, common.jsx, data.js   # 소스 (admin.html에 인라인 복제)
 │   └── bo-export-bridge.js
-├── panels/*.jsx              # 14개 패널 소스 (admin.html에 인라인)
+├── panels/*.jsx              # 16개 패널 소스 (admin.html에 인라인)
 ├── shared/
 │   ├── topik-bo-core.js, topik-export.js, topik-lib-loader.js, topik-mail.js
 │   └── topik-i18n-content.js
@@ -106,24 +106,26 @@ html/C안/BO(admin)/project/
 └── screenshots/              # 01~03 대시보드/접수자 캡처
 ```
 
-### B.2 14개 패널 및 기능
+### B.2 16개 패널 및 기능
 
-| 패널 | 파일 | 주요 기능 (mock DataStore) |
+| 패널 | 파일 | 주요 기능 (FastAPI 연동) |
 |------|------|---------------------------|
-| 1 | `dashboard.jsx` | KPI 10종, 회차 컨텍스트, 최근 접수/공지/환불/문의, 처리 이력 |
-| 2 | `applicants.jsx` | 필터·검색·그리드, 승인/반려, 오프라인 수납/취소, 사진 심사 LP, 13자리 수험번호 일괄부여, 연명부 Excel, 사진 ZIP, 인쇄 |
-| 3 | `photos.jsx` | 사진 심사 카드 갤러리, 승인/반려(사유) |
-| 4 | `sessions.jsx` | 회차 CRUD, 접수기간·응시료·시험장 매핑, 상태(open/closed/planned) |
-| 5 | `venues.jsx` | 시험장 CRUD, venue_code 2자리, 활성/비활성 |
-| 6 | `notices.jsx` | 공지 CRUD, 카테고리, 고정, 마케팅 발송 UI |
-| 7 | `faq.jsx` | FAQ CRUD, KO/MY/EN, 정렬 |
-| 8 | `refunds.jsx` | 환불·정보정정 목록/상세/답변/상태 |
-| 9 | `inquiries.jsx` | 문의 게시판 관리, 답변, 비밀글 |
-| 10 | `members.jsx` | 회원 목록/상세/수정, 정지/탈퇴, 비번 초기화, CSV |
-| 11 | `terms.jsx` | 약관 버전 draft/게시/폐지, 미리보기, 동의 이력 |
-| 12 | `admins.jsx` | 관리자 계정 CRUD, 역할(super/general/viewer) |
-| 13 | `permissions.jsx` | 메뉴별 권한 매트릭스 (조회/생성·수정·삭제) |
-| 14 | `audit.jsx` | 처리 이력 필터·검색·상세 |
+| 1 | `dashboard.jsx` | KPI, 회차 컨텍스트, 최근 접수/공지/환불/문의 |
+| 2 | `applicants.jsx` | 필터·검색·그리드, 사진 심사·수납·승인/반려, 수험번호 부여, xlsx/zip export |
+| 3 | `sessions.jsx` | 회차 CRUD, 접수기간·응시료·시험장 매핑 |
+| 4 | `venues.jsx` | 시험장 CRUD, venue_code, name_my |
+| 5 | `notices.jsx` | 공지 CRUD, MY/EN, 휴지통, 마케팅 발송 |
+| 6 | `faq.jsx` | FAQ CRUD, KO/MY/EN |
+| 7 | `refunds.jsx` | 환불·정보정정 목록/상세/답변 |
+| 8 | `inquiries.jsx` | 문의 게시판, 공식 답변·댓글 |
+| 9 | `members.jsx` | 회원 목록/상세, 정지/탈퇴, 비번 초기화 |
+| 10 | `terms.jsx` | 약관 버전·동의 이력 |
+| 11 | `admins.jsx` | 관리자 계정 CRUD |
+| 12 | `permissions.jsx` | 권한 매트릭스 조회 |
+| 13 | `audit.jsx` | 처리 이력 필터·검색·상세 |
+| 14 | `admin-access-log.jsx` | 관리자 접근 로그 (V012, super) |
+| 15 | `member-access-log.jsx` | 회원 접근 로그 (V012, super) |
+| 16 | `perm-history.jsx` | 권한 변경 이력 (super) |
 
 **IA:** `project/docs/IA.md` + `uploads/*기능정의서*.md` — 패널·모달 ID와 정합.
 

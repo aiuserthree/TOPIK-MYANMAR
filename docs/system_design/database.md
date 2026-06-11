@@ -1,12 +1,12 @@
 # TOPIK Myanmar — DB 논리 명세 (Database Logical Spec)
 
 > **문서 위치:** `docs/system_design/database.md`
-> **기준일:** 2026-06-09 · **DB 엔진:** PostgreSQL 15+ (+ pgvector)
+> **기준일:** 2026-06-11 · **DB 엔진:** PostgreSQL 15+ (+ pgvector)
 > **1차 근거:** [`docs/기능정의서/DB스키마_초안.md`](../기능정의서/DB스키마_초안.md)
-> **정합 기준(실제 우선):** `db/migrations/V001~V008`, `apps/api/app/models/*.py`
+> **정합 기준(실제 우선):** `db/migrations/V001~V012`, `apps/api/app/models/*.py`
 > **상호 문서:** [개요](overview.md) · [개발 스펙](tech-spec.md)
 
-본 문서는 DB스키마 초안을 1차 근거로 하되, **실제 마이그레이션(V001~V008)과 ORM 모델을 정본으로 대조·최신화**한 논리 명세입니다. 초안과 실제 구현이 다를 경우 **실제 구현을 우선**하고, 초안에만 있는 항목은 `(초안/합의 필요)`로 구분 표기합니다. 차이 요약은 [§7](#7-마이그레이션-현황-및-초안-대비-차이)에 정리합니다.
+본 문서는 DB스키마 초안을 1차 근거로 하되, **실제 마이그레이션(V001~V012)과 ORM 모델을 정본으로 대조·최신화**한 논리 명세입니다. 초안과 실제 구현이 다를 경우 **실제 구현을 우선**하고, 초안에만 있는 항목은 `(초안/합의 필요)`로 구분 표기합니다. 차이 요약은 [§7](#7-마이그레이션-현황-및-초안-대비-차이)에 정리합니다.
 
 > **표기 규칙:** PostgreSQL 실제 타입은 `SERIAL`(=int) PK, `INTEGER` FK, `TIMESTAMPTZ`를 사용합니다. 초안의 `BIGSERIAL/BIGINT`는 실제로는 `SERIAL/INTEGER`로 구현되어 있습니다(아래 명세는 실제 기준).
 
@@ -251,7 +251,7 @@ DB는 `CHECK` enum 대신 **`VARCHAR` + 애플리케이션 검증** 방식입니
 
 ## 4. 테이블별 상세 명세
 
-> 컬럼·제약·인덱스는 `db/migrations/V001~V008` + ORM 기준. `(V00n)`은 추가 마이그레이션을 표기.
+> 컬럼·제약·인덱스는 `db/migrations/V001~V012` + ORM 기준. `(V00n)`은 추가 마이그레이션을 표기.
 
 ### 4.1 `users` — FO 회원
 
@@ -729,7 +729,7 @@ flowchart TB
 
 ## 7. 마이그레이션 현황 및 초안 대비 차이
 
-### 7.1 마이그레이션 현황 (V001~V008)
+### 7.1 마이그레이션 현황 (V001~V012)
 
 | 파일 | 내용 |
 | --- | --- |
@@ -741,8 +741,12 @@ flowchart TB
 | `V006__fo_contract_and_security.sql` | 지역코드 시드, `exam_venues` 지역별 UNIQUE, 로그인 5회 잠금(`users`/`admin_users`), 비밀글 5회 잠금(`board_posts`), `terms_consents` |
 | `V007__pgvector_semantic_search.sql` | `CREATE EXTENSION vector` + `semantic_chunks`(HNSW cosine) — **superuser 필요, stdin 적용** |
 | `V008__exam_venue_name_my.sql` | `exam_venues.name_my` — 미얀마어 시험장명 |
+| `V009__notice_i18n_display_softdelete.sql` | 공지 MY/EN·노출 기간·휴지통 |
+| `V010__board_official_reply_history.sql` | `board_comments.is_official_reply` |
+| `V011__admin_permission_matrix.sql` | `admin_permission_matrix` JSONB |
+| `V012__access_logs.sql` | `admin_access_logs`, `member_access_logs` |
 
-> 적용 순서: V001 → V008. 일괄: `bash scripts/run-migrations.sh`. V007의 `CREATE EXTENSION vector`는 **postgres superuser** + **stdin**(`< 경로`)로 적용([tech-spec §7](tech-spec.md#7-환경--로컬-개발--배포)).
+> 적용 순서: V001 → V012. 일괄: `bash scripts/run-migrations.sh`. V007의 `CREATE EXTENSION vector`는 **postgres superuser** + **stdin**(`< 경로`)로 적용([tech-spec §7](tech-spec.md#7-환경--로컬-개발--배포)).
 
 ### 7.2 초안 ↔ 실제 차이 (실제 구현 우선)
 

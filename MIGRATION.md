@@ -1,18 +1,18 @@
 # TOPIK Myanmar — 재개발·이전 요약
 
-> **기준일:** 2026-06-09  
+> **기준일:** 2026-06-11  
 > 전체 스펙: [`docs/DEV_SPEC.md`](docs/DEV_SPEC.md) · FO/BO 리뷰: [`docs/PROJECT_REVIEW.md`](docs/PROJECT_REVIEW.md)
 
-## 현재 상태 (2026-06-09)
+## 현재 상태 (2026-06-11)
 
 **1단계 구현 완료.** 운영 화면은 `html/C안/` 정적 HTML, API는 `apps/api` FastAPI가 정본입니다.
 
 | 영역 | 정본 경로 | 상태 |
 | --- | --- | --- |
 | FO 화면 | `html/C안/FO/` (25페이지) | FastAPI 연동, `build.py` → `public/` |
-| BO 화면 | `html/C안/BO(admin)/project/` | 패널 13개 FastAPI 연동, `build-bo.py` → `public-bo/` |
+| BO 화면 | `html/C안/BO(admin)/project/` | 패널 16개 FastAPI 연동, `build-bo.py` → `public-bo/` |
 | API | `apps/api/` | FO/BO REST 전반 구현 |
-| DB | `db/migrations/V001`~`V008` | PostgreSQL 15 + pgvector |
+| DB | `db/migrations/V001`~`V012` | PostgreSQL 15 + pgvector |
 | 신규 FO | `apps/web/` (Vite+React) | 스캐폴드만 — **미운영** |
 | 레거시 API | `api/` (Fastify) | 참조용 |
 
@@ -39,7 +39,7 @@ html/
 ├── C안/FO/                 # 운영 FO
 ├── C안/BO(admin)/project/  # 운영 BO
 └── shared/                 # 공통 JS 클라이언트
-db/migrations/              # V001~V008 SQL
+db/migrations/              # V001~V012 SQL
 packages/shared/            # 공통 상수 placeholder
 build.py / build-bo.py      # 정적 빌드
 ```
@@ -72,7 +72,7 @@ cd apps/web && npm install && npm run dev   # http://localhost:5173
 ## DB migration 적용
 
 ```bash
-# V001~V008 일괄 (V007 pgvector는 superuser 별도)
+# V001~V012 일괄 (V007 pgvector는 superuser 별도)
 bash scripts/run-migrations.sh
 
 # V007 — postgres superuser

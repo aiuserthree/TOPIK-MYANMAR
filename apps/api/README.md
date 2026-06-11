@@ -2,7 +2,7 @@
 
 미얀마 TOPIK FO/BO **운영 API** (`apps/api`). 레거시 `api/` Fastify 서버는 참조용이며, 신규 개발은 본 디렉터리를 기준으로 합니다.
 
-> **기준일:** 2026-06-09
+> **기준일:** 2026-06-11
 
 ## 구성
 
@@ -29,7 +29,7 @@ apps/api/
 └── .env.example
 ```
 
-스키마 정본: `db/migrations/V001`~`V008` SQL. Alembic은 신규 빈 DB 부트스트랩용 보조 수단입니다.
+스키마 정본: `db/migrations/V001`~`V012` SQL. Alembic은 신규 빈 DB 부트스트랩용 보조 수단입니다.
 
 ## 로컬 실행
 
@@ -53,7 +53,7 @@ curl http://localhost:8000/api/v1/auth/status
 ## DB 마이그레이션
 
 ```bash
-# 저장소 루트 — V001~V008 일괄 (V007 pgvector는 superuser 별도)
+# 저장소 루트 — V001~V012 일괄 (V007 pgvector는 superuser 별도)
 bash scripts/run-migrations.sh
 
 # V007만 superuser (CREATE EXTENSION vector)
@@ -70,6 +70,20 @@ sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_s
 | V006 | 로그인 잠금, 비밀글 잠금, terms_consents, 지역 코드 |
 | V007 | pgvector + semantic_chunks |
 | V008 | exam_venues.name_my (미얀마어 시험장명) |
+| V009 | 공지 MY/EN·노출 기간·휴지통 |
+| V010 | 게시판 공식 답변 이력 |
+| V011 | BO 권한 매트릭스 |
+| V012 | admin_access_logs, member_access_logs |
+
+### BO 접근 로그 API (super 전용)
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/api/v1/admin/access-logs/admins` | 관리자 로그인·로그아웃·세션만료·실패 이력 |
+| GET | `/api/v1/admin/access-logs/members` | 회원 로그인·로그아웃·페이지접근 이력 |
+| GET | `/api/v1/admin/permission-history` | 권한 매트릭스·등급 변경 이력 (`admin_audit_logs` 필터) |
+
+V012 미적용 시 위 API는 `503 MIGRATION_REQUIRED`를 반환합니다.
 
 ## 시드
 

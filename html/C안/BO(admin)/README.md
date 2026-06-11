@@ -2,7 +2,7 @@
 
 미얀마 TOPIK **백오피스(BO)** 운영 화면. React 18 CDN + Babel SPA로 구현되어 있으며, FastAPI `apps/api`의 `/api/v1/admin/*`와 연동합니다.
 
-> **기준일:** 2026-06-09
+> **기준일:** 2026-06-11
 
 ## 구성
 
@@ -12,7 +12,7 @@
 | `project/admin.html` | SPA 셸 (사이드바 라우팅) |
 | `project/assets/app.jsx` | 패널 라우터, 최초 비밀번호 변경 게이트 |
 | `project/assets/bo-api-bridge.js` | 패널 액션 → `TopikBoApi` 매핑 |
-| `project/panels/*.jsx` | 기능 패널 13개 |
+| `project/panels/*.jsx` | 기능 패널 16개 |
 | `project/shared/bo-api-client.js` | Admin API 클라이언트 |
 
 ## 패널 목록

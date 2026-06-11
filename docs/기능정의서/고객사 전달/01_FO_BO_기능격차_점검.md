@@ -1,6 +1,6 @@
 # FO·BO 기능 격차 점검 (고객사 전달용)
 
-> **기준일:** 2026-06-10  
+> **기준일:** 2026-06-11  
 > **기준 문서:** 본 폴더 `FO/*.xlsx`, `BO/*.xlsx` (v1.31) 및 `docs/기능정의서/FO|BO/*.md`  
 > **구현 기준:** `html/C안/FO/`, `html/C안/BO(admin)/project/`, `apps/api/`  
 > **범위:** 기능만 (인프라·법무·DNS·SMTP 운영 제외는 별도 [`00_인프라_배포_참고.md`](00_인프라_배포_참고.md))
@@ -22,7 +22,7 @@
 
 | 영역 | 기능정의서 | 구현 |
 | --- | --- | --- |
-| 00 공통 | GNB 4대 메뉴, 언어 KO/MY/EN, 모바일 메뉴, 로그인 가드 | `common.js` |
+| 00 공통 | GNB 4대 메뉴, 언어 KO/MY/EN, 모바일 메뉴, 로그인 가드, **푸터 개인정보처리방침 볼드** | `common.js`, `styles.css` |
 | 01 메인 | D-Day, 공지 5건, FAQ | API 연동 |
 | 02~03 안내·규정 | 8개 정적 페이지 | HTML 8종 |
 | 04 접수 | 4단계 원서, 임시저장, Ⅰ+Ⅱ 동시 접수, 마이페이지 배지·취소 | `register.html`, `mypage.html` |
@@ -78,6 +78,7 @@
 | 04 콘텐츠 | 환불·정정·문의 **답변 이력**, **대댓글**, 공식답변·댓글 구분 | `refunds.jsx`, `inquiries.jsx`, `board-comments.jsx` |
 | 05 회원·약관 | 회원·약관·동의 이력, **이메일(로그인 ID) 수정 불가** | `members.jsx`, `terms.jsx` |
 | 06 시스템 | 관리자·처리 이력, **조회관리자 UI 버튼 비활성**(접수 상세 등) | `admins.jsx`, `audit.jsx`, `applicants.jsx` |
+| 06 시스템 | **관리자·회원 접근 로그**, **권한 변경 이력** (super, V012) | `admin-access-log.jsx`, `member-access-log.jsx`, `perm-history.jsx` |
 | 06 시스템 | 알림 **이메일** outbox·트리거·마케팅 발송 | `mail.py`, `email_notify.py`, `admin_api.py` |
 
 ---

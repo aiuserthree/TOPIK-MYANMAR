@@ -1,8 +1,8 @@
 # TOPIK Myanmar — 시스템 개요 (System Design Overview)
 
 > **문서 위치:** `docs/system_design/overview.md` · **최상위 인덱스**
-> **기준일:** 2026-06-09
-> **근거(SSOT):** `docs/기능정의서/`(README·DB스키마_초안·ERD_및_플로우·REST_API_명세_초안), 실제 구현 `apps/api/`(라우터·ORM), 실제 마이그레이션 `db/migrations/V001~V008`, 운영 문서 `docs/DEV_SPEC.md`·`docs/IWINV_SETUP.md`
+> **기준일:** 2026-06-11
+> **근거(SSOT):** `docs/기능정의서/`(README·DB스키마_초안·ERD_및_플로우·REST_API_명세_초안), 실제 구현 `apps/api/`(라우터·ORM), 실제 마이그레이션 `db/migrations/V001~V012`, 운영 문서 `docs/DEV_SPEC.md`·`docs/IWINV_SETUP.md`
 > **상호 문서:** [DB 논리 명세](database.md) · [개발 스펙](tech-spec.md) · [서비스 상세](#8-문서-구성-안내)
 
 본 문서는 **TOPIK Myanmar** 시스템의 최상위 설계 개요이자 산출물 인덱스입니다. 데이터 모델 상세는 [`database.md`](database.md), 기술 스택·아키텍처는 [`tech-spec.md`](tech-spec.md), FO/BO 화면·기능 상세는 [`services/`](#8-문서-구성-안내) 폴더를 참고하세요.
@@ -409,7 +409,7 @@ docs/system_design/
 | 문서 | 역할 | 1차 근거 |
 | --- | --- | --- |
 | `overview.md` | 시스템 전반·액터·서비스맵·플로우·컨텍스트 (인덱스) | 기능정의서 README, 실제 라우터/모델 |
-| `database.md` | 테이블/컬럼/제약/인덱스·열거형·채번·서비스↔테이블 매핑 | `DB스키마_초안.md` + `db/migrations/V001~V008` + ORM |
+| `database.md` | 테이블/컬럼/제약/인덱스·열거형·채번·서비스↔테이블 매핑 | `DB스키마_초안.md` + `db/migrations/V001~V012` + ORM |
 | `tech-spec.md` | 기술 스택·아키텍처·API·인증·파일/메일/동시성·비기능·배포 | `DEV_SPEC.md` + `IWINV_SETUP.md` + 실제 코드 |
 | `services/*.md` | FO/BO 화면·컴포넌트·시나리오·검증·연동 상세 | 기능정의서 FO/BO `*.md` + HTML 화면 |
 

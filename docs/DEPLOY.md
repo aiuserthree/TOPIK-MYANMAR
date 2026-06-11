@@ -21,11 +21,11 @@
 
 ## 2. DB (PostgreSQL)
 
-DB VPS에서 `V001` → `V008` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트.
+DB VPS에서 `V001` → `V012` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트.
 
 ```bash
 cd /opt/myanmar-v2
-# V001~V006, V008 — topik_app (일괄)
+# V001~V012 — topik_app (일괄, V012 접근 로그 포함)
 bash scripts/run-migrations.sh
 
 # V007 — superuser (IWINV_SETUP.md §2.8)
@@ -123,6 +123,18 @@ TOPIK_API_BASE=http://127.0.0.1:8000 python3 build-bo.py
 | 6 | 비밀번호 재설정 | 메일 + 코드로 변경 |
 | 7 | 공지·FAQ 목록 | FO `GET /api/v1/notices`, `/api/v1/faq` |
 | 8 | BO 로그인 → 접수·회차·공지 CRUD | `admin.topik-myanmar.com` |
+| 9 | BO **관리자 접근 로그** — 로그인 후 이력 표시 | `GET /api/v1/admin/access-logs/admins` (super) |
+| 10 | FO 푸터 **개인정보처리방침** 볼드 표시 | `public/assets/styles.css` `.ft-policy-privacy` |
+
+**운영 전체 배포 (권장):**
+
+```bash
+cd /opt/myanmar-v2
+git fetch origin
+bash scripts/deploy-all-from-git.sh
+```
+
+`deploy-all-from-git.sh`는 `git checkout origin/main`으로 소스 반영 → migration → API 재시작 → `build.py` + `build-bo.py`를 순서대로 실행합니다.
 
 **BO go-live 노트:**
 - 화면 handoff: `html/C안/BO(admin)/project/` — `admin-login.html` + `admin.html`
@@ -169,3 +181,5 @@ PostgreSQL은 로컬 설치, 또는 IwinV DB VPS 원격 연결. 상세: [`apps/a
 | [`배포_아키텍처.md`](기능정의서/배포_아키텍처.md) | 아키텍처 개요 |
 | [`고객사_DNS_요청_템플릿.md`](고객사_DNS_요청_템플릿.md) | DNS IT 요청서 |
 | [`apps/api/README.md`](../apps/api/README.md) | FastAPI 로컬·migration |
+| [`scripts/deploy-all-from-git.sh`](../scripts/deploy-all-from-git.sh) | 운영 전체 배포 (API+DB+FO+BO) |
+| [`scripts/deploy-static-live.sh`](../scripts/deploy-static-live.sh) | FO/BO 정적만 재빌드 |

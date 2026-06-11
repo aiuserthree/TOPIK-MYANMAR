@@ -1,8 +1,8 @@
 # TOPIK Myanmar — DB 스키마 초안 (v0.1)
 
 > **목적**: 프로덕션 데이터 모델 **초안** (요구사항·기능정의서 기반).  
-> **실제 구현 정본**: `db/migrations/V001~V008` + [`docs/system_design/database.md`](../system_design/database.md)  
-> **갱신:** 2026-06-09 — PostgreSQL 15+ + pgvector, SQL migration, FastAPI SQLAlchemy ORM. (초안의 Flyway/Drizzle는 미적용)
+> **실제 구현 정본**: `db/migrations/V001~V012` + [`docs/system_design/database.md`](../system_design/database.md)
+> **갱신:** 2026-06-11 — PostgreSQL 15+ + pgvector, SQL migration, FastAPI SQLAlchemy ORM. (초안의 Flyway/Drizzle는 미적용)
 
 ---
 

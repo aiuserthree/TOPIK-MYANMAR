@@ -1,7 +1,7 @@
 # TOPIK Myanmar — 개발 스펙 (Technical Spec)
 
 > **문서 위치:** `docs/system_design/tech-spec.md`
-> **기준일:** 2026-06-09
+> **기준일:** 2026-06-11
 > **1차 근거:** [`docs/DEV_SPEC.md`](../DEV_SPEC.md) · 실제 코드 `apps/api/`, `db/migrations/`, `html/`
 > **운영 절차:** [`docs/IWINV_SETUP.md`](../IWINV_SETUP.md) · [`docs/DEPLOY.md`](../DEPLOY.md)
 > **상호 문서:** [개요](overview.md) · [DB 논리 명세](database.md)
@@ -112,9 +112,9 @@ Myanmar_v2.0/
 │   └── web/                     # Vite + React 스캐폴드 (홈 placeholder)
 ├── html/
 │   ├── C안/FO/                  # 운영 FO 정적 HTML (25페이지)
-│   ├── C안/BO(admin)/project/   # 운영 BO handoff SPA (패널 13개)
+│   ├── C안/BO(admin)/project/   # 운영 BO handoff SPA (패널 16개)
 │   └── shared/                  # api-client.js·bo-api-client.js·roster-codes.js
-├── db/migrations/               # V001~V008 SQL (정본 스키마)
+├── db/migrations/               # V001~V012 SQL (정본 스키마)
 ├── api/                         # Fastify 레거시(참조용, 일부 파일만)
 ├── packages/shared/             # 공통 상수 placeholder
 ├── scripts/                     # seed_dev/seed_prod/create_admin/test_* 등
@@ -304,7 +304,7 @@ Myanmar_v2.0/
 
 ### 7.2 로컬 개발 실행
 
-**DB 준비 (V001~V008)**
+**DB 준비 (V001~V012)**
 
 ```bash
 createdb topik_myanmar
@@ -345,7 +345,7 @@ python3 build.py        # FO → public/  (TOPIK_API_BASE 생략 = same-origin)
 python3 build-bo.py     # BO → public-bo/
 cd apps/api && pip install -r requirements.txt && sudo systemctl restart myanmar-api
 sudo nginx -t && sudo systemctl reload nginx
-# DB: bash scripts/run-migrations.sh (V001~V008) / 운영 시드: CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py
+# DB: bash scripts/run-migrations.sh (V001~V012) / 운영 시드: CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py
 # 첫 관리자: ADMIN_EMAIL=… ADMIN_PASSWORD=… python3 scripts/create_admin.py
 ```
 

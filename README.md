@@ -2,23 +2,23 @@
 
 미얀마 TOPIK 시험 **온라인 접수·운영** 웹 서비스 (FO: 응시자 / BO: 운영 관리자).
 
-> **기준일:** 2026-06-09 · 1차 목표 회차: **제107회** (접수 2026-07-17~21, 시험 2026-10-18)
+> **기준일:** 2026-06-11 · 1차 목표 회차: **제107회** (접수 2026-07-17~21, 시험 2026-10-18)
 
 ## 현재 구현 상태
 
 | 구분 | 경로 | 상태 |
 | --- | --- | --- |
 | **운영 FO** | `html/C안/FO/` (25페이지, HTML/CSS/JS) | FastAPI 연동 완료 → `build.py` → `public/` |
-| **운영 BO** | `html/C안/BO(admin)/project/` (React 18 CDN SPA) | 패널 13개 FastAPI 연동 → `build-bo.py` → `public-bo/` |
+| **운영 BO** | `html/C안/BO(admin)/project/` (React 18 CDN SPA) | 패널 16개 FastAPI 연동 → `build-bo.py` → `public-bo/` |
 | **운영 API** | `apps/api/` (FastAPI) | FO/BO REST API 구현 완료 |
-| **DB** | `db/migrations/V001`~`V008` | PostgreSQL 15 + pgvector |
+| **DB** | `db/migrations/V001`~`V012` | PostgreSQL 15 + pgvector |
 | **신규 FO (중기)** | `apps/web/` (Vite + React) | 홈 placeholder만 존재, 미운영 |
 | **레거시 API** | `api/` (Fastify) | 참조용 잔존 |
 
 ## 빠른 시작 (로컬)
 
 ```bash
-# 1. DB 마이그레이션 (V001~V008)
+# 1. DB 마이그레이션 (V001~V012)
 bash scripts/run-migrations.sh
 # V007(pgvector)만 superuser 필요: sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
 
@@ -50,7 +50,7 @@ Myanmar_v2.0/
 ├── html/C안/FO/           # 운영 FO (HTML/CSS/JS)
 ├── html/C안/BO(admin)/project/  # 운영 BO SPA
 ├── html/shared/           # api-client.js, bo-api-client.js, roster-codes.js
-├── db/migrations/         # V001~V008 SQL
+├── db/migrations/         # V001~V012 SQL
 ├── scripts/               # seed, deploy, migrate, test
 ├── build.py / build-bo.py # 정적 빌드
 └── docs/                  # 설계·운영 문서
@@ -67,6 +67,9 @@ Myanmar_v2.0/
 | [`docs/PROJECT_REVIEW.md`](docs/PROJECT_REVIEW.md) | FO/BO 구현 리뷰 |
 | [`apps/api/README.md`](apps/api/README.md) | FastAPI 로컬 실행 |
 | [`docs/기능정의서/README.md`](docs/기능정의서/README.md) | 기능정의서 인덱스 |
+| [`docs/사용가이드/FO_사용가이드.md`](docs/사용가이드/FO_사용가이드.md) | 응시자 화면 사용 가이드 |
+| [`docs/사용가이드/BO_사용가이드.md`](docs/사용가이드/BO_사용가이드.md) | 관리자 화면 사용 가이드 |
+| [`docs/통합테스트/통합테스트_시나리오.md`](docs/통합테스트/통합테스트_시나리오.md) | 통합 테스트 시나리오 (244건) |
 
 ## 운영 인프라 (IwinV)
 
