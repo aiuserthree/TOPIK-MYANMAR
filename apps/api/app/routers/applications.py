@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
-from app.lib.deps import AuthUser, require_complete_user
+from app.lib.consents import persist_term_consents, required_terms_consent_error
+from app.lib.deps import AuthUser, get_client_ip, require_complete_user
 from app.lib.errors import api_error
 from app.lib.exam_round_status import sync_exam_round_status
 from app.lib.formatting import (
@@ -40,6 +41,8 @@ class SubmitBody(BaseModel):
     photo_checklist_confirmed: bool = False
     accommodation_requested: bool = False
     reapply: bool = False
+    # 접수 시 약관 동의 이력 — [{"type":"service","version":"1.0","agreed":true}, ...]
+    terms_agreed: list[dict] = Field(default_factory=list)
 
 
 def _is_app_cancelled(app: Application) -> bool:
@@ -154,12 +157,28 @@ async def submit_application(
     body: SubmitBody,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
+    ip: str | None = Depends(get_client_ip),
 ) -> dict:
     levels = [lv.upper() for lv in body.exam_levels if lv.upper() in ("I", "II")]
     if not levels:
         raise api_error("VALIDATION_ERROR", "응시 급수를 선택해 주세요.")
     if not body.photo_checklist_confirmed:
         raise api_error("VALIDATION_ERROR", "사진 확인 체크리스트에 동의해 주세요.")
+    terms_err = required_terms_consent_error(body.terms_agreed)
+    if terms_err:
+        raise api_error("VALIDATION_ERROR", terms_err)
+
+    user_res = await db.execute(select(User).where(User.id == auth.id))
+    user = user_res.scalar_one_or_none()
+    if not user:
+        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+    await persist_term_consents(
+        db,
+        user_id=auth.id,
+        terms_agreed=body.terms_agreed,
+        marketing_opt_in=user.marketing_opt_in,
+        ip=ip,
+    )
 
     round_res = await db.execute(select(ExamRound).where(ExamRound.id == body.exam_round_id))
     exam_round = round_res.scalar_one_or_none()
@@ -197,11 +216,6 @@ async def submit_application(
     venue = venue_res.scalar_one_or_none()
     if not venue:
         raise api_error("INVALID_VENUE", "유효하지 않은 시험장입니다.", 400)
-
-    user_res = await db.execute(select(User).where(User.id == auth.id))
-    user = user_res.scalar_one_or_none()
-    if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
 
     now = datetime.now(timezone.utc)
     if is_reapply:

@@ -712,6 +712,12 @@ p { margin: 0; }
 .step.done .n { background: var(--success); color: #fff; }
 .step.done { color: var(--text-2); }
 
+/* sticky step bar (회원가입·시험접수) — 가운데 정렬 */
+.step-sticky {
+  display: flex;
+  justify-content: center;
+}
+
 /* vertical version for narrow */
 @media (max-width: 600px) {
   .steps { padding: 4px; gap: 2px; }

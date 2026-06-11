@@ -5,6 +5,42 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.content import Term, TermConsent
 
+DEFAULT_REQUIRED_TERM_TYPES = ("service", "privacy")
+
+
+def _normalize_term_type(raw: str | None) -> str:
+    t = (raw or "").strip().lower()
+    if "privacy" in t:
+        return "privacy"
+    if "marketing" in t:
+        return "marketing"
+    if "service" in t or "terms" in t or t in ("tos", "use"):
+        return "service"
+    return t
+
+
+def required_terms_consent_error(
+    terms_agreed: list[dict] | None,
+    *,
+    required: tuple[str, ...] = DEFAULT_REQUIRED_TERM_TYPES,
+) -> str | None:
+    """필수 약관(service, privacy) 동의 여부. 미충족 시 사용자용 오류 문구."""
+    agreed: set[str] = set()
+    for item in terms_agreed or []:
+        if not isinstance(item, dict):
+            continue
+        if not item.get("agreed", True):
+            continue
+        ttype = _normalize_term_type(item.get("term_type") or item.get("type"))
+        if ttype:
+            agreed.add(ttype)
+    missing = [t for t in required if t not in agreed]
+    if not missing:
+        return None
+    labels = {"service": "서비스 이용약관", "privacy": "개인정보 처리"}
+    names = "·".join(labels.get(t, t) for t in missing)
+    return f"필수 약관({names})에 동의해 주세요."
+
 
 async def persist_term_consents(
     db: AsyncSession,

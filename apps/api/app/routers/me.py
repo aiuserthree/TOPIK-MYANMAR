@@ -14,7 +14,7 @@ from app.lib.deps import AuthUser, get_client_ip, require_complete_user, require
 from app.lib.profile import AUTH_USER_STATUSES, is_profile_incomplete
 from app.lib.email_notify import count_active_applications, notify_account_status
 from app.lib.errors import api_error
-from app.lib.consents import persist_term_consents
+from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.google_auth import verify_google_id_token
 from app.lib.security import hash_password, verify_password
@@ -181,6 +181,14 @@ async def update_me(
         raise api_error("VALIDATION_ERROR", roster_err)
     photo_base64 = data.pop("photo_base64", None)
     terms_agreed = data.pop("terms_agreed", None)
+    if is_profile_incomplete(user):
+        terms_err = required_terms_consent_error(terms_agreed)
+        if terms_err:
+            raise api_error("VALIDATION_ERROR", terms_err)
+    elif terms_agreed is not None:
+        terms_err = required_terms_consent_error(terms_agreed)
+        if terms_err:
+            raise api_error("VALIDATION_ERROR", terms_err)
     for key, value in data.items():
         setattr(user, key, value)
     if photo_base64:

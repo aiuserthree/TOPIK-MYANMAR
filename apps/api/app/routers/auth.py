@@ -28,7 +28,7 @@ from app.lib.security import (
     verify_code,
     verify_password,
 )
-from app.lib.consents import persist_term_consents
+from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.email_notify import notify_password_expiry_reminder
 from app.lib.google_auth import verify_google_id_token
 from app.lib.profile import (
@@ -761,6 +761,9 @@ async def register(
     roster_err = validate_roster_codes(body.job_code, body.motive_code, body.purpose_code)
     if roster_err:
         raise api_error("VALIDATION_ERROR", roster_err)
+    terms_err = required_terms_consent_error(body.terms_agreed)
+    if terms_err:
+        raise api_error("VALIDATION_ERROR", terms_err)
 
     existing = await db.execute(select(User).where(User.email == email))
     existing_user = existing.scalar_one_or_none()
