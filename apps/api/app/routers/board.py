@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
 from app.lib.deps import AuthUser, require_complete_user
-from app.lib.errors import api_error
+from app.lib.errors import api_error, fo_api_error
+from app.lib.fo_messages import fo_message
 from app.lib.email_notify import (
     notify_board_activity_to_operator,
     notify_board_post_created,
@@ -219,13 +220,13 @@ async def list_posts(
     }
 
 
-async def _load_post_with_author(db: AsyncSession, post_id: int):
+async def _load_post_with_author(db: AsyncSession, post_id: int, lang: str | None = None):
     res = await db.execute(
         select(BoardPost, User).join(User, User.id == BoardPost.user_id).where(BoardPost.id == post_id)
     )
     row = res.first()
     if not row:
-        raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "post_not_found", lang, 404)
     return row  # (post, user)
 
 
@@ -238,7 +239,7 @@ async def get_post(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     locale = resolve_request_locale(request, lang)
-    post, user = await _load_post_with_author(db, post_id)
+    post, user = await _load_post_with_author(db, post_id, locale)
     if _is_locked_secret(post, auth):
         # 잠긴 비밀글: 본문 비노출. unlock 으로 열람.
         return {
@@ -261,10 +262,12 @@ async def get_post(
 
 @router.post("/posts")
 async def create_post(
+    request: Request,
     body: CreatePostBody,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = resolve_request_locale(request)
     # 비밀번호는 선택: 미입력 시 작성자·관리자만 열람(비밀번호 unlock 불가).
     post = BoardPost(
         board_type=body.board_type,
@@ -301,30 +304,36 @@ async def create_post(
         await notify_board_post_created(db, post, user, admin_email=admin_email)
     await db.commit()
     await db.refresh(post)
-    return {"id": post.id, "workflow_status": post.workflow_status, "message": "접수되었습니다."}
+    return {
+        "id": post.id,
+        "workflow_status": post.workflow_status,
+        "message": fo_message("post_submitted", lang),
+    }
 
 
 @router.patch("/posts/{post_id}")
 async def update_post(
+    request: Request,
     post_id: int,
     body: UpdatePostBody,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    post, user = await _load_post_with_author(db, post_id)
+    lang = resolve_request_locale(request)
+    post, user = await _load_post_with_author(db, post_id, lang)
     if not _can_author_edit(post, auth):
-        raise api_error("FORBIDDEN", "답변이 등록된 글은 수정할 수 없습니다.", 403)
+        raise fo_api_error("FORBIDDEN", "cannot_edit_replied", lang, 403)
     data = body.model_dump(exclude_unset=True)
     secret_password = data.pop("secret_password", None)
     if "title" in data:
         title = (data["title"] or "").strip()
         if not title or len(title) > 100:
-            raise api_error("VALIDATION_ERROR", "제목을 100자 이내로 입력해 주세요.", 400)
+            raise fo_api_error("VALIDATION_ERROR", "title_too_long", lang, 400)
         post.title = title
     if "body" in data:
         content = (data["body"] or "").strip()
         if not content or len(content) < 10:
-            raise api_error("VALIDATION_ERROR", "내용을 10자 이상 입력해 주세요.", 400)
+            raise fo_api_error("VALIDATION_ERROR", "body_too_short", lang, 400)
         post.body = content
     if "category" in data:
         post.category = data["category"]
@@ -336,42 +345,46 @@ async def update_post(
         pw = secret_password.strip()
         if post.is_secret and pw:
             if len(pw) < 4:
-                raise api_error("VALIDATION_ERROR", "비밀글 비밀번호를 4자 이상 입력해 주세요.", 400)
+                raise fo_api_error("VALIDATION_ERROR", "secret_pw_min", lang, 400)
             post.secret_password_hash = hash_password(pw)
         elif not pw:
             post.secret_password_hash = None
     await db.commit()
     attachments = await _attachments_for_post(db, post_id)
     data = await _full_post_dict(db, post, user.name_ko, auth, attachments)
-    data["message"] = "수정되었습니다."
+    data["message"] = fo_message("post_updated", lang)
     return data
 
 
 @router.delete("/posts/{post_id}")
 async def delete_post(
+    request: Request,
     post_id: int,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    post, _ = await _load_post_with_author(db, post_id)
+    lang = resolve_request_locale(request)
+    post, _ = await _load_post_with_author(db, post_id, lang)
     if not _can_author_edit(post, auth):
-        raise api_error("FORBIDDEN", "답변이 등록된 글은 삭제할 수 없습니다.", 403)
+        raise fo_api_error("FORBIDDEN", "cannot_delete_replied", lang, 403)
     await db.delete(post)
     await db.commit()
-    return {"deleted": True, "message": "삭제되었습니다."}
+    return {"deleted": True, "message": fo_message("post_deleted", lang)}
 
 
 @router.post("/attachments")
 async def upload_attachment(
+    request: Request,
     file: UploadFile = File(...),
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = resolve_request_locale(request)
     content_type = (file.content_type or "").lower()
     filename = file.filename or "file"
     ext_ok = any(filename.lower().endswith(ext) for exts in _ALLOWED_ATTACH.values() for ext in exts)
     if content_type not in _ALLOWED_ATTACH and not ext_ok:
-        raise api_error("INVALID_FILE_TYPE", "jpg, png, pdf 파일만 업로드할 수 있습니다.")
+        raise fo_api_error("INVALID_FILE_TYPE", "invalid_file_type", lang)
     data = await file.read()
     # MIME 미확정 시 확장자로 보정.
     if content_type not in _ALLOWED_ATTACH:
@@ -392,8 +405,9 @@ async def upload_attachment(
             original_filename=filename,
         )
     except ValueError as exc:
-        msg = "5MB 이하의 파일만 업로드할 수 있습니다." if str(exc) == "file_too_large" else "파일을 업로드할 수 없습니다."
-        raise api_error("FILE_TOO_LARGE", msg) from exc
+        key = "attach_max_size" if str(exc) == "file_too_large" else "attach_upload_failed"
+        code = "FILE_TOO_LARGE" if str(exc) == "file_too_large" else "VALIDATION_ERROR"
+        raise fo_api_error(code, key, lang) from exc
     await db.commit()
     return {
         "body": {
@@ -411,12 +425,14 @@ async def upload_attachment(
 
 @router.post("/posts/{post_id}/unlock")
 async def unlock_post(
+    request: Request,
     post_id: int,
     body: UnlockBody,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    post, user = await _load_post_with_author(db, post_id)
+    lang = resolve_request_locale(request)
+    post, user = await _load_post_with_author(db, post_id, lang)
     # 본인 글/일반글은 잠금 없음.
     if not _is_locked_secret(post, auth):
         attachments = await _attachments_for_post(db, post_id)
@@ -424,11 +440,11 @@ async def unlock_post(
 
     # 비밀번호가 설정되지 않은 비밀글은 작성자·관리자만 열람 가능(unlock 불가).
     if not post.secret_password_hash:
-        raise api_error("FORBIDDEN", "작성자만 열람할 수 있는 비밀글입니다.", 403)
+        raise fo_api_error("FORBIDDEN", "secret_forbidden", lang, 403)
 
     now = datetime.now(timezone.utc)
     if post.secret_locked_until and post.secret_locked_until > now:
-        raise api_error("LOCKED", "비밀번호 입력 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.", 423)
+        raise fo_api_error("LOCKED", "secret_locked", lang, 423)
 
     if verify_password(body.password, post.secret_password_hash):
         post.secret_fail_count = 0
@@ -445,20 +461,29 @@ async def unlock_post(
         post.secret_locked_until = now + timedelta(minutes=SECRET_LOCK_MINUTES)
         post.secret_fail_count = 0
         await db.commit()
-        raise api_error("LOCKED", f"비밀번호 {SECRET_MAX_FAIL}회 오류로 {SECRET_LOCK_MINUTES}분간 잠겼습니다.", 423)
+        raise fo_api_error(
+            "LOCKED",
+            "secret_lock_minutes",
+            lang,
+            423,
+            max_fail=SECRET_MAX_FAIL,
+            minutes=SECRET_LOCK_MINUTES,
+        )
     await db.commit()
-    raise api_error("INVALID_PASSWORD", f"비밀번호가 올바르지 않습니다. (남은 시도 {max(0, remaining)}회)", 400)
+    raise fo_api_error("INVALID_PASSWORD", "invalid_secret_password", lang, remaining=max(0, remaining))
 
 
 @router.get("/posts/{post_id}/comments")
 async def list_comments(
+    request: Request,
     post_id: int,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    post, _ = await _load_post_with_author(db, post_id)
+    lang = resolve_request_locale(request)
+    post, _ = await _load_post_with_author(db, post_id, lang)
     if _is_locked_secret(post, auth):
-        raise api_error("FORBIDDEN", "비밀글입니다. 작성자만 열람할 수 있습니다.", 403)
+        raise fo_api_error("FORBIDDEN", "secret_only_author_view", lang, 403)
 
     result = await db.execute(
         select(BoardComment)
@@ -492,20 +517,22 @@ async def list_comments(
 
 @router.post("/posts/{post_id}/comments")
 async def create_comment(
+    request: Request,
     post_id: int,
     body: CreateCommentBody,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    post, _ = await _load_post_with_author(db, post_id)
+    lang = resolve_request_locale(request)
+    post, _ = await _load_post_with_author(db, post_id, lang)
     if _is_locked_secret(post, auth):
-        raise api_error("FORBIDDEN", "비밀글입니다. 작성자만 댓글을 작성할 수 있습니다.", 403)
+        raise fo_api_error("FORBIDDEN", "secret_only_author_comment", lang, 403)
     content = body.body.strip()
     if not content:
-        raise api_error("VALIDATION_ERROR", "댓글 내용을 입력해 주세요.")
+        raise fo_api_error("VALIDATION_ERROR", "comment_required", lang)
     parent_id = parse_parent_comment_id(body.parent_comment_id)
     if body.parent_comment_id is not None and parent_id is None:
-        raise api_error("VALIDATION_ERROR", "parent_comment_id가 올바르지 않습니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "invalid_parent_comment", lang, 400)
     comment = BoardComment(
         board_post_id=post_id,
         author_user_id=auth.id,

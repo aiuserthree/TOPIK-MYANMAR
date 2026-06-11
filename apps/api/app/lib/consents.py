@@ -23,8 +23,11 @@ def required_terms_consent_error(
     terms_agreed: list[dict] | None,
     *,
     required: tuple[str, ...] = DEFAULT_REQUIRED_TERM_TYPES,
+    lang: str | None = None,
 ) -> str | None:
     """필수 약관(service, privacy) 동의 여부. 미충족 시 사용자용 오류 문구."""
+    from app.lib.fo_messages import terms_missing_message
+
     agreed: set[str] = set()
     for item in terms_agreed or []:
         if not isinstance(item, dict):
@@ -37,9 +40,7 @@ def required_terms_consent_error(
     missing = [t for t in required if t not in agreed]
     if not missing:
         return None
-    labels = {"service": "서비스 이용약관", "privacy": "개인정보 처리"}
-    names = "·".join(labels.get(t, t) for t in missing)
-    return f"필수 약관({names})에 동의해 주세요."
+    return terms_missing_message(missing, lang)
 
 
 async def persist_term_consents(

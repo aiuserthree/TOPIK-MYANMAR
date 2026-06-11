@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import io
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
 from app.lib.deps import AuthUser, get_optional_user
-from app.lib.errors import api_error
+from app.lib.errors import api_error, fo_api_error
+from app.lib.locale import resolve_request_locale
 from app.lib.security import decode_access_token
 from app.lib.storage import get_file_row, read_file_bytes, resolve_local_path
 from app.models.application import Application
@@ -23,6 +24,7 @@ async def _authorize_file(
     user: AuthUser | None,
     token: str | None,
     db: AsyncSession,
+    lang: str | None = None,
 ) -> tuple:
     auth = user
     if not auth and token:
@@ -32,10 +34,10 @@ async def _authorize_file(
             kind, _, ident = sub.partition(":")
             auth = AuthUser(id=int(ident), email=payload.get("email", ""), role=payload.get("role"), is_admin=kind == "admin")
     if not auth:
-        raise api_error("UNAUTHORIZED", "인증이 필요합니다.", 401)
+        raise fo_api_error("UNAUTHORIZED", "file_unauthorized", lang, 401)
     row = await get_file_row(db, file_id)
     if not row:
-        raise api_error("FILE_UNAVAILABLE", "파일을 찾을 수 없습니다.", 404)
+        raise fo_api_error("FILE_UNAVAILABLE", "file_not_found", lang, 404)
     if auth.is_admin:
         return row, auth
     if row.owner_type == "user_photo" and row.owner_id == auth.id:
@@ -50,17 +52,17 @@ async def _authorize_file(
     u = user_res.scalar_one_or_none()
     if u and u.photo_file_id == file_id:
         return row, auth
-    raise api_error("FORBIDDEN", "파일 접근 권한이 없습니다.", 403)
+    raise fo_api_error("FORBIDDEN", "file_forbidden", lang, 403)
 
 
-def _file_response(row) -> FileResponse | StreamingResponse:
+def _file_response(row, lang: str | None = None) -> FileResponse | StreamingResponse:
     path = resolve_local_path(row.storage_key)
     if path:
         return FileResponse(path, media_type=row.mime_type, filename=row.original_filename or "file")
 
     data = read_file_bytes(row.storage_key)
     if not data:
-        raise api_error("FILE_UNAVAILABLE", "파일을 사용할 수 없습니다.", 404)
+        raise fo_api_error("FILE_UNAVAILABLE", "file_unavailable", lang, 404)
 
     headers = {}
     if row.original_filename:
@@ -70,13 +72,15 @@ def _file_response(row) -> FileResponse | StreamingResponse:
 
 @router.get("/files/{file_id}")
 async def get_file(
+    request: Request,
     file_id: int,
     token: str | None = Query(None),
     user: AuthUser | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db_session),
 ):
-    row, _ = await _authorize_file(file_id, user, token, db)
-    return _file_response(row)
+    lang = resolve_request_locale(request)
+    row, _ = await _authorize_file(file_id, user, token, db, lang=lang)
+    return _file_response(row, lang=lang)
 
 
 @router.get("/admin/files/{file_id}")

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db_session
-from app.lib.errors import api_error
+from app.lib.errors import fo_api_error
+from app.lib.locale import resolve_request_locale
 from app.lib.formatting import faq_category_label, fmt_date, notice_category_label
 from app.models.admin import AdminUser
 from app.models.content import FaqItem, Notice, Term
@@ -156,10 +157,12 @@ async def _notice_neighbors(db: AsyncSession, notice: Notice, lang: str = "ko") 
 
 @router.get("/notices/{notice_id}")
 async def get_notice(
+    request: Request,
     notice_id: int,
     lang: str = Query("ko"),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    locale = resolve_request_locale(request, lang)
     now = _notice_visible_now()
     result = await db.execute(
         select(Notice).where(
@@ -170,7 +173,7 @@ async def get_notice(
     )
     notice = result.scalar_one_or_none()
     if not notice:
-        raise api_error("NOT_FOUND", "공지를 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "notice_not_found", locale, 404)
     title, body_html = _notice_localized(notice, lang)
     notice.view_count += 1
     author_name = "관리자"
@@ -265,7 +268,13 @@ async def list_terms(db: AsyncSession = Depends(get_db_session)) -> dict:
 
 
 @router.get("/terms/{term_type}")
-async def get_term(term_type: str, lang: str = Query("ko"), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def get_term(
+    request: Request,
+    term_type: str,
+    lang: str = Query("ko"),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    locale = resolve_request_locale(request, lang)
     result = await db.execute(
         select(Term)
         .where(Term.term_type == term_type, Term.status == "published")
@@ -274,7 +283,7 @@ async def get_term(term_type: str, lang: str = Query("ko"), db: AsyncSession = D
     )
     row = result.scalar_one_or_none()
     if not row:
-        raise api_error("NOT_FOUND", "약관을 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "terms_not_found", locale, 404)
     body = getattr(row, f"body_{lang}", None) or row.body_ko
     return {
         "id": row.id,

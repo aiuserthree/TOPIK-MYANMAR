@@ -11,7 +11,8 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db_session
 from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user
-from app.lib.errors import api_error
+from app.lib.errors import api_error, fo_api_error
+from app.lib.fo_messages import level_label
 from app.lib.exam_round_status import sync_exam_round_status
 from app.lib.locale import resolve_request_locale
 from app.lib.formatting import (
@@ -110,7 +111,12 @@ async def _purge_expired_drafts(db: AsyncSession, user_id: int) -> None:
 
 
 @router.get("/application-draft")
-async def get_draft(auth: AuthUser = Depends(require_complete_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def get_draft(
+    request: Request,
+    auth: AuthUser = Depends(require_complete_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = resolve_request_locale(request)
     await _purge_expired_drafts(db, auth.id)
     result = await db.execute(
         select(ApplicationDraft).where(
@@ -120,7 +126,7 @@ async def get_draft(auth: AuthUser = Depends(require_complete_user), db: AsyncSe
     )
     row = result.scalar_one_or_none()
     if not row:
-        raise api_error("NOT_FOUND", "임시 저장된 접수 정보가 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "draft_not_found", lang, 404)
     return {"payload": row.payload, "updated_at": row.updated_at, "expires_at": row.expires_at}
 
 
@@ -155,24 +161,26 @@ async def delete_draft(auth: AuthUser = Depends(require_complete_user), db: Asyn
 
 @router.post("/application-submissions")
 async def submit_application(
+    request: Request,
     body: SubmitBody,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
     ip: str | None = Depends(get_client_ip),
 ) -> dict:
+    lang = resolve_request_locale(request)
     levels = [lv.upper() for lv in body.exam_levels if lv.upper() in ("I", "II")]
     if not levels:
-        raise api_error("VALIDATION_ERROR", "응시 급수를 선택해 주세요.")
+        raise fo_api_error("VALIDATION_ERROR", "select_level", lang)
     if not body.photo_checklist_confirmed:
-        raise api_error("VALIDATION_ERROR", "사진 확인 체크리스트에 동의해 주세요.")
-    terms_err = required_terms_consent_error(body.terms_agreed)
+        raise fo_api_error("VALIDATION_ERROR", "photo_checklist", lang)
+    terms_err = required_terms_consent_error(body.terms_agreed, lang=lang)
     if terms_err:
         raise api_error("VALIDATION_ERROR", terms_err)
 
     user_res = await db.execute(select(User).where(User.id == auth.id))
     user = user_res.scalar_one_or_none()
     if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
     await persist_term_consents(
         db,
         user_id=auth.id,
@@ -186,7 +194,7 @@ async def submit_application(
     if exam_round:
         await sync_exam_round_status(db, exam_round)
     if not exam_round or exam_round.registration_status != "open":
-        raise api_error("ROUND_NOT_OPEN", "접수 가능한 회차가 아닙니다.", 400)
+        raise fo_api_error("ROUND_NOT_OPEN", "round_not_open", lang, 400)
 
     existing_res = await db.execute(
         select(ApplicationSubmission)
@@ -204,11 +212,7 @@ async def submit_application(
     )
     if venue_locked:
         if body.exam_venue_id != existing.exam_venue_id:
-            raise api_error(
-                "VALIDATION_ERROR",
-                "다른 급수가 진행 중일 때는 기존 시험장으로만 접수할 수 있습니다.",
-                400,
-            )
+            raise fo_api_error("VALIDATION_ERROR", "venue_locked", lang, 400)
         venue_res = await db.execute(select(ExamVenue).where(ExamVenue.id == existing.exam_venue_id))
     else:
         venue_res = await db.execute(
@@ -216,26 +220,30 @@ async def submit_application(
         )
     venue = venue_res.scalar_one_or_none()
     if not venue:
-        raise api_error("INVALID_VENUE", "유효하지 않은 시험장입니다.", 400)
+        raise fo_api_error("INVALID_VENUE", "invalid_venue", lang, 400)
 
     now = datetime.now(timezone.utc)
     if is_reapply:
         if not _is_app_rejected(existing):
-            raise api_error("VALIDATION_ERROR", "재접수 가능한 반려 접수가 없습니다.")
+            raise fo_api_error("VALIDATION_ERROR", "reapply_not_found", lang)
         # Partial reapply — reset rejected rows and re-activate cancelled rows; keep in-progress intact.
         existing_apps = {a.exam_level: a for a in existing.applications}
         for level in levels:
             app = existing_apps.get(level)
             if not app:
-                raise api_error(
+                raise fo_api_error(
                     "VALIDATION_ERROR",
-                    f"{_LEVEL_TEXT.get(level, level)} 접수 내역이 없습니다.",
+                    "level_record_missing",
+                    lang,
+                    level=level_label(level, lang),
                 )
             if _is_app_cancelled(app) or app.status == "rejected":
                 continue
-            raise api_error(
+            raise fo_api_error(
                 "VALIDATION_ERROR",
-                f"{_LEVEL_TEXT.get(level, level)}은(는) 심사 진행 중이어서 재접수할 수 없습니다.",
+                "level_reapply_locked",
+                lang,
+                level=level_label(level, lang),
             )
 
         existing.photo_checklist_confirmed = body.photo_checklist_confirmed
@@ -276,17 +284,14 @@ async def submit_application(
                 in_progress_requested.append(level)
 
         if rejected_requested:
-            names = ", ".join(_LEVEL_TEXT.get(lv, lv) for lv in rejected_requested)
-            raise api_error(
-                "VALIDATION_ERROR",
-                f"{names}은(는) 재접수가 필요합니다. 마이페이지에서 재접수를 이용해 주세요.",
-            )
+            names = ", ".join(level_label(lv, lang) for lv in rejected_requested)
+            raise fo_api_error("VALIDATION_ERROR", "level_reapply_needed", lang, levels=names)
 
         if not levels_to_add:
             if in_progress_requested:
-                names = ", ".join(_LEVEL_TEXT.get(lv, lv) for lv in in_progress_requested)
-                raise api_error("ALREADY_SUBMITTED", f"{names}은(는) 이미 접수 진행 중입니다.", 409)
-            raise api_error("ALREADY_SUBMITTED", "이미 해당 회차에 접수한 내역이 있습니다.", 409)
+                names = ", ".join(level_label(lv, lang) for lv in in_progress_requested)
+                raise fo_api_error("ALREADY_SUBMITTED", "level_in_progress", lang, 409, levels=names)
+            raise fo_api_error("ALREADY_SUBMITTED", "already_submitted_round", lang, 409)
 
         venue_id = existing.exam_venue_id if venue_locked else body.exam_venue_id
         if venue_locked:
@@ -511,11 +516,13 @@ async def my_applications(
 
 @router.post("/applications/{application_id}/cancel")
 async def cancel_application(
+    request: Request,
     application_id: int,
     body: dict | None = None,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = resolve_request_locale(request)
     """급수(application) 단위 취소 — 동일 submission의 다른 급수는 유지."""
     result = await db.execute(
         select(Application)
@@ -524,11 +531,11 @@ async def cancel_application(
     )
     app = result.scalar_one_or_none()
     if not app:
-        raise api_error("NOT_FOUND", "접수 내역을 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "application_not_found", lang, 404)
     if app.cancelled_at or app.status == "cancelled":
-        raise api_error("ALREADY_CANCELLED", "이미 취소된 접수입니다.", 409)
+        raise fo_api_error("ALREADY_CANCELLED", "already_cancelled", lang, 409)
     if app.payment_status == "paid":
-        raise api_error("CANNOT_CANCEL", "수납 완료된 접수는 취소할 수 없습니다.", 400)
+        raise fo_api_error("CANNOT_CANCEL", "cannot_cancel_paid", lang, 400)
     reason = (body or {}).get("reason", "사용자 취소")
     now = datetime.now(timezone.utc)
     app.cancelled_at = now
@@ -545,12 +552,14 @@ async def cancel_application(
 
 @router.post("/application-submissions/{submission_id}/cancel")
 async def cancel_submission(
+    request: Request,
     submission_id: int,
     body: dict | None = None,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """submission 전체 취소 (하위 모든 급수)."""
+    lang = resolve_request_locale(request)
     result = await db.execute(
         select(ApplicationSubmission)
         .where(ApplicationSubmission.id == submission_id, ApplicationSubmission.user_id == auth.id)
@@ -558,12 +567,12 @@ async def cancel_submission(
     )
     sub = result.scalar_one_or_none()
     if not sub:
-        raise api_error("NOT_FOUND", "접수 내역을 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "application_not_found", lang, 404)
     if sub.cancelled_at:
-        raise api_error("ALREADY_CANCELLED", "이미 취소된 접수입니다.", 409)
+        raise fo_api_error("ALREADY_CANCELLED", "already_cancelled", lang, 409)
     for app in sub.applications:
         if app.status != "cancelled" and app.payment_status == "paid":
-            raise api_error("CANNOT_CANCEL", "수납 완료된 접수는 취소할 수 없습니다.", 400)
+            raise fo_api_error("CANNOT_CANCEL", "cannot_cancel_paid", lang, 400)
     reason = (body or {}).get("reason", "사용자 취소")
     now = datetime.now(timezone.utc)
     sub.cancelled_at = now

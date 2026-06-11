@@ -58,12 +58,21 @@ MOTIVE_CODES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 PURPOSE_CODES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15}
 
 
-def validate_roster_codes(job_code: int | None, motive_code: int | None, purpose_code: int | None) -> str | None:
+def validate_roster_codes(
+    job_code: int | None,
+    motive_code: int | None,
+    purpose_code: int | None,
+    lang: str | None = None,
+) -> str | None:
     """직업/동기/목적 코드가 연명부 권위 코드표에 부합하는지 검증. 위반 시 메시지, 정상 시 None."""
-    if job_code is not None and job_code not in JOB_CODES:
-        return "직업 코드가 올바르지 않습니다."
-    if motive_code is not None and motive_code not in MOTIVE_CODES:
-        return "응시동기 코드가 올바르지 않습니다."
-    if purpose_code is not None and purpose_code not in PURPOSE_CODES:
-        return "응시목적 코드가 올바르지 않습니다."
+    from app.lib.fo_messages import fo_message
+
+    if not job_code or not motive_code or not purpose_code:
+        return fo_message("roster_codes", lang)
+    if job_code not in JOB_CODES:
+        return fo_message("job_code_invalid", lang)
+    if motive_code not in MOTIVE_CODES:
+        return fo_message("motive_code_invalid", lang)
+    if purpose_code not in PURPOSE_CODES:
+        return fo_message("purpose_code_invalid", lang)
     return None

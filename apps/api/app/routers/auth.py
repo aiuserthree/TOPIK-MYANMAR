@@ -16,7 +16,8 @@ from app.database import get_db_session
 from app.lib.access_log import write_admin_access, write_member_access
 from app.lib.audit import write_audit
 from app.lib.deps import AuthUser, get_client_ip, get_optional_user
-from app.lib.errors import api_error
+from app.lib.errors import api_error, fo_api_error
+from app.lib.fo_messages import fo_message
 from app.lib.security import (
     create_access_token,
     create_email_verify_token,
@@ -70,24 +71,31 @@ LOGIN_LOCK_MINUTES = 30
 OTP_MAX_FAIL = 6
 
 
-async def _prepare_existing_user_for_signup(db: AsyncSession, existing_user: User | None) -> None:
+async def _prepare_existing_user_for_signup(
+    db: AsyncSession,
+    existing_user: User | None,
+    lang: str | None = None,
+) -> None:
     """가입 전 기존 이메일 행 정리. 탈퇴 30일 이내·정지·기가입은 차단."""
     if not existing_user:
         return
     if existing_user.status == "suspended":
-        raise api_error("ACCOUNT_INACTIVE", "이용이 제한된 계정입니다.", 403)
+        raise fo_api_error("ACCOUNT_INACTIVE", "account_inactive", lang, 403)
     remaining = withdrawn_rejoin_days_remaining(existing_user)
     if remaining is not None:
-        raise api_error(
+        raise fo_api_error(
             "REJOIN_RESTRICTED",
-            f"탈퇴 후 {WITHDRAW_REREGISTRATION_DAYS}일간 동일 이메일로 재가입할 수 없습니다. ({remaining}일 후 가능)",
+            "rejoin_restricted",
+            lang,
             403,
+            days=WITHDRAW_REREGISTRATION_DAYS,
+            remaining=remaining,
         )
     if existing_user.status == "withdrawn":
         await remove_withdrawn_user_for_reregister(db, existing_user)
         return
     if is_full_member(existing_user):
-        raise api_error("EMAIL_ALREADY_REGISTERED", "이미 가입된 이메일입니다.", 409)
+        raise fo_api_error("EMAIL_ALREADY_REGISTERED", "email_already_registered", lang, 409)
     await remove_incomplete_signup_user(db, existing_user)
 
 
@@ -247,22 +255,23 @@ async def google_login(
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = _resolve_request_locale(body.preferred_lang, request)
     if not settings.google_oauth_enabled:
-        raise api_error("SERVICE_UNAVAILABLE", "Google 로그인이 설정되지 않았습니다.", 503)
+        raise fo_api_error("SERVICE_UNAVAILABLE", "google_login_disabled", lang, 503)
     token = body.id_token.strip()
     if not token:
-        raise api_error("VALIDATION_ERROR", "Google 인증 토큰이 필요합니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "google_token_required", lang)
     try:
         claims = verify_google_id_token(token, settings.google_client_id.strip())
     except ValueError as exc:
-        raise api_error("INVALID_TOKEN", "Google 인증에 실패했습니다.", 401) from exc
+        raise fo_api_error("INVALID_TOKEN", "google_auth_failed", lang, 401) from exc
 
     sub = claims.get("sub")
     email = (claims.get("email") or "").strip().lower()
     if not sub or not email:
-        raise api_error("INVALID_TOKEN", "Google 계정 정보가 부족합니다.", 401)
+        raise fo_api_error("INVALID_TOKEN", "google_account_incomplete", lang, 401)
     if not claims.get("email_verified", True):
-        raise api_error("INVALID_TOKEN", "이메일이 인증되지 않은 Google 계정입니다.", 401)
+        raise fo_api_error("INVALID_TOKEN", "google_email_unverified", lang, 401)
 
     is_new_user = False
     by_sub = await db.execute(select(User).where(User.google_sub == sub))
@@ -273,13 +282,16 @@ async def google_login(
 
     if user:
         if user.status == "suspended":
-            raise api_error("ACCOUNT_INACTIVE", "이용이 제한된 계정입니다.", 403)
+            raise fo_api_error("ACCOUNT_INACTIVE", "account_inactive", lang, 403)
         remaining = withdrawn_rejoin_days_remaining(user)
         if remaining is not None:
-            raise api_error(
+            raise fo_api_error(
                 "REJOIN_RESTRICTED",
-                f"탈퇴 후 {WITHDRAW_REREGISTRATION_DAYS}일간 동일 이메일로 재가입할 수 없습니다. ({remaining}일 후 가능)",
+                "rejoin_restricted",
+                lang,
                 403,
+                days=WITHDRAW_REREGISTRATION_DAYS,
+                remaining=remaining,
             )
         if user.status == "withdrawn":
             await remove_withdrawn_user_for_reregister(db, user)
@@ -356,27 +368,13 @@ def _reset_login_state(account) -> None:
     account.last_login_at = datetime.now(timezone.utc)
 
 
-_LOCK_MESSAGE = (
-    f"로그인 {LOGIN_MAX_FAIL}회 실패로 계정이 잠겼습니다. "
-    f"{LOGIN_LOCK_MINUTES}분 후 다시 시도해 주세요."
-)
-
-_OTP_EXCEEDED_MESSAGE = (
-    f"인증코드 확인에 {OTP_MAX_FAIL}회 실패했습니다. 인증코드를 다시 발송해 주세요."
-)
-
-
-def _register_otp_failure(
-    *,
-    failed_attempts: int,
-    remaining_template: str,
-) -> None:
+def _register_otp_failure(*, failed_attempts: int, lang: str | None = None) -> None:
     remaining = OTP_MAX_FAIL - failed_attempts
     if failed_attempts >= OTP_MAX_FAIL:
-        raise api_error("OTP_EXCEEDED", _OTP_EXCEEDED_MESSAGE, 400)
-    msg = remaining_template
+        raise fo_api_error("OTP_EXCEEDED", "otp_exceeded", lang, max_fail=OTP_MAX_FAIL)
+    msg = fo_message("otp_invalid_short", lang)
     if remaining > 0:
-        msg += f" ({remaining}회 남음)"
+        msg += " " + fo_message("otp_remaining_suffix", lang, remaining=remaining)
     raise api_error("INVALID_CODE", msg, 400)
 
 
@@ -460,7 +458,11 @@ async def _login_admin(
             memo="account_locked",
         )
         await db.commit()
-        raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
+        raise api_error(
+            "ACCOUNT_LOCKED",
+            fo_message("account_locked", "ko", max_fail=LOGIN_MAX_FAIL, lock_minutes=LOGIN_LOCK_MINUTES),
+            423,
+        )
     if not verify_password(password, admin.password_hash):
         _register_login_failure(admin)
         await write_admin_access(
@@ -499,6 +501,7 @@ async def _login_user(
     password: str,
     ip: str | None = None,
     user_agent: str | None = None,
+    lang: str | None = None,
 ) -> dict:
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     user = user_res.scalar_one_or_none()
@@ -514,7 +517,7 @@ async def _login_user(
             memo="invalid_credentials",
         )
         await db.commit()
-        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+        raise fo_api_error("INVALID_CREDENTIALS", "invalid_credentials", lang, 401)
     if is_profile_incomplete(user):
         await write_member_access(
             db,
@@ -528,7 +531,7 @@ async def _login_user(
             memo="profile_incomplete",
         )
         await db.commit()
-        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+        raise fo_api_error("INVALID_CREDENTIALS", "invalid_credentials", lang, 401)
     if _is_locked(user):
         await write_member_access(
             db,
@@ -542,7 +545,14 @@ async def _login_user(
             memo="account_locked",
         )
         await db.commit()
-        raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
+        raise fo_api_error(
+            "ACCOUNT_LOCKED",
+            "account_locked",
+            lang,
+            423,
+            max_fail=LOGIN_MAX_FAIL,
+            lock_minutes=LOGIN_LOCK_MINUTES,
+        )
     if not verify_password(password, user.password_hash):
         _register_login_failure(user)
         await write_member_access(
@@ -557,7 +567,7 @@ async def _login_user(
             memo="invalid_credentials",
         )
         await db.commit()
-        raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
+        raise fo_api_error("INVALID_CREDENTIALS", "invalid_credentials", lang, 401)
     _reset_login_state(user)
     await write_member_access(
         db,
@@ -587,23 +597,29 @@ async def login(
     portal = (body.portal or "").strip().lower() or None
     ua = _user_agent(request)
 
+    lang = _resolve_request_locale(None, request)
     if portal == "fo":
-        return await _login_user(db, email=email, password=body.password, ip=ip, user_agent=ua)
+        return await _login_user(db, email=email, password=body.password, ip=ip, user_agent=ua, lang=lang)
     if portal == "bo":
         return await _login_admin(db, email=email, password=body.password, ip=ip, user_agent=ua)
 
     # portal 미지정(구 FO 페이지·캐시된 api-client): 동일 이메일이 회원·관리자에 있으면 회원 우선
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     if user_res.scalar_one_or_none():
-        return await _login_user(db, email=email, password=body.password, ip=ip, user_agent=ua)
+        return await _login_user(db, email=email, password=body.password, ip=ip, user_agent=ua, lang=lang)
     return await _login_admin(db, email=email, password=body.password, ip=ip, user_agent=ua)
 
 
 @router.post("/find-email")
-async def find_email(body: FindEmailBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def find_email(
+    body: FindEmailBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = _resolve_request_locale(None, request)
     birth = normalize_birth_date(body.birth_date)
     if not birth:
-        raise api_error("VALIDATION_ERROR", "생년월일 형식이 올바르지 않습니다.")
+        raise fo_api_error("VALIDATION_ERROR", "birth_invalid", lang)
     name = body.name_ko.strip()
     phone = body.phone.strip()
     result = await db.execute(
@@ -666,10 +682,15 @@ async def logout(
 
 
 @router.post("/refresh")
-async def refresh(body: RefreshBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def refresh(
+    body: RefreshBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = _resolve_request_locale(None, request)
     payload = decode_refresh_token(body.refresh_token)
     if not payload or not payload.get("sub"):
-        raise api_error("INVALID_TOKEN", "유효하지 않은 refresh token입니다.", 401)
+        raise fo_api_error("INVALID_TOKEN", "invalid_refresh_token", lang, 401)
     sub = str(payload["sub"])
     kind, _, ident = sub.partition(":")
     if kind == "user":
@@ -678,7 +699,7 @@ async def refresh(body: RefreshBody, db: AsyncSession = Depends(get_db_session))
         )
         user = result.scalar_one_or_none()
         if not user:
-            raise api_error("INVALID_TOKEN", "사용자를 찾을 수 없습니다.", 401)
+            raise fo_api_error("INVALID_TOKEN", "user_not_found", lang, 401)
         return {
             "access_token": create_access_token(sub, {"email": user.email, "role": "user"}),
             "refresh_token": create_refresh_token(sub, {"email": user.email, "role": "user"}),
@@ -694,7 +715,7 @@ async def refresh(body: RefreshBody, db: AsyncSession = Depends(get_db_session))
             "refresh_token": create_refresh_token(sub, {"email": admin.email, "role": admin.role}),
             "token_type": "bearer",
         }
-    raise api_error("INVALID_TOKEN", "유효하지 않은 refresh token입니다.", 401)
+    raise fo_api_error("INVALID_TOKEN", "invalid_refresh_token", lang, 401)
 
 
 @router.post("/send-verification-code")
@@ -703,12 +724,13 @@ async def send_verification_code(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = _resolve_request_locale(body.preferred_lang, request)
     email = body.email.strip().lower()
     if not is_valid_email(email):
-        raise api_error("VALIDATION_ERROR", "유효한 이메일을 입력해 주세요.")
+        raise fo_api_error("VALIDATION_ERROR", "email_invalid", lang)
     existing = await db.execute(select(User).where(User.email == email))
     existing_user = existing.scalar_one_or_none()
-    await _prepare_existing_user_for_signup(db, existing_user)
+    await _prepare_existing_user_for_signup(db, existing_user, lang=lang)
     code = f"{random.randint(100000, 999999)}"
     await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
     db.add(
@@ -742,7 +764,12 @@ async def send_verification_code(
 
 
 @router.post("/verify-email")
-async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def verify_email(
+    body: VerifyEmailBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = _resolve_request_locale(None, request)
     email = body.email.strip().lower()
     now = datetime.now(timezone.utc)
     result = await db.execute(
@@ -753,18 +780,15 @@ async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_
     )
     row = result.scalar_one_or_none()
     if not row or row.expires_at < now:
-        raise api_error("INVALID_CODE", "인증코드가 올바르지 않거나 만료되었습니다.", 400)
+        raise fo_api_error("INVALID_CODE", "invalid_code", lang)
     if not verify_code(body.code, row.code_hash):
         row.failed_attempts = (row.failed_attempts or 0) + 1
         if row.failed_attempts >= OTP_MAX_FAIL:
             await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
             await db.commit()
-            raise api_error("OTP_EXCEEDED", _OTP_EXCEEDED_MESSAGE, 400)
+            raise fo_api_error("OTP_EXCEEDED", "otp_exceeded", lang, max_fail=OTP_MAX_FAIL)
         await db.commit()
-        _register_otp_failure(
-            failed_attempts=row.failed_attempts,
-            remaining_template="인증코드가 올바르지 않습니다.",
-        )
+        _register_otp_failure(failed_attempts=row.failed_attempts, lang=lang)
     token = create_email_verify_token(email)
     await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
     await db.commit()
@@ -778,28 +802,35 @@ async def register(
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = _resolve_request_locale(body.preferred_lang, request)
     email = decode_email_verify_token(body.verification_token)
     if not email or email != body.email.strip().lower():
-        raise api_error("INVALID_TOKEN", "이메일 인증이 필요합니다.", 400)
+        raise fo_api_error("INVALID_TOKEN", "email_verify_required", lang)
     if not body.password or not is_valid_password(body.password):
-        raise api_error("VALIDATION_ERROR", "비밀번호는 8자 이상, 영문·숫자·특수문자를 포함해야 합니다.")
+        raise fo_api_error("VALIDATION_ERROR", "password_rule", lang)
     if body.password != body.password_confirm:
-        raise api_error("VALIDATION_ERROR", "비밀번호 확인이 일치하지 않습니다.")
+        raise fo_api_error("VALIDATION_ERROR", "password_mismatch", lang)
     birth = normalize_birth_date(body.birth_date)
     if not birth:
-        raise api_error("VALIDATION_ERROR", "생년월일 형식이 올바르지 않습니다.")
+        raise fo_api_error("VALIDATION_ERROR", "birth_invalid", lang)
     if is_under_minimum_age(birth):
-        raise api_error("AGE_RESTRICTED", f"만 {settings.min_signup_age_years}세 미만은 회원가입할 수 없습니다.", 422)
-    roster_err = validate_roster_codes(body.job_code, body.motive_code, body.purpose_code)
+        raise fo_api_error(
+            "AGE_RESTRICTED",
+            "age_restricted",
+            lang,
+            422,
+            age=settings.min_signup_age_years,
+        )
+    roster_err = validate_roster_codes(body.job_code, body.motive_code, body.purpose_code, lang=lang)
     if roster_err:
         raise api_error("VALIDATION_ERROR", roster_err)
-    terms_err = required_terms_consent_error(body.terms_agreed)
+    terms_err = required_terms_consent_error(body.terms_agreed, lang=lang)
     if terms_err:
         raise api_error("VALIDATION_ERROR", terms_err)
 
     existing = await db.execute(select(User).where(User.email == email))
     existing_user = existing.scalar_one_or_none()
-    await _prepare_existing_user_for_signup(db, existing_user)
+    await _prepare_existing_user_for_signup(db, existing_user, lang=lang)
 
     user = User(
         email=email,
@@ -826,7 +857,7 @@ async def register(
             user.photo_file_id = photo.id
         except ValueError as exc:
             if str(exc) == "file_too_large":
-                raise api_error("VALIDATION_ERROR", "증명사진은 2MB 이하로 업로드해 주세요.") from exc
+                raise fo_api_error("VALIDATION_ERROR", "photo_too_large", lang) from exc
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
     await persist_term_consents(
         db,
@@ -912,7 +943,12 @@ async def forgot_password(
 
 
 @router.post("/verify-reset-code")
-async def verify_reset_code(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def verify_reset_code(
+    body: VerifyEmailBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = _resolve_request_locale(None, request)
     email = body.email.strip().lower()
     now = datetime.now(timezone.utc)
     result = await db.execute(
@@ -923,18 +959,15 @@ async def verify_reset_code(body: VerifyEmailBody, db: AsyncSession = Depends(ge
     )
     row = result.scalar_one_or_none()
     if not row or row.expires_at < now:
-        raise api_error("INVALID_CODE", "인증코드가 올바르지 않거나 만료되었습니다.", 400)
+        raise fo_api_error("INVALID_CODE", "invalid_code", lang)
     if not verify_code(body.code, row.code_hash):
         row.failed_attempts = (row.failed_attempts or 0) + 1
         if row.failed_attempts >= OTP_MAX_FAIL:
             row.used_at = now
             await db.commit()
-            raise api_error("OTP_EXCEEDED", _OTP_EXCEEDED_MESSAGE, 400)
+            raise fo_api_error("OTP_EXCEEDED", "otp_exceeded", lang, max_fail=OTP_MAX_FAIL)
         await db.commit()
-        _register_otp_failure(
-            failed_attempts=row.failed_attempts,
-            remaining_template="인증코드가 올바르지 않습니다.",
-        )
+        _register_otp_failure(failed_attempts=row.failed_attempts, lang=lang)
     reset_token = secrets.token_urlsafe(32)
     row.code_hash = hash_code(reset_token)
     await db.commit()
@@ -942,10 +975,15 @@ async def verify_reset_code(body: VerifyEmailBody, db: AsyncSession = Depends(ge
 
 
 @router.post("/reset-password")
-async def reset_password(body: ResetPasswordBody, db: AsyncSession = Depends(get_db_session)) -> dict:
+async def reset_password(
+    body: ResetPasswordBody,
+    request: Request,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = _resolve_request_locale(None, request)
     email = body.email.strip().lower()
     if not is_valid_password(body.password) or body.password != body.password_confirm:
-        raise api_error("VALIDATION_ERROR", "비밀번호 규칙을 확인해 주세요.")
+        raise fo_api_error("VALIDATION_ERROR", "password_rules_check", lang)
     result = await db.execute(
         select(PasswordResetToken)
         .where(PasswordResetToken.email == email, PasswordResetToken.used_at.is_(None))
@@ -954,13 +992,13 @@ async def reset_password(body: ResetPasswordBody, db: AsyncSession = Depends(get
     )
     row = result.scalar_one_or_none()
     if not row or row.expires_at < datetime.now(timezone.utc) or not verify_code(body.reset_token, row.code_hash):
-        raise api_error("INVALID_TOKEN", "재설정 토큰이 유효하지 않습니다.", 400)
+        raise fo_api_error("INVALID_TOKEN", "reset_token_invalid", lang)
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     user = user_res.scalar_one_or_none()
     if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
     if user.password_hash and verify_password(body.password, user.password_hash):
-        raise api_error("VALIDATION_ERROR", "새 비밀번호는 현재 비밀번호와 달라야 합니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "new_password_same", lang)
     user.password_hash = hash_password(body.password)
     user.password_changed_at = datetime.now(timezone.utc)
     row.used_at = datetime.now(timezone.utc)

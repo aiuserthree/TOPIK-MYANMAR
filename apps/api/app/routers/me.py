@@ -13,7 +13,8 @@ from app.database import get_db_session
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user, require_user
 from app.lib.profile import AUTH_USER_STATUSES, is_profile_incomplete
 from app.lib.email_notify import count_active_applications, notify_account_status
-from app.lib.errors import api_error
+from app.lib.errors import api_error, fo_api_error
+from app.lib.locale import resolve_request_locale
 from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.google_auth import verify_google_id_token
@@ -88,58 +89,63 @@ def serialize_user(user: User) -> dict:
     }
 
 
-def _verify_withdraw_google(user: User, raw_token: str) -> None:
+def _verify_withdraw_google(user: User, raw_token: str, lang: str | None = None) -> None:
     if not user.google_sub:
-        raise api_error("VALIDATION_ERROR", "Google 계정이 연동되지 않았습니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "google_not_linked", lang)
     if not settings.google_oauth_enabled:
-        raise api_error("SERVICE_UNAVAILABLE", "Google 인증이 설정되지 않았습니다.", 503)
+        raise fo_api_error("SERVICE_UNAVAILABLE", "google_login_disabled", lang, 503)
     token = raw_token.strip()
     if not token:
-        raise api_error("VALIDATION_ERROR", "Google 인증 토큰이 필요합니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "google_token_required", lang)
     try:
         claims = verify_google_id_token(token, settings.google_client_id.strip())
     except ValueError as exc:
-        raise api_error("INVALID_TOKEN", "Google 인증에 실패했습니다.", 401) from exc
+        raise fo_api_error("INVALID_TOKEN", "google_auth_failed", lang, 401) from exc
     sub = claims.get("sub")
     email = (claims.get("email") or "").strip().lower()
     if sub != user.google_sub or email != user.email:
-        raise api_error("INVALID_TOKEN", "Google 계정이 일치하지 않습니다.", 401)
+        raise fo_api_error("INVALID_TOKEN", "google_account_mismatch", lang, 401)
     iat = claims.get("iat")
     if iat is not None:
         issued = datetime.fromtimestamp(int(iat), tz=timezone.utc)
         if datetime.now(timezone.utc) - issued > timedelta(seconds=WITHDRAW_GOOGLE_TOKEN_MAX_AGE_SECONDS):
-            raise api_error("INVALID_TOKEN", "Google 인증이 만료되었습니다. 다시 시도해 주세요.", 401)
+            raise fo_api_error("INVALID_TOKEN", "google_verify_expired", lang, 401)
 
 
-def _verify_withdraw_password(user: User, password: str) -> None:
+def _verify_withdraw_password(user: User, password: str, lang: str | None = None) -> None:
     if not user.password_hash or not verify_password(password, user.password_hash):
-        raise api_error("INVALID_CREDENTIALS", "비밀번호가 올바르지 않습니다.", 400)
+        raise fo_api_error("INVALID_CREDENTIALS", "password_wrong", lang)
 
 
-def _verify_withdraw_identity(user: User, body: WithdrawBody) -> None:
+def _verify_withdraw_identity(user: User, body: WithdrawBody, lang: str | None = None) -> None:
     google_token = (body.google_id_token or "").strip()
     password = (body.password or "").strip()
     if google_token:
-        _verify_withdraw_google(user, google_token)
+        _verify_withdraw_google(user, google_token, lang=lang)
         return
     if password:
-        _verify_withdraw_password(user, password)
+        _verify_withdraw_password(user, password, lang=lang)
         return
     if user.google_sub and (user.signup_provider == "google" or not user.password_hash):
-        raise api_error("VALIDATION_ERROR", "Google 계정으로 본인 확인이 필요합니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "verify_identity_google", lang)
     if user.password_hash:
-        raise api_error("VALIDATION_ERROR", "비밀번호를 입력해 주세요.", 400)
-    raise api_error("VALIDATION_ERROR", "본인 확인이 필요합니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "password_required", lang)
+    raise fo_api_error("VALIDATION_ERROR", "verify_identity_required", lang)
 
 
 @router.get("/me")
-async def get_me(auth: AuthUser = Depends(require_user), db: AsyncSession = Depends(get_db_session)) -> dict:
+async def get_me(
+    request: Request,
+    auth: AuthUser = Depends(require_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    lang = resolve_request_locale(request)
     result = await db.execute(
         select(User).where(User.id == auth.id, User.status.in_(AUTH_USER_STATUSES))
     )
     user = result.scalar_one_or_none()
     if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
     return {"user": serialize_user(user), "profile_incomplete": is_profile_incomplete(user)}
 
 
@@ -155,38 +161,35 @@ async def update_me(
     result = await db.execute(
         select(User).where(User.id == auth.id, User.status.in_(AUTH_USER_STATUSES))
     )
+    lang = resolve_request_locale(request)
     user = result.scalar_one_or_none()
     if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
     check_rev(user, expected_rev_from_request(request, body.rev, if_match), label="프로필")
     data = body.model_dump(exclude_unset=True)
     data.pop("rev", None)
     if "birth_date" in data and data["birth_date"]:
         birth = normalize_birth_date(data["birth_date"])
         if not birth:
-            raise api_error("VALIDATION_ERROR", "생년월일 형식이 올바르지 않습니다.")
+            raise fo_api_error("VALIDATION_ERROR", "birth_invalid", lang)
         if is_under_minimum_age(birth):
-            raise api_error(
-                "AGE_RESTRICTED",
-                f"만 {settings.min_signup_age_years}세 미만은 회원가입할 수 없습니다.",
-                422,
-            )
+            raise fo_api_error("AGE_RESTRICTED", "age_restricted", lang, 422, age=settings.min_signup_age_years)
         data["birth_date"] = birth
     if "gender" in data and data["gender"]:
         data["gender"] = gender_to_code(data["gender"])
     roster_err = validate_roster_codes(
-        data.get("job_code"), data.get("motive_code"), data.get("purpose_code")
+        data.get("job_code"), data.get("motive_code"), data.get("purpose_code"), lang=lang
     )
     if roster_err:
         raise api_error("VALIDATION_ERROR", roster_err)
     photo_base64 = data.pop("photo_base64", None)
     terms_agreed = data.pop("terms_agreed", None)
     if is_profile_incomplete(user):
-        terms_err = required_terms_consent_error(terms_agreed)
+        terms_err = required_terms_consent_error(terms_agreed, lang=lang)
         if terms_err:
             raise api_error("VALIDATION_ERROR", terms_err)
     elif terms_agreed is not None:
-        terms_err = required_terms_consent_error(terms_agreed)
+        terms_err = required_terms_consent_error(terms_agreed, lang=lang)
         if terms_err:
             raise api_error("VALIDATION_ERROR", terms_err)
     for key, value in data.items():
@@ -202,7 +205,7 @@ async def update_me(
             )
         except ValueError as exc:
             if str(exc) == "file_too_large":
-                raise api_error("VALIDATION_ERROR", "증명사진은 2MB 이하로 업로드해 주세요.") from exc
+                raise fo_api_error("VALIDATION_ERROR", "photo_too_large", lang) from exc
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
     if terms_agreed is not None:
         await persist_term_consents(
@@ -223,25 +226,23 @@ async def update_me(
 @router.post("/me/change-password")
 async def change_password(
     body: ChangePasswordBody,
+    request: Request,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = resolve_request_locale(request)
     result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
     user = result.scalar_one_or_none()
     if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+        raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
     if user.signup_provider != "email" or not user.password_hash:
-        raise api_error(
-            "VALIDATION_ERROR",
-            "Google 계정은 비밀번호 변경을 사용할 수 없습니다.",
-            400,
-        )
+        raise fo_api_error("VALIDATION_ERROR", "google_password_change_blocked", lang)
     if not verify_password(body.current_password, user.password_hash):
-        raise api_error("INVALID_CREDENTIALS", "현재 비밀번호가 올바르지 않습니다.", 400)
+        raise fo_api_error("INVALID_CREDENTIALS", "current_password_wrong", lang)
     if not is_valid_password(body.new_password) or body.new_password != body.new_password_confirm:
-        raise api_error("VALIDATION_ERROR", "새 비밀번호 규칙을 확인해 주세요.")
+        raise fo_api_error("VALIDATION_ERROR", "password_rules_check", lang)
     if verify_password(body.new_password, user.password_hash):
-        raise api_error("VALIDATION_ERROR", "새 비밀번호는 현재 비밀번호와 달라야 합니다.", 400)
+        raise fo_api_error("VALIDATION_ERROR", "new_password_same", lang)
     user.password_hash = hash_password(body.new_password)
     user.password_changed_at = datetime.now(timezone.utc)
     await db.commit()
@@ -251,14 +252,16 @@ async def change_password(
 @router.post("/me/withdraw")
 async def withdraw(
     body: WithdrawBody,
+    request: Request,
     auth: AuthUser = Depends(require_complete_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    lang = resolve_request_locale(request)
     result = await db.execute(select(User).where(User.id == auth.id, User.status == "active"))
     user = result.scalar_one_or_none()
     if not user:
-        raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
-    _verify_withdraw_identity(user, body)
+        raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
+    _verify_withdraw_identity(user, body, lang=lang)
     now = datetime.now(timezone.utc)
     canceled_count = await count_active_applications(db, user.id)
     user.status = "withdrawn"

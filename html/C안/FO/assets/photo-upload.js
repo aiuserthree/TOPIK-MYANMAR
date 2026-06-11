@@ -9,6 +9,10 @@
   // i18n 헬퍼 — 중앙 사전(TPKMLang.t) 사용, 미정의 시 KO 폴백
   function pt(key, fallback) {
     try {
+      if (window.TPKMBt && typeof TPKMBt.bt === 'function') {
+        var btVal = TPKMBt.bt(key, fallback);
+        if (btVal) return btVal;
+      }
       if (window.TPKMLang && typeof TPKMLang.t === 'function') {
         var v = TPKMLang.t(key);
         if (v) return v;
@@ -133,7 +137,7 @@
     }
     if (previewEl) {
       previewEl.style.cursor = 'pointer';
-      previewEl.title = '클릭하여 파일 선택';
+      previewEl.title = pt('photo.click_select', '클릭하여 파일 선택');
       previewEl.addEventListener('click', function () { input.click(); });
     }
     if (specBtn) {

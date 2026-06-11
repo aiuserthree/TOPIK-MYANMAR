@@ -247,6 +247,8 @@
     'common.network_err_detail': { ko: '네트워크 오류입니다. 연결 상태를 확인해 주세요.', my: 'ကွန်ရက် အမှားဖြစ်သည်။ ချိတ်ဆက်မှု စစ်ဆေးပါ။', en: 'Network error. Please check your connection.' },
     'common.checking': { ko: '확인 중…', my: 'စစ်ဆေးနေသည်…', en: 'Checking…' },
     'common.sending': { ko: '발송 중…', my: 'ပို့နေသည်…', en: 'Sending…' },
+    'common.request_failed': { ko: '요청에 실패했습니다. 잠시 후 다시 시도해 주세요.', my: 'တောင်းဆိုမှု မအောင်မြင်ပါ။ ခဏနေ ပြန်စမ်းပါ။', en: 'Request failed. Please try again shortly.' },
+    'photo.click_select': { ko: '클릭하여 파일 선택', my: 'ဖိုင်ရွေးရန် နှိပ်ပါ', en: 'Click to select a file' },
     'common.verifying': { ko: '확인 중…', my: 'အတည်ပြုနေသည်…', en: 'Verifying…' },
     'common.saving': { ko: '저장 중…', my: 'သိမ်းနေသည်…', en: 'Saving…' },
     'common.resend_ok': { ko: '인증코드를 다시 발송했습니다.', my: 'အတည်ပြုကုဒ် ပြန်ပို့ပြီးပါပြီ။', en: 'Verification code resent.' },
@@ -281,6 +283,13 @@
     'err.NETWORK': { ko: '네트워크 오류입니다. 연결 상태를 확인해 주세요.', my: 'ကွန်ရက် အမှားဖြစ်သည်။ ချိတ်ဆက်မှု စစ်ဆေးပါ။', en: 'Network error. Please check your connection.' },
     'err.API_DISABLED': { ko: 'API 연결이 설정되지 않았습니다.', my: 'API ချိတ်ဆက်မှု မပြင်ဆင်ရသေးပါ။', en: 'API connection is not configured.' },
     'err.CONFLICT': { ko: '이미 처리된 요청입니다.', my: 'ဤတောင်းဆိုမှုကို ပြီးသား ဆောင်ရွက်ပြီးပါပြီ။', en: 'This request was already processed.' },
+    'err.REJOIN_RESTRICTED': { ko: '탈퇴 후 일정 기간 동일 이메일로 재가입할 수 없습니다.', my: 'ထွက်ပြီးနောက် ကာလတစ်ခုအတွင်း တူညီသော အီးမေးလ်ဖြင့် ပြန်မှတ်ပုံတင်၍ မရပါ။', en: 'You cannot re-register with this email for a period after withdrawal.' },
+    'err.FORBIDDEN': { ko: '권한이 없습니다.', my: 'ခွင့်ပြုချက် မရှိပါ။', en: 'You do not have permission.' },
+    'err.LOCKED': { ko: '시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.', my: 'ကြိုးပမ်းမှု များလွန်းသည်။ ခဏနေ ပြန်စမ်းပါ။', en: 'Too many attempts. Please try again later.' },
+    'err.INVALID_PASSWORD': { ko: '비밀번호가 올바르지 않습니다.', my: 'စကားဝှက် မမှန်ပါ။', en: 'Incorrect password.' },
+    'err.INVALID_FILE_TYPE': { ko: 'jpg, png, pdf 파일만 업로드할 수 있습니다.', my: 'jpg, png, pdf ဖိုင်သာ တင်နိုင်သည်။', en: 'Only jpg, png, and pdf files can be uploaded.' },
+    'err.FILE_TOO_LARGE': { ko: '파일 크기가 제한을 초과했습니다.', my: 'ဖိုင်အရွယ်အစား ကန့်သတ်ချက် ကျော်လွန်သည်။', en: 'File size exceeds the limit.' },
+    'err.FILE_UNAVAILABLE': { ko: '파일을 사용할 수 없습니다.', my: 'ဖိုင်ကို အသုံးပြု၍ မရပါ။', en: 'File is unavailable.' },
 
     /* ── 카드 상태 (card.*) ── */
     'card.photo': { ko: '사진 심사중', my: 'ဓာတ်ပုံ စိစစ်နေဆဲ', en: 'Photo review' },
@@ -318,6 +327,13 @@
     'login.js_google_only': { ko: '입력하신 이메일은 Google 계정으로 가입된 계정입니다. 구글 로그인을 이용해 주세요.', my: 'ဤအီးမေးလ်သည် Google အကောင့်ဖြင့် မှတ်ပုံတင်ထားသည်။ Google ဖြင့် ဝင်ပါ။', en: 'This email was registered with Google. Please use Google sign-in.' },
     'login.js_fields_required': { ko: '이메일과 비밀번호를 모두 입력해 주세요.', my: 'အီးမေးလ်နှင့် စကားဝှက် နှစ်ခုလုံး ထည့်ပါ။', en: 'Please enter both email and password.' },
     'login.js_signing_in': { ko: '로그인 중…', my: 'ဝင်ရောက်နေသည်…', en: 'Signing in…' },
+    'login.js_locked': { ko: '로그인 실패가 누적되어 계정이 잠겼습니다. 30분 후 다시 시도해 주세요.', my: 'ဝင်ရောက်မှု မအောင်မြင်မှုများကြောင့် အကောင့် ပိတ်ထားသည်။ ၃၀ မိနစ် အကြာ ပြန်စမ်းပါ။', en: 'Your account is locked after too many failed sign-in attempts. Try again in 30 minutes.' },
+    'login.js_server_unavail': { ko: '서버를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.', my: 'ဆာဗာကို ယာယီ အသုံးပြု၍ မရပါ။ ခဏနေ ပြန်စမ်းပါ။', en: 'The server is temporarily unavailable. Please try again shortly.' },
+    'login.js_api_conn': { ko: 'API에 연결할 수 없습니다. 네트워크와 서버 상태를 확인해 주세요.', my: 'API နှင့် ချိတ်ဆက်၍ မရပါ။ ကွန်ရက်နှင့် ဆာဗာ အခြေအနေ စစ်ပါ။', en: 'Cannot connect to the API. Check your network and server status.' },
+    'login.js_fail': { ko: '로그인에 실패했습니다.', my: 'ဝင်ရောက်မှု မအောင်မြင်ပါ။', en: 'Sign-in failed.' },
+    'login.js_network': { ko: '로그인 요청 중 오류가 발생했습니다. 네트워크를 확인해 주세요.', my: 'ဝင်ရောက်ရန် တောင်းဆိုနေစဉ် အမှားဖြစ်သည်။ ကွန်ရက် စစ်ပါ။', en: 'An error occurred while signing in. Please check your network.' },
+    'login.js_confirm_id': { ko: '아이디 확인', my: 'အိုင်ဒီ စစ်ဆေးရန်', en: 'Find ID' },
+    'login.js_send_code': { ko: '인증코드 발송', my: 'အတည်ပြုကုဒ် ပို့ရန်', en: 'Send code' },
 
     /* ── 비밀번호 재설정 JS (pwr.js_*) ── */
     'pwr.js_verify_ok': { ko: '✓ 인증이 완료되었습니다. 새 비밀번호를 설정해 주세요.', my: '✓ အတည်ပြုပြီး။ စကားဝှက်အသစ် သတ်မှတ်ပါ။', en: '✓ Verified. Please set a new password.' },
@@ -340,6 +356,15 @@
     'reg.err_terms': { ko: '약관에 동의해 주세요.', my: 'စည်းကမ်းများကို သဘောတူပါ။', en: 'Please agree to the terms.' },
     'reg.err_no_photo': { ko: '증명사진이 등록되어 있지 않습니다. 마이페이지에서 사진을 등록한 뒤 접수해 주세요.', my: 'သက်သေခံ ဓာတ်ပုံ မတင်ရသေးပါ။ ကျွန်ုပ်စာမျက်နှာတွင် တင်ပြီး လျှောက်ထားပါ။', en: 'No ID photo on file. Upload one on My page before registering.' },
     'reg.err_draft_saved': { ko: '작성 중인 접수 정보가 임시 저장되었습니다.\n다음에 시험 접수 화면에 다시 들어오시면 이어서 작성할 수 있습니다.', my: 'လျှောက်လွှာ အချက်အလက် ယာယီသိမ်းပြီးပါပြီ။\nနောက်တစ်ကြိမ် ပြန်ဝင်ပါက ဆက်လက် ရေးသားနိုင်ပါသည်။', en: 'Your draft was saved.\nReturn to registration later to continue.' },
+    'reg.js_submitting': { ko: '제출 중…', my: 'တင်သွင်းနေသည်…', en: 'Submitting…' },
+    'reg.js_simul': { ko: '(동시 접수)', my: '(တစ်ပြိုင်တည်း လျှောက်ထား)', en: '(simultaneous)' },
+    'reg.js_network': { ko: '네트워크 오류가 발생했습니다. API 서버 연결을 확인해 주세요.', my: 'ကွန်ရက် အမှားဖြစ်သည်။ API ဆာဗာ ချိတ်ဆက်မှု စစ်ပါ။', en: 'A network error occurred. Check the API server connection.' },
+    'fmt.round_no': { ko: '제{n}회', my: 'အကြိမ် {n}', en: 'Round {n}' },
+    'su.js_signing_up': { ko: '가입 처리 중…', my: 'မှတ်ပုံတင်နေသည်…', en: 'Creating account…' },
+    'su.js_google_ok': { ko: 'Google 계정 인증이 완료되었습니다.', my: 'Google အကောင့် အတည်ပြုမှု ပြီးမြောက်ပါပြီ။', en: 'Google account verification complete.' },
+    'rfd.badge_correction': { ko: '정보정정', my: 'အချက်အလက်ပြင်ဆင်', en: 'Correction' },
+    'rfd.badge_refund': { ko: '환불', my: 'ငွေပြန်အမ်း', en: 'Refund' },
+    'rfd.badge_default': { ko: '신청', my: 'လျှောက်ထား', en: 'Request' },
 
     /* ── 마이페이지 프로필 JS (mpp.js_*) ── */
     'mpp.js_saved': { ko: '회원정보가 저장되었습니다.', my: 'အဖွဲ့ဝင် အချက်အလက် သိမ်းပြီးပါပြီ။', en: 'Profile saved.' },

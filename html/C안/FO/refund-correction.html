@@ -433,12 +433,17 @@
     document.getElementById(id).classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  function rfdBt(key, fallback) {
+    try { if (window.TPKMBt && TPKMBt.bt) return TPKMBt.bt(key, fallback); } catch (e) {}
+    try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e2) {}
+    return fallback;
+  }
   // ---- 목록/상세 (API) ----
   function rfdBadge(p) {
     var cat = p.category || '';
-    if (cat === '정보정정') return '<span class="badge badge-type-cor">정보정정</span>';
-    if (cat === '환불') return '<span class="badge badge-type-rfd">환불</span>';
-    return '<span class="badge badge-type-rfd">' + (cat ? cat.replace(/[<>&]/g, '') : '신청') + '</span>';
+    if (cat === '정보정정') return '<span class="badge badge-type-cor">' + rfdBt('rfd.badge_correction', '정보정정') + '</span>';
+    if (cat === '환불') return '<span class="badge badge-type-rfd">' + rfdBt('rfd.badge_refund', '환불') + '</span>';
+    return '<span class="badge badge-type-rfd">' + (cat ? cat.replace(/[<>&]/g, '') : rfdBt('rfd.badge_default', '신청')) + '</span>';
   }
   var editingPostId = null;
   var board = TPKMBoard.initBoard({

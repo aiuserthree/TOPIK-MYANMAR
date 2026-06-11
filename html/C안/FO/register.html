@@ -489,6 +489,7 @@
 <script src="assets/common.js"></script>
 <script>
   function bt(key, fallback) {
+    try { if (window.TPKMBt && TPKMBt.bt) { var btv = TPKMBt.bt(key, fallback); if (btv) return btv; } } catch (e) {}
     try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
     if (window.TOPIKPageI18n && TOPIKPageI18n.text) {
       var lang = 'ko';
@@ -500,6 +501,18 @@
       if (pageVal) return pageVal;
     }
     return fallback;
+  }
+
+  function btf(key, fallback, vars) {
+    var s = bt(key, fallback);
+    if (!vars) return s;
+    Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
+    return s;
+  }
+
+  function roundLabel(r) {
+    if (!r) return '—';
+    return r.title || btf('fmt.round_no', '제' + r.round_no + '회', { n: r.round_no });
   }
 
   function venuePlaceholderText() {
@@ -709,7 +722,7 @@
       card.dataset.roundId = String(r.id);
       card.innerHTML =
         '<input type="radio" name="round" hidden' + (disabled ? ' disabled' : (isSelected ? ' checked' : '')) + '>' +
-        '<div class="h"><div class="round-n">' + (r.title || ('제' + r.round_no + '회')) + '</div>' +
+        '<div class="h"><div class="round-n">' + roundLabel(r) + '</div>' +
         '<div class="round-status">' + st.text + '</div></div>' +
         '<div class="meta-row">' +
         '<div><strong>' + bt('reg.meta_exam_date', '시험일') + '</strong>' + fmtDateYmd(r.exam_date) + '</div>' +
@@ -1340,13 +1353,13 @@
     const lvls = [];
     if (l1) lvls.push('TOPIK Ⅰ');
     if (l2) lvls.push('TOPIK Ⅱ');
-    document.getElementById('sumLevels').innerHTML = '<strong>' + lvls.join(' · ') + '</strong>' + (lvls.length === 2 ? ' <span style="font-size:12px; color:var(--text-3);">(동시 접수)</span>' : '');
+    document.getElementById('sumLevels').innerHTML = '<strong>' + lvls.join(' · ') + '</strong>' + (lvls.length === 2 ? ' <span style="font-size:12px; color:var(--text-3);">' + bt('reg.js_simul', '(동시 접수)') + '</span>' : '');
 
     const round = getSelectedRound();
     const sumRound = document.getElementById('sumRound');
     if (sumRound) {
       sumRound.innerHTML = round
-        ? '<strong>' + (round.title || ('제' + round.round_no + '회')) + '</strong> · ' + fmtDateYmd(round.exam_date)
+        ? '<strong>' + roundLabel(round) + '</strong> · ' + fmtDateYmd(round.exam_date)
         : '—';
     }
     const venueSel = document.getElementById('venueSelect');
@@ -1447,11 +1460,11 @@
 
     var btn = document.getElementById('btnSubmit');
     btn.disabled = true;
-    btn.textContent = '제출 중…';
+    btn.textContent = bt('reg.js_submitting', '제출 중…');
 
     TopikApi.submitApplication(buildSubmitPayload()).then(function (res) {
       btn.disabled = false;
-      btn.textContent = '접수하기';
+      btn.textContent = bt('reg.submit', '접수하기');
       if (res.ok) {
         localStorage.removeItem(DRAFT_KEY);
         clearReapplyMode();
@@ -1470,7 +1483,7 @@
         return;
       }
       var err = (res.body && res.body.error) || {};
-      var msg = err.message || '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      var msg = err.message || TopikApi.parseError(res) || bt('common.request_failed', '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.');
       if (res.status === 401) {
         alert(bt('common.session_expired', '로그인이 만료되었습니다. 다시 로그인해 주세요.'));
         location.href = 'login.html?next=' + encodeURIComponent('register.html');
@@ -1479,8 +1492,8 @@
       showSubmitError(msg);
     }).catch(function () {
       btn.disabled = false;
-      btn.textContent = '접수하기';
-      showSubmitError('네트워크 오류가 발생했습니다. API 서버 연결을 확인해 주세요.');
+      btn.textContent = bt('reg.submit', '접수하기');
+      showSubmitError(bt('reg.js_network', '네트워크 오류가 발생했습니다. API 서버 연결을 확인해 주세요.'));
     });
   });
 

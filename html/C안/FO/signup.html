@@ -843,7 +843,7 @@
       if (u.purpose_code) document.getElementById('su-purpose').value = String(u.purpose_code);
       document.getElementById('emailOk').classList.remove('hidden');
       var okMsg = document.querySelector('#emailOk .callout div div');
-      if (okMsg) okMsg.innerHTML = '<strong>Google 계정 인증이 완료되었습니다.</strong>';
+      if (okMsg) okMsg.innerHTML = '<strong>' + bt('su.js_google_ok', 'Google 계정 인증이 완료되었습니다.') + '</strong>';
       go(2);
     }).catch(function () { /* ignore */ });
   })();
@@ -1175,7 +1175,7 @@
         document.getElementById('su-name-en').value = '';
         document.getElementById('emailOk').classList.remove('hidden');
         var okMsg = document.querySelector('#emailOk .callout div div');
-        if (okMsg) okMsg.innerHTML = '<strong>Google 계정 인증이 완료되었습니다.</strong>';
+        if (okMsg) okMsg.innerHTML = '<strong>' + bt('su.js_google_ok', 'Google 계정 인증이 완료되었습니다.') + '</strong>';
         go(2);
       }).catch(function () { showSignupErr(tr.fail); });
     }
@@ -1387,10 +1387,10 @@
         return;
       }
     }
-    setBusy(btn, true, '가입 처리 중…');
+    setBusy(btn, true, bt('su.js_signing_up', '가입 처리 중…'));
 
     function finishSignup() {
-      setBusy(btn, false, '가입 완료');
+      setBusy(btn, false, bt('su.finish', '가입 완료'));
       if (window.TPKMAuth) TPKMAuth.logout();
       else if (window.TopikApi && TopikApi.logout) TopikApi.logout();
       if (window.__tpkmRebuildNav) __tpkmRebuildNav();
@@ -1398,7 +1398,7 @@
     }
 
     function handleSignupError(res) {
-      setBusy(btn, false, '가입 완료');
+      setBusy(btn, false, bt('su.finish', '가입 완료'));
       var errBody = res.body && res.body.error;
       if (res.status === 422 && errBody && errBody.code === 'AGE_RESTRICTED') {
         setBirthFieldError(errBody.message || bt('val.birth_age', '만 14세 미만은 회원가입할 수 없습니다.'));
@@ -1412,7 +1412,7 @@
         if (!res.ok) { handleSignupError(res); return; }
         finishSignup();
       }).catch(function () {
-        setBusy(btn, false, '가입 완료');
+        setBusy(btn, false, bt('su.finish', '가입 완료'));
         showSignupErr(bt('common.network_err', '네트워크 오류입니다.'));
       });
       return;
@@ -1431,7 +1431,7 @@
       if (!res.ok) { handleSignupError(res); return; }
       finishSignup();
     }).catch(function () {
-      setBusy(btn, false, '가입 완료');
+      setBusy(btn, false, bt('su.finish', '가입 완료'));
       showSignupErr(bt('common.network_err', '네트워크 오류입니다.'));
     });
   });

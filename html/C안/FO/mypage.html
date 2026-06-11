@@ -291,8 +291,17 @@
   'use strict';
 
   function bt(key, fallback) {
+    try { if (window.TPKMBt && TPKMBt.bt) { var btv = TPKMBt.bt(key, fallback); if (btv) return btv; } } catch (e) {}
     try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e) {}
     return fallback;
+  }
+
+  function btf(key, fallback, vars) {
+    try { if (window.TPKMBt && TPKMBt.btf) return TPKMBt.btf(key, fallback, vars); } catch (e) {}
+    var s = bt(key, fallback);
+    if (!vars) return s;
+    Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
+    return s;
   }
 
   var PHOTO_LABELS = {
@@ -329,7 +338,7 @@
   function roundTitle(item) {
     var r = item.exam_round || {};
     if (r.title) return esc(r.title);
-    if (r.round_no) return '제' + esc(r.round_no) + '회';
+    if (r.round_no) return esc(btf('fmt.round_no', '제' + r.round_no + '회', { n: r.round_no }));
     return 'TOPIK';
   }
 
