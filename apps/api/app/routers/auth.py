@@ -913,6 +913,8 @@ async def reset_password(body: ResetPasswordBody, db: AsyncSession = Depends(get
     user = user_res.scalar_one_or_none()
     if not user:
         raise api_error("NOT_FOUND", "사용자를 찾을 수 없습니다.", 404)
+    if user.password_hash and verify_password(body.password, user.password_hash):
+        raise api_error("VALIDATION_ERROR", "새 비밀번호는 현재 비밀번호와 달라야 합니다.", 400)
     user.password_hash = hash_password(body.password)
     user.password_changed_at = datetime.now(timezone.utc)
     row.used_at = datetime.now(timezone.utc)

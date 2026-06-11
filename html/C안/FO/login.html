@@ -185,11 +185,11 @@
         </div>
         <div class="form-row">
           <label class="label"><span data-i18n-content="login.birth8">생년월일 (8자리)</span> <span class="req">*</span></label>
-          <input class="input" placeholder="19960101" maxlength="8" id="fi-bd">
+          <input class="input" placeholder="19960101" maxlength="8" id="fi-bd" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div class="form-row">
           <label class="label"><span data-i18n-content="su.phone">연락처</span> <span class="req">*</span></label>
-          <input class="input" placeholder="+95 ..." id="fi-tel">
+          <input class="input" placeholder="09123456789" id="fi-tel" inputmode="numeric" pattern="[0-9]*" maxlength="15">
         </div>
       </div>
 
@@ -293,6 +293,7 @@
   };
 </script>
 <script src="shared/api-client.js?v=20260609b"></script>
+<script src="shared/form-validation.js"></script>
 <script src="assets/common.js"></script>
 <script>
   function maybeShowPwExpiry(due, thenGo) {
@@ -585,12 +586,22 @@
           '<span class="type' + (isG ? ' google' : '') + '">' + (isG ? 'Google 계정' : '일반 가입') + '</span></div>';
       }).join('');
   }
+  if (window.TPKMValidate) {
+    TPKMValidate.bindDigitsOnlyInput(document.getElementById('fi-bd'), 8);
+    TPKMValidate.bindDigitsOnlyInput(document.getElementById('fi-tel'), 15);
+  }
+
   document.getElementById('btnFindId').addEventListener('click', function () {
     var btn = this;
     var n = document.getElementById('fi-name').value.trim();
     var b = document.getElementById('fi-bd').value.trim();
     var t = document.getElementById('fi-tel').value.trim();
     if (!n || !b || !t) { alert('이름, 생년월일, 연락처를 모두 입력해 주세요.'); return; }
+    if (window.TPKMValidate) {
+      var birthCheck = TPKMValidate.validateBirthYmd(b);
+      if (!birthCheck.ok) { alert(birthCheck.message); return; }
+      b = birthCheck.value;
+    }
     if (!window.TopikApi || !TopikApi.canUseApi()) { alert('서버에 연결할 수 없습니다.'); return; }
     btn.disabled = true; var prev = btn.textContent; btn.textContent = '확인 중…';
     TopikApi.findEmail({ name_ko: n, birth_date: b, phone: t }).then(function (res) {
@@ -620,7 +631,9 @@
     var errEl = document.getElementById('findPwErr');
     if (errEl) errEl.style.display = 'none';
     var e = document.getElementById('fp-email').value.trim();
-    if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { alert('유효한 이메일을 입력해 주세요.'); return; }
+    if (!e || (window.TPKMValidate ? !TPKMValidate.isValidEmail(e) : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))) {
+      alert('유효한 이메일을 입력해 주세요.'); return;
+    }
 
     function goReset() {
       location.href = './password-reset.html?email=' + encodeURIComponent(e);

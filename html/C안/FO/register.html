@@ -1414,6 +1414,10 @@
     if (!document.getElementById('agreeTerms').checked) {
       alert('약관에 동의해 주세요.'); return;
     }
+    if (!portraitState.hasPhoto) {
+      alert('증명사진이 등록되어 있지 않습니다. 마이페이지에서 사진을 등록한 뒤 접수해 주세요.');
+      return;
+    }
     showSubmitError('');
 
     if (REG_STATE.levelLocksPending) {

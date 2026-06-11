@@ -238,6 +238,8 @@ async def change_password(
         raise api_error("INVALID_CREDENTIALS", "현재 비밀번호가 올바르지 않습니다.", 400)
     if not is_valid_password(body.new_password) or body.new_password != body.new_password_confirm:
         raise api_error("VALIDATION_ERROR", "새 비밀번호 규칙을 확인해 주세요.")
+    if verify_password(body.new_password, user.password_hash):
+        raise api_error("VALIDATION_ERROR", "새 비밀번호는 현재 비밀번호와 달라야 합니다.", 400)
     user.password_hash = hash_password(body.new_password)
     user.password_changed_at = datetime.now(timezone.utc)
     await db.commit()

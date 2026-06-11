@@ -516,6 +516,7 @@
 </script>
 <script src="shared/api-client.js"></script>
 <script src="shared/roster-codes.js"></script>
+<script src="shared/form-validation.js"></script>
 <script src="assets/common.js"></script>
 <script src="assets/photo-upload.js"></script>
 <script>
@@ -883,6 +884,9 @@
     var btn = this;
     var e = document.getElementById('su-email').value.trim();
     if (!e) { showSignupErr('이메일을 입력해 주세요.'); return; }
+    if (window.TPKMValidate && !TPKMValidate.isValidEmail(e)) {
+      showSignupErr('올바른 이메일 형식을 입력해 주세요.'); return;
+    }
     if (!TopikApi.canUseApi()) {
       showSignupErr('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
       return;
