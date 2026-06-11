@@ -201,6 +201,8 @@ async def update_me(
                 .values(photo_file_id=photo.id, photo_review_status="pending")
             )
         except ValueError as exc:
+            if str(exc) == "file_too_large":
+                raise api_error("VALIDATION_ERROR", "증명사진은 2MB 이하로 업로드해 주세요.") from exc
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
     if terms_agreed is not None:
         await persist_term_consents(

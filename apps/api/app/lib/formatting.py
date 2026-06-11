@@ -58,6 +58,34 @@ _NOTICE_CATEGORY_LABELS = {
     "other": "기타",
 }
 
+_NOTICE_CATEGORY_LABELS_MY = {
+    "important": "အရေးကြီး",
+    "imp": "အရေးကြီး",
+    "general": "ယေဘုယျ",
+    "notice": "ကြေညာချက်",
+    "registration": "လျှောက်ထားခြင်း",
+    "apply": "လျှောက်ထားခြင်း",
+    "exam": "စာမေးပွဲ",
+    "result": "ရလဒ်",
+    "event": "ပွဲ",
+    "etc": "အခြား",
+    "other": "အခြား",
+}
+
+_NOTICE_CATEGORY_LABELS_EN = {
+    "important": "Important",
+    "imp": "Important",
+    "general": "General",
+    "notice": "Notice",
+    "registration": "Registration",
+    "apply": "Registration",
+    "exam": "Exam",
+    "result": "Results",
+    "event": "Event",
+    "etc": "Other",
+    "other": "Other",
+}
+
 _FAQ_CATEGORY_LABELS = {
     "account": "계정",
     "apply": "접수",
@@ -72,9 +100,18 @@ _FAQ_CATEGORY_LABELS = {
 }
 
 
-def notice_category_label(category: str | None) -> str:
+def notice_category_label(category: str | None, lang: str | None = None) -> str:
+    lang = (lang or "ko").lower()
     if not category:
+        if lang == "my":
+            return "ကြေညာချက်"
+        if lang == "en":
+            return "Notice"
         return "공지"
+    if lang == "my":
+        return _NOTICE_CATEGORY_LABELS_MY.get(category, _NOTICE_CATEGORY_LABELS.get(category, category))
+    if lang == "en":
+        return _NOTICE_CATEGORY_LABELS_EN.get(category, _NOTICE_CATEGORY_LABELS.get(category, category))
     return _NOTICE_CATEGORY_LABELS.get(category, category)
 
 

@@ -18,6 +18,7 @@ from app.models.system import FileAttachment
 settings = get_settings()
 logger = logging.getLogger(__name__)
 DATA_URL_RE = re.compile(r"^data:([^;]+);base64,(.+)$", re.DOTALL)
+PHOTO_MAX_BYTES = 2 * 1024 * 1024
 
 
 def _upload_root() -> Path:
@@ -173,7 +174,8 @@ def decode_photo_base64(photo_base64: str) -> tuple[bytes, str]:
         raise ValueError("invalid_base64") from exc
     if not data:
         raise ValueError("empty_image")
-    if len(data) > settings.upload_max_bytes:
+    limit = PHOTO_MAX_BYTES
+    if len(data) > limit:
         raise ValueError("file_too_large")
     return data, mime
 

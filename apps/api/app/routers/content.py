@@ -108,7 +108,7 @@ async def list_notices(
             {
                 "id": n.id,
                 "category": n.category,
-                "category_label": notice_category_label(n.category),
+                "category_label": notice_category_label(n.category, lang),
                 "title": title,
                 "is_pinned": n.is_pinned,
                 "published_at": n.published_at.isoformat() if n.published_at else None,
@@ -189,7 +189,7 @@ async def get_notice(
     return {
         "id": notice.id,
         "category": notice.category,
-        "category_label": notice_category_label(notice.category),
+        "category_label": notice_category_label(notice.category, lang),
         "title": title,
         "body_html": body_html,
         "is_pinned": notice.is_pinned,

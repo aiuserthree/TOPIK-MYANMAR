@@ -67,6 +67,7 @@ settings = get_settings()
 
 LOGIN_MAX_FAIL = 5
 LOGIN_LOCK_MINUTES = 30
+OTP_MAX_FAIL = 6
 
 
 async def _prepare_existing_user_for_signup(db: AsyncSession, existing_user: User | None) -> None:
@@ -358,6 +359,24 @@ _LOCK_MESSAGE = (
     f"로그인 {LOGIN_MAX_FAIL}회 실패로 계정이 잠겼습니다. "
     f"{LOGIN_LOCK_MINUTES}분 후 다시 시도해 주세요."
 )
+
+_OTP_EXCEEDED_MESSAGE = (
+    f"인증코드 확인에 {OTP_MAX_FAIL}회 실패했습니다. 인증코드를 다시 발송해 주세요."
+)
+
+
+def _register_otp_failure(
+    *,
+    failed_attempts: int,
+    remaining_template: str,
+) -> None:
+    remaining = OTP_MAX_FAIL - failed_attempts
+    if failed_attempts >= OTP_MAX_FAIL:
+        raise api_error("OTP_EXCEEDED", _OTP_EXCEEDED_MESSAGE, 400)
+    msg = remaining_template
+    if remaining > 0:
+        msg += f" ({remaining}회 남음)"
+    raise api_error("INVALID_CODE", msg, 400)
 
 
 def _user_agent(request: Request | None) -> str | None:
@@ -724,6 +743,7 @@ async def send_verification_code(
 @router.post("/verify-email")
 async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_session)) -> dict:
     email = body.email.strip().lower()
+    now = datetime.now(timezone.utc)
     result = await db.execute(
         select(EmailVerificationCode)
         .where(EmailVerificationCode.email == email)
@@ -731,12 +751,23 @@ async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_
         .limit(1)
     )
     row = result.scalar_one_or_none()
-    if not row or row.expires_at < datetime.now(timezone.utc) or not verify_code(body.code, row.code_hash):
+    if not row or row.expires_at < now:
         raise api_error("INVALID_CODE", "인증코드가 올바르지 않거나 만료되었습니다.", 400)
+    if not verify_code(body.code, row.code_hash):
+        row.failed_attempts = (row.failed_attempts or 0) + 1
+        if row.failed_attempts >= OTP_MAX_FAIL:
+            await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
+            await db.commit()
+            raise api_error("OTP_EXCEEDED", _OTP_EXCEEDED_MESSAGE, 400)
+        await db.commit()
+        _register_otp_failure(
+            failed_attempts=row.failed_attempts,
+            remaining_template="인증코드가 올바르지 않습니다.",
+        )
     token = create_email_verify_token(email)
     await db.execute(delete(EmailVerificationCode).where(EmailVerificationCode.email == email))
     await db.commit()
-    return {"verified": True, "verification_token": token}
+    return {"verified": True, "verification_token": token, "email": email}
 
 
 @router.post("/register")
@@ -793,6 +824,8 @@ async def register(
             photo = await save_photo(db, owner_type="user_photo", owner_id=user.id, photo_base64=body.photo_base64)
             user.photo_file_id = photo.id
         except ValueError as exc:
+            if str(exc) == "file_too_large":
+                raise api_error("VALIDATION_ERROR", "증명사진은 2MB 이하로 업로드해 주세요.") from exc
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
     await persist_term_consents(
         db,
@@ -880,6 +913,7 @@ async def forgot_password(
 @router.post("/verify-reset-code")
 async def verify_reset_code(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_session)) -> dict:
     email = body.email.strip().lower()
+    now = datetime.now(timezone.utc)
     result = await db.execute(
         select(PasswordResetToken)
         .where(PasswordResetToken.email == email, PasswordResetToken.used_at.is_(None))
@@ -887,8 +921,19 @@ async def verify_reset_code(body: VerifyEmailBody, db: AsyncSession = Depends(ge
         .limit(1)
     )
     row = result.scalar_one_or_none()
-    if not row or row.expires_at < datetime.now(timezone.utc) or not verify_code(body.code, row.code_hash):
+    if not row or row.expires_at < now:
         raise api_error("INVALID_CODE", "인증코드가 올바르지 않거나 만료되었습니다.", 400)
+    if not verify_code(body.code, row.code_hash):
+        row.failed_attempts = (row.failed_attempts or 0) + 1
+        if row.failed_attempts >= OTP_MAX_FAIL:
+            row.used_at = now
+            await db.commit()
+            raise api_error("OTP_EXCEEDED", _OTP_EXCEEDED_MESSAGE, 400)
+        await db.commit()
+        _register_otp_failure(
+            failed_attempts=row.failed_attempts,
+            remaining_template="인증코드가 올바르지 않습니다.",
+        )
     reset_token = secrets.token_urlsafe(32)
     row.code_hash = hash_code(reset_token)
     await db.commit()

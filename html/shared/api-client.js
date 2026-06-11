@@ -10,6 +10,7 @@
     access: "topik_access_token",
     refresh: "topik_refresh_token",
     user: "topik_user",
+    profileIncomplete: "topik_profile_incomplete",
   };
 
   function readMetaApiBase() {
@@ -61,6 +62,7 @@
     store.removeItem(STORAGE.access);
     store.removeItem(STORAGE.refresh);
     store.removeItem(STORAGE.user);
+    store.removeItem(STORAGE.profileIncomplete);
   }
 
   function clearAllTokenStores() {
@@ -158,6 +160,31 @@
     return refreshInFlight;
   }
 
+  function readProfileIncomplete() {
+    try {
+      return (
+        global.sessionStorage.getItem(STORAGE.profileIncomplete) === "1" ||
+        global.localStorage.getItem(STORAGE.profileIncomplete) === "1"
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setProfileIncomplete(incomplete) {
+    var val = incomplete ? "1" : "0";
+    try {
+      var store = tokenStore();
+      if (store) store.setItem(STORAGE.profileIncomplete, val);
+      else global.sessionStorage.setItem(STORAGE.profileIncomplete, val);
+    } catch (e) { /* private mode */ }
+  }
+
+  function applyProfileIncompleteFromBody(body) {
+    if (!body || body.profile_incomplete == null) return;
+    setProfileIncomplete(!!body.profile_incomplete);
+  }
+
   function persistSession(data, persist) {
     var store = storageFor(!!persist);
     var other = storageFor(!persist);
@@ -165,6 +192,10 @@
     store.setItem(STORAGE.access, data.access_token);
     store.setItem(STORAGE.refresh, data.refresh_token);
     store.setItem(STORAGE.user, JSON.stringify(data.user));
+    store.setItem(
+      STORAGE.profileIncomplete,
+      data.profile_incomplete === true ? "1" : "0"
+    );
   }
 
   function syncLegacyUser(user) {
@@ -208,6 +239,10 @@
 
   function markFileUnavailable(fileId) {
     if (fileId) unavailableFileIds[String(fileId)] = true;
+  }
+
+  function clearFileUnavailable(fileId) {
+    if (fileId) delete unavailableFileIds[String(fileId)];
   }
 
   function isFileUnavailable(fileId) {
@@ -316,8 +351,11 @@
               };
             }
             persistSession(body, persist);
-            syncLegacyUser(body.user);
-            return { ok: true, status: res.status, user: body.user, body: body };
+            if (!body.profile_incomplete) syncLegacyUser(body.user);
+            else {
+              try { global.localStorage.removeItem("tpkm_user"); } catch (e) { /* ignore */ }
+            }
+            return { ok: true, status: res.status, user: body.user, body: body, password_change_due: !!body.password_change_due };
           });
       })
       .catch(function (err) {
@@ -356,8 +394,16 @@
     return Promise.resolve({ ok: true, status: 200, user: user, demo: true });
   }
 
-  function isLoggedIn() {
+  function hasSession() {
     return !!getAccessToken();
+  }
+
+  function isProfileIncomplete() {
+    return hasSession() && readProfileIncomplete();
+  }
+
+  function isLoggedIn() {
+    return hasSession() && !readProfileIncomplete();
   }
 
   function logout() {
@@ -430,7 +476,10 @@
   }
 
   function getMe() {
-    return apiFetch("/api/v1/me");
+    return apiFetch("/api/v1/me").then(function (res) {
+      if (res.ok && res.body) applyProfileIncompleteFromBody(res.body);
+      return res;
+    });
   }
 
   function getExamRounds(query) {
@@ -528,7 +577,10 @@
     }).then(function (res) {
       if (res.ok && res.body && res.body.access_token) {
         persistSession(res.body, true);
-        syncLegacyUser(res.body.user);
+        if (!res.body.profile_incomplete) syncLegacyUser(res.body.user);
+        else {
+          try { global.localStorage.removeItem("tpkm_user"); } catch (e) { /* ignore */ }
+        }
       }
       return res;
     });
@@ -570,6 +622,12 @@
     return apiFetch("/api/v1/me", {
       method: "PATCH",
       body: JSON.stringify(payload || {}),
+    }).then(function (res) {
+      if (res.ok && res.body) {
+        applyProfileIncompleteFromBody(res.body);
+        if (!res.body.profile_incomplete && res.body.user) syncLegacyUser(res.body.user);
+      }
+      return res;
     });
   }
 
@@ -580,10 +638,17 @@
     });
   }
 
-  function withdraw(password) {
+  function withdraw(payload) {
+    var body = payload || {};
+    if (typeof payload === "string") {
+      body = { password: payload };
+    }
     return apiFetch("/api/v1/me/withdraw", {
       method: "POST",
-      body: JSON.stringify({ password: password || "" }),
+      body: JSON.stringify({
+        password: body.password || null,
+        google_id_token: body.google_id_token || null,
+      }),
     });
   }
 
@@ -592,6 +657,7 @@
     var parts = [];
     if (q.category) parts.push("category=" + encodeURIComponent(q.category));
     if (q.q) parts.push("q=" + encodeURIComponent(q.q));
+    if (q.lang) parts.push("lang=" + encodeURIComponent(q.lang));
     if (q.page) parts.push("page=" + encodeURIComponent(q.page));
     if (q.page_size) parts.push("page_size=" + encodeURIComponent(q.page_size));
     if (q.home_preview) parts.push("home_preview=1");
@@ -599,10 +665,11 @@
     return apiFetch("/api/v1/notices" + qs, { auth: false });
   }
 
-  function getNotice(id, sessionKey) {
-    var qs = sessionKey
-      ? "?session_key=" + encodeURIComponent(sessionKey)
-      : "";
+  function getNotice(id, sessionKey, lang) {
+    var parts = [];
+    if (sessionKey) parts.push("session_key=" + encodeURIComponent(sessionKey));
+    if (lang) parts.push("lang=" + encodeURIComponent(lang));
+    var qs = parts.length ? "?" + parts.join("&") : "";
     return apiFetch("/api/v1/notices/" + encodeURIComponent(id) + qs, {
       auth: false,
     });
@@ -632,6 +699,19 @@
     return apiFetch("/api/v1/board/posts", {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  }
+
+  function updateBoardPost(id, payload) {
+    return apiFetch("/api/v1/board/posts/" + encodeURIComponent(id), {
+      method: "PATCH",
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  function deleteBoardPost(id) {
+    return apiFetch("/api/v1/board/posts/" + encodeURIComponent(id), {
+      method: "DELETE",
     });
   }
 
@@ -666,6 +746,15 @@
     if (q.type) parts.push("type=" + encodeURIComponent(q.type));
     var qs = parts.length ? "?" + parts.join("&") : "";
     return apiFetch("/api/v1/terms" + qs, { auth: false });
+  }
+
+  // 약관 본문(현행 게시 버전) — FO 약관 페이지·가입 Step3 모달
+  function getTerm(termType, lang) {
+    var qs = lang ? "?lang=" + encodeURIComponent(lang) : "";
+    return apiFetch(
+      "/api/v1/terms/" + encodeURIComponent(termType) + qs,
+      { auth: false }
+    );
   }
 
   function getBoardComments(postId) {
@@ -724,6 +813,8 @@
 
     login: login,
     logout: logout,
+    hasSession: hasSession,
+    isProfileIncomplete: isProfileIncomplete,
     isLoggedIn: isLoggedIn,
     getAccessToken: getAccessToken,
     refreshSession: refreshSession,
@@ -732,6 +823,7 @@
     fileObjectUrl: fileObjectUrl,
     imgFileOnError: imgFileOnError,
     markFileUnavailable: markFileUnavailable,
+    clearFileUnavailable: clearFileUnavailable,
     isFileUnavailable: isFileUnavailable,
     getUser: getUser,
     syncLegacyUser: syncLegacyUser,
@@ -765,9 +857,12 @@
     getBoardPosts: getBoardPosts,
     getBoardPost: getBoardPost,
     createBoardPost: createBoardPost,
+    updateBoardPost: updateBoardPost,
+    deleteBoardPost: deleteBoardPost,
     uploadBoardAttachment: uploadBoardAttachment,
     unlockBoardPost: unlockBoardPost,
     getTerms: getTerms,
+    getTerm: getTerm,
     getBoardComments: getBoardComments,
     createBoardComment: createBoardComment,
     parseError: parseError,

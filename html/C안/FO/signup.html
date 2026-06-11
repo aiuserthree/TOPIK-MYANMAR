@@ -953,7 +953,20 @@
     TopikApi.verifyEmail(e, code).then(function (res) {
       setConfirmBtnState(false);
       if (!res.ok) {
-        showSignupErr(TopikApi.parseError(res));
+        var errMsg = TopikApi.parseError(res);
+        var errCode = res.body && res.body.error && res.body.error.code;
+        if (errCode === 'OTP_EXCEEDED') {
+          otpCodeSent = false;
+          verifiedEmail = '';
+          verificationToken = '';
+          document.getElementById('otpRow').classList.add('hidden');
+          document.getElementById('su-otp').value = '';
+          document.getElementById('emailOk').classList.add('hidden');
+          clearInterval(timerId);
+          setSendCodeBtnState(false);
+          updateStep1NextButton();
+        }
+        showSignupErr(errMsg);
         return;
       }
       verifiedEmail = res.body.email || e;
