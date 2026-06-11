@@ -60,6 +60,7 @@ from app.lib.admin_permissions import (
     role_has,
     save_matrix,
 )
+from app.models.access_log import AdminAccessLog, MemberAccessLog
 from app.models.admin import AdminAuditLog, AdminPermissionMatrix, AdminUser
 from app.models.application import Application, ApplicationMemo, ApplicationSubmission
 from app.models.board import BoardComment, BoardPost
@@ -2338,7 +2339,14 @@ async def create_admin_user(
     )
     db.add(row)
     await db.flush()
-    await write_audit(db, admin_user_id=admin.id, action_type="admin_create", target_type="admin_users", target_id=row.id)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="admin_create",
+        target_type="admin_users",
+        target_id=row.id,
+        after_data={"role": row.role, "name": row.name, "email": row.email, "status": row.status},
+    )
     await db.commit()
     return {"id": row.id}
 
@@ -2361,9 +2369,20 @@ async def update_admin_user(
         data["role"] = _normalize_admin_role(data["role"])
     if "email" in data:
         data["email"] = data["email"].strip().lower()
+    before_data = {k: getattr(row, k) for k in data}
     for key, val in data.items():
         setattr(row, key, val)
-    await write_audit(db, admin_user_id=admin.id, action_type="admin_update", target_type="admin_users", target_id=admin_id)
+    after_data = {k: getattr(row, k) for k in data}
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="admin_update",
+        target_type="admin_users",
+        target_id=admin_id,
+        before_data=before_data,
+        after_data=after_data,
+        memo="등급 변경" if "role" in data else None,
+    )
     await db.commit()
     return {"updated": True}
 
@@ -2464,6 +2483,218 @@ async def audit_logs(
     if admin.role != "super" and not role_has(matrix, admin.role, "audit", "viewAll"):
         logs = [l for l in logs if l.admin_user_id == admin.id]
     return {"items": await _serialize_audit_logs(db, logs)}
+
+
+_PERM_HISTORY_ACTIONS = ("permission_matrix_update", "admin_update", "admin_create")
+
+
+def _access_days_filter(days: int | None):
+    if not days or days <= 0:
+        return None
+    return datetime.now(timezone.utc) - timedelta(days=days)
+
+
+async def _serialize_admin_access_logs(db: AsyncSession, logs: list[AdminAccessLog]) -> list[dict]:
+    admin_ids = {l.admin_user_id for l in logs if l.admin_user_id}
+    admins: dict[int, AdminUser] = {}
+    if admin_ids:
+        res = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
+        admins = {a.id: a for a in res.scalars().all()}
+    out = []
+    for l in logs:
+        adm = admins.get(l.admin_user_id) if l.admin_user_id else None
+        out.append({
+            "id": l.id,
+            "admin_user_id": l.admin_user_id,
+            "admin_id": str(l.admin_user_id) if l.admin_user_id else (l.admin_email or "unknown"),
+            "admin_name": adm.name if adm else "—",
+            "admin_email": l.admin_email or (adm.email if adm else None),
+            "action_type": l.action_type,
+            "success": l.success,
+            "ip_address": l.ip_address,
+            "user_agent": l.user_agent,
+            "memo": l.memo,
+            "created_at": l.created_at.isoformat(),
+        })
+    return out
+
+
+async def _serialize_member_access_logs(logs: list[MemberAccessLog]) -> list[dict]:
+    return [
+        {
+            "id": l.id,
+            "user_id": l.user_id,
+            "member_id": str(l.user_id) if l.user_id else "—",
+            "email": l.email,
+            "action_type": l.action_type,
+            "path": l.path,
+            "success": l.success,
+            "ip_address": l.ip_address,
+            "user_agent": l.user_agent,
+            "memo": l.memo,
+            "created_at": l.created_at.isoformat(),
+        }
+        for l in logs
+    ]
+
+
+def _perm_history_change_type(action_type: str, before: dict | None, after: dict | None) -> str:
+    if action_type == "permission_matrix_update":
+        return "메뉴 권한 변경"
+    if action_type == "admin_create":
+        return "계정 등록"
+    if action_type == "admin_update" and before and after and before.get("role") != after.get("role"):
+        return "등급 변경"
+    if action_type == "admin_update":
+        return "관리자 수정"
+    return action_type
+
+
+async def _serialize_perm_history(db: AsyncSession, logs: list[AdminAuditLog]) -> list[dict]:
+    serialized = await _serialize_audit_logs(db, logs)
+    out = []
+    for row, raw in zip(serialized, logs):
+        target = "권한매트릭스" if raw.target_type == "admin_permission_matrix" else str(raw.target_id)
+        change_type = _perm_history_change_type(
+            raw.action_type, raw.before_data, raw.after_data
+        )
+        role = "—"
+        menu = "—"
+        if raw.action_type == "permission_matrix_update":
+            role = "—"
+            menu = "—"
+        elif raw.action_type == "admin_update" and raw.after_data and raw.after_data.get("role"):
+            role = raw.after_data.get("role")
+            menu = "—"
+        elif raw.action_type == "admin_create" and raw.after_data is None:
+            role = "—"
+        out.append({
+            "id": raw.id,
+            "admin_user_id": raw.admin_user_id,
+            "actor": row.get("admin_email") or (str(raw.admin_user_id) if raw.admin_user_id else "—"),
+            "ip_address": raw.ip_address,
+            "target": target,
+            "change_type": change_type,
+            "role": role,
+            "menu": menu,
+            "before_data": raw.before_data,
+            "after_data": raw.after_data,
+            "memo": raw.memo or change_type,
+            "created_at": raw.created_at.isoformat(),
+        })
+    return out
+
+
+@router.get("/access-logs/admins")
+async def admin_access_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    admin_user_id: int | None = Query(None),
+    action_type: str | None = Query(None),
+    success: bool | None = Query(None),
+    days: int | None = Query(None, ge=1, le=365),
+    ip: str | None = Query(None),
+    admin: AuthUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)
+    stmt = select(AdminAccessLog).order_by(AdminAccessLog.created_at.desc())
+    if admin_user_id is not None:
+        stmt = stmt.where(AdminAccessLog.admin_user_id == admin_user_id)
+    if action_type:
+        stmt = stmt.where(AdminAccessLog.action_type == action_type)
+    if success is not None:
+        stmt = stmt.where(AdminAccessLog.success == success)
+    cutoff = _access_days_filter(days)
+    if cutoff is not None:
+        stmt = stmt.where(AdminAccessLog.created_at >= cutoff)
+    if ip:
+        stmt = stmt.where(AdminAccessLog.ip_address.ilike(f"%{ip}%"))
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    result = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+    logs = result.scalars().all()
+    return {
+        "items": await _serialize_admin_access_logs(db, logs),
+        "page": page,
+        "page_size": page_size,
+        "total_items": total,
+    }
+
+
+@router.get("/access-logs/members")
+async def member_access_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    user_id: int | None = Query(None),
+    email: str | None = Query(None),
+    action_type: str | None = Query(None),
+    success: bool | None = Query(None),
+    days: int | None = Query(None, ge=1, le=365),
+    admin: AuthUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)
+    stmt = select(MemberAccessLog).order_by(MemberAccessLog.created_at.desc())
+    if user_id is not None:
+        stmt = stmt.where(MemberAccessLog.user_id == user_id)
+    if email:
+        stmt = stmt.where(MemberAccessLog.email.ilike(f"%{email.strip()}%"))
+    if action_type:
+        stmt = stmt.where(MemberAccessLog.action_type == action_type)
+    if success is not None:
+        stmt = stmt.where(MemberAccessLog.success == success)
+    cutoff = _access_days_filter(days)
+    if cutoff is not None:
+        stmt = stmt.where(MemberAccessLog.created_at >= cutoff)
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    result = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+    logs = result.scalars().all()
+    return {
+        "items": await _serialize_member_access_logs(logs),
+        "page": page,
+        "page_size": page_size,
+        "total_items": total,
+    }
+
+
+@router.get("/permission-history")
+async def permission_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=500),
+    admin_user_id: int | None = Query(None),
+    change_type: str | None = Query(None),
+    days: int | None = Query(None, ge=1, le=365),
+    admin: AuthUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    _require_super(admin)
+    stmt = (
+        select(AdminAuditLog)
+        .where(AdminAuditLog.action_type.in_(_PERM_HISTORY_ACTIONS))
+        .order_by(AdminAuditLog.created_at.desc())
+    )
+    if admin_user_id is not None:
+        stmt = stmt.where(AdminAuditLog.admin_user_id == admin_user_id)
+    cutoff = _access_days_filter(days)
+    if cutoff is not None:
+        stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
+    result_all = await db.execute(stmt)
+    all_logs = result_all.scalars().all()
+    if change_type:
+        filtered = [
+            l for l in all_logs
+            if _perm_history_change_type(l.action_type, l.before_data, l.after_data) == change_type
+        ]
+    else:
+        filtered = all_logs
+    total = len(filtered)
+    page_logs = filtered[(page - 1) * page_size : page * page_size]
+    return {
+        "items": await _serialize_perm_history(db, page_logs),
+        "page": page,
+        "page_size": page_size,
+        "total_items": total,
+    }
 
 
 class AdminChangePasswordBody(BaseModel):

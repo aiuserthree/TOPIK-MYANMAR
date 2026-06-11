@@ -281,6 +281,33 @@
     admin_create: "생성", admin_update: "수정", admin_reset_password: "비밀번호초기화",
     exam_round_create: "생성", exam_venue_update: "수정", exam_number_assign: "수험번호부여",
     photo_review_approve: "승인", photo_review_reject: "반려",
+    login: "로그인", logout: "로그아웃",
+    permission_matrix_update: "수정", admin_change_password: "비밀번호초기화",
+  };
+  var ADMIN_ACCESS_ACTION_UI = {
+    login: "로그인", logout: "로그아웃", login_failed: "로그인실패", session_expired: "세션만료",
+  };
+  var ADMIN_ACCESS_MEMO_UI = {
+    invalid_credentials: "비밀번호 불일치",
+    account_locked: "계정 잠금(5회 실패)",
+  };
+  var MEMBER_ACCESS_ACTION_UI = {
+    login: "로그인", logout: "로그아웃", login_failed: "로그인실패",
+    register: "로그인", google_login: "로그인", page_view: "페이지접근",
+  };
+  var MEMBER_ACCESS_MEMO_UI = {
+    invalid_credentials: "비밀번호 불일치",
+    account_locked: "계정 잠금(5회 실패)",
+    profile_incomplete: "프로필 미완료",
+    auto_login_after_register: "회원가입 후 자동 로그인",
+    google: "Google 로그인",
+    google_register: "Google 회원가입",
+  };
+  var ADMIN_ACCESS_ACTION_API = {
+    "로그인": "login", "로그아웃": "logout", "로그인실패": "login_failed", "세션만료": "session_expired",
+  };
+  var MEMBER_ACCESS_ACTION_API = {
+    "로그인": "login", "로그아웃": "logout", "로그인실패": "login_failed", "페이지접근": "page_view",
   };
   var AUDIT_TYPE_UI = {
     applications: "접수자", board_posts: "게시판", users: "회원", terms: "약관",
@@ -500,6 +527,54 @@
     };
   }
 
+  function mapAdminAccessLog(row) {
+    return {
+      id: "aal" + row.id,
+      ts: fmtKst(row.created_at),
+      adminId: row.admin_id || String(row.admin_user_id || "unknown"),
+      name: row.admin_name || "—",
+      ip: row.ip_address || "—",
+      action: ADMIN_ACCESS_ACTION_UI[row.action_type] || row.action_type || "—",
+      result: row.success ? "성공" : "실패",
+      userAgent: row.user_agent || "",
+      memo: ADMIN_ACCESS_MEMO_UI[row.memo] || row.memo || "",
+    };
+  }
+
+  function mapMemberAccessLog(row) {
+    return {
+      id: "mal" + row.id,
+      ts: fmtKst(row.created_at),
+      memberId: row.member_id || (row.user_id ? String(row.user_id) : "—"),
+      email: row.email || "—",
+      ip: row.ip_address || "—",
+      action: MEMBER_ACCESS_ACTION_UI[row.action_type] || row.action_type || "—",
+      path: row.path || "—",
+      result: row.success ? "성공" : "실패",
+      userAgent: row.user_agent || "",
+      memo: MEMBER_ACCESS_MEMO_UI[row.memo] || row.memo || "",
+    };
+  }
+
+  function mapPermHistory(row) {
+    var role = row.role;
+    if (role === "admin") role = "general";
+    if (role === "readonly") role = "viewer";
+    return {
+      id: "ph" + row.id,
+      ts: fmtKst(row.created_at),
+      actor: row.actor || "—",
+      ip: row.ip_address || "—",
+      target: row.target || "—",
+      changeType: row.change_type || "—",
+      role: role || "—",
+      menu: row.menu || "—",
+      before: row.before_data || null,
+      after: row.after_data || null,
+      memo: row.memo || "",
+    };
+  }
+
   function fail(msg) {
     DS.state.apiError = msg;
     DS.state.applicants = [];
@@ -514,6 +589,9 @@
     DS.state.terms = [];
     DS.state.admins = [];
     DS.state.audit = [];
+    DS.state.adminAccessLogs = [];
+    DS.state.memberAccessLogs = [];
+    DS.state.permHistory = [];
     DS.notify();
     return false;
   }
@@ -679,15 +757,43 @@
         DS.state.perms = mapMatrixToPerms(permRes.body.matrix);
       }
 
-      if (DS.state.sessions.length) {
-        var open = DS.state.sessions.find(function (s) { return s.status === "open"; });
-        DS.state.activeSessionId = (open || DS.state.sessions[0]).id;
+      var isSuper = DS.state.me && (DS.state.me.role === "super");
+      if (isSuper) {
+        DS.state.adminAccessLogs = [];
+        DS.state.memberAccessLogs = [];
+        DS.state.permHistory = [];
+        return Promise.all([
+          Api.getAdminAccessLogs({ page_size: 500 }),
+          Api.getMemberAccessLogs({ page_size: 500 }),
+          Api.getPermissionHistory({ page_size: 500 }),
+        ]).then(function (extra) {
+          if (extra[0].ok && extra[0].body && extra[0].body.items) {
+            DS.state.adminAccessLogs = extra[0].body.items.map(mapAdminAccessLog);
+          }
+          if (extra[1].ok && extra[1].body && extra[1].body.items) {
+            DS.state.memberAccessLogs = extra[1].body.items.map(mapMemberAccessLog);
+          }
+          if (extra[2].ok && extra[2].body && extra[2].body.items) {
+            DS.state.permHistory = extra[2].body.items.map(mapPermHistory);
+          }
+          return finishInit();
+        });
       }
+      DS.state.adminAccessLogs = [];
+      DS.state.memberAccessLogs = [];
+      DS.state.permHistory = [];
+      return finishInit();
 
-      DS.apiLoading = false;
-      DS.state.apiError = null;
-      DS.notify();
-      return true;
+      function finishInit() {
+        if (DS.state.sessions.length) {
+          var open = DS.state.sessions.find(function (s) { return s.status === "open"; });
+          DS.state.activeSessionId = (open || DS.state.sessions[0]).id;
+        }
+        DS.apiLoading = false;
+        DS.state.apiError = null;
+        DS.notify();
+        return true;
+      }
     }).catch(function () {
       DS.apiLoading = false;
       return fail("API 연결에 실패했습니다.");
@@ -1253,6 +1359,36 @@
     });
   };
 
+  DS.reloadAdminAccessLogs = function (q) {
+    if (!DS.isApiMode()) return Promise.resolve();
+    return Api.getAdminAccessLogs(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
+      if (res.ok && res.body && res.body.items) {
+        DS.state.adminAccessLogs = res.body.items.map(mapAdminAccessLog);
+      }
+      DS.notify();
+    });
+  };
+
+  DS.reloadMemberAccessLogs = function (q) {
+    if (!DS.isApiMode()) return Promise.resolve();
+    return Api.getMemberAccessLogs(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
+      if (res.ok && res.body && res.body.items) {
+        DS.state.memberAccessLogs = res.body.items.map(mapMemberAccessLog);
+      }
+      DS.notify();
+    });
+  };
+
+  DS.reloadPermHistory = function (q) {
+    if (!DS.isApiMode()) return Promise.resolve();
+    return Api.getPermissionHistory(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
+      if (res.ok && res.body && res.body.items) {
+        DS.state.permHistory = res.body.items.map(mapPermHistory);
+      }
+      DS.notify();
+    });
+  };
+
   /** 접수자 상세 LP — 해당 접수 건(target_type=applications) 처리 이력만 조회 */
   DS.fetchApplicantAudit = function (appId) {
     if (!DS.isApiMode()) return Promise.resolve(null);
@@ -1279,7 +1415,10 @@
         DS.state.perms = mapMatrixToPerms(res.body.matrix);
       }
       DS.notify();
-      return DS.reloadAudit().then(function () { return true; });
+      return Promise.all([
+        DS.reloadAudit(),
+        DS.reloadPermHistory(),
+      ]).then(function () { return true; });
     });
   };
 

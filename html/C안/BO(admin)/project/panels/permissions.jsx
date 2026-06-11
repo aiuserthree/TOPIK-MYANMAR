@@ -104,6 +104,9 @@ function PermissionsPanel() {
     const before = JSON.parse(JSON.stringify(state.perms));
     state.perms = next;
     DataStore.addAudit({ type: '관리자계정', targetId: '권한매트릭스', action: '수정', before, after: state.perms, memo: '권한 매트릭스 변경 저장' });
+    if (!DataStore.isApiMode || !DataStore.isApiMode()) {
+      DataStore.addPermHistory({ before, after: state.perms, memo: '권한 매트릭스 변경 저장' });
+    }
     DataStore.notify();
     toastOk('권한 매트릭스가 저장되었습니다.', { title: '저장 완료', type: 'success' });
   };

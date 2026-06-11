@@ -27,6 +27,9 @@ const NAV = [
   { id: 'admins',      label: '관리자 계정',     icon: 'ShieldCheck' },
   { id: 'permissions', label: '관리자 권한',     icon: 'Lock' },
   { id: 'audit',       label: '처리 이력',       icon: 'History' },
+  { id: 'admin-access-log', label: '관리자 접근 로그', icon: 'LogIn' },
+  { id: 'member-access-log', label: '회원 접근 로그',   icon: 'UserCheck' },
+  { id: 'perm-history',      label: '권한 변경 이력',   icon: 'KeyRound' },
 ];
 
 const PANEL_TITLE = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n.label]));
@@ -44,6 +47,9 @@ const CRUMB = {
   admins:     ['시스템', '관리자 계정 관리'],
   permissions:['시스템', '관리자 권한 관리'],
   audit:      ['시스템', '처리 이력'],
+  'admin-access-log': ['시스템', '관리자 접근 로그'],
+  'member-access-log': ['시스템', '회원 접근 로그'],
+  'perm-history':      ['시스템', '권한 변경 이력'],
 };
 
 // ===== 첫 로그인 비밀번호 변경 강제 (must_change_password) =====
@@ -294,6 +300,9 @@ function App() {
     admins:     window.AdminsPanel,
     permissions:window.PermissionsPanel,
     audit:      window.AuditPanel,
+    'admin-access-log': window.AdminAccessLogPanel,
+    'member-access-log': window.MemberAccessLogPanel,
+    'perm-history':      window.PermHistoryPanel,
   };
   const Panel = PanelByRoute[route] || PanelByRoute.dashboard;
 

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db_session
+from app.lib.access_log import write_admin_access, write_member_access
 from app.lib.audit import write_audit
 from app.lib.deps import AuthUser, get_client_ip, get_optional_user
 from app.lib.errors import api_error
@@ -241,6 +242,7 @@ def _google_display_names(claims: dict) -> tuple[str, str]:
 @router.post("/google")
 async def google_login(
     body: GoogleAuthBody,
+    request: Request,
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -316,6 +318,17 @@ async def google_login(
         await db.flush()
         _reset_login_state(user)
 
+    ua = _user_agent(request)
+    await write_member_access(
+        db,
+        action_type="google_login" if not is_new_user else "register",
+        user_id=user.id,
+        email=user.email,
+        path="/login",
+        ip_address=ip,
+        user_agent=ua,
+        memo="google" if not is_new_user else "google_register",
+    )
     await db.commit()
     await db.refresh(user)
     out = _user_token_response(user)
@@ -345,6 +358,12 @@ _LOCK_MESSAGE = (
     f"로그인 {LOGIN_MAX_FAIL}회 실패로 계정이 잠겼습니다. "
     f"{LOGIN_LOCK_MINUTES}분 후 다시 시도해 주세요."
 )
+
+
+def _user_agent(request: Request | None) -> str | None:
+    if not request:
+        return None
+    return request.headers.get("user-agent")
 
 PASSWORD_REMINDER_DAYS = 180
 PASSWORD_REMINDER_COOLDOWN_DAYS = 30
@@ -393,18 +412,58 @@ async def _login_admin(
     email: str,
     password: str,
     ip: str | None,
+    user_agent: str | None = None,
 ) -> dict:
     admin_res = await db.execute(select(AdminUser).where(AdminUser.email == email, AdminUser.status == "active"))
     admin = admin_res.scalar_one_or_none()
     if not admin:
+        await write_admin_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            admin_email=email,
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="invalid_credentials",
+        )
+        await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     if _is_locked(admin):
+        await write_admin_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            admin_user_id=admin.id,
+            admin_email=admin.email,
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="account_locked",
+        )
+        await db.commit()
         raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
     if not verify_password(password, admin.password_hash):
         _register_login_failure(admin)
+        await write_admin_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            admin_user_id=admin.id,
+            admin_email=admin.email,
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="invalid_credentials",
+        )
         await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     _reset_login_state(admin)
+    await write_admin_access(
+        db,
+        action_type="login",
+        admin_user_id=admin.id,
+        admin_email=admin.email,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
     await write_audit(
         db, admin_user_id=admin.id, action_type="login",
         target_type="admin_users", target_id=admin.id, ip_address=ip,
@@ -418,20 +477,77 @@ async def _login_user(
     *,
     email: str,
     password: str,
+    ip: str | None = None,
+    user_agent: str | None = None,
 ) -> dict:
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     user = user_res.scalar_one_or_none()
     if not user:
+        await write_member_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            email=email,
+            path="/login",
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="invalid_credentials",
+        )
+        await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     if is_profile_incomplete(user):
+        await write_member_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            user_id=user.id,
+            email=user.email,
+            path="/login",
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="profile_incomplete",
+        )
+        await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     if _is_locked(user):
+        await write_member_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            user_id=user.id,
+            email=user.email,
+            path="/login",
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="account_locked",
+        )
+        await db.commit()
         raise api_error("ACCOUNT_LOCKED", _LOCK_MESSAGE, 423)
     if not verify_password(password, user.password_hash):
         _register_login_failure(user)
+        await write_member_access(
+            db,
+            action_type="login_failed",
+            success=False,
+            user_id=user.id,
+            email=user.email,
+            path="/login",
+            ip_address=ip,
+            user_agent=user_agent,
+            memo="invalid_credentials",
+        )
         await db.commit()
         raise api_error("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.", 401)
     _reset_login_state(user)
+    await write_member_access(
+        db,
+        action_type="login",
+        user_id=user.id,
+        email=user.email,
+        path="/login",
+        ip_address=ip,
+        user_agent=user_agent,
+    )
     await _maybe_password_reminder(db, user)
     await db.commit()
     out = _user_token_response(user)
@@ -443,22 +559,24 @@ async def _login_user(
 @router.post("/login")
 async def login(
     body: LoginBody,
+    request: Request,
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     email = body.email.strip().lower()
     portal = (body.portal or "").strip().lower() or None
+    ua = _user_agent(request)
 
     if portal == "fo":
-        return await _login_user(db, email=email, password=body.password)
+        return await _login_user(db, email=email, password=body.password, ip=ip, user_agent=ua)
     if portal == "bo":
-        return await _login_admin(db, email=email, password=body.password, ip=ip)
+        return await _login_admin(db, email=email, password=body.password, ip=ip, user_agent=ua)
 
     # portal 미지정(구 FO 페이지·캐시된 api-client): 동일 이메일이 회원·관리자에 있으면 회원 우선
     user_res = await db.execute(select(User).where(User.email == email, User.status == "active"))
     if user_res.scalar_one_or_none():
-        return await _login_user(db, email=email, password=body.password)
-    return await _login_admin(db, email=email, password=body.password, ip=ip)
+        return await _login_user(db, email=email, password=body.password, ip=ip, user_agent=ua)
+    return await _login_admin(db, email=email, password=body.password, ip=ip, user_agent=ua)
 
 
 @router.post("/find-email")
@@ -488,15 +606,40 @@ async def find_email(body: FindEmailBody, db: AsyncSession = Depends(get_db_sess
 
 @router.post("/logout")
 async def logout(
+    request: Request,
     auth: AuthUser | None = Depends(get_optional_user),
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     # 토큰 폐기는 클라이언트에서 수행. 관리자 로그아웃은 audit 기록(계약서 7절).
+    ua = _user_agent(request)
     if auth and auth.is_admin:
+        admin_row = (
+            await db.execute(select(AdminUser).where(AdminUser.id == auth.id))
+        ).scalar_one_or_none()
+        await write_admin_access(
+            db,
+            action_type="logout",
+            admin_user_id=auth.id,
+            admin_email=admin_row.email if admin_row else auth.email,
+            ip_address=ip,
+            user_agent=ua,
+        )
         await write_audit(
             db, admin_user_id=auth.id, action_type="logout",
             target_type="admin_users", target_id=auth.id, ip_address=ip,
+        )
+        await db.commit()
+    elif auth and not auth.is_admin:
+        user_row = (await db.execute(select(User).where(User.id == auth.id))).scalar_one_or_none()
+        await write_member_access(
+            db,
+            action_type="logout",
+            user_id=auth.id,
+            email=user_row.email if user_row else auth.email,
+            path="/",
+            ip_address=ip,
+            user_agent=ua,
         )
         await db.commit()
     return {"logged_out": True}
@@ -599,6 +742,7 @@ async def verify_email(body: VerifyEmailBody, db: AsyncSession = Depends(get_db_
 @router.post("/register")
 async def register(
     body: RegisterBody,
+    request: Request,
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
@@ -655,6 +799,26 @@ async def register(
         ip=ip,
     )
     _reset_login_state(user)
+    ua = _user_agent(request)
+    await write_member_access(
+        db,
+        action_type="register",
+        user_id=user.id,
+        email=user.email,
+        path="/register",
+        ip_address=ip,
+        user_agent=ua,
+    )
+    await write_member_access(
+        db,
+        action_type="login",
+        user_id=user.id,
+        email=user.email,
+        path="/register",
+        ip_address=ip,
+        user_agent=ua,
+        memo="auto_login_after_register",
+    )
     await db.commit()
     await db.refresh(user)
     out = _user_token_response(user)

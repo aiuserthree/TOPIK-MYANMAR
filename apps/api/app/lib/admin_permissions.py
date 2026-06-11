@@ -29,6 +29,9 @@ PERM_MENUS: dict[str, list[str]] = {
     "admins": ["view", "create", "edit", "reset", "deactivate"],
     "permissions": ["view", "edit"],
     "audit": ["viewAll", "viewOwn", "export"],
+    "admin-access-log": ["view", "export"],
+    "member-access-log": ["view", "export"],
+    "perm-history": ["view", "export"],
 }
 
 DEFAULT_MATRIX: dict[str, dict[str, list[str]]] = {
@@ -46,6 +49,9 @@ DEFAULT_MATRIX: dict[str, dict[str, list[str]]] = {
         "admins": [],
         "permissions": [],
         "audit": ["viewOwn"],
+        "admin-access-log": [],
+        "member-access-log": [],
+        "perm-history": [],
     },
     "readonly": {
         "dashboard": ["view"],
@@ -61,6 +67,9 @@ DEFAULT_MATRIX: dict[str, dict[str, list[str]]] = {
         "admins": [],
         "permissions": [],
         "audit": ["viewOwn"],
+        "admin-access-log": [],
+        "member-access-log": [],
+        "perm-history": [],
     },
 }
 
@@ -107,6 +116,9 @@ def perm_schema() -> dict[str, Any]:
                 {"id": "admins", "label": "관리자 계정", "actions": PERM_MENUS["admins"]},
                 {"id": "permissions", "label": "관리자 권한", "actions": PERM_MENUS["permissions"]},
                 {"id": "audit", "label": "처리 이력", "actions": PERM_MENUS["audit"]},
+                {"id": "admin-access-log", "label": "관리자 접근 로그", "actions": PERM_MENUS["admin-access-log"]},
+                {"id": "member-access-log", "label": "회원 접근 로그", "actions": PERM_MENUS["member-access-log"]},
+                {"id": "perm-history", "label": "권한 변경 이력", "actions": PERM_MENUS["perm-history"]},
             ],
         },
     ]

@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models for TOPIK Myanmar."""
 
+from app.models.access_log import AdminAccessLog, MemberAccessLog
 from app.models.admin import AdminAuditLog, AdminPermissionMatrix, AdminUser
 from app.models.auth_tokens import EmailVerificationCode, PasswordResetToken
 from app.models.board import BoardComment, BoardPost
@@ -16,6 +17,8 @@ from app.models.semantic import SemanticChunk
 from app.models.user import User
 
 __all__ = [
+    "AdminAccessLog",
+    "MemberAccessLog",
     "AdminAuditLog",
     "AdminUser",
     "BoardComment",

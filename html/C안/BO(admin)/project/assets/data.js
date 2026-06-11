@@ -254,6 +254,9 @@
     { menu: '시스템 · 관리자 계정',        super: 'rw', general: 'no', viewer: 'no' },
     { menu: '시스템 · 관리자 권한',        super: 'rw', general: 'no', viewer: 'no' },
     { menu: '시스템 · 처리 이력',          super: 'rw', general: 'r-own',  viewer: 'r-own' },
+    { menu: '시스템 · 관리자 접근 로그',   super: 'rw', general: 'no', viewer: 'no' },
+    { menu: '시스템 · 회원 접근 로그',     super: 'rw', general: 'no', viewer: 'no' },
+    { menu: '시스템 · 권한 변경 이력',     super: 'rw', general: 'no', viewer: 'no' },
   ];
 
   // ---- Audit log (seed with realistic entries) ----
@@ -291,6 +294,84 @@
       method: pick(['체크박스','전체 동의']),
     });
   }
+
+  // ---- Admin access log (관리자 로그인·로그아웃·세션) ----
+  const ADMIN_ACCESS_ACTIONS = ['로그인', '로그아웃', '세션만료', '로그인실패'];
+  const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) Safari/17.4',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4) Mobile/15E148',
+    'Mozilla/5.0 (Linux; Android 14) Chrome/124.0 Mobile',
+  ];
+  const ADMIN_ACCESS_LOGS = [];
+  for (let i = 1; i <= 48; i++) {
+    const admin = pick(ADMINS.filter(a => a.status === 'active'));
+    const act = pick(ADMIN_ACCESS_ACTIONS);
+    const ok = act === '로그인실패' ? '실패' : '성공';
+    ADMIN_ACCESS_LOGS.push({
+      id: 'aal' + pad(i, 4),
+      ts: `2026-05-${pad(rint(20, 28), 2)} ${pad(rint(0, 23), 2)}:${pad(rint(0, 59), 2)}:${pad(rint(0, 59), 2)}`,
+      adminId: act === '로그인실패' ? 'unknown' : admin.id,
+      name: act === '로그인실패' ? '—' : admin.name,
+      ip: pick(['203.0.113.42', '203.0.113.51', '203.0.113.62', '203.0.113.71', '198.51.100.12']),
+      action: act,
+      result: ok,
+      userAgent: pick(USER_AGENTS),
+      memo: act === '로그인실패' ? pick(['비밀번호 불일치', '계정 잠금(5회 실패)', '비활성 계정']) : (act === '세션만료' ? '30분 무활동' : ''),
+    });
+  }
+  ADMIN_ACCESS_LOGS.sort((a, b) => b.ts.localeCompare(a.ts));
+
+  // ---- Member access log (회원 로그인·페이지 접근) ----
+  const MEMBER_ACCESS_ACTIONS = ['로그인', '로그아웃', '페이지접근', '로그인실패'];
+  const MEMBER_PATHS = ['/', '/login', '/mypage', '/apply', '/notice', '/faq', '/qna', '/mypage/profile', '/ticket'];
+  const MEMBER_ACCESS_LOGS = [];
+  for (let i = 1; i <= 60; i++) {
+    const member = pick(MEMBERS.filter(m => m.status === 'active'));
+    const act = pick(MEMBER_ACCESS_ACTIONS);
+    const ok = act === '로그인실패' ? '실패' : '성공';
+    MEMBER_ACCESS_LOGS.push({
+      id: 'mal' + pad(i, 4),
+      ts: `2026-05-${pad(rint(1, 28), 2)} ${pad(rint(0, 23), 2)}:${pad(rint(0, 59), 2)}:${pad(rint(0, 59), 2)}`,
+      memberId: act === '로그인실패' ? '—' : member.id,
+      email: act === '로그인실패' ? pick(['wrong@example.com', 'test@test.com', member.email]) : member.email,
+      ip: `203.0.${rint(0, 255)}.${rint(1, 254)}`,
+      action: act,
+      path: act === '페이지접근' ? pick(MEMBER_PATHS) : (act === '로그인' || act === '로그인실패' ? '/login' : '/'),
+      result: ok,
+      userAgent: pick(USER_AGENTS),
+      memo: act === '로그인실패' ? '비밀번호 불일치' : '',
+    });
+  }
+  MEMBER_ACCESS_LOGS.sort((a, b) => b.ts.localeCompare(a.ts));
+
+  // ---- Permission change history (권한 매트릭스·등급 변경) ----
+  const PERM_TARGETS = ['권한매트릭스', 'admin01', 'editor01', 'editor02', 'viewer01'];
+  const PERM_CHANGES = ['메뉴 권한 변경', '등급 변경', '액션 추가', '액션 제거'];
+  const ROLE_LABELS = { super: '최고관리자', general: '일반관리자', viewer: '조회관리자' };
+  const PERM_HISTORY = [];
+  for (let i = 1; i <= 24; i++) {
+    const target = pick(PERM_TARGETS);
+    const change = pick(PERM_CHANGES);
+    const role = pick(['general', 'viewer']);
+    const menu = pick(['applicants', 'notices', 'members', 'audit', 'sessions']);
+    PERM_HISTORY.push({
+      id: 'ph' + pad(i, 4),
+      ts: `2026-05-${pad(rint(1, 28), 2)} ${pad(rint(8, 18), 2)}:${pad(rint(0, 59), 2)}:${pad(rint(0, 59), 2)}`,
+      actor: pick(['admin01', 'admin02']),
+      ip: pick(['203.0.113.42', '203.0.113.51']),
+      target,
+      changeType: change,
+      role: target === '권한매트릭스' ? role : pick(['super', 'general', 'viewer']),
+      menu: target === '권한매트릭스' ? menu : '—',
+      before: change === '등급 변경' ? { role: 'general' } : { actions: ['view', 'edit'] },
+      after: change === '등급 변경' ? { role: 'viewer' } : { actions: ['view'] },
+      memo: target === '권한매트릭스'
+        ? `${ROLE_LABELS[role] || role} · ${menu} 메뉴 권한 조정`
+        : `관리자 ${target} 등급 변경`,
+    });
+  }
+  PERM_HISTORY.sort((a, b) => b.ts.localeCompare(a.ts));
 
   // ============================================================
   // Reactive store — listeners pattern (no framework deps)
@@ -330,6 +411,9 @@
       { id: 'admins', label: '관리자 계정', actions: ['view','create','edit','reset','deactivate'] },
       { id: 'permissions', label: '관리자 권한', actions: ['view','edit'] },
       { id: 'audit', label: '처리 이력', actions: ['viewAll','viewOwn','export'] },
+      { id: 'admin-access-log', label: '관리자 접근 로그', actions: ['view','export'] },
+      { id: 'member-access-log', label: '회원 접근 로그', actions: ['view','export'] },
+      { id: 'perm-history', label: '권한 변경 이력', actions: ['view','export'] },
     ]},
   ];
   // 권장 기본값 (role별)
@@ -351,6 +435,7 @@
           members: ['view'], terms: ['view'],
           admins: [], permissions: [],
           audit: ['viewOwn'],
+          'admin-access-log': [], 'member-access-log': [], 'perm-history': [],
         };
         out[m.id] = (map[m.id] || []).filter(a => m.actions.includes(a));
       } else { // viewer — read-only
@@ -384,6 +469,9 @@
     perms: PERMS,
     audit: AUDIT,
     consents: CONSENTS,
+    adminAccessLogs: ADMIN_ACCESS_LOGS,
+    memberAccessLogs: MEMBER_ACCESS_LOGS,
+    permHistory: PERM_HISTORY,
     activeSessionId: 's107', // 현재 회차
     me: null, // 로그인 사용자 - set on boot
     apiError: null,
@@ -399,6 +487,21 @@
       ...entry,
     };
     state.audit.unshift(e);
+  }
+
+  function addPermHistory(entry) {
+    const e = {
+      id: 'ph' + pad(state.permHistory.length + 1, 4),
+      ts: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      actor: state.me?.id || 'admin01',
+      ip: state.me?.ip || '203.0.113.42',
+      target: '권한매트릭스',
+      changeType: '메뉴 권한 변경',
+      role: '—',
+      menu: '—',
+      ...entry,
+    };
+    state.permHistory.unshift(e);
   }
 
   function setSession(sessionId) {
@@ -468,7 +571,7 @@
   }
 
   window.DataStore = {
-    state, subscribe, notify, addAudit, setSession, getAdminSession,
+    state, subscribe, notify, addAudit, addPermHistory, setSession, getAdminSession,
     badges, fmtNum, fmtResultDate, fmtCurrency, statusLabel, levelLabel, roleLabel, venueName, pad,
     permSections: PERM_SECTIONS, permActions: PERM_ACTIONS, recommendedPerms, normalizeRole, can, isReadonly,
   };
