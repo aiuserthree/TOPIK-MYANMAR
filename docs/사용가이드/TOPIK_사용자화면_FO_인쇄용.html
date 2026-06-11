@@ -1,0 +1,347 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사용자 화면(FO) 사용 가이드</title><style>
+*{box-sizing:border-box}
+:root{--ink:#262420;--soft:#54514a;--faint:#8c887e;--line:#e3dfd3;--coral:#cc785c;--wash:#f6eae2;--bg:#ffffff}
+html,body{margin:0;background:var(--bg)}
+body{font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);font-size:11pt;line-height:1.6;}
+.page{max-width:880px;margin:0 auto;padding:28px 30px 60px}
+h1{font-size:30px;font-weight:700;letter-spacing:-.01em;margin:0 0 6px}
+h1 .sub{display:block;font-size:17px;color:var(--coral);font-weight:600;margin-top:8px}
+h2{font-size:23px;font-weight:700;border-top:3px solid var(--coral);padding-top:14px;margin:34px 0 12px;letter-spacing:-.01em}
+h3{font-size:16px;font-weight:700;color:var(--coral);margin:20px 0 8px}
+h4{font-size:14px;font-weight:700;margin:16px 0 6px}
+p{margin:.5em 0}
+strong{font-weight:700}
+a,.ln{color:var(--coral);text-decoration:none}
+.ln{border-bottom:1px dotted var(--coral)}
+code{font-family:Consolas,"Courier New",monospace;font-size:.86em;background:#efebe1;border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+hr{border:none;border-top:1px solid var(--line);margin:18px 0}
+ul,ol{margin:.5em 0;padding-left:1.4em}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:10px 16px;background:var(--wash);border-left:4px solid var(--coral);border-radius:0 8px 8px 0;color:var(--soft)}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:10pt}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top;line-height:1.45}
+th{background:var(--wash);color:#8a4a32;font-weight:700}
+tbody tr:nth-child(even){background:#faf8f4}
+figure{margin:12px 0;text-align:center}
+figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px}
+em{color:var(--coral);font-style:normal;font-weight:600}
+.note{background:var(--wash);border:1px solid var(--coral);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:10.5pt;color:var(--soft)}
+@page{size:A4;margin:14mm}
+@media print{
+  .page{max-width:none;padding:0}
+  h2{page-break-before:always}
+  h1{page-break-after:avoid}
+  figure,tr,li,blockquote,h2,h3,h4{break-inside:avoid}
+  figure img{max-height:250mm}
+  a,.ln{color:var(--coral)}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style></head>
+<body><div class="page"><h1>사용자 화면(FO) 사용 가이드<span class="sub">TOPIK Myanmar · 응시자용 화면</span></h1>
+<h2>목차</h2>
+<ol><li><span class="ln">공통 레이아웃</span></li><li><span class="ln">메인 홈</span></li><li><span class="ln">TOPIK 안내 · 시험 개요</span></li><li><span class="ln">TOPIK 안내 · 시험 소개</span></li><li><span class="ln">TOPIK 안내 · 문항 구성</span></li><li><span class="ln">TOPIK 안내 · 평가 기준</span></li><li><span class="ln">TOPIK 규정 · 유의 사항</span></li><li><span class="ln">TOPIK 규정 · 답안 작성 요령</span></li><li><span class="ln">TOPIK 규정 · 응시료 규정</span></li><li><span class="ln">TOPIK 규정 · 신분증 규정</span></li><li><span class="ln">TOPIK 접수 · 접수 방법</span></li><li><span class="ln">TOPIK 접수 · 시험 접수 (4단계)</span></li><li><span class="ln">TOPIK 접수 · 접수 확인</span></li><li><span class="ln">TOPIK 접수 · 수험표 출력</span></li><li><span class="ln">게시판 · 공지사항</span></li><li><span class="ln">게시판 · FAQ</span></li><li><span class="ln">게시판 · 문의게시판</span></li><li><span class="ln">게시판 · 환불·정보정정</span></li><li><span class="ln">계정 · 로그인</span></li><li><span class="ln">계정 · 회원가입 (3단계)</span></li><li><span class="ln">계정 · 비밀번호 재설정</span></li><li><span class="ln">계정 · 내정보 수정</span></li><li><span class="ln">약관 · 이용약관</span></li><li><span class="ln">약관 · 개인정보처리방침</span></li><li><span class="ln">약관 · 마케팅 수신</span></li><li><span class="ln">에러 · 404</span></li></ol>
+<h2>이 가이드 사용법</h2>
+<ul><li><strong>필수 표기:</strong> 입력 필드 표에서 ● = 반드시 입력, ○ = 선택 입력입니다.</li><li><strong>로그인이 필요한 메뉴:</strong> 시험 접수, 접수 확인, 환불·정정, 문의게시판은 <strong>로그인 후</strong> 이용할 수 있습니다. 로그인하지 않은 상태에서 해당 메뉴를 누르면 로그인 화면으로 이동하며, 로그인을 마치면 <strong>원래 가려던 페이지</strong>로 자동 이동합니다.</li><li><strong>언어 변경:</strong> 화면 오른쪽 상단의 <strong>KO / MY / EN</strong> 버튼을 누르면 한국어, 미얀마어, 영어로 전환됩니다. 선택한 언어는 다음 방문 때도 유지됩니다. 공지·FAQ·약관은 언어별로 내용이 다를 수 있으니, 편한 언어로 바꿔 읽어 보세요.</li></ul>
+<h3>처음 이용하시는 분 — 추천 순서</h3>
+<ol><li><span class="ln">메인 홈</span>에서 <strong>현재 회차·접수 마감</strong> 확인</li><li><span class="ln">접수 방법</span>과 <span class="ln">응시료 규정</span> 읽기</li><li><span class="ln">회원가입</span> → <span class="ln">로그인</span> → <span class="ln">시험 접수</span></li><li>접수 후 <span class="ln">접수 확인(마이페이지)</span>에서 <strong>사진 심사·수납·수험번호</strong> 진행 상황 확인</li><li>문제가 있으면 <span class="ln">FAQ</span> → <span class="ln">문의게시판</span> 또는 <span class="ln">환불·정보정정</span></li></ol>
+<blockquote><strong>TIP:</strong> 증명사진(JPG/PNG, 3:4, 200KB~2MB, 최근 6개월)과 <strong>오프라인 수납용 현금·접수번호</strong>를 미리 준비해 두면 접수가 훨씬 수월합니다. 이 사이트에서는 <strong>온라인 카드 결제가 되지 않습니다.</strong></blockquote>
+<hr>
+<h2>1. 공통 레이아웃 (GNB · 푸터 · 모바일)</h2>
+<p>모든 페이지는 <strong>같은 상단 메뉴(GNB)</strong>, <strong>하단 푸터</strong>, <strong>모바일 하단 탭바</strong>를 사용합니다. 어느 화면에서든 메뉴 구성과 로그인 상태가 동일하게 보이므로, 한 번 익혀 두면 다른 페이지에서도 길을 잃지 않습니다.</p>
+<p><em>공통 레이아웃 (GNB · 푸터 · 모바일)</em></p>
+<figure><img src="./screenshots/_pdf/fo_common-layout__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_common-layout__pc-2.png" alt=""></figure>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>페이지를 열면 상단 메뉴·하단 푸터·모바일 탭바가 자동으로 표시됩니다.</li><li>로그인한 상태라면 오른쪽에 <strong>내 이름</strong>과 <strong>로그아웃</strong> 버튼이 보이고, 로그인하지 않았다면 <strong>로그인</strong>·<strong>회원가입</strong> 버튼이 보입니다. 이름을 클릭하면 <strong>마이페이지(접수 확인)</strong> 로 이동합니다.</li><li>시험 접수·접수 확인·환불·정정·문의처럼 로그인이 필요한 메뉴를 누르면 먼저 로그인 화면으로 이동합니다. 로그인 후 <strong>원래 가려던 메뉴</strong>로 자동 이동합니다.</li><li><strong>모바일</strong>에서는 화면 아래 <strong>4개 탭</strong>(홈·접수·게시판·마이)으로 주요 메뉴에 빠르게 갈 수 있습니다. 더 많은 메뉴는 우측 <strong>햄버거(≡)</strong> 를 눌러 주세요.</li></ol>
+<h3>요소별 상세</h3>
+<table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 동작 / 결과</th></tr></thead><tbody><tr><td>1</td><td>로고</td><td>TOPIK Myanmar 로고. 클릭하면 <strong>홈</strong>으로 이동합니다.</td></tr><tr><td>2</td><td>TOPIK 안내</td><td>마우스를 올리거나 탭하면 시험 개요·소개·문항 구성·평가 기준 메뉴가 펼쳐집니다. 시험이 처음이면 여기서 <strong>시험 구조</strong>를 먼저 읽어 보세요.</td></tr><tr><td>3</td><td>TOPIK 규정 메뉴</td><td>드롭다운: 유의 사항·답안 작성 요령·응시료 규정·신분증 규정. <strong>시험 당일</strong> 전에 유의 사항·신분증 규정을 꼭 확인하세요.</td></tr><tr><td>4</td><td>TOPIK 접수 메뉴</td><td>드롭다운: 접수 방법·<strong>시험 접수(로그인)</strong>·<strong>접수 확인(로그인)</strong>·수험표 출력.</td></tr><tr><td>5</td><td>게시판 메뉴</td><td>드롭다운: 공지사항·<strong>환불·정보정정신청(로그인)</strong>·<strong>문의게시판(로그인)</strong>·FAQ.</td></tr><tr><td>6</td><td>로그인·회원가입</td><td>로그인 전: <strong>로그인</strong>·<strong>회원가입</strong> 버튼. 로그인 후: 내 이름(클릭 시 마이페이지) + <strong>로그아웃</strong>.</td></tr><tr><td>7</td><td>언어 전환 (KO/MY/EN)</td><td>버튼을 누르면 <strong>바로</strong> 해당 언어로 화면이 바뀝니다. 새로고침 없이 적용됩니다.</td></tr><tr><td>8</td><td>햄버거 메뉴 (모바일)</td><td>우측 슬라이드 메뉴. 4대 메뉴 아코디언 + 로그인/마이 + 언어 전환. <strong>ESC·배경 클릭·닫기(✕)</strong> 로 닫힘, 열린 동안 본문 스크롤 잠금.</td></tr><tr><td>9</td><td>하단 탭바 (모바일)</td><td>홈·접수·게시판·마이 4탭. 현재 페이지에 맞춰 활성 탭 표시(예: 마이페이지·로그인은 "마이").</td></tr><tr><td>10</td><td>푸터</td><td>운영기관 안내, 바로가기, TOPIK·NIIED 등 외부 링크, <strong>개인정보처리방침</strong>(볼드 강조), 이용약관·마케팅 링크, 문의 이메일, 업무시간(<strong>월–금 09:00–17:00, 미얀마 시간</strong>).</td></tr><tr><td>11</td><td>로그인 필요 페이지</td><td>시험 접수·접수 확인·환불·정정·문의는 로그인 후 이용합니다.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> PC에서는 상단 메뉴, 스마트폰에서는 <strong>하단 탭</strong>과 <strong>햄버거 메뉴</strong>를 함께 쓰면 편합니다. 접수·마이페이지는 모바일 <strong>「마이」</strong> 탭에서도 바로 갈 수 있습니다.</blockquote>
+<hr>
+<h2>2. 메인 홈</h2>
+<p><em>메인 홈</em></p>
+<figure><img src="./screenshots/_pdf/fo_index__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_index__pc-2.png" alt=""></figure>
+<p><strong>사이트 첫 화면</strong>입니다. 지금 <strong>몇 회차</strong>가 접수 중인지, <strong>마감까지 얼마나 남았는지</strong>, <strong>시험·합격 발표 일정</strong>, <strong>최신 공지</strong>, <strong>자주 묻는 질문</strong>을 한곳에서 확인할 수 있습니다. 접수 전에 여기서 <strong>일정과 마감</strong>을 꼭 확인하세요.</p>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 회차 배지</strong> — 현재/다음 회차와 시험일을 표시합니다. 상태에 따라 모양이 바뀝니다: 접수 전 = "제N회 …(시험일)", 접수 중 = "… 접수 진행 중"(초록 점 깜빡임), 마감 = "접수 마감"(회색). <strong>접수 중인 회차</strong>가 우선 표시되고, 없으면 가장 가까운 <strong>예정</strong> 회차가 표시됩니다.</li><li><strong>2) 주요 버튼</strong> — <strong>시험 접수하기</strong>(로그인 필요), <strong>시험 안내 보기</strong>. PC는 가로, 모바일은 세로로 배치됩니다. 아직 가입하지 않았다면 <strong>회원가입</strong> 후 접수하세요.</li><li><strong>3) D-Day 카운트다운</strong> — <strong>접수 마감 시각까지</strong> 남은 일·시·분·초를 1초마다 갱신합니다. 0이 되면 "접수가 마감되었습니다 + 다음 회차 일정 보기" 안내로 자동 전환됩니다. 마감 직전에는 서버 부하로 지연될 수 있으니 <strong>여유 있게</strong> 접수하는 것을 권장합니다.</li><li><strong>4) 일정 타임라인</strong> — 4단계 카드: 원서 접수 → 응시료 납부(오프라인) → 시험 시행 → 합격 발표(추후 공지). 현재 진행 중 단계는 <strong>진행중</strong>, 지난 단계는 <strong>종료</strong> 배지로 표시됩니다.</li><li><strong>5) 공지 미리보기</strong> — 최신 공지 최대 5건. 각 행 = 카테고리 배지 + 제목(고정글은 NEW) + 날짜. 행을 클릭하면 공지 상세로 이동합니다. <strong>중요·접수</strong> 공지는 반드시 읽어 보세요.</li><li><strong>6) 바로가기 카드</strong> — 시험 접수 / 접수 확인 / 수험표 출력 / 환불·정보정정. 자주 쓰는 메뉴로 빠르게 이동합니다.</li><li><strong>7) FAQ 아코디언</strong> — FAQ 상위 3건 요약. 질문 클릭 시 답변 펼침. 더 보려면 <span class="ln">FAQ 메뉴</span>로 이동하세요.</li></ul>
+<blockquote><strong>TIP:</strong> 홈의 D-Day는 <strong>접수 마감</strong> 기준입니다. 시험 당일까지 남은 시간과는 다릅니다. 접수 후에는 <span class="ln">접수 확인(마이페이지)</span>에서 <strong>사진 심사·수납</strong> 진행 상황을 확인하세요.</blockquote>
+<hr>
+<h2>3. TOPIK 안내 · 시험 개요</h2>
+<p><em>TOPIK 안내 · 시험 개요</em></p>
+<figure><img src="./screenshots/_pdf/fo_guide-overview__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_guide-overview__pc-2.png" alt=""></figure>
+<p>TOPIK 시험의 <strong>전체 그림</strong>을 소개하는 페이지입니다. 시험이 무엇인지, 누가 볼 수 있는지, 미얀마에서 <strong>언제</strong> 시험이 열리는지 확인할 수 있습니다. 처음 TOPIK을 준비하시는 분은 이 페이지와 <span class="ln">시험 소개</span>를 함께 읽어 보세요.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 동작</th></tr></thead><tbody><tr><td>1</td><td>외부 링크 3종</td><td>주미얀마 대한민국 대사관·Facebook·YouTube (새 탭). 공식 소식·안내 영상을 볼 수 있습니다.</td></tr><tr><td>2</td><td>핵심 요약 카드</td><td><strong>주관</strong>(국립국제교육원 NIIED) / <strong>시행 기관</strong>(주미얀마 대한민국 대사관) / <strong>응시 자격</strong>(국적 제한 없음).</td></tr><tr><td>3</td><td>본문</td><td>"TOPIK이란?"(1997년~ 시행 목적), 응시 목적 4가지(유학·취업·이민·자격 확인 등).</td></tr><tr><td>4</td><td>연간 시험 일정 표</td><td>등록된 시험 회차 일정이 표로 표시됩니다. <strong>현재 접수 중</strong>인 회차는 표에서 강조 표시됩니다. 시각은 <strong>미얀마(UTC+6:30)</strong> 기준입니다.</td></tr><tr><td>5</td><td>CTA 블록</td><td><strong>시험 접수하기</strong> / <strong>시험 규정 보기</strong> / <strong>자주 묻는 질문</strong>. 접수 전 규정·FAQ를 먼저 보면 실수를 줄일 수 있습니다.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 일정 표의 날짜는 <strong>변경될 수</strong> 있습니다. 최종 일정은 <strong>공지사항</strong>과 홈 화면 회차 정보를 함께 확인하세요.</blockquote>
+<hr>
+<h2>4. TOPIK 안내 · 시험 소개</h2>
+<p><em>TOPIK 안내 · 시험 소개</em></p>
+<figure><img src="./screenshots/_pdf/fo_guide-intro__pc-1.png" alt=""></figure>
+<p><strong>TOPIK Ⅰ과 Ⅱ의 차이</strong>, <strong>등급별 활용처</strong>를 카드로 설명하는 안내 페이지입니다. "어느 급수를 접수해야 할까?" 고민될 때 참고하세요. Ⅰ·Ⅱ <strong>동시 접수</strong>도 가능합니다(응시료는 급수별로 각각 납부).</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>내용</th></tr></thead><tbody><tr><td>1</td><td>TOPIK Ⅰ 카드</td><td><strong>초급</strong>(1·2급) · 2개 영역 · 100분 · 200점. 듣기 30 + 읽기 40(객관식). 급수별 어휘 안내. 한국어 기초~초급 학습자·EPS 등에 적합.</td></tr><tr><td>2</td><td>TOPIK Ⅱ 카드</td><td><strong>중·고급</strong>(3~6급) · 3개 영역 · 180분 · 300점. 듣기 50 + 쓰기 4 + 읽기 50(객관식+주관식). 유학·전문직 등에 많이 사용.</td></tr><tr><td>3</td><td>동시 접수 안내 콜아웃</td><td>Ⅰ·Ⅱ <strong>동시 접수 가능</strong>, <strong>동일 시험장</strong> 코드, 응시료는 <strong>수준별 개별</strong> 오프라인 수납. 같은 날 두 시험을 보려면 접수 시 둘 다 선택하세요.</td></tr><tr><td>4</td><td>활용처 카드 3종</td><td>한국 유학(권장 <strong>3급+</strong>) / EPS·취업(권장 <strong>2급+</strong>) / 거주·이민(권장 <strong>3급+</strong>). 목적에 맞는 급수를 선택하는 참고 자료입니다.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 목표 기관(대학·고용주)에서 요구하는 <strong>급수</strong>를 먼저 확인한 뒤 접수하세요. 급수를 잘못 선택해도 접수 기간 중 <strong>수납 전</strong>까지는 마이페이지에서 취소할 수 있습니다.</blockquote>
+<hr>
+<h2>5. TOPIK 안내 · 문항 구성</h2>
+<p><em>TOPIK 안내 · 문항 구성</em></p>
+<figure><img src="./screenshots/_pdf/fo_guide-questions__pc-1.png" alt=""></figure>
+<p>시험 <strong>영역별 문항 수·배점·시간</strong>을 정리한 표 페이지입니다. 시험 당일 <strong>시간 배분</strong>을 계획할 때 참고하세요. TOPIK Ⅱ는 <strong>쓰기(주관식)</strong> 가 포함되어 Ⅰ보다 시간·난이도가 높습니다.</p>
+<table><thead><tr><th>시험</th><th>영역 (유형)</th><th>문항</th><th>배점</th><th>시간</th></tr></thead><tbody><tr><td><strong>TOPIK Ⅰ</strong></td><td>듣기 (객관식)</td><td>30</td><td>100</td><td>40분</td></tr><tr><td></td><td>읽기 (객관식)</td><td>40</td><td>100</td><td>60분</td></tr><tr><td></td><td><strong>총계</strong></td><td><strong>70</strong></td><td><strong>200</strong></td><td><strong>100분</strong></td></tr><tr><td><strong>TOPIK Ⅱ</strong></td><td>듣기 (객관식)</td><td>50</td><td>100</td><td>110분(듣기+쓰기)</td></tr><tr><td></td><td>쓰기 (주관식)</td><td>4</td><td>100</td><td></td></tr><tr><td></td><td>읽기 (객관식)</td><td>50</td><td>100</td><td>70분</td></tr><tr><td></td><td><strong>총계</strong></td><td><strong>104</strong></td><td><strong>300</strong></td><td><strong>180분</strong></td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>TOPIK Ⅰ 문항 표</td><td>듣기 30문항(40분)·읽기 40문항(60분), 총 70문항·200점·100분. 헤더에 급수·총 문항·총점·시간 요약.</td></tr><tr><td>2</td><td>TOPIK Ⅱ 문항 표</td><td>듣기 50·쓰기 4·읽기 50문항, 총 104문항·300점·180분(듣기+쓰기 110분, 읽기 70분).</td></tr><tr><td>3</td><td>쓰기 안내 콜아웃</td><td>TOPIK Ⅱ 쓰기 = 단문 완성형 2 + 작문형 2, 응시자 <strong>본인 손</strong>으로 답안지에 직접 작성. 연필·볼펜 사용 불가. 모범 답안·채점 기준은 <a href="https://topik.go.kr">topik.go.kr</a>에서 확인.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> Ⅱ급 응시 시 <strong>쓰기 연습</strong>을 미리 해 두세요. OMR(객관식)만 연습하면 쓰기 시간이 부족할 수 있습니다.</blockquote>
+<hr>
+<h2>6. TOPIK 안내 · 평가 기준</h2>
+<p><em>TOPIK 안내 · 평가 기준</em></p>
+<figure><img src="./screenshots/_pdf/fo_guide-evaluation__pc-1.png" alt=""></figure>
+<p><strong>등급별 합격 점수</strong>와 채점·성적 인정 방식을 안내하는 페이지입니다. "몇 점 이상이면 몇 급?"을 확인할 수 있습니다. 실제 합격 여부는 <strong>총점</strong>이 해당 급수 <strong>최저 점수</strong> 이상일 때 해당 급수가 부여됩니다(영역별 최저 점수는 별도 규정이 없을 수 있음 — 최종 기준은 공식 안내 참고).</p>
+<table><thead><tr><th>시험</th><th>등급</th><th>최저 점수</th></tr></thead><tbody><tr><td>TOPIK Ⅰ (200점)</td><td>1급 / 2급</td><td>80점 이상 / 140점 이상</td></tr><tr><td>TOPIK Ⅱ (300점)</td><td>3급 / 4급 / 5급 / 6급</td><td>120 / 150 / 190 / 230점 이상</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>TOPIK Ⅰ 등급표</td><td>1급(80점+)·2급(140점+) 합격 기준. 등급별 최저 점수·설명·점수 막대 시각화.</td></tr><tr><td>2</td><td>TOPIK Ⅱ 등급표</td><td>3~6급(120/150/190/230점+) 합격 기준. Ⅰ과 동일 형식, 색상만 Ⅱ(적색) 테마.</td></tr><tr><td>3</td><td>추가 정보 카드 4종</td><td><strong>채점 방식</strong>(OMR 자동·쓰기 평가위원) · <strong>성적 인정 기간(2년)</strong> · <strong>등급 부여</strong>(총점 기준·미달 시 불합격) · <strong>성적표 발급</strong>(<a href="https://topik.go.kr">topik.go.kr</a> PDF). 성적표는 본부 사이트에서 직접 출력·다운로드합니다.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 성적은 <strong>2년간</strong> 인정됩니다. 유학·비자 일정에 맞춰 시험 시기를 계획하세요.</blockquote>
+<hr>
+<h2>7. TOPIK 규정 · 유의 사항</h2>
+<p><em>TOPIK 규정 · 유의 사항</em></p>
+<figure><img src="./screenshots/_pdf/fo_rules-notice__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_rules-notice__pc-2.png" alt=""></figure>
+<p><strong>시험 당일</strong> 지켜야 할 규정을 정리한 페이지입니다. 입실 시간·금지 물품·부정행위 제재 등을 <strong>시험 전날</strong> 꼭 읽어 보세요. 규정 위반 시 <strong>해당 회차 무효</strong> 또는 향후 응시 제한이 될 수 있습니다.</p>
+<table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>상단 경고</td><td>시험 시작 후 입실 불가, 규정 위반 시 무효 처리 가능.</td></tr><tr><td>2</td><td>입실 및 신분 확인</td><td>시작 <strong>30분 전</strong> 도착, 인정 신분증+수험표 지참, 사진·본인 일치 확인(마스크 잠시 벗기).</td></tr><tr><td>3</td><td>휴대 금지 물품</td><td>휴대전화·스마트워치, 전자사전·계산기, 이어폰·블루투스, 카메라·녹음기, 서적·노트·메모지, 사전류·참고서, 디지털 시계, 기타 전자기기.</td></tr><tr><td>4</td><td>진행 중 준수 사항</td><td>통신기기 전원 OFF·가방 보관, 책상 위 허용물(신분증·수험표·검정 사인펜·수정테이프), 화장실 사용 불가 원칙, 답안 교체·교환 금지, 감독관 지시 준수.</td></tr><tr><td>5</td><td>부정행위 제재</td><td>회차 무효·향후 응시 제한·형사 고발 가능. (대리응시·신분증 위변조·문제/답안 촬영 유출·외부 정보 검색·답안 교환)</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 시험장에는 <strong>휴대전화·스마트워치</strong>를 가져가지 마세요. 입실 전 전원 OFF 후 지정 장소에 보관해야 합니다. <span class="ln">신분증 규정</span>과 <span class="ln">수험표</span>도 함께 준비하세요.</blockquote>
+<hr>
+<h2>8. TOPIK 규정 · 답안 작성 요령</h2>
+<p><em>TOPIK 규정 · 답안 작성 요령</em></p>
+<figure><img src="./screenshots/_pdf/fo_rules-answer__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_rules-answer__pc-2.png" alt=""></figure>
+<p><strong>OMR(객관식) 마킹</strong>과 <strong>쓰기 답안</strong> 작성법, <strong>사용 가능한 필기구</strong>를 안내합니다. 시험 전에 OMR 연습을 해 두면 당일 실수를 줄일 수 있습니다.</p>
+<table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>사용 가능한 필기구</td><td><strong>검정색 컴퓨터용 사인펜만</strong> 사용(시험장 제공·본인 휴대 가능). 수정테이프·수정액·연필·볼펜 금지.</td></tr><tr><td>2</td><td>OMR 카드 마킹</td><td>올바른 예(원 안을 완전히 진하게) vs 잘못된 예(빗금·점·반칸) 일러스트로 비교.</td></tr><tr><td>3</td><td>해야 할 것 / 하지 말 것</td><td>Do/Don't 2열 표로 정답 마킹·<strong>수정 테이프</strong>로 OMR 정정·답안지 훼손 금지 등 안내. 답을 바꿀 때는 기존 마킹을 지우지 말고 <strong>수정테이프</strong>로 덮은 뒤 다시 마킹하세요.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 시험장에서 <strong>검정 컴퓨터용 사인펜</strong>과 <strong>수정테이프</strong>를 제공하지만, 본인 것을 가져가도 됩니다. 연필·볼펜·수정액은 <strong>사용할 수 없습니다.</strong></blockquote>
+<hr>
+<h2>9. TOPIK 규정 · 응시료 규정</h2>
+<p><em>TOPIK 규정 · 응시료 규정</em></p>
+<figure><img src="./screenshots/_pdf/fo_rules-fee__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_rules-fee__pc-2.png" alt=""></figure>
+<p><strong>응시료 금액·납부 방법·환불률</strong>을 안내하는 페이지입니다(2026 기준). 이 사이트에서는 <strong>온라인 결제가 되지 않으므로</strong>, 접수 후 <strong>지정 수납처에서 직접</strong> 납부해야 합니다. Ⅰ·Ⅱ 동시 접수 시 <strong>급수마다 각각</strong> 납부합니다.</p>
+<ul><li><strong>1) 응시료:</strong> TOPIK Ⅰ = <strong>$25 USD</strong>, TOPIK Ⅱ = <strong>$25 USD</strong>. (회차별로 변경될 수 있음 — <strong>접수 화면·공지</strong>에 표시된 금액이 최종 기준입니다.)</li><li><strong>2) 결제 방법:</strong> <strong>오프라인 수납만</strong> (온라인 카드·계좌이체 미지원). 지정 계좌/수납처에서 직접 납부, 수납 시 <strong>접수번호</strong>를 꼭 확인·기록, <strong>영수증 보관</strong>, Ⅰ·Ⅱ 동시 접수 시 <strong>수준별 개별 납부</strong>.</li><li><strong>3) 환불 정책 표:</strong></li></ul>
+<table><thead><tr><th>시점</th><th>환불률</th><th>비고</th></tr></thead><tbody><tr><td>접수 기간 중</td><td>100%</td><td>오프라인 수납 전 — 마이페이지에서 직접 취소</td></tr><tr><td>접수 마감 후 ~ 시험 7일 전</td><td>60%</td><td>환불·정보정정신청 게시판으로 신청</td></tr><tr><td>시험 7일 전 ~ 1일 전</td><td>30%</td><td>환불·정보정정신청 게시판으로 신청</td></tr><tr><td>시험 당일 이후</td><td>0%</td><td>환불 불가</td></tr></tbody></table>
+<ul><li><strong>4) 영수증 발급:</strong> 종이 영수증은 환불·정정 신청 시 필요할 수 있음. 전자 영수증은 시행 기관 문의.</li></ul>
+<blockquote><strong>중요:</strong> <strong>오프라인 수납 전까지</strong>는 마이페이지에서 <strong>직접 접수 취소</strong>(100% 환불 해당)가 가능합니다. <strong>수납 후</strong>에는 마이페이지 취소가 막히므로, 환불이 필요하면 <span class="ln">환불·정보정정신청 게시판</span>으로 신청하세요. 환불률은 아래 표와 <span class="ln">공지</span>를 함께 확인하세요.</blockquote>
+<hr>
+<h2>10. TOPIK 규정 · 신분증 규정</h2>
+<p><em>TOPIK 규정 · 신분증 규정</em></p>
+<figure><img src="./screenshots/_pdf/fo_rules-id__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_rules-id__pc-2.png" alt=""></figure>
+<p>시험 당일 <strong>반드시 지참</strong>해야 하는 <strong>신분증</strong> 종류와, <strong>인정되지 않는</strong> 증명, <strong>분실 시</strong> 대응 방법을 안내합니다. 신분증 없이는 <strong>응시할 수 없습니다.</strong> 수험표와 함께 준비하세요.</p>
+<table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>인정 신분증</td><td>여권·미얀마 NRC·미얀마 발급 거주증·국가 발급 사진 부착 신분증(운전면허증 등). <strong>유효기간 내 + 사진 부착 + 본인 일치</strong> 필수.</td></tr><tr><td>2</td><td>불인정 신분증</td><td>학생증·사원증 / 사진 없는 신분증 / 만료된 신분증 / 사본·휴대폰 화면 이미지.</td></tr><tr><td>3</td><td>신분증 미소지 시</td><td>인정 신분증 없으면 <strong>응시 불가</strong>. 당일 분실 시 시작 30분 전까지 감독관에 즉시 신고, 대체 확인 가능 여부는 감독관 판단.</td></tr><tr><td>4</td><td>사진 일치 확인</td><td>신분증 사진과 응시자 <strong>동일인</strong> 식별 필요. 머리·안경 변화는 인정, 안면 윤곽이 크게 다르면 추가 확인. 마스크·모자·선글라스는 확인 시 <strong>잠시 벗기</strong>.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 접수·가입 시 올린 <strong>증명사진</strong>과 당일 본모습이 너무 다르면 사진 심사·당일 확인에서 지연될 수 있습니다. <span class="ln">내정보 수정</span>에서 최근 사진으로 미리 바꿔 두세요.</blockquote>
+<hr>
+<h2>11. TOPIK 접수 · 접수 방법</h2>
+<p><em>TOPIK 접수 · 접수 방법</em></p>
+<figure><img src="./screenshots/_pdf/fo_apply-howto__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_apply-howto__pc-2.png" alt=""></figure>
+<p><strong>회원가입부터 수험표 출력까지</strong> 전체 흐름을 6단계로 설명하는 안내 페이지입니다. 처음 접수하시는 분은 이 페이지를 <strong>처음부터 끝까지</strong> 한 번 읽은 뒤 <span class="ln">시험 접수</span>로 이동하세요.</p>
+<table><thead><tr><th>번호</th><th>단계</th><th>채널</th><th>내용</th></tr></thead><tbody><tr><td>1</td><td>회원가입</td><td>온라인</td><td>이메일 인증 + 기본정보·증명사진 등록 (사진은 접수 시 자동 사용).</td></tr><tr><td>2</td><td>로그인</td><td>온라인</td><td>이메일+비밀번호 또는 Google 계정.</td></tr><tr><td>3</td><td>시험 접수 (4단계)</td><td>온라인</td><td>회차·급수 → 회원정보 확인 → 사진 규격 확인 → 최종 제출. Ⅰ·Ⅱ 동시 가능.</td></tr><tr><td>4</td><td>사진 심사 + 응시료 수납</td><td>오프라인</td><td>운영진 사진 심사 + 지정 수납처 직접 납부 (동시 접수 시 수준별 개별).</td></tr><tr><td>5</td><td>수험번호 부여</td><td>온라인</td><td>사진 승인 + 수납 완료 확인 시 일괄 부여 → 마이페이지에서 확인.</td></tr><tr><td>6</td><td>수험표 출력</td><td>외부</td><td>시험 2주 전부터 <strong>topik.go.kr</strong>에서 출력, 당일 신분증과 지참.</td></tr></tbody></table>
+<ul><li><strong>준비물 체크리스트:</strong> 유효 <strong>이메일</strong> / 본인 <strong>연락처</strong>(미얀마 휴대전화 권장) / <strong>여권용 증명사진</strong>(JPG·PNG, 3:4, 200KB~2MB, 6개월 이내) / <strong>신분증</strong> 정보(여권·NRC) / <strong>응시료</strong>(오프라인, USD 현금 등 — 수납처 안내는 공지 참고).</li><li><strong>경고 콜아웃:</strong> 본 사이트는 <strong>응시료 온라인 결제 불가</strong> → 온라인 접수 완료 후 <strong>오프라인 수납</strong> → 운영진 확인 → <strong>수험번호 부여</strong> 순서입니다.</li></ul>
+<blockquote><strong>TIP:</strong> 4단계(사진 심사 + 수납)는 <strong>운영진·수납처</strong>에서 진행됩니다. 접수 직후 마이페이지에 <strong>「사진 심사 대기」「수납 대기」</strong> 가 보이면 정상입니다. 조급해 문의하기 전에 <span class="ln">접수 확인</span>에서 진행 칸을 확인하세요.</blockquote>
+<hr>
+<h2>12. TOPIK 접수 · 시험 접수 (4단계)</h2>
+<p><em>TOPIK 접수 · 시험 접수 (4단계)</em></p>
+<figure><img src="./screenshots/_pdf/fo_register__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_register__pc-2.png" alt=""></figure>
+<p><strong>로그인 필수</strong> — 이용 전 로그인해 주세요.</p>
+<p>4단계로 나뉜 <strong>온라인 시험 접수</strong> 화면입니다. 상단 단계 표시에서 <strong>완료한 단계를 클릭</strong>하거나 <strong>다음·이전</strong> 버튼으로 이동합니다. <strong>저장 후 나가기</strong>로 중간 저장(30일)도 가능합니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li><strong>STEP1 회차·급수</strong> — <strong>접수 중</strong>인 회차만 선택 → <strong>시험장</strong> → <strong>TOPIK Ⅰ/Ⅱ</strong>(복수 가능) → <strong>다음</strong>.</li><li><strong>STEP2 회원정보 확인</strong> — 가입 정보 <strong>읽기 전용</strong>. 수정은 <span class="ln">내정보 수정</span>에서 <strong>접수 전에</strong>.</li><li><strong>STEP3 사진 규격 확인</strong> — 증명사진 + <strong>5개 체크 전부</strong>해야 <strong>다음</strong> 활성. 사진 교체는 이 단계에서 불가.</li><li><strong>STEP4 최종 확인</strong> — 요약 + <strong>약관 동의</strong> → <strong>접수하기</strong> → <strong>접수확인</strong>으로 마이페이지.</li><li><strong>저장 후 나가기</strong> — 임시저장. 다음 접속 시 이어쓰기 여부를 묻습니다.</li></ol>
+<h3>STEP별 핵심 동작</h3>
+<table><thead><tr><th>단계</th><th>주요 동작</th></tr></thead><tbody><tr><td>1</td><td>회차 선택 → 시험장 선택 → TOPIK Ⅰ·Ⅱ 급수(복수) 선택 → <strong>다음</strong></td></tr><tr><td>2</td><td>가입 정보 읽기 전용 표시(수정 불가, 내정보 수정 링크 제공)</td></tr><tr><td>3</td><td>증명사진 미리보기 + 5항목 규격 체크 전부 선택 시 <strong>다음</strong> 활성</td></tr><tr><td>4</td><td>접수 요약 확인 + 약관 동의 → <strong>접수하기</strong> (증명사진 없으면 제출 불가)</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 단계 표시</strong> — ①회차·급수 ②회원정보 확인 ③사진 규격 확인 ④최종 확인. 완료 단계 클릭 시 해당 단계로 이동(모바일은 활성 탭을 화면 중앙으로 스크롤).</li><li><strong>2) 저장 후 나가기</strong> — 입력 중인 내용을 임시 저장하고 마이페이지로 나갈 수 있습니다. 저장된 내용은 <strong>30일간</strong> 보관되며, 다음에 접수 화면에 들어오면 이어서 작성할지 묻습니다.</li><li><strong>3) 회차 목록</strong> — 접수 중·예정 회차만 카드로 노출. 카드에 제N회/제목, 상태 배지(접수 중/접수 마감/예정), 시험일, 접수 기간. <strong>접수 중이 아닌 회차는 선택 불가</strong>. 한 번에 하나만 선택.</li><li><strong>4) 시험장</strong> — 시험장 목록 드롭다운. 시험장이 1개면 자동 선택. <strong>재접수</strong>이거나 <strong>같은 회차에 진행 중 급수</strong>가 있으면 기존 시험장으로 고정(변경 불가 + 안내 문구).</li><li><strong>5) 급수 선택</strong> — TOPIK Ⅰ·Ⅱ 복수 선택. 이미 진행 중인 급수는 선택 불가 + 사유 안내(사진 심사중/수납 대기/접수 진행중). <strong>재접수</strong>에서는 반려·취소된 급수만 다시 선택 가능.</li><li><strong>6) 응시료 표시</strong> — 선택 회차·급수별 응시료. Ⅰ·Ⅱ 동시 선택 시 최종 확인 단계 합계에 반영.</li><li><strong>7) 회원정보 (STEP2)</strong> — 한글·영문 성명, 생년월일, 성별, 국적, 제1언어, 연락처, 이메일, 직업·응시동기·응시목적. 이 화면에서는 수정 불가 → <strong>내정보 수정</strong> 이용.</li><li><strong>8) 사진 미리보기 (STEP3)</strong> — 가입 시 등록한 증명사진 표시. <strong>이 단계에서 교체 불가</strong> → 내정보 수정에서 변경.</li><li><strong>9) 규격 체크리스트 (STEP3)</strong> — 5항목: 여권용 정면 컬러(JPG)·흰색 배경 / 최근 6개월 이내 / 흑백·흐릿 아님 / 모자·선글라스·이어폰·앞머리로 얼굴 안 가림 / 정면·본인. <strong>전부 체크해야</strong> <strong>다음</strong> 활성.</li><li><strong>10) 최종 요약 (STEP4)</strong> — 회차·시험일, 선택 급수(2개면 "동시 접수"), 시험장, 응시자 정보, 응시료 합계. 응시료·환불 안내 함께 표시.</li><li><strong>11) 약관 동의</strong> — <strong>[필수]</strong> 체크. 미체크 시 제출 불가(알림).</li><li><strong>12) 제출</strong> — <strong>접수하기</strong> → 완료 안내 → <strong>접수확인</strong> 누르면 마이페이지 이동.</li></ul>
+<h3>자주 보는 안내 메시지</h3>
+<table><thead><tr><th>상황</th><th>동작 / 메시지</th></tr></thead><tbody><tr><td>급수 미선택</td><td>"응시 급수를 1개 이상 선택해 주세요."</td></tr><tr><td>사진 체크리스트 미완료</td><td>STEP3에서 <strong>다음</strong> 비활성</td></tr><tr><td>접수 불가 회차</td><td>"접수 가능한 회차가 아닙니다."</td></tr><tr><td>동일 회차·급수 중복</td><td>"이미 …접수 진행 중입니다."</td></tr><tr><td>잠긴 시험장 위반</td><td>"다른 급수가 진행 중일 때는 기존 시험장으로만 접수할 수 있습니다."</td></tr><tr><td>잘못된 시험장</td><td>"선택한 시험장을 사용할 수 없습니다."</td></tr><tr><td>로그인 만료</td><td>"로그인이 만료되었습니다." → 로그인 화면으로 이동</td></tr></tbody></table>
+<h3>재접수 진입</h3>
+<p>마이페이지에서 <strong>재접수</strong> 클릭 시 접수 화면으로 이동합니다. 재접수 모드는 임시저장 복원을 건너뛰고, <strong>반려·취소된 급수만</strong> 다시 선택해 제출합니다.</p>
+<blockquote><strong>TIP:</strong> STEP3 체크리스트 5개를 <strong>한 번에</strong> 체크하지 않으면 <strong>다음</strong> 버튼이 회색으로 비활성입니다. 사진 규격을 다시 확인한 뒤 모두 체크해 주세요.</blockquote>
+<hr>
+<h2>13. TOPIK 접수 · 접수 확인</h2>
+<p><em>TOPIK 접수 · 접수 확인</em></p>
+<figure><img src="./screenshots/_pdf/fo_mypage__pc-1.png" alt=""></figure>
+<p><strong>로그인 필수.</strong></p>
+<p><strong>마이페이지(접수 확인)</strong> 는 접수 후 <strong>가장 자주</strong> 방문하게 되는 화면입니다. <strong>내 프로필</strong>과 <strong>회차·급수별 접수 카드</strong>를 한곳에서 볼 수 있으며, <strong>사진 심사·응시료 수납·수험번호</strong> 진행 상황을 <strong>4칸 진행 현황</strong>으로 확인합니다. 스크린샷은 <strong>PC + MO</strong> 전체 페이지를 나란히 보여 주며, <strong>● 번호</strong>는 아래 표와 같습니다.</p>
+<p>동일 회차에 TOPIK Ⅰ·Ⅱ를 함께 접수한 경우(예: 제107회) <strong>급수별 카드가 각각</strong> 표시됩니다. Ⅰ·Ⅱ는 <strong>사진 심사·수납·수험번호</strong>도 <strong>급수별로</strong> 따로 진행됩니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>로그인 후 <strong>접수 확인</strong>(또는 상단 <strong>내 이름</strong> 클릭)에 들어오면 상단 <strong>프로필 카드</strong>와 <strong>진행 중인 접수 / 지난 접수</strong> 탭이 표시됩니다.</li><li><strong>진행 중인 접수</strong> 탭에서 회차·급수·<strong>상태 배지</strong>·4칸 진행 현황(수험번호·사진 심사·응시료 수납·접수일)을 확인합니다. <strong>주황색</strong>으로 강조된 칸이 <strong>지금 해야 할 다음 단계</strong>입니다(예: 수납 대기).</li><li><strong>접수 확인증</strong>을 누르면 인쇄용 확인증 창이 열립니다. 수납 전·미반려 건은 <strong>접수 취소</strong>도 이용할 수 있습니다.</li><li><strong>사진 반려</strong> 시 <strong>사유보기</strong>로 이유 확인 → <span class="ln">내정보 수정</span>에서 사진 교체 → <strong>사진 재등록</strong> 또는 자동 재심사 대기.</li></ol>
+<h3>화면 구성 (스크린샷 예시)</h3>
+<table><thead><tr><th>번호</th><th>요소</th><th>스크린샷에서 보이는 내용 / 동작</th></tr></thead><tbody><tr><td>1</td><td><strong>프로필 카드</strong></td><td>증명사진, 한글·영문 이름, 연락처·이메일. 우측 <strong>내정보 수정</strong> 링크.</td></tr><tr><td>2</td><td><strong>탭</strong></td><td><strong>진행 중인 접수</strong> / <strong>지난 접수</strong> — 탭 옆 숫자는 해당 목록 건수. 취소·완료 건은 지난 접수로 이동.</td></tr><tr><td>3</td><td><strong>접수 카드 (급수별)</strong></td><td>예: <strong>제107회 TOPIK Ⅰ</strong> · 배지 <strong>접수 완료</strong> · 시험일·시험장·접수번호. Ⅱ급은 별도 카드.</td></tr><tr><td>4</td><td><strong>4칸 진행 현황</strong></td><td><strong>수험번호</strong> 부여 전 · <strong>사진 심사</strong> 대기 · <strong>응시료 수납</strong> 대기(주황 강조) · <strong>접수일</strong>.</td></tr><tr><td>5</td><td><strong>접수 확인증</strong></td><td>카드 하단 버튼 → 인쇄용 확인증(회차·접수번호·급수·응시료·접수일·응시자 등).</td></tr><tr><td>6</td><td><strong>접수 취소</strong></td><td>수납 전·미반려 건만 노출. 확인 후 해당 급수 접수 취소.</td></tr></tbody></table>
+<h3>상태 배지 의미</h3>
+<table><thead><tr><th>배지</th><th>의미</th></tr></thead><tbody><tr><td>접수 완료</td><td>제출됨, 사진 심사 대기</td></tr><tr><td>사진 심사중</td><td>운영진 사진 심사 진행</td></tr><tr><td>수납 대기</td><td>사진 승인 후 응시료 미납</td></tr><tr><td>수납 완료</td><td>납부 완료, 수험번호 부여 대기</td></tr><tr><td>수험번호 부여</td><td>수험번호 부여(공개일 전까지 숨김 가능)</td></tr><tr><td>사진 반려</td><td>사진 재등록 필요</td></tr><tr><td>반려</td><td>접수 반려 → 재접수 필요</td></tr><tr><td>접수 취소</td><td>취소됨(지난 접수 탭)</td></tr></tbody></table>
+<h3>기타 요소 (카드·안내 창)</h3>
+<ul><li><strong>반려 사유</strong> — 사진/접수 반려 카드의 <strong>사유보기</strong> → 반려 사유 확인.</li><li><strong>재접수</strong> — 반려 건에 표시 → 접수 화면으로 이동해 다시 접수.</li></ul>
+<h3>액션 노출 규칙</h3>
+<table><thead><tr><th>상태</th><th>노출 버튼</th></tr></thead><tbody><tr><td>접수 완료·사진 심사중·수납 대기</td><td>접수 확인증 · 접수 취소</td></tr><tr><td>수납 완료</td><td>접수 확인증</td></tr><tr><td>수험번호 부여</td><td>접수 확인증 · 수험표 출력</td></tr><tr><td>사진 반려</td><td>사진 재등록 · 사유보기</td></tr><tr><td>반려</td><td>재접수 · 사유보기</td></tr></tbody></table>
+<ul><li><strong>취소 불가:</strong> 이미 취소되었거나 <strong>수납이 완료된</strong> 접수는 마이페이지에서 직접 취소할 수 없습니다. 환불이 필요하면 <span class="ln">환불·정보정정신청 게시판</span>을 이용하세요(환불률은 <span class="ln">응시료 규정</span> 참고).</li><li>한 회차에 여러 급수가 있을 때 <strong>급수 단위 취소</strong>가 가능하며, 모든 급수가 취소되면 접수 건 전체가 취소 처리됩니다.</li><li><strong>수험번호</strong>는 운영진이 부여한 뒤, <strong>공개 일시</strong> 이전에는 마이페이지에 <strong>「부여 전」</strong> 또는 숨김으로 보일 수 있습니다. 공개 후에도 안 보이면 <span class="ln">문의게시판</span>으로 연락하세요.</li></ul>
+<blockquote><strong>TIP:</strong> 접수 후 <strong>매일 한 번</strong> 마이페이지를 확인하면 사진 반려·수납 안내를 놓치지 않습니다. 수납은 <strong>지정 수납처</strong>에서 <strong>접수번호</strong>를 알려 주며 납부합니다.</blockquote>
+<hr>
+<h2>14. TOPIK 접수 · 수험표 출력</h2>
+<p><em>TOPIK 접수 · 수험표 출력</em></p>
+<figure><img src="./screenshots/_pdf/fo_ticket__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_ticket__pc-2.png" alt=""></figure>
+<p>로그인 없이도 <strong>안내 내용</strong>은 볼 수 있습니다. <strong>본인 수험번호</strong> 확인·출력 안내는 <strong>로그인 후</strong> 가능합니다.</p>
+<p><strong>수험표(입장권)</strong> 는 이 사이트가 아니라 <strong>topik.go.kr</strong>(TOPIK 본부 공식 사이트)에서 출력합니다. 아래 순서를 따라 주세요.</p>
+<h3>출력까지의 흐름</h3>
+<ol><li><span class="ln">접수 확인(마이페이지)</span>에서 <strong>수험번호 부여</strong>·<strong>공개</strong> 여부 확인</li><li>이 페이지 또는 마이페이지의 <strong>TOPIK 본부에서 수험표 출력</strong> 링크로 <strong>topik.go.kr</strong> 이동</li><li>본부 사이트 안내에 따라 수험번호로 수험표 출력(보통 <strong>시험 2주 전</strong>부터)</li><li>시험 당일 <strong>수험표 + 신분증</strong> 지참</li></ol>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 상태 영역</strong> — 로그인·접수 상태에 따라 안내가 바뀝니다:<ul><li>비로그인: "로그인하면 수험번호 공개 여부를 확인" 안내(로그인 링크).</li><li>수험번호 공개됨: 회차별 카드 + 급수별 수험번호 + <strong>TOPIK 본부에서 수험표 출력</strong> 버튼.</li><li>부여됐으나 공개 전: "아직 공개일 전" 경고.</li><li>대상 없음/진행 중만 있음: 안내 + 접수/확인 링크.</li></ul></li><li><strong>2) topik.go.kr 안내</strong> — 본부 사이트로 이동 버튼.</li><li><strong>3) 안내 블록 4종</strong> — 출력 시점(시험 <strong>2주 전 월요일 10시~</strong>), 확인 방법(로그인→마이페이지→접수현황→수험표), 시험 당일(<strong>수험표+신분증</strong>), 출력 유의사항(<strong>Chrome</strong> 권장·<strong>팝업 차단 해제</strong>).</li></ul>
+<blockquote><strong>TIP:</strong> 수험표가 출력되지 않으면 브라우저 <strong>팝업 차단</strong>을 해제하고 다시 시도하세요. 수험번호가 아직 <strong>공개 전</strong>이면 본부 사이트에서도 조회되지 않을 수 있습니다.</blockquote>
+<hr>
+<h2>15. 게시판 · 공지사항</h2>
+<p><em>게시판 · 공지사항</em></p>
+<figure><img src="./screenshots/_pdf/fo_notice-list__pc-1.png" alt=""></figure>
+<p>운영 기관의 <strong>공식 공지</strong>를 확인하는 게시판입니다. 접수 일정 변경·수납처·시험장 안내 등 <strong>중요·접수</strong> 분류 공지는 접수 전후에 꼭 확인하세요. 한 페이지에서 <strong>목록</strong>과 <strong>상세</strong>를 전환하며 읽을 수 있고, 공지 링크를 공유하면 해당 글 상세로 바로 열립니다.</p>
+<h3>화면 구성</h3>
+<table><thead><tr><th>화면</th><th>설명</th></tr></thead><tbody><tr><td>목록</td><td>카테고리 필터 + 검색 + 공지 목록(번호·분류·제목·작성일)</td></tr><tr><td>상세</td><td>제목·작성 정보·본문·첨부·이전글/다음글</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 카테고리 칩</strong> — 전체 / 중요 / 접수 / 시험 / 결과. 카테고리를 누르면 해당 분류만 표시됩니다.</li><li><strong>2) 검색</strong> — <strong>제목</strong>을 기준으로 검색합니다. 결과 없으면 "검색 조건에 맞는 공지가 없습니다." 표시.</li><li><strong>3) 목록</strong> — 고정 공지는 번호 대신 NEW 배지. 행 클릭 → 상세. 게시 기간·공개 상태에 맞는 공지만 표시.</li><li><strong>4) 상세 본문</strong> — 관리자가 작성한 내용. 외부 링크는 새 탭. 조회 시 조회수 증가. (스크린샷에서는 목록 <strong>아래</strong>에 상세 영역이 함께 펼쳐져 있습니다.)</li><li><strong>5) 첨부</strong> — 파일명·크기, 다운로드.</li><li><strong>6) 이전글/다음글</strong> — 목록과 같은 순서 기준. 클릭 시 해당 글 상세.</li><li><strong>7) 언어 전환</strong> — KO/MY/EN 변경 시 목록·상세를 해당 언어로 다시 불러옵니다. 번역이 없는 공지는 한국어가 표시될 수 있습니다.</li></ul>
+<blockquote><strong>TIP:</strong> 홈 화면 <strong>공지 미리보기</strong>에서 최신 5건만 볼 수 있습니다. 지난 공지는 이 메뉴 <strong>목록·검색</strong>으로 찾으세요.</blockquote>
+<hr>
+<h2>16. 게시판 · FAQ</h2>
+<p><em>게시판 · FAQ</em></p>
+<figure><img src="./screenshots/_pdf/fo_faq__pc-1.png" alt=""></figure>
+<p><strong>자주 묻는 질문</strong>을 카테고리별로 모아 둔 페이지입니다. 접수·수납·수험표·사진 등 <strong>반복 질문</strong>은 문의 전에 여기서 먼저 검색해 보세요. 질문을 클릭하면 답변이 <strong>아코디언</strong>으로 펼쳐집니다.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>카테고리 칩</td><td>전체 / 계정 / 접수 / 시험 / 결과 / 기타. 카테고리를 누르면 해당 분류만 표시됩니다.</td></tr><tr><td>2</td><td>검색</td><td>질문과 답변에서 검색합니다. 일치 항목은 자동으로 펼쳐집니다.</td></tr><tr><td>3</td><td>아코디언 그룹</td><td>카테고리별 그룹 헤더(건수 배지) + 질문 클릭 시 답변 펼침.</td></tr><tr><td>4</td><td>언어 전환</td><td>KO/MY/EN 변경 시 해당 언어로 다시 불러옵니다.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 검색창에 <strong>「수납」「사진」「수험번호」</strong> 등 키워드를 입력하면 관련 질문이 자동으로 펼쳐집니다.</blockquote>
+<hr>
+<h2>17. 게시판 · 문의게시판</h2>
+<p><em>게시판 · 문의게시판</em></p>
+<figure><img src="./screenshots/_pdf/fo_qna__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_qna__pc-2.png" alt=""></figure>
+<p><strong>로그인 필수.</strong></p>
+<p>응시자가 운영진에게 <strong>1:1로 질문</strong>하는 게시판입니다. FAQ에서 답을 찾지 못했을 때 이용하세요. 한 페이지에서 <strong>목록</strong>, <strong>글쓰기</strong>, <strong>상세 보기</strong>를 전환합니다. <strong>관리자 답변</strong>이 등록되면 상태가 <strong>답변 완료</strong> 등으로 바뀝니다.</p>
+<h3>사용 흐름 (비밀글 문의 시나리오)</h3>
+<ol><li><strong>문의하기</strong> → 작성 화면. 카테고리·공개 범위 선택. <strong>비밀</strong>을 고르면 비밀번호 입력칸(4자 이상).</li><li>제목(100자 이내)·내용(10자 이상)·첨부(jpg/png/pdf, 5MB 이하, 최대 3개) 입력 후 <strong>제출</strong>.</li><li>목록에서 내 비밀글은 자물쇠 아이콘. <strong>본인</strong>이면 본문 열람. <strong>타인</strong> 비밀글 클릭 시 "작성자·관리자만 열람" 안내.</li></ol>
+<h3>입력 필드 (작성 화면)</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th><th>예시</th></tr></thead><tbody><tr><td>카테고리</td><td>●</td><td>접수 / 시험 / 기타</td><td>접수</td></tr><tr><td>공개 범위</td><td>●</td><td>일반(누구나) / 비밀(작성자·관리자만)</td><td>비밀</td></tr><tr><td>비밀글 비밀번호</td><td>비밀 선택 시 ●</td><td>4자 이상</td><td>1234</td></tr><tr><td>제목</td><td>●</td><td>1~100자</td><td>응시료 수납 문의</td></tr><tr><td>내용</td><td>●</td><td>10자 이상</td><td>…</td></tr><tr><td>첨부</td><td>○</td><td>jpg/png/pdf, 5MB 이하, 최대 3개</td><td>receipt.jpg</td></tr></tbody></table>
+<h3>게시글 상태</h3>
+<table><thead><tr><th>상태</th><th>표시</th></tr></thead><tbody><tr><td>접수</td><td>접수</td></tr><tr><td>처리중</td><td>처리중</td></tr><tr><td>답변 대기</td><td>답변 대기</td></tr><tr><td>답변 완료</td><td>답변 완료</td></tr><tr><td>완료</td><td>완료</td></tr><tr><td>반려</td><td>반려</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 목록</strong> — 번호·분류·제목·작성자·작성일·상태. 탭(전체/일반/비밀)·카테고리·검색 필터. 페이지당 20건. 작성자는 "본인", 관리자 답변은 "관리자" 표기.</li><li><strong>2) 작성 화면</strong> — 위 입력 표 참조. 첨부는 <strong>선택 즉시 업로드</strong>, 상태(업로드 중/완료/실패) 표시.</li><li><strong>3) 상세 화면</strong> — 제목·작성 정보·본문·첨부·관리자 답변·댓글.</li><li><strong>4) 수정·삭제</strong> — 관리자 답변 <strong>전</strong>에만 <strong>수정</strong>·<strong>삭제</strong> 가능.</li><li><strong>5) 비밀글 안내</strong> — 타인 비밀글 클릭 시 "비밀글입니다. 작성자·관리자만 열람할 수 있습니다." 안내.</li><li><strong>6) 댓글·답글</strong> — 로그인 사용자만 작성. <strong>답글</strong>로 대댓글. 관리자 댓글은 "관리자" 표기.</li></ul>
+<h3>검증·에러</h3>
+<table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>제목 길이</td><td>"제목을 100자 이내로 입력해 주세요."</td></tr><tr><td>내용 길이</td><td>"내용을 10자 이상 입력해 주세요."</td></tr><tr><td>비밀글 비번</td><td>"비밀글 비밀번호를 4자 이상 입력해 주세요."</td></tr><tr><td>첨부 형식/크기</td><td>"jpg, png, pdf 형식만…" / "파일 크기는 5MB 이하…"</td></tr><tr><td>첨부 개수</td><td>"첨부파일은 최대 3개까지 가능합니다."</td></tr><tr><td>비로그인</td><td>로그인 화면으로 이동</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 개인정보(여권번호 전체·계좌번호 등)는 <strong>비밀글</strong>로 작성하는 것을 권장합니다. 관리자 <strong>답변 후</strong>에는 본인 글도 <strong>수정·삭제</strong>할 수 없습니다 — 제출 전 내용을 꼼꼼히 확인하세요.</blockquote>
+<hr>
+<h2>18. 게시판 · 환불·정보정정</h2>
+<p><em>게시판 · 환불·정보정정</em></p>
+<figure><img src="./screenshots/_pdf/fo_refund-correction__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_refund-correction__pc-2.png" alt=""></figure>
+<p><strong>로그인 필수.</strong></p>
+<p><strong>환불</strong> 또는 <strong>회원·접수 정보 정정</strong>을 신청하는 <strong>전용 게시판</strong>입니다. <span class="ln">문의게시판</span>과 비슷하지만, <strong>모든 글이 비밀글</strong>로 등록되며 <strong>유형(환불/정보정정)</strong> 을 반드시 선택합니다. 환불률·기한은 <span class="ln">응시료 규정</span>을 참고하세요.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li><strong>글쓰기</strong> → 유형(환불/정보정정) → 제목·내용 → 비밀번호(4자 이상) → 첨부(영수증·신분증 사본 등) → <strong>개인정보 처리 동의</strong> → <strong>제출</strong>.</li><li>모든 글은 비밀글 → <strong>작성자 본인과 관리자</strong>만 본문 열람. 타인 글 클릭 시 안내만 표시.</li></ol>
+<h3>입력 필드 (작성 화면)</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th><th>예시</th></tr></thead><tbody><tr><td>유형</td><td>●</td><td>환불 / 정보정정</td><td>환불</td></tr><tr><td>제목</td><td>●</td><td>1~100자</td><td>제107회 응시료 환불</td></tr><tr><td>내용</td><td>●</td><td>10자 이상 (사유·접수번호·회차 등)</td><td>…</td></tr><tr><td>비밀번호</td><td>●</td><td>4자 이상 (모든 글 비밀)</td><td>1234</td></tr><tr><td>첨부</td><td>○</td><td>jpg/png/pdf, 5MB 이하, 최대 5개</td><td>receipt.pdf</td></tr><tr><td>개인정보 동의</td><td>●</td><td>미체크 시 제출 불가</td><td>✔</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 유형 칩</strong> — 전체 / 환불 / 정보정정. 유형별 목록 필터.</li><li><strong>2) 목록 + 페이지</strong> — 번호·유형·제목·작성자·작성일·상태.</li><li><strong>3) 작성 화면</strong> — 위 표 참조. "모든 신청 글은 비밀글로 등록" 안내 고정.</li><li><strong>4) 상세</strong> — 본문·관리자 답변·댓글. 수정·삭제는 <strong>관리자 답변 전</strong>까지.</li></ul>
+<blockquote><strong>TIP:</strong> 환불 신청 시 <strong>접수번호·회차·급수·영수증 사본</strong>을 내용·첨부에 포함하면 처리가 빨라집니다. <strong>개인정보 처리 동의</strong>는 필수입니다.</blockquote>
+<hr>
+<h2>19. 계정 · 로그인</h2>
+<p><em>계정 · 로그인</em></p>
+<figure><img src="./screenshots/_pdf/fo_login__pc-1.png" alt=""></figure>
+<p><strong>이메일+비밀번호</strong> 또는 <strong>Google 계정</strong>으로 로그인합니다. 시험 접수·마이페이지·문의 등 대부분의 기능은 로그인 후 이용합니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>이메일+비밀번호 입력 → <strong>로그인</strong>. <strong>로그인 상태 유지</strong> 체크 시 브라우저를 닫아도 로그인 유지.</li><li>성공 시, 로그인 전에 가려던 페이지가 있으면 그곳으로, 없으면 홈으로 이동.</li><li>비밀번호를 6개월 이상 변경하지 않았다면 변경 권유 안내(나중에 / 변경).</li></ol>
+<h3>입력 필드</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>이메일</td><td>●</td><td>이메일 형식(= 로그인 아이디)</td></tr><tr><td>비밀번호</td><td>●</td><td><strong>표시/숨김</strong> 토글 제공</td></tr><tr><td>로그인 상태 유지</td><td>○</td><td>체크 시 브라우저를 닫아도 로그인 유지</td></tr></tbody></table>
+<h3>안내 창</h3>
+<table><thead><tr><th>기능</th><th>설명</th></tr></thead><tbody><tr><td>아이디(이메일) 찾기</td><td>이름·생년월일·연락처 입력 → 가입 이메일 일부 안내.</td></tr><tr><td>비밀번호 찾기</td><td>이메일로 인증코드 → 비밀번호 재설정 화면.</td></tr><tr><td>비밀번호 변경 권고</td><td>6개월 이상 미변경 시 표시. <strong>변경</strong> → 내정보 수정.</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 로그인 폼</strong> — 이메일·비밀번호 입력 후 <strong>로그인</strong>.</li><li><strong>2) Google 로그인</strong> — Google 계정으로 로그인. 프로필 미완성 시 회원가입으로 이어질 수 있음.</li><li><strong>3) 아이디 찾기</strong> — 이름·생년월일·연락처 <strong>모두 일치</strong> 시 이메일 일부 안내.</li><li><strong>4) 비밀번호 찾기</strong> — 이메일 → 인증코드. Google 계정이면 Google 로그인 안내, 미가입이면 "가입된 계정이 없습니다."</li><li><strong>5) 비밀번호 변경 권고</strong> — 이메일 계정, 6개월 이상 미변경 시 <strong>안내 창(모달)</strong> 으로 표시됩니다.</li><li><strong>6) 회원가입 링크</strong> — 회원가입 화면으로 이동.</li></ul>
+<h3>로그인 실패 시 안내</h3>
+<table><thead><tr><th>상황</th><th>안내 메시지</th></tr></thead><tbody><tr><td>이메일·비밀번호 불일치</td><td>"이메일 또는 비밀번호가 일치하지 않습니다."</td></tr><tr><td>계정 잠금</td><td>"로그인 실패가 누적되어 계정이 잠겼습니다." (5회 실패 시 30분)</td></tr><tr><td>일시적 오류</td><td>"서버를 일시적으로 사용할 수 없습니다."</td></tr><tr><td>연결 오류</td><td>"서버에 연결할 수 없습니다." — 잠시 후 다시 시도</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 비밀번호를 <strong>5번</strong> 틀리면 <strong>30분간</strong> 로그인이 잠깁니다. <span class="ln">비밀번호 찾기</span>로 재설정하거나, 잠금 해제까지 기다려 주세요. Google 가입 회원은 <strong>Google 로그인</strong> 버튼을 사용하세요.</blockquote>
+<hr>
+<h2>20. 계정 · 회원가입 (3단계)</h2>
+<p><em>계정 · 회원가입 (3단계)</em></p>
+<figure><img src="./screenshots/_pdf/fo_signup__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_signup__pc-2.png" alt=""></figure>
+<p><strong>처음 이용</strong>하시는 분은 3단계 회원가입을 완료해야 시험 접수가 가능합니다. <strong>증명사진</strong>은 가입 시 한 번 등록하면 접수·심사에 계속 사용되므로, <span class="ln">사진 규정</span>과 <span class="ln">접수 STEP3</span> 기준에 맞는 사진을 준비해 주세요.</p>
+<h3>사용 흐름 (가입 시나리오)</h3>
+<ol><li><strong>STEP1 이메일 인증</strong> — 이메일 → <strong>인증코드 발송</strong> → 6자리 코드 입력(5분 유효) → <strong>확인</strong>. 또는 Google(이메일 인증 생략). 완료 후 <strong>다음</strong>.</li><li><strong>STEP2 기본정보 + 증명사진</strong> — 이름·생년월일·연락처 등 + 증명사진 업로드.</li><li><strong>STEP3 약관 동의</strong> — 필수 약관 → <strong>가입 완료</strong> → 완료 안내 → 로그인.</li></ol>
+<h3>단계별 화면</h3>
+<table><thead><tr><th>단계</th><th>주요 동작</th></tr></thead><tbody><tr><td>1</td><td>이메일 입력 → 인증코드 발송·입력·확인, 또는 Google → <strong>다음</strong></td></tr><tr><td>2</td><td>프로필 입력 + 증명사진 → <strong>다음</strong></td></tr><tr><td>3</td><td>약관 동의 → <strong>가입 완료</strong></td></tr></tbody></table>
+<h3>입력 필드 (STEP2)</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th><th>예시</th></tr></thead><tbody><tr><td>이메일(아이디)</td><td>●</td><td>STEP1에서 인증된 값, 변경 불가</td><td>a@b.com</td></tr><tr><td>한글 성명</td><td>●</td><td>100자 이내</td><td>홍길동</td></tr><tr><td>영문 성명</td><td>●</td><td>여권 표기, 입력 시 자동 대문자</td><td>HONG GILDONG</td></tr><tr><td>생년월일</td><td>●</td><td>YYYYMMDD 8자리, <strong>만 14세 이상</strong></td><td>19960101</td></tr><tr><td>성별</td><td>●</td><td>남 / 여</td><td>남</td></tr><tr><td>국적</td><td>●</td><td>미얀마 / 대한민국 / 기타</td><td>미얀마</td></tr><tr><td>제1언어</td><td>●</td><td>미얀마어 / 한국어 / 영어 / 기타</td><td>미얀마어</td></tr><tr><td>연락처</td><td>●</td><td>국가번호 포함 권장</td><td>+95 9…</td></tr><tr><td>직업 / 응시동기 / 응시목적</td><td>●</td><td>목록에서 선택</td><td>학생</td></tr><tr><td>비밀번호 / 확인</td><td>●</td><td>8자 이상 + 영문·숫자·특수문자 (Google 가입 시 숨김)</td><td>—</td></tr><tr><td>증명사진</td><td>●</td><td>JPG/PNG, 2MB 이하 (규격 안내 제공)</td><td>photo.jpg</td></tr></tbody></table>
+<h3>안내 창</h3>
+<table><thead><tr><th>기능</th><th>설명</th></tr></thead><tbody><tr><td>약관 보기</td><td><strong>보기</strong> → 약관 전문 확인</td></tr><tr><td>가입 완료</td><td>로그인 또는 시험 접수로 이동</td></tr><tr><td>증명사진 규격</td><td>7개 규칙 안내</td></tr></tbody></table>
+<h3>스크린샷 번호 (● 표시)</h3>
+<p>스크린샷에는 3단계 화면이 <strong>한 장에 펼쳐져</strong> 있으며, <strong>● 1~9</strong> 번호가 아래 표와 같습니다.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>설명</th></tr></thead><tbody><tr><td>1</td><td><strong>단계 표시</strong></td><td>① 이메일 인증 → ② 기본정보 → ③ 약관 동의. 현재 단계가 강조 표시됩니다.</td></tr><tr><td>2</td><td><strong>이메일 + 인증코드 발송</strong></td><td>이메일 입력 후 <strong>인증코드 발송</strong>. 6자리 코드가 이메일로 전송되며 <strong>5분</strong> 유효합니다.</td></tr><tr><td>3</td><td><strong>인증코드 + 타이머</strong></td><td>코드 입력란과 남은 시간. <strong>확인</strong> → "이메일 인증 완료" 안내.</td></tr><tr><td>4</td><td><strong>Google 가입</strong></td><td>Google 계정으로 계속하기. 이메일 인증·비밀번호 입력이 <strong>생략</strong>됩니다.</td></tr><tr><td>5</td><td><strong>프로필 입력 (STEP2)</strong></td><td>한글·영문 성명, 생년월일, 성별, 국적, 연락처, 직업·동기·목적 등 위 <strong>입력 표</strong> 항목 전체.</td></tr><tr><td>6</td><td><strong>비밀번호 강도</strong></td><td>8자 이상·영문·숫자·특수문자 충족도 → 약함~매우 강함. Google 가입 시 이 영역은 숨겨집니다.</td></tr><tr><td>7</td><td><strong>증명사진</strong></td><td>파일 선택·미리보기. JPG/PNG 2MB 이하. <strong>규격 안내</strong> 버튼으로 7가지 규칙 확인.</td></tr><tr><td>8</td><td><strong>약관 동의</strong></td><td>서비스·개인정보 <strong>필수</strong>, 마케팅 <strong>선택</strong>. <strong>전체 동의</strong> 토글. <strong>보기</strong>로 약관 전문 확인.</td></tr><tr><td>9</td><td><strong>가입 완료</strong></td><td><strong>가입 완료</strong> 버튼 → 완료 안내 → 로그인 또는 시험 접수로 이동.</td></tr></tbody></table>
+<h3>자주 보는 안내 메시지</h3>
+<table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>비밀번호 규칙</td><td>"비밀번호는 8자 이상, 영문·숫자·특수문자를 포함해야 합니다."</td></tr><tr><td>비밀번호 불일치</td><td>"비밀번호 확인이 일치하지 않습니다."</td></tr><tr><td>만 14세 미만</td><td>생년월일 필드 오류 — 가입 불가</td></tr><tr><td>이미 가입된 이메일</td><td>"이미 가입된 이메일입니다."</td></tr><tr><td>탈퇴 30일 이내 재가입</td><td>"탈퇴 후 30일간 동일 이메일로 재가입 불가"</td></tr><tr><td>정지 계정</td><td>"사용이 제한된 계정입니다."</td></tr><tr><td>인증코드 오류/만료</td><td>"인증코드가 올바르지 않습니다." (남은 시도 표시)</td></tr><tr><td>OTP 6회 실패</td><td>"인증코드 확인에 6회 실패했습니다. 인증코드를 다시 발송해 주세요."</td></tr><tr><td>이메일 형식</td><td>"올바른 이메일 형식을 입력해 주세요."</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 인증코드는 <strong>5분</strong> 유효합니다. 메일이 안 오면 <strong>스팸함</strong>을 확인하고 <strong>재발송</strong>하세요. Google 가입은 이메일 인증·비밀번호 입력이 <strong>생략</strong>됩니다.</blockquote>
+<hr>
+<h2>21. 계정 · 비밀번호 재설정</h2>
+<p><em>계정 · 비밀번호 재설정</em></p>
+<figure><img src="./screenshots/_pdf/fo_password-reset__pc-1.png" alt=""></figure>
+<p>로그인 화면 <strong>비밀번호 찾기</strong>에서 이메일로 인증코드를 받은 뒤 이 페이지로 진입합니다. 스크린샷은 <strong>PC + MO</strong> 나란히, <strong>인증코드 발송 직후</strong> 정상 화면입니다. <strong>● 번호</strong>는 아래 표와 같습니다.</p>
+<p><strong>주소를 직접 입력</strong>해서 들어오면 <strong>잘못된 접근입니다</strong> 안내만 보이고 <strong>로그인 페이지로</strong> 이동합니다. 반드시 로그인 화면에서 <strong>비밀번호 찾기 → 인증코드 발송</strong> 순서로 시작하세요.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>로그인 → <strong>비밀번호 찾기</strong> → 이메일 → <strong>인증코드 발송</strong> → 이 페이지.</li><li>발송 안내 확인 → <strong>6자리 인증코드</strong> → <strong>확인</strong> → 새 비밀번호 입력란 활성화.</li><li><strong>새 비밀번호</strong>·<strong>확인</strong> → <strong>비밀번호 저장</strong> → 성공 안내 → 로그인.</li></ol>
+<h3>화면 구성 (정상 재설정 화면)</h3>
+<table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td><strong>제목·안내</strong></td><td><strong>비밀번호 재설정</strong> — 이메일 인증코드로 새 비밀번호 설정. <strong>유효 30분</strong>.</td></tr><tr><td>2</td><td><strong>발송 안내</strong></td><td>"인증코드를 발송했습니다." + 대상 이메일 + 코드·새 비밀번호 입력 안내.</td></tr><tr><td>3</td><td><strong>인증코드</strong></td><td>6자리 입력 + <strong>타이머</strong>(30:00부터) + <strong>확인</strong>. 하단 <strong>재발송</strong>.</td></tr><tr><td>4</td><td><strong>잠금 안내</strong></td><td>인증 전: "인증코드 확인 후 새 비밀번호를 설정할 수 있습니다." — 새 비밀번호·저장 버튼 비활성.</td></tr><tr><td>5</td><td><strong>새 비밀번호</strong></td><td>인증 후 활성. <strong>표시/숨김</strong>, 강도 표시, 8자 이상·영문·숫자·특수문자 안내.</td></tr><tr><td>6</td><td><strong>새 비밀번호 확인</strong></td><td>동일 값 재입력.</td></tr><tr><td>7</td><td><strong>비밀번호 저장</strong></td><td>검증 통과 시 활성 → 저장 후 성공 안내.</td></tr></tbody></table>
+<h3>잘못된 접근</h3>
+<table><thead><tr><th>요소</th><th>내용</th></tr></thead><tbody><tr><td>안내</td><td><strong>잘못된 접근입니다</strong> — 로그인에서 이메일 입력 후 <strong>[인증코드 발송]</strong> 으로 다시 시작.</td></tr><tr><td>버튼</td><td><strong>로그인 페이지로</strong></td></tr></tbody></table>
+<h3>입력 필드</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>인증코드</td><td>●</td><td>6자리, <strong>유효 30분</strong></td></tr><tr><td>새 비밀번호</td><td>●</td><td>8자 이상 + 영문·숫자·특수문자 (인증 전 비활성)</td></tr><tr><td>새 비밀번호 확인</td><td>●</td><td>위와 동일 값</td></tr></tbody></table>
+<h3>검증·에러</h3>
+<table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>코드 오류/만료</td><td>"인증코드가 올바르지 않거나 만료되었습니다."</td></tr><tr><td>재설정 실패</td><td>"비밀번호를 변경할 수 없습니다. 다시 시도해 주세요."</td></tr><tr><td>비번 규칙</td><td>"영문·숫자·특수문자를 각각 포함하여 8자 이상…"</td></tr><tr><td>현재와 동일 비번</td><td>"새 비밀번호는 현재 비밀번호와 달라야 합니다."</td></tr><tr><td>OTP 6회 실패</td><td>"인증코드를 다시 발송해 주세요."</td></tr><tr><td>URL 직접 접속</td><td>"잘못된 접근입니다" 안내</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 인증코드·재설정 링크 모두 <strong>30분</strong> 유효입니다. 시간이 지나면 로그인 화면에서 <strong>비밀번호 찾기</strong>를 <strong>처음부터</strong> 다시 진행하세요.</blockquote>
+<hr>
+<h2>22. 계정 · 내정보 수정</h2>
+<p><em>계정 · 내정보 수정</em></p>
+<figure><img src="./screenshots/_pdf/fo_mypage-profile__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_mypage-profile__pc-2.png" alt=""></figure>
+<p><strong>로그인 필수.</strong></p>
+<p><strong>이름·연락처·증명사진·비밀번호</strong> 등을 수정하는 화면입니다. 마이페이지 프로필 카드의 <strong>내정보 수정</strong> 링크로도 들어올 수 있습니다. <strong>사진을 바꾸면</strong> 진행 중인 접수의 <strong>사진 심사가 처음부터</strong> 다시 진행됩니다 — 시험 직전에는 신중하게 변경하세요.</p>
+<p>탭 2개: <strong>기본정보·사진</strong> / <strong>계정·비밀번호</strong>. (Google 계정은 비밀번호 탭 숨김 + Google 안내)</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li><strong>기본정보·사진</strong> — 수정 후 <strong>기본정보 저장</strong>. 사진 변경 시 <strong>진행 중 접수에 즉시 반영</strong>, 사진 심사 <strong>자동 재실행</strong>.</li><li><strong>계정·비밀번호</strong> — 현재/새 비밀번호 저장 → 보안상 <strong>재로그인</strong> 안내. 하단 <strong>회원 탈퇴</strong>.</li></ol>
+<h3>입력 필드 (기본정보)</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>한글/영문 성명</td><td>●</td><td>영문은 여권 표기</td></tr><tr><td>생년월일</td><td>●</td><td>YYYYMMDD, 만 14세 이상</td></tr><tr><td>성별/국적/제1언어</td><td>●</td><td>목록 선택</td></tr><tr><td>연락처</td><td>●</td><td>—</td></tr><tr><td>직업/응시동기/응시목적</td><td>●</td><td>목록 선택</td></tr><tr><td>증명사진</td><td>○</td><td>JPG/PNG 2MB 이하, 변경 시 진행 중 접수 재심사</td></tr></tbody></table>
+<h3>비밀번호 변경 필드</h3>
+<table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>현재 비밀번호</td><td>●</td><td>일치해야 함</td></tr><tr><td>새 비밀번호 / 확인</td><td>●</td><td>8자 이상 + 영문·숫자·특수문자</td></tr></tbody></table>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 프로필 폼</strong> — <strong>기본정보 저장</strong> → 반영, 상단 메뉴 이름도 변경.</li><li><strong>2) 사진 교체</strong> — 미리보기, 저장 시 진행 중 접수 사진 심사 <strong>대기</strong>로 재설정. 사진만 실패 시 "기본정보는 저장됐지만 사진 업로드 실패" 안내.</li><li><strong>3) 비밀번호 변경</strong> — 이메일 가입 계정만. Google 가입은 Google에서 관리. 변경 후 재로그인.</li><li><strong>4) 회원 탈퇴</strong> — 이메일 계정: <strong>비밀번호</strong> 확인. Google 계정: <strong>Google 본인 확인</strong>. 탈퇴 시 <strong>진행 중 접수 전부 취소</strong>, 동일 이메일 <strong>30일 재가입 제한</strong>.</li><li><strong>5) Google 안내</strong> — Google 가입 계정에만 표시(비밀번호는 Google에서 관리).</li><li><strong>6) 마지막 변경일</strong> — 비밀번호 마지막 변경일(6개월마다 변경 권장 안내).</li></ul>
+<h3>검증·에러</h3>
+<table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>현재 비번 불일치</td><td>"현재 비밀번호가 올바르지 않습니다."</td></tr><tr><td>Google 비번 변경 시도</td><td>"Google 계정은 비밀번호 변경을 사용할 수 없습니다."</td></tr><tr><td>만 14세 미만 생일</td><td>"만 14세 이상만 가입할 수 있습니다."</td></tr><tr><td>Google 인증 만료</td><td>"Google 인증이 만료되었습니다. 다시 시도해 주세요."</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> <strong>회원 탈퇴</strong> 시 <strong>진행 중인 모든 접수가 취소</strong>되며, 같은 이메일로 <strong>30일간 재가입</strong>할 수 없습니다. 탈퇴 전 <span class="ln">접수 확인</span>에서 진행 중 접수가 없는지 확인하세요.</blockquote>
+<hr>
+<h2>23. 약관 · 이용약관</h2>
+<p><em>약관 · 이용약관</em></p>
+<figure><img src="./screenshots/_pdf/fo_terms__pc-1.png" alt=""></figure>
+<figure><img src="./screenshots/_pdf/fo_terms__pc-2.png" alt=""></figure>
+<p>TOPIK Myanmar <strong>서비스 이용약관</strong> 전문입니다. 회원가입 시 <strong>필수 동의</strong> 항목이며, 하단에 <strong>버전·시행일</strong>이 표시됩니다. 약관이 개정되면 공지 후 새 버전이 적용될 수 있습니다 — 중요 변경은 <strong>공지사항</strong>도 함께 확인하세요.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>약관 본문</td><td>이용약관 전문과 버전·시행일. 스크롤하여 전체를 읽을 수 있습니다.</td></tr><tr><td>2</td><td>언어 전환</td><td>KO/MY/EN 변경 시 해당 언어 약관을 다시 불러옵니다.</td></tr></tbody></table>
+<hr>
+<h2>24. 약관 · 개인정보처리방침</h2>
+<p><em>약관 · 개인정보처리방침</em></p>
+<figure><img src="./screenshots/_pdf/fo_privacy__pc-1.png" alt=""></figure>
+<p><strong>개인정보 수집·이용·보관·파기</strong> 등에 관한 처리방침 전문입니다. 회원가입 시 <strong>필수 동의</strong> 합니다. 이용약관과 같이 KO / MY / EN을 지원하며, 푸터·가입 화면 <strong>「보기」</strong> 링크로도 열립니다.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>개인정보 본문</td><td>개인정보처리방침 전문. 문의처·보호책임자 등이 포함될 수 있습니다.</td></tr></tbody></table>
+<hr>
+<h2>25. 약관 · 마케팅 수신</h2>
+<p><em>약관 · 마케팅 수신</em></p>
+<figure><img src="./screenshots/_pdf/fo_marketing__pc-1.png" alt=""></figure>
+<p><strong>마케팅 정보 수신 동의</strong> 약관 전문입니다. 회원가입 시 <strong>선택</strong> 항목이며, 동의하지 않아도 시험 접수·필수 서비스 이용에는 영향이 없습니다. 동의한 경우 <strong>공지·시험 안내</strong> 이메일을 받을 수 있습니다. <span class="ln">내정보 수정</span>에서 수신 여부를 나중에 바꿀 수 있습니다.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>마케팅 약관</td><td>마케팅 정보 수신 동의 관련 약관 전문.</td></tr></tbody></table>
+<hr>
+<h2>26. 에러 · 404</h2>
+<p><em>에러 · 404</em></p>
+<figure><img src="./screenshots/_pdf/fo_404__pc-1.png" alt=""></figure>
+<p><strong>존재하지 않거나 삭제된 주소</strong>로 접속했을 때 보이는 안내 화면입니다. 북마크·공유 링크가 오래되었거나 주소를 잘못 입력한 경우에 나타납니다. <strong>상단 메뉴·푸터</strong>는 다른 페이지와 같아서, 메뉴로 원하는 화면으로 이동할 수 있습니다.</p>
+<table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>안내 문구</td><td>"요청하신 페이지를 찾을 수 없습니다" + 짧은 설명.</td></tr><tr><td>2</td><td>이동 버튼</td><td><strong>홈으로</strong> — 메인 홈 이동 / <strong>접수 방법</strong> — <span class="ln">접수 방법</span> 안내.</td></tr></tbody></table>
+<blockquote><strong>TIP:</strong> 로그인·접수 중 갑자기 404가 나오면 <strong>주소창 URL</strong>이 잘렸는지 확인하고, <strong>홈</strong>에서 다시 메뉴를 이용하세요.</blockquote>
+<hr>
+<h2>부록: 자주 묻는 상황과 대처</h2>
+<table><thead><tr><th>상황</th><th>확인할 곳</th><th>대처</th></tr></thead><tbody><tr><td>접수 <strong>다음</strong> 버튼이 비활성</td><td><span class="ln">시험 접수 STEP3</span></td><td>사진 규격 <strong>5개 체크</strong> 모두 선택</td></tr><tr><td>접수 후 아무 일도 안 일어나는 것 같음</td><td><span class="ln">접수 확인</span></td><td><strong>사진 심사 대기</strong> → 운영진 처리 대기, <strong>수납 대기</strong> → 수납처 방문</td></tr><tr><td>사진 <strong>반려</strong></td><td>마이페이지 <strong>사유보기</strong></td><td><span class="ln">내정보 수정</span>에서 사진 교체</td></tr><tr><td><strong>수납</strong> 후에도 수납 대기</td><td>마이페이지</td><td>수납처·접수번호 확인, <span class="ln">문의게시판</span></td></tr><tr><td><strong>수험번호</strong> 안 보임</td><td>마이페이지·<span class="ln">수험표</span></td><td><strong>공개 일시</strong> 전일 수 있음, 공지 확인</td></tr><tr><td><strong>환불</strong> 필요</td><td><span class="ln">응시료 규정</span></td><td><span class="ln">환불·정보정정</span> 신청</td></tr><tr><td><strong>로그인</strong> 안 됨</td><td><span class="ln">로그인</span></td><td>비번 확인·5회 잠금·Google 가입 여부</td></tr><tr><td><strong>비밀번호</strong> 분실</td><td><span class="ln">비밀번호 재설정</span></td><td>로그인 화면 <strong>비밀번호 찾기</strong>부터</td></tr></tbody></table>
+<p><strong>문의:</strong> 푸터 업무시간(월–금 09:00–17:00, 미얀마 시간) 내 <span class="ln">문의게시판</span> 또는 공지에 안내된 이메일을 이용하세요. FAQ에서 먼저 검색하면 더 빠릅니다.</p>
+<hr></div></body></html>

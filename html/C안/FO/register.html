@@ -348,7 +348,6 @@
         <div class="sum-row"><div class="l" data-i18n-content="su.phone">연락처</div><div class="v" id="sumPhone">—</div></div>
         <div class="sum-row"><div class="l" data-i18n-content="reg.email">이메일</div><div class="v" id="sumEmail">—</div></div>
         <div class="sum-row"><div class="l" data-i18n-content="reg.fee_total">응시료 합계</div><div class="v" id="sumFee">—</div></div>
-        <div class="sum-row"><div class="l" data-i18n-content="reg.accommodation_title">편의지원(장애인 등) 신청</div><div class="v" id="sumAccommodation">—</div></div>
       </div>
 
       <h3 class="h4" style="margin: 24px 0 10px;" data-i18n-content="reg.fee_guide">응시료 안내</h3>
@@ -367,20 +366,6 @@
           오프라인 수납 전까지 마이페이지에서 직접 취소가 가능합니다. 수납 완료 후에는 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>에 따라 환불 신청해 주세요.
         </div>
       </div>
-
-      <h3 class="h4" style="margin: 24px 0 10px;" data-i18n-content="reg.accommodation_title">편의지원(장애인 등) 신청</h3>
-      <div class="callout callout-neutral" style="margin-bottom: 12px;">
-        <div class="ico"></div>
-        <div data-i18n-content="reg.accommodation_desc" data-i18n-content-html>
-          시험 당일 좌석 배치 등 <strong>편의지원이 필요한 경우</strong> 체크해 주세요.
-          신청 시 수험번호 채번 시 해당 수준의 <strong>마지막 홀수 좌석부터 우선 배정</strong>됩니다.
-        </div>
-      </div>
-      <label class="check" style="margin-bottom: 16px;">
-        <input type="checkbox" id="accommodationRequested">
-        <span class="box"></span>
-        <span data-i18n-content="reg.accommodation_check">편의지원(장애인 등)을 신청합니다.</span>
-      </label>
 
       <div style="margin: 20px 0;">
         <label class="check"><input type="checkbox" id="agreeTerms"><span class="box"></span><span><span class="req" style="color:var(--danger);">[필수]</span> <span data-i18n-content="reg.agree">서비스 이용약관 및 개인정보 처리 방침에 동의합니다.</span></span></label>
@@ -482,11 +467,6 @@
     'reg.refund_guide': { ko: '환불·취소 안내', my: 'ငွေပြန်အမ်း·ပယ်ဖျက် လမ်းညွှန်', en: 'Refund & cancellation' },
     'reg.refund_desc': { ko: '오프라인 수납 전까지 마이페이지에서 직접 취소가 가능합니다. 수납 완료 후에는 <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">응시료 규정</a>에 따라 환불 신청해 주세요.', my: 'အော့ဖ်လိုင်း ပေးသွင်းမတိုင်မီ ကျွန်ုပ်စာမျက်နှာတွင် ကိုယ်တိုင် ပယ်ဖျက်နိုင်သည်။ ပေးသွင်းပြီးနောက် <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">ဖြေဆိုကြေး စည်းမျဉ်း</a> အရ ငွေပြန်အမ်း လျှောက်ပါ။', en: 'You can cancel on My page until you pay offline. After payment, request a refund per the <a href="rules-fee.html" class="text-primary" style="text-decoration:underline;">fee policy</a>.' },
     'reg.agree': { ko: '서비스 이용약관 및 개인정보 처리 방침에 동의합니다.', my: 'ဝန်ဆောင်မှု စည်းကမ်းနှင့် ကိုယ်ရေးအချက်အလက် မူဝါဒကို သဘောတူသည်။', en: 'I agree to the Terms of Service and Privacy Policy.' },
-    'reg.accommodation_title': { ko: '편의지원(장애인 등) 신청', my: 'အထူးအကူအညီ (မသန်စွမ်း စသည်) လျှောက်ထားခြင်း', en: 'Accommodation request' },
-    'reg.accommodation_desc': { ko: '시험 당일 좌석 배치 등 <strong>편의지원이 필요한 경우</strong> 체크해 주세요. 신청 시 수험번호 채번 시 해당 수준의 <strong>마지막 홀수 좌석부터 우선 배정</strong>됩니다.', my: 'စာမေးပွဲနေ့ ထိုင်ခုံ စီစဉ်မှု စသည့် <strong>အထူးအကူအညီ လိုအပ်ပါက</strong> အမှန်ခြစ်ပါ။ လျှောက်ထားပါက စာမေးပွဲနံပါတ် ပေးအပ်ရာတွင် ထိုအဆင့်အတွက် <strong>နောက်ဆုံး မ ဂဏန်း ထိုင်ခုံများမှ ဦးစားပေး</strong> ပေးပါသည်။', en: 'Check if you need <strong>exam-day accommodations</strong>. When assigned, your exam number is prioritized from the <strong>last odd seat</strong> in that level group.' },
-    'reg.accommodation_check': { ko: '편의지원(장애인 등)을 신청합니다.', my: 'အထူးအကူအညီ (မသန်စွမ်း စသည်) လျှောက်ထားပါသည်။', en: 'I request accommodation (e.g. disability support).' },
-    'reg.accommodation_yes': { ko: '신청', my: 'လျှောက်ထားသည်', en: 'Requested' },
-    'reg.accommodation_no': { ko: '미신청', my: 'မလျှောက်ထား', en: 'Not requested' },
     'reg.submit': { ko: '접수하기', my: 'လျှောက်ထားရန်', en: 'Submit registration' },
     'reg.done_title': { ko: '접수가 완료되었습니다', my: 'လျှောက်ထားခြင်း ပြီးဆုံးပါပြီ', en: 'Registration complete' },
     'reg.done_desc': { ko: '사진 심사 및 오프라인 응시료 수납 후<br>정해진 날짜에 수험번호가 일괄 부여됩니다.<br>접수 결과는 마이페이지에서 확인하시기 바랍니다.', my: 'ဓာတ်ပုံစိစစ်ခြင်းနှင့် အော့ဖ်လိုင်း ဖြေဆိုကြေး ပေးသွင်းပြီးနောက်<br>သတ်မှတ်ထားသော နေ့တွင် ဖြေဆိုသူနံပါတ်များ တစ်ပြိုင်တည်း ပေးအပ်မည်။<br>လျှောက်ထားမှု ရလဒ်ကို ကျွန်ုပ်စာမျက်နှာတွင် စစ်ဆေးပါ။', en: 'After photo review and offline fee payment,<br>exam numbers are assigned in batch on the scheduled date.<br>Check your registration result on My page.' },
@@ -1396,15 +1376,7 @@
       if (l2) total += feeFor(round, 'II');
       sumFee.textContent = lvls.length ? formatFee(total) : '—';
     }
-    var sumAcc = document.getElementById('sumAccommodation');
-    var accEl = document.getElementById('accommodationRequested');
-    if (sumAcc && accEl) {
-      sumAcc.textContent = accEl.checked ? '신청' : '미신청';
-    }
   }
-
-  var accReqEl = document.getElementById('accommodationRequested');
-  if (accReqEl) accReqEl.addEventListener('change', updateSummary);
 
   function buildSubmitPayload() {
     const round = getSelectedRound();
@@ -1419,7 +1391,6 @@
       exam_levels: levels,
       exam_venue_id: venueId,
       photo_checklist_confirmed: true,
-      accommodation_requested: !!document.getElementById('accommodationRequested').checked,
       terms_agreed: buildExamTermsAgreed(),
     };
     if (mode && mode.reapply) payload.reapply = true;
@@ -1551,9 +1522,6 @@
       document.getElementById('btnGoStep4').disabled = !inputs.every(x => x.checked);
     }
     document.getElementById('agreeTerms').checked = !!d.agree;
-    if (document.getElementById('accommodationRequested')) {
-      document.getElementById('accommodationRequested').checked = !!d.accommodation;
-    }
     updateSummary();
     applyLevelLocks();
     if (d.step) go(d.step);
@@ -1570,7 +1538,6 @@
       lvl2: document.getElementById('lvl2').checked,
       photoChecks: [...document.querySelectorAll('.check-photo input')].map(c => c.checked),
       agree: document.getElementById('agreeTerms').checked,
-      accommodation: document.getElementById('accommodationRequested').checked,
       savedAt: new Date().toISOString()
     };
   }
