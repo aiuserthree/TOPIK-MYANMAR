@@ -8,6 +8,7 @@ cd "${APP_ROOT}"
 
 echo "==> Fetch origin/main"
 git fetch origin
+echo "  target commit: $(git rev-parse --short origin/main) $(git log origin/main -1 --format='%s')"
 
 echo "==> Checkout latest code (API + BO + FO + db + scripts)"
 git checkout origin/main -- \
@@ -45,10 +46,25 @@ python3 build.py
 python3 build-bo.py
 
 echo "==> Verify"
+echo "  deployed commit: $(git rev-parse --short origin/main)"
 echo "  FO pages: $(find public -maxdepth 1 -name '*.html' | wc -l | tr -d ' ')"
 echo "  BO admin: $(test -f public-bo/admin.html && echo ok || echo MISSING)"
 grep -q "처리 사유" public-bo/panels/audit.jsx && echo "  audit.jsx: 처리 사유 OK" || echo "  audit.jsx: OLD"
 grep -q "memo" apps/api/app/routers/admin_api.py && echo "  admin_api: memo OK"
+grep -q "boardNotifyOptIn" public-bo/panels/admins.jsx && echo "  admins.jsx: 게시글 알림 OK" || echo "  admins.jsx: OLD (board notify missing)"
+grep -q "board_notify_opt_in" apps/api/app/routers/admin_api.py && echo "  admin_api: board_notify_opt_in OK" || echo "  admin_api: OLD (board notify missing)"
+test -f db/migrations/V015__admin_board_notify_opt_in.sql && echo "  migration V015: present" || echo "  migration V015: MISSING"
+if command -v psql >/dev/null 2>&1; then
+  _env="${APP_ROOT}/apps/api/.env"
+  if [[ -z "${DATABASE_URL_SYNC:-}" && -f "${_env}" ]]; then
+    _raw="$(grep -E '^DATABASE_URL=' "${_env}" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+    [[ -n "${_raw}" ]] && DATABASE_URL_SYNC="$(printf '%s' "${_raw}" | sed 's|^postgresql+asyncpg://|postgresql://|')"
+  fi
+  _db="${DATABASE_URL_SYNC:-postgresql://topik_app@127.0.0.1:5432/topik_myanmar}"
+  _col="$(psql "${_db}" -tAc "SELECT 1 FROM information_schema.columns WHERE table_name='admin_users' AND column_name='board_notify_opt_in'" 2>/dev/null || true)"
+  [[ "${_col}" == "1" ]] && echo "  DB column board_notify_opt_in: OK" || echo "  DB column board_notify_opt_in: MISSING"
+fi
+echo "  API started: $(systemctl show myanmar-api -p ActiveEnterTimestamp --value 2>/dev/null || echo unknown)"
 
 echo ""
 echo "==> Done. 확인:"
