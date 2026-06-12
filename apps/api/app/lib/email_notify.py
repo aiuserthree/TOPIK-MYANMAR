@@ -23,6 +23,13 @@ BOARD_NAMES = {
     "inquiry": "1:1 문의",
 }
 
+# 운영자 신규 접수 알림(board_admin_new_post) 등 BO 발송용 표기
+BOARD_NAMES_ADMIN = {
+    "refund_correction": "환불·정보정정신청",
+    "refund": "환불·정보정정신청",
+    "inquiry": "문의 게시판",
+}
+
 
 def _withdraw_status_until(user: User, locale: str) -> str:
     start = user.withdrawn_at or datetime.now(timezone.utc)
@@ -59,6 +66,19 @@ def _bo_base(settings: Settings | None = None) -> str:
 
 def _board_name(board_type: str) -> str:
     return BOARD_NAMES.get(board_type, board_type)
+
+
+def _board_name_admin(board_type: str) -> str:
+    return BOARD_NAMES_ADMIN.get(board_type, _board_name(board_type))
+
+
+def _user_locale(user: User) -> str:
+    return (user.preferred_lang or "ko")[:2].lower()
+
+
+async def _active_admin_email_set(db: AsyncSession) -> set[str]:
+    res = await db.execute(select(AdminUser.email).where(AdminUser.status == "active"))
+    return {(raw or "").strip().lower() for raw in res.scalars().all() if raw and str(raw).strip()}
 
 
 def _board_post_url(base: str, board_type: str, post_id: int) -> str:
@@ -164,27 +184,34 @@ async def notify_board_post_created(
     base = _fo_base(cfg)
     bo_base = _bo_base(cfg)
     board_name = _board_name(post.board_type)
+    admin_board_name = _board_name_admin(post.board_type)
     submitted = fmt_date(post.created_at) if post.created_at else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     post_url = _board_post_url(base, post.board_type, post.id)
     if post.board_type in ("refund", "refund_correction"):
-        await enqueue_email(
-            db,
-            template_key="board_refund_received",
-            to_email=user.email,
-            locale=user.preferred_lang,
-            user_id=user.id,
-            variables={
-                "userName": user.name_ko,
-                "boardName": board_name,
-                "postTitle": post.title,
-                "postId": str(post.id),
-                "submittedAt": submitted,
-                "postUrl": post_url,
-            },
-        )
+        user_email = user.email.strip().lower()
+        locale = _user_locale(user)
+        admin_emails = await _active_admin_email_set(db)
+        # 관리자 주소로 미얀마어 접수 확인 메일 중복 발송 방지(운영자 알림은 아래 ko 템플릿만)
+        send_user_confirm = not (user_email in admin_emails and locale == "my")
+        if send_user_confirm:
+            await enqueue_email(
+                db,
+                template_key="board_refund_received",
+                to_email=user.email,
+                locale=user.preferred_lang,
+                user_id=user.id,
+                variables={
+                    "userName": user.name_ko,
+                    "boardName": board_name,
+                    "postTitle": post.title,
+                    "postId": str(post.id),
+                    "submittedAt": submitted,
+                    "postUrl": post_url,
+                },
+            )
     admin_vars = {
         "userName": user.name_ko,
-        "boardName": board_name,
+        "boardName": admin_board_name,
         "category": post.category or post.post_type or "—",
         "postTitle": post.title,
         "submittedAt": submitted,
