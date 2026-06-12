@@ -41,6 +41,11 @@ function ApplicantsPanel() {
   const sessionId = state.activeSessionId;
   const apps = useMemo(() => state.applicants.filter(a => a.sessionId === sessionId), [state.applicants, sessionId]);
 
+  useEffect(() => {
+    if (!sessionId || !DataStore.isApiMode || !DataStore.isApiMode() || !DataStore.reloadApplicants) return;
+    DataStore.reloadApplicants(sessionId);
+  }, [sessionId]);
+
   // ---- Filter / search ----
   const [statusF, setStatusF] = useState('all');
   const [venueF, setVenueF] = useState('all');

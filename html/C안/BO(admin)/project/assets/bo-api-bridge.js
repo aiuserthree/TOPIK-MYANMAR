@@ -822,9 +822,25 @@
     return Api.getApplications(q).then(function (res) {
       if (!res.ok) {
         DS.state.apiError = TopikBoApi.parseError(res);
-        DS.state.applicants = [];
+        if (!sessionId) DS.state.applicants = [];
       } else {
-        DS.state.applicants = ((res.body && res.body.items) || []).map(mapApplicant);
+        var items = ((res.body && res.body.items) || []).map(mapApplicant);
+        if (sessionId) {
+          var sid = String(sessionId);
+          var rest = DS.state.applicants.filter(function (a) { return a.sessionId !== sid; });
+          DS.state.applicants = rest.concat(items);
+          var sess = DS.state.sessions.find(function (x) { return x.id === sid; });
+          if (sess) sess.applicants = items.length;
+        } else {
+          DS.state.applicants = items;
+          var counts = {};
+          items.forEach(function (a) {
+            counts[a.sessionId] = (counts[a.sessionId] || 0) + 1;
+          });
+          DS.state.sessions.forEach(function (s) {
+            s.applicants = counts[s.id] || 0;
+          });
+        }
         DS.state.apiError = null;
       }
       DS.notify();
