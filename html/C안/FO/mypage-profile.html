@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>내정보 수정 — TOPIK Myanmar</title>
 <link rel="stylesheet" href="assets/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
 <style>
   .profile-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
   .profile-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
@@ -54,6 +55,29 @@
     font-size: 12.5px;
     color: var(--text-4);
   }
+
+  .mkt-view {
+    font-size: 12px; color: var(--text-3); text-decoration: underline;
+    background: none; border: 0; padding: 4px 0; cursor: pointer;
+  }
+  .mkt-view:hover { color: var(--text-2); }
+
+  .modal-terms { max-width: 560px; max-height: min(88vh, 720px); display: flex; flex-direction: column; }
+  .modal-terms .modal-body {
+    overflow-y: auto; flex: 1; min-height: 0;
+    max-height: calc(min(88vh, 720px) - 120px);
+  }
+  .terms-modal-body h2 { font-size: 16px; margin: 20px 0 8px; color: var(--text); }
+  .terms-modal-body h2:first-child { margin-top: 0; }
+  .terms-modal-body p, .terms-modal-body li {
+    font-size: 13.5px; color: var(--text-2); line-height: 1.7;
+  }
+  .terms-modal-body ul { padding-left: 18px; margin: 8px 0 14px; list-style: disc; }
+  .terms-modal-body .terms-meta {
+    font-size: 12px; color: var(--text-3); margin-bottom: 14px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .terms-modal-body.plain { white-space: pre-wrap; word-break: break-word; }
 </style>
 </head>
 <body data-require-login>
@@ -180,7 +204,7 @@
           </span>
         </label>
         <p style="margin: 10px 0 0 28px; font-size: 13px;">
-          <a href="marketing.html" target="_blank" rel="noopener" data-i18n-content="su.terms_view">보기</a>
+          <button type="button" class="mkt-view" id="btnMktTermsView" data-i18n-content="su.terms_view">보기</button>
         </p>
       </div>
 
@@ -229,6 +253,19 @@
 
 <div id="site-footer"></div>
 <div id="site-tabbar"></div>
+
+<div class="modal-backdrop" id="modalTerms">
+  <div class="modal modal-terms" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+    <div class="modal-head"><h3 id="termsModalTitle">약관</h3></div>
+    <div class="modal-body">
+      <p class="terms-meta hidden" id="termsModalMeta"></p>
+      <div id="termsModalBody" class="terms-modal-body"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-secondary" id="btnTermsClose" data-i18n-content="btn.close">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="modalLeave">
   <div class="modal">
@@ -725,6 +762,111 @@
   }
 
   $('btnOpenLeave')?.addEventListener('click', openLeaveModal);
+
+  // ---- 마케팅 약관 보기 모달 (회원가입 STEP3와 동일) ----
+  var MKT_TERMS_META = {
+    title: { ko: '마케팅 정보 수신 동의 (이메일)', my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူ (အီးမေးလ်)', en: 'Consent to marketing email' }
+  };
+
+  function mktTermsLang() {
+    try {
+      var l = (localStorage.getItem('tpkm_lang') || 'KO').toUpperCase();
+      if (l === 'MY') return 'my';
+      if (l === 'EN') return 'en';
+    } catch (e) { /* ignore */ }
+    return 'ko';
+  }
+
+  function mktTermsPick(map) {
+    if (!map) return '';
+    var lang = mktTermsLang();
+    return map[lang] || map.ko || '';
+  }
+
+  function mktTermsEmptyMessage() {
+    var lang = mktTermsLang();
+    if (lang === 'en') return 'No terms have been registered by the administrator.';
+    if (lang === 'my') return 'ကျင်းပရေးအဖွဲ့မှ စည်းကမ်း မကြေညာသေးပါ။';
+    return '관리자에 등록된 약관이 없습니다.';
+  }
+
+  function renderMktTermsBody(el, body) {
+    if (!el) return;
+    var text = body == null ? '' : String(body);
+    var looksHtml = /<\/?[a-z][\s\S]*>/i.test(text);
+    if (looksHtml && window.DOMPurify && typeof DOMPurify.sanitize === 'function') {
+      el.className = 'terms-modal-body';
+      el.innerHTML = DOMPurify.sanitize(text);
+    } else {
+      el.className = 'terms-modal-body plain';
+      el.textContent = text;
+    }
+  }
+
+  function fmtMktTermsDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    try {
+      return d.toLocaleDateString('ko-KR', { timeZone: 'Asia/Yangon', year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (e) {
+      return d.toISOString().slice(0, 10);
+    }
+  }
+
+  function openMktTermsModal() {
+    var titleEl = document.getElementById('termsModalTitle');
+    var bodyEl = document.getElementById('termsModalBody');
+    var metaEl = document.getElementById('termsModalMeta');
+    var lang = mktTermsLang();
+    var loading = lang === 'en' ? 'Loading…' : (lang === 'my' ? 'ဖတ်ရှုနေသည်…' : '약관을 불러오는 중…');
+    if (titleEl) titleEl.textContent = mktTermsPick(MKT_TERMS_META.title);
+    if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);font-size:13px;">' + loading + '</p>';
+    if (metaEl) metaEl.classList.add('hidden');
+    if (window.TPKM && TPKM.openModal) TPKM.openModal('modalTerms');
+
+    if (!window.TopikApi || typeof TopikApi.getTerm !== 'function' || !TopikApi.canUseApi()) {
+      renderMktTermsBody(bodyEl, mktTermsEmptyMessage());
+      if (metaEl) metaEl.classList.add('hidden');
+      return;
+    }
+    TopikApi.getTerm('marketing', lang).then(function (res) {
+      if (!res.ok || !res.body || typeof res.body.body !== 'string' || !String(res.body.body).trim()) {
+        renderMktTermsBody(bodyEl, mktTermsEmptyMessage());
+        if (metaEl) metaEl.classList.add('hidden');
+        return;
+      }
+      var data = res.body;
+      renderMktTermsBody(bodyEl, data.body);
+      if (metaEl) {
+        var parts = [];
+        if (data.version) parts.push((lang === 'en' ? 'Version ' : (lang === 'my' ? 'ဗားရှင်း ' : '버전 ')) + data.version);
+        var eff = fmtMktTermsDate(data.effective_at);
+        if (eff) parts.push((lang === 'en' ? 'Effective: ' : (lang === 'my' ? 'စတင်နေ့ — ' : '시행일: ')) + eff);
+        if (parts.length) {
+          metaEl.textContent = parts.join(' · ');
+          metaEl.classList.remove('hidden');
+        }
+      }
+    }).catch(function () {
+      renderMktTermsBody(bodyEl, mktTermsEmptyMessage());
+      if (metaEl) metaEl.classList.add('hidden');
+    });
+  }
+
+  $('btnMktTermsView')?.addEventListener('click', function (e) {
+    e.preventDefault();
+    openMktTermsModal();
+  });
+
+  var modalTerms = document.getElementById('modalTerms');
+  if (modalTerms) {
+    modalTerms.addEventListener('click', function (e) {
+      if (e.target === modalTerms || e.target.id === 'btnTermsClose' || e.target.closest('#btnTermsClose')) {
+        if (window.TPKM && TPKM.closeModal) TPKM.closeModal('modalTerms');
+      }
+    });
+  }
 
   // ---- 회원 탈퇴 (POST /me/withdraw) ----
   $('btnLeaveConfirm')?.addEventListener('click', function () {
