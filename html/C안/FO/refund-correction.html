@@ -260,7 +260,7 @@
         </div>
         <div class="board-tools-row">
           <div class="search"><input type="search" placeholder="제목·작성자 검색" data-i18n-content="qna.search_ph" data-i18n-content-placeholder></div>
-          <button class="btn btn-primary btn-sm write" onclick="show('writePane')" data-i18n-content="btn.write">글쓰기</button>
+          <button class="btn btn-primary btn-sm write" onclick="openRfdWritePane()" data-i18n-content="btn.write">글쓰기</button>
         </div>
       </div>
 
@@ -433,6 +433,31 @@
     document.getElementById(id).classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function resetRfdWriteForm() {
+    editingPostId = null;
+    var title = document.getElementById('rfdTitle');
+    var body = document.getElementById('rfdBody');
+    var secretPw = document.getElementById('rfdSecretPw');
+    var agree = document.getElementById('rfdAgree');
+    if (title) title.value = '';
+    if (body) body.value = '';
+    if (secretPw) secretPw.value = '';
+    if (agree) agree.checked = false;
+    var radios = document.getElementsByName('type');
+    if (radios[0]) radios[0].checked = true;
+    if (radios[1]) radios[1].checked = false;
+    if (typeof rfdAttach !== 'undefined' && rfdAttach && rfdAttach.reset) rfdAttach.reset();
+    var heading = document.querySelector('#writePane .h2');
+    if (heading) {
+      heading.textContent = (window.TPKMLang && TPKMLang.t('rfd.write_title')) || '새 글 작성';
+    }
+  }
+
+  function openRfdWritePane() {
+    resetRfdWriteForm();
+    show('writePane');
+  }
   function rfdBt(key, fallback) {
     try { if (window.TPKMBt && TPKMBt.bt) return TPKMBt.bt(key, fallback); } catch (e) {}
     try { if (window.TPKMLang && TPKMLang.t) { var v = TPKMLang.t(key); if (v) return v; } } catch (e2) {}
@@ -539,6 +564,8 @@
     },
     getEditingId: function () { return editingPostId; },
     clearEditing: function () {
+      var agree = document.getElementById('rfdAgree');
+      if (agree) agree.checked = false;
       editingPostId = null;
       document.querySelector('#writePane .h2').textContent =
         (window.TPKMLang && TPKMLang.t('rfd.write_title')) || '새 글 작성';
