@@ -25,13 +25,16 @@
   // 「연명부 양식.xlsx」 B~K 컬럼 순서(총 10열, 순번 없음)
   // 한글성명|영문성명|생년월일|성별|국적|제1언어|직업코드|응시동기코드|응시목적코드|수험번호
   function rosterRow(a) {
+    var ko = g.TOPIKBoAdminKo || {};
+    var natKo = ko.nationalityKo ? ko.nationalityKo(a.nationality || a.nation, '미얀마') : (a.nationality || a.nation || '미얀마');
+    var langKo = ko.firstLanguageKo ? ko.firstLanguageKo(a.firstLang || a.l1, '') : (a.firstLang || a.l1 || '');
     return [
       a.nameKo && a.nameKo !== '—' ? a.nameKo : (a.name || a.nameEn || ''),  // 한글성명(없으면 영문)
       a.name || a.nameEn || '',                                                // 영문성명
       birth8(a.birth || a.dob),                                                // 생년월일 8자리
       rosterSexCode(a),                                                        // 성별 1/2
-      a.nationality || a.nation || '미얀마',                                    // 국적(명칭)
-      a.firstLang || a.l1 || '',                                               // 제1언어(명칭)
+      natKo,                                                                   // 국적(BO 한글 표시)
+      langKo,                                                                  // 제1언어(BO 한글 표시)
       a.jobCode != null && a.jobCode !== '' ? a.jobCode : '',                  // 직업코드
       a.motiveCode != null && a.motiveCode !== '' ? a.motiveCode : '',         // 응시동기코드
       a.purposeCode != null && a.purposeCode !== '' ? a.purposeCode : '',      // 응시목적코드
@@ -75,9 +78,35 @@
     return groups;
   }
 
-  // 파일명: TOPIK Ⅰ_미얀마_{지역}_{시험장}.xlsx
-  function groupFilename(levelPfx, region, venue) {
-    return levelPfx + '_미얀마_' + region + '_' + venue + '.xlsx';
+  var ROSTER_COUNTRY = '미얀마';
+
+  function safeFilenameSeg(value, fallback) {
+    var v = String(value || '').trim() || fallback;
+    return v.replace(/[\\/:*?"<>|]+/g, '_');
+  }
+
+  // 제{회차}회 TOPIK 지원자 연명부({국가}_{시험장})
+  function rosterExportBasename(roundNo, venueName) {
+    var roundPart = roundNo ? ('제' + roundNo + '회 ') : '';
+    var venue = safeFilenameSeg(venueName, '시험장');
+    return roundPart + 'TOPIK 지원자 연명부(' + ROSTER_COUNTRY + '_' + venue + ')';
+  }
+
+  function rosterExportFilename(roundNo, venueName, levelPfx, multiLevelAtVenue) {
+    var base = rosterExportBasename(roundNo, venueName);
+    if (multiLevelAtVenue && levelPfx) return base + '_' + levelPfx + '.xlsx';
+    return base + '.xlsx';
+  }
+
+  function rosterExportZipName(roundNo, groups) {
+    var keys = Object.keys(groups || {});
+    var venues = {};
+    keys.forEach(function (k) { venues[groups[k].venue] = true; });
+    var venueNames = Object.keys(venues);
+    if (venueNames.length === 1) {
+      return rosterExportBasename(roundNo, venueNames[0]) + '.zip';
+    }
+    return (roundNo ? ('제' + roundNo + '회 ') : '') + 'TOPIK 지원자 연명부.zip';
   }
 
   function exportRosterExcel(opts) {
@@ -95,11 +124,22 @@
     var rows = sortByExam(baseRows);
 
     var groups = buildGroups(rows, state);
+    var levelsByVenue = {};
+    Object.keys(groups).forEach(function (k) {
+      var grp = groups[k];
+      if (!levelsByVenue[grp.venue]) levelsByVenue[grp.venue] = {};
+      levelsByVenue[grp.venue][grp.level] = true;
+    });
     var files = Object.keys(groups).map(function (k) {
       var grp = groups[k];
       var list = sortByExam(grp.list);
       return {
-        filename: groupFilename(grp.level, grp.region, grp.venue),
+        filename: rosterExportFilename(
+          sessionNo,
+          grp.venue,
+          grp.level,
+          Object.keys(levelsByVenue[grp.venue]).length > 1
+        ),
         rows: list.map(function (a) { return rosterRow(a); }),
         headers: headers
       };
@@ -114,7 +154,7 @@
       });
     }
     return g.TOPIKExport.downloadRosterXlsxZip({
-      zipName: 'TOPIK_미얀마_연명부' + (sessionNo ? '_제' + sessionNo + '회' : '') + '.zip',
+      zipName: rosterExportZipName(sessionNo, groups),
       files: files
     });
   }
@@ -167,6 +207,8 @@
     sendMail: sendMail,
     enforcePerm: enforcePerm,
     withApplicantLock: withApplicantLock,
-    rosterRow: rosterRow
+    rosterRow: rosterRow,
+    rosterExportBasename: rosterExportBasename,
+    rosterExportFilename: rosterExportFilename
   };
 })(typeof window !== 'undefined' ? window : this);

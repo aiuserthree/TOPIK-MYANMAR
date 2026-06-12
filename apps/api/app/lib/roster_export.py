@@ -9,6 +9,7 @@ from typing import Any
 
 from openpyxl import Workbook
 
+from app.lib.profile_ko_labels import first_language_ko, nationality_ko
 from app.lib.validation import gender_to_code
 
 ROSTER_HEADERS = [
@@ -39,6 +40,27 @@ ROSTER_GUIDE = [
 ]
 
 _LEVEL_FOLDER = {"I": "TOPIK Ⅰ", "II": "TOPIK Ⅱ"}
+_COUNTRY_NAME = "미얀마"
+
+
+def roster_export_basename(*, round_no: int | None, venue_name: str) -> str:
+    """제{회차}회 TOPIK 지원자 연명부({국가}_{시험장})"""
+    venue = _safe_seg(venue_name, "시험장")
+    round_part = f"제{round_no}회 " if round_no else ""
+    return f"{round_part}TOPIK 지원자 연명부({_COUNTRY_NAME}_{venue})"
+
+
+def roster_export_filename(
+    *,
+    round_no: int | None,
+    venue_name: str,
+    level_pfx: str | None = None,
+    multi_level_at_venue: bool = False,
+) -> str:
+    base = roster_export_basename(round_no=round_no, venue_name=venue_name)
+    if multi_level_at_venue and level_pfx:
+        return f"{base}_{level_pfx}.xlsx"
+    return f"{base}.xlsx"
 
 
 def _safe_seg(value: str | None, fallback: str) -> str:
@@ -76,8 +98,8 @@ def _roster_row(row: dict[str, Any]) -> list:
         name_en,
         birth,
         _gender_cell(row),
-        row.get("nationality") or "미얀마",
-        row.get("first_language") or "",
+        nationality_ko(row.get("nationality")),
+        first_language_ko(row.get("first_language")),
         _code_cell(row.get("job_code")),
         _code_cell(row.get("motive_code")),
         _code_cell(row.get("purpose_code")),
@@ -115,19 +137,38 @@ def build_roster_zip(
     groups: dict[str, list[dict[str, Any]]],
 ) -> tuple[bytes, str]:
     """groups key: level|region|venue_name"""
+    levels_by_venue: dict[str, set[str]] = {}
+    for key in groups:
+        level_pfx, _, venue = key.split("|", 2)
+        levels_by_venue.setdefault(venue, set()).add(level_pfx)
+
     buf = io.BytesIO()
+    venues_in_export: set[str] = set()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for key, rows in groups.items():
-            level_pfx, region, venue = key.split("|", 2)
+            level_pfx, _, venue = key.split("|", 2)
+            venues_in_export.add(venue)
             sorted_rows = _sort_rows(rows)
             data = [_roster_row(r) for r in sorted_rows]
-            filename = f"{level_pfx}_미얀마_{region}_{venue}.xlsx"
+            multi_level = len(levels_by_venue.get(venue, set())) > 1
+            filename = roster_export_filename(
+                round_no=round_no,
+                venue_name=venue,
+                level_pfx=level_pfx,
+                multi_level_at_venue=multi_level,
+            )
             zf.writestr(filename, _workbook_bytes(ROSTER_HEADERS, data))
         if not groups:
             zf.writestr("연명부_대상없음.txt", b"(export target empty)")
-    suffix = f"_제{round_no}회" if round_no else ""
+
+    if len(venues_in_export) == 1:
+        venue = next(iter(venues_in_export))
+        zip_name = f"{roster_export_basename(round_no=round_no, venue_name=venue)}.zip"
+    else:
+        round_part = f"제{round_no}회 " if round_no else ""
+        zip_name = f"{round_part}TOPIK 지원자 연명부.zip"
     buf.seek(0)
-    return buf.getvalue(), f"TOPIK_미얀마_연명부{suffix}.zip"
+    return buf.getvalue(), zip_name
 
 
 def group_roster_rows(

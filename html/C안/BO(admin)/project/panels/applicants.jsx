@@ -24,7 +24,13 @@ const STATUS_CHIPS = [
   { id: 'refund',   label: '환불자' },
 ];
 
-const GENERAL_REJECT_REASONS = ['정보 불일치', '중복 접수', '기타'];
+/** FO 다국어 저장값 → BO 상세보기 한글 표시 */
+function boAdminNationKo(v) {
+  return window.TOPIKBoAdminKo?.nationalityKo(v, '미얀마') ?? (v || '미얀마');
+}
+function boAdminLangKo(v) {
+  return window.TOPIKBoAdminKo?.firstLanguageKo(v, '') ?? (v || '');
+}
 
 /** FO 접수 취소 — API `cancelled` → BO `cancel` (bo-api-bridge mapApplicantStatus) */
 function isFoCancelled(a) {
@@ -864,8 +870,8 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
               <KV k="영문 성명" v={a.nameEn}/>
               <KV k="생년월일" v={<code className="code-id">{a.dob}</code>}/>
               <KV k="성별" v={a.sx === 1 ? '남(1)' : '여(2)'}/>
-              <KV k="국적" v={a.nation}/>
-              <KV k="제1언어" v={a.l1}/>
+              <KV k="국적" v={boAdminNationKo(a.nation)}/>
+              <KV k="제1언어" v={boAdminLangKo(a.l1)}/>
               <KV k="직업" v={a.job}/>
               <KV k="이메일" v={a.email}/>
               <KV k="전화" v={a.tel}/>
@@ -1192,19 +1198,31 @@ function ExcelExportModal({ onClose, rows }) {
   const levelPfx = (lv) => String(lv || '').indexOf('동시') >= 0 ? 'TOPIK Ⅰ·Ⅱ'
     : (String(lv).indexOf('Ⅱ') >= 0 ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ');
 
-  // 지역·시험장·시험수준별 개별 파일(단일 시트) — 파일명 TOPIK Ⅰ_미얀마_{지역}_{시험장}.xlsx
+  // 시험장·수준별 개별 파일 — 파일명: 제{회차}회 TOPIK 지원자 연명부(미얀마_{시험장})[_{급수}].xlsx
   const groups = useMemo(() => {
     const src = mode === 'full' ? state.applicants.filter(a => a.sessionId === state.activeSessionId) : rows;
+    const roundNo = session ? session.no : '';
     const m = new Map();
+    const levelsByVenue = new Map();
     src.forEach(a => {
       const venue = state.venues.find(v => v.id === a.venueId);
-      const region = venue ? (venue.region || '미얀마') : '미지정';
       const vname = venue ? venue.nameKo : '미지정';
-      const fname = `${levelPfx(a.level)}_미얀마_${region}_${vname}.xlsx`;
+      const lp = levelPfx(a.level);
+      if (!levelsByVenue.has(vname)) levelsByVenue.set(vname, new Set());
+      levelsByVenue.get(vname).add(lp);
+    });
+    src.forEach(a => {
+      const venue = state.venues.find(v => v.id === a.venueId);
+      const vname = venue ? venue.nameKo : '미지정';
+      const lp = levelPfx(a.level);
+      const multiLevel = (levelsByVenue.get(vname)?.size || 0) > 1;
+      const fname = window.TOPIKBoBridge?.rosterExportFilename
+        ? TOPIKBoBridge.rosterExportFilename(roundNo, vname, lp, multiLevel)
+        : `${roundNo ? `제${roundNo}회 ` : ''}TOPIK 지원자 연명부(미얀마_${vname})${multiLevel ? `_${lp}` : ''}.xlsx`;
       m.set(fname, (m.get(fname) || 0) + 1);
     });
     return Array.from(m.entries()).map(([k, n]) => ({ k, n }));
-  }, [rows, state.venues, state.applicants, mode]);
+  }, [rows, state.venues, state.applicants, mode, session]);
   const totalRows = groups.reduce((s, g) => s + g.n, 0);
 
   const doExport = () => {
