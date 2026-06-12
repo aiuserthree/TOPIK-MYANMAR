@@ -421,7 +421,22 @@
           return { ok: false, status: 0, body: { error: { message: "연명부 다운로드에 실패했습니다." } } };
         });
     },
-    getFaq: function () { return apiFetch("/api/v1/admin/faq"); },
+    getFaq: function (q) {
+      var parts = [];
+      var query = q || {};
+      if (query.active != null && query.active !== "") {
+        parts.push("active=" + encodeURIComponent(query.active));
+      } else {
+        parts.push("active=true");
+      }
+      Object.keys(query).forEach(function (k) {
+        if (k === "active") return;
+        if (query[k] != null && query[k] !== "") {
+          parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(query[k]));
+        }
+      });
+      return apiFetch("/api/v1/admin/faq" + (parts.length ? "?" + parts.join("&") : ""));
+    },
     createFaq: function (payload) {
       return apiFetch("/api/v1/admin/faq", { method: "POST", body: JSON.stringify(payload || {}) });
     },
@@ -430,6 +445,9 @@
         method: "PATCH",
         body: JSON.stringify(payload || {}),
       });
+    },
+    deleteFaq: function (id) {
+      return apiFetch("/api/v1/admin/faq/" + encodeURIComponent(id), { method: "DELETE" });
     },
     cancelPayment: function (id) {
       return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/payment/cancel", {

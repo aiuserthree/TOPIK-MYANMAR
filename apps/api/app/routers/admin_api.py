@@ -1645,8 +1645,15 @@ async def restore_notice(
 
 
 @router.get("/faq")
-async def admin_faq(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
-    result = await db.execute(select(FaqItem).order_by(FaqItem.sort_order, FaqItem.id))
+async def admin_faq(
+    active: bool | None = Query(None, description="true=노출만, false=숨김만, 생략=전체"),
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    stmt = select(FaqItem).order_by(FaqItem.sort_order, FaqItem.id)
+    if active is not None:
+        stmt = stmt.where(FaqItem.is_active.is_(active))
+    result = await db.execute(stmt)
     return {
         "items": [
             {
@@ -1718,6 +1725,26 @@ async def update_faq(
     )
     await db.commit()
     return {"updated": True}
+
+
+@router.delete("/faq/{faq_id}")
+async def delete_faq(
+    faq_id: int,
+    admin: AuthUser = Depends(matrix_perm("faq", "delete")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    row = (await db.execute(select(FaqItem).where(FaqItem.id == faq_id))).scalar_one_or_none()
+    if not row:
+        raise api_error("NOT_FOUND", "FAQ를 찾을 수 없습니다.", 404)
+    before = {"category": row.category, "question_ko": row.question_ko, "is_active": row.is_active}
+    row.is_active = False
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="faq_delete",
+        target_type="faq", target_id=faq_id, before_data=before, ip_address=ip,
+    )
+    await db.commit()
+    return {"deleted": True, "id": faq_id}
 
 
 @router.get("/terms")

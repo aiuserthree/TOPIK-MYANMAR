@@ -141,6 +141,7 @@ function SessionsPanel() {
 
 function SessionEditLP({ edit, onClose, onSave }) {
   const state = useStore();
+  const [busy, setBusy] = useState(false);
   const existing = edit.id ? state.sessions.find(s => s.id === edit.id) : null;
   const nextNo = state.sessions.length
     ? Math.max(...state.sessions.map(s => Number(s.no) || 0)) + 1
@@ -177,21 +178,32 @@ function SessionEditLP({ edit, onClose, onSave }) {
   const cap = Number(f.cap);
   const feeI = Number(f.feeI);
   const feeII = Number(f.feeII);
+  const scheduleOk = f.applyStart && f.applyEnd && f.examDate
+    && f.applyStart <= f.applyEnd && f.applyEnd <= f.examDate
+    && (!f.resultDate || f.examDate <= f.resultDate);
   const valid = f.name.trim()
-    && f.applyStart && f.applyEnd && f.examDate
+    && scheduleOk
     && !Number.isNaN(cap) && cap >= 0
     && !Number.isNaN(feeI) && feeI > 0
     && !Number.isNaN(feeII) && feeII > 0
-    && venues.length > 0
-    && f.applyStart < f.applyEnd && f.applyEnd < f.examDate
-    && (!f.resultDate || f.examDate < f.resultDate);
+    && venues.length > 0;
+
+  const submit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    try {
+      await onSave(f);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <LP open title={existing ? `회차 수정 — ${existing.name}` : '회차 등록'} sub={existing ? `회차 ID ${existing.id}` : '신규 회차'}
       onClose={onClose}
       footer={<>
-        <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" disabled={!valid} onClick={() => onSave(f)}>{existing ? '저장' : '등록'}</button>
+        <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>취소</button>
+        <button type="button" className="btn btn-primary" disabled={!valid || busy} onClick={submit}>{busy ? '처리 중…' : (existing ? '저장' : '등록')}</button>
       </>}>
       <FieldSet legend="기본 정보" cols={2}>
         <FormRow label="회차 번호" required>
@@ -242,7 +254,10 @@ function SessionEditLP({ edit, onClose, onSave }) {
 
       {!valid && (
         <div style={{ padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
-          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 &lt; 접수마감 &lt; 시험일) + 시험장 1개 이상 선택이 필요합니다. 정원 0은 미정을 의미합니다. 합격발표일은 미정 시 비워두세요.
+          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 ≤ 접수마감 ≤ 시험일) + 시험장 1개 이상 선택이 필요합니다. 정원 0은 미정을 의미합니다. 합격발표일은 미정 시 비워두세요.
+          {!venues.length && state.venues.filter(v => v.active).length === 0 && (
+            <><br/>활성 시험장이 없습니다. 시험장 관리에서 먼저 등록·활성화해 주세요.</>
+          )}
         </div>
       )}
     </LP>

@@ -638,6 +638,7 @@
       toastErr(TopikBoApi.parseError(res));
       return Promise.resolve(false);
     }
+    if (reloadFn) return reloadFn().then(function () { return true; });
     return Promise.resolve(true);
   }
 
@@ -747,7 +748,9 @@
       DS.state.notices = ((notRes.body && notRes.body.items) || []).map(function (n, i) {
         return mapNotice(n, i, DS.state.me && DS.state.me.id);
       });
-      DS.state.faqs = ((faqRes.body && faqRes.body.items) || []).map(mapFaq);
+      DS.state.faqs = ((faqRes.body && faqRes.body.items) || [])
+        .filter(function (f) { return f.is_active !== false; })
+        .map(mapFaq);
       DS.state.members = ((memRes.body && memRes.body.items) || []).map(mapMember);
       DS.state.terms = ((termRes.body && termRes.body.items) || []).map(mapTerm);
       DS.state.admins = ((admRes.body && admRes.body.items) || []).map(mapAdmin);
@@ -828,6 +831,61 @@
     });
   };
 
+  DS.reloadVenues = function () {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Api.getRegionCodes().then(function (regRes) {
+      return Api.getExamVenues().then(function (venRes) {
+        if (!venRes.ok) {
+          toastErr(TopikBoApi.parseError(venRes));
+          return false;
+        }
+        var regions = (regRes.ok && regRes.body && regRes.body.items) || [];
+        var rmap = regionNameMap(regions);
+        DS.state.venues = ((venRes.body && venRes.body.items) || []).map(function (v) {
+          return mapVenue(v, rmap[v.region_code]);
+        });
+        DS.notify();
+        return true;
+      });
+    });
+  };
+
+  DS.reloadSessions = function () {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Api.getExamRounds().then(function (rndRes) {
+      if (!rndRes.ok) {
+        toastErr(TopikBoApi.parseError(rndRes));
+        return false;
+      }
+      var counts = {};
+      (DS.state.applicants || []).forEach(function (a) {
+        counts[a.sessionId] = (counts[a.sessionId] || 0) + 1;
+      });
+      DS.state.sessions = ((rndRes.body && rndRes.body.items) || []).map(function (s) {
+        return mapSession(s, counts);
+      });
+      if (DS.state.sessions.length && !DS.state.sessions.some(function (s) { return s.id === DS.state.activeSessionId; })) {
+        var open = DS.state.sessions.find(function (s) { return s.status === "open"; });
+        DS.state.activeSessionId = (open || DS.state.sessions[0]).id;
+      }
+      DS.notify();
+      return true;
+    });
+  };
+
+  DS.reloadInquiries = function () {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Api.getBoardPosts("inquiry", { page_size: 200 }).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return false;
+      }
+      DS.state.inquiries = ((res.body && res.body.items) || []).map(mapInquiry);
+      DS.notify();
+      return true;
+    });
+  };
+
   function applyLocalApplicant(id, patch) {
     var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
     if (a) Object.assign(a, patch);
@@ -840,12 +898,6 @@
       return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
         if (!ok) return false;
         applyRevFromResponse(id, res);
-        var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
-        applyLocalApplicant(id, {
-          photoStatus: "approved",
-          photoOk: true,
-          status: a && a.paid ? "applied" : "pay",
-        });
         return true;
       });
     });
@@ -857,7 +909,6 @@
       return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
         if (!ok) return false;
         applyRevFromResponse(id, res);
-        applyLocalApplicant(id, { photoStatus: "rejected", photoOk: false, status: "photo", rejectReason: reason });
         return true;
       });
     });
@@ -923,11 +974,7 @@
       }
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      ress.forEach(function (res, i) {
-        applyRevFromResponse(ids[i], res);
-      });
-      ids.forEach(function (id) { applyLocalApplicant(id, { paid: false, status: "refund" }); });
-      return ids.length;
+      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
     });
   };
 
@@ -969,7 +1016,7 @@
       : Api.createExamRound(payload);
     return p.then(function (res) {
       if (!res || !res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      return DS.initFromApi();
+      return DS.reloadSessions();
     });
   };
 
@@ -989,7 +1036,7 @@
       : Api.createExamVenue(payload);
     return p.then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      return DS.initFromApi();
+      return DS.reloadVenues();
     });
   };
 
@@ -1070,6 +1117,21 @@
     });
   };
 
+  DS.reloadFaqs = function () {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Api.getFaq({ active: true }).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return false;
+      }
+      DS.state.faqs = ((res.body && res.body.items) || [])
+        .filter(function (f) { return f.is_active !== false; })
+        .map(mapFaq);
+      DS.notify();
+      return true;
+    });
+  };
+
   DS.apiSaveFaq = function (data) {
     var payload = {
       category: data.cat,
@@ -1087,16 +1149,15 @@
       : Api.createFaq(payload);
     return p.then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      return DS.initFromApi();
+      return DS.reloadFaqs();
     });
   };
 
   DS.apiDeleteFaq = function (id) {
-    return Api.updateFaq(id, { is_active: false }).then(function (res) {
+    var del = Api.deleteFaq ? Api.deleteFaq(id) : Api.updateFaq(id, { is_active: false });
+    return del.then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
-      DS.state.faqs = DS.state.faqs.filter(function (f) { return f.id !== String(id); });
-      DS.notify();
-      return true;
+      return DS.reloadFaqs();
     });
   };
 

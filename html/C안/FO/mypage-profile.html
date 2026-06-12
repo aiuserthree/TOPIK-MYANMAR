@@ -170,6 +170,20 @@
         <select class="select" id="pf-purpose"><option value="" data-i18n-content="form.select">선택</option></select>
       </div>
 
+      <h2 class="h3" style="margin: 24px 0 12px;" data-i18n-content="mpp.mkt_title">마케팅 정보 수신</h2>
+      <div class="form-row" style="padding: 14px 16px; background: var(--bg-2); border-radius: var(--radius);">
+        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; line-height: 1.5;">
+          <input type="checkbox" id="pf-marketing" style="margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0;">
+          <span>
+            <span data-i18n-content="su.terms_marketing">마케팅 정보 수신 동의 (이메일)</span>
+            <span class="hint" style="display: block; margin-top: 4px;" data-i18n-content="mpp.mkt_hint">시험·접수 안내 외 이벤트·설문 등 유용한 소식을 이메일로 받습니다. 언제든지 철회할 수 있습니다.</span>
+          </span>
+        </label>
+        <p style="margin: 10px 0 0 28px; font-size: 13px;">
+          <a href="marketing.html" target="_blank" rel="noopener" data-i18n-content="su.terms_view">보기</a>
+        </p>
+      </div>
+
       <button class="btn btn-primary btn-block btn-lg" style="margin-top: 16px;" id="pf-save-basic" data-i18n-content="mpp.save_basic">기본정보 저장</button>
     </section>
 
@@ -283,6 +297,10 @@
     'su.motive': { ko: '응시동기', my: 'ဖြေဆိုရခြင်း အကြောင်းရင်း', en: 'Reason for taking' },
     'su.purpose': { ko: '응시목적', my: 'ဖြေဆိုရခြင်း ရည်ရွယ်ချက်', en: 'Purpose of taking' },
     'mpp.save_basic': { ko: '기본정보 저장', my: 'အချက်အလက် သိမ်းရန်', en: 'Save basic info' },
+    'mpp.mkt_title': { ko: '마케팅 정보 수신', my: 'ကြော်ငြာ အချက်အလက် လက်ခံခြင်း', en: 'Marketing communications' },
+    'mpp.mkt_hint': { ko: '시험·접수 안내 외 이벤트·설문 등 유용한 소식을 이메일로 받습니다. 언제든지 철회할 수 있습니다.', my: 'စာမေးပွဲ·လျှောက်ထားမှု အပြင် ပွဲများ၊ စစ်တမ်းများ စသည့် အသိပေးချက်များကို အီးမေးလ်ဖြင့် လက်ခံရန် ရွေးချယ်နိုင်ပါသည်။ အချိန်မရွေး ရုပ်သိမ်းနိုင်ပါသည်။', en: 'Receive emails about events, surveys, and other useful news beyond exam and registration notices. You may withdraw consent at any time.' },
+    'su.terms_marketing': { ko: '마케팅 정보 수신 동의 (이메일)', my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူ (အီးမေးလ်)', en: 'Agree to receive marketing info (email)' },
+    'su.terms_view': { ko: '보기', my: 'ကြည့်ရန်', en: 'View' },
     'mpp.email_login_id': { ko: '이메일 (로그인 ID)', my: 'အီးမေးလ် (ဝင်ရောက်ရန် ID)', en: 'Email (login ID)' },
     'mpp.email_hint': { ko: '이메일(로그인 ID)은 변경할 수 없습니다.', my: 'အီးမေးလ် (ဝင်ရောက်ရန် ID) ကို ပြောင်းလဲ၍မရပါ။', en: 'Your email (login ID) cannot be changed.' },
     'mpp.pw_change': { ko: '비밀번호 변경', my: 'စကားဝှက် ပြောင်းလဲခြင်း', en: 'Change password' },
@@ -441,6 +459,8 @@
       setSelectValue($('pf-job'), u.job_code);
       setSelectValue($('pf-motive'), u.motive_code);
       setSelectValue($('pf-purpose'), u.purpose_code);
+      var mkt = $('pf-marketing');
+      if (mkt) mkt.checked = !!u.marketing_opt_in;
       $('pf-email').value = u.email || '';
       profileUser = u;
       applyAccountUi(u.signup_provider || 'email');
@@ -476,7 +496,8 @@
       phone: phoneRaw,
       job_code: Number($('pf-job').value),
       motive_code: Number($('pf-motive').value),
-      purpose_code: Number($('pf-purpose').value)
+      purpose_code: Number($('pf-purpose').value),
+      marketing_opt_in: !!($('pf-marketing') && $('pf-marketing').checked)
     };
     if (!payload.name_ko || !payload.name_en || !payload.phone) {
       alert(bt('val.required_fields', '한글 성명, 영문 성명, 연락처는 필수입니다.'));

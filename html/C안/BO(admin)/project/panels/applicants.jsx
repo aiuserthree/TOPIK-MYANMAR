@@ -741,11 +741,11 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
     return Promise.resolve();
   }, [appId, isApi]);
 
-  // 상세 LP 열릴 때 바로 해당 접수 건 이력 조회(탭 숫자가 전역 audit 오매칭으로 (2)처럼 보이지 않게)
+  // 상세 LP 열릴 때·처리 후 해당 접수 건 이력·상태 동기화
   useEffect(() => {
     setDetailLog(null);
     loadDetailLog();
-  }, [appId, loadDetailLog, state.applicants]);
+  }, [appId, loadDetailLog, a && a.rev, a && a.status, a && a.paid, a && a.photoStatus]);
 
   const log = useMemo(() => {
     if (isApi) return detailLog !== null ? detailLog : [];

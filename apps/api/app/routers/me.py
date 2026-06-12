@@ -184,6 +184,7 @@ async def update_me(
         raise api_error("VALIDATION_ERROR", roster_err)
     photo_base64 = data.pop("photo_base64", None)
     terms_agreed = data.pop("terms_agreed", None)
+    marketing_changed = "marketing_opt_in" in data
     if is_profile_incomplete(user):
         terms_err = required_terms_consent_error(terms_agreed, lang=lang)
         if terms_err:
@@ -213,6 +214,14 @@ async def update_me(
             user_id=user.id,
             terms_agreed=terms_agreed,
             marketing_opt_in=user.marketing_opt_in,
+            ip=ip,
+        )
+    elif marketing_changed:
+        await persist_term_consents(
+            db,
+            user_id=user.id,
+            terms_agreed=[],
+            marketing_opt_in=bool(user.marketing_opt_in),
             ip=ip,
         )
     bump_rev(user)
