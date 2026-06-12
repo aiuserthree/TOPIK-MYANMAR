@@ -178,6 +178,16 @@ function SessionEditLP({ edit, onClose, onSave }) {
   const cap = Number(f.cap);
   const feeI = Number(f.feeI);
   const feeII = Number(f.feeII);
+
+  const validateApplyWindow = (start, end) => {
+    if (!start || !end) return true;
+    if (end < start) {
+      toastErr('접수 마감일은 접수 시작일 이후여야 합니다.');
+      return false;
+    }
+    return true;
+  };
+
   const scheduleOk = f.applyStart && f.applyEnd && f.examDate
     && f.applyStart <= f.applyEnd && f.applyEnd <= f.examDate
     && (!f.resultDate || f.examDate <= f.resultDate);
@@ -190,6 +200,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
 
   const submit = async () => {
     if (!valid || busy) return;
+    if (!validateApplyWindow(f.applyStart, f.applyEnd)) return;
     setBusy(true);
     try {
       await onSave(f);
@@ -226,8 +237,26 @@ function SessionEditLP({ edit, onClose, onSave }) {
       </FieldSet>
 
       <FieldSet legend="일정" cols={2}>
-        <FormRow label="접수 시작일" required><input type="date" className="input" value={f.applyStart} onChange={e => set('applyStart', e.target.value)}/></FormRow>
-        <FormRow label="접수 마감일" required><input type="date" className="input" value={f.applyEnd} onChange={e => set('applyEnd', e.target.value)}/></FormRow>
+        <FormRow label="접수 시작일" required>
+          <input type="date" className="input" value={f.applyStart} onChange={e => {
+            const v = e.target.value;
+            if (f.applyEnd && v && f.applyEnd < v) {
+              toastErr('접수 마감일은 접수 시작일 이후여야 합니다.');
+              return;
+            }
+            set('applyStart', v);
+          }}/>
+        </FormRow>
+        <FormRow label="접수 마감일" required>
+          <input type="date" className="input" value={f.applyEnd} onChange={e => {
+            const v = e.target.value;
+            if (f.applyStart && v && v < f.applyStart) {
+              toastErr('접수 마감일은 접수 시작일 이후여야 합니다.');
+              return;
+            }
+            set('applyEnd', v);
+          }}/>
+        </FormRow>
         <FormRow label="시험일" required><input type="date" className="input" value={f.examDate} onChange={e => set('examDate', e.target.value)}/></FormRow>
         <FormRow label="합격발표일"><input type="date" className="input" value={f.resultDate} onChange={e => set('resultDate', e.target.value)} placeholder="미정 시 비워두기"/></FormRow>
       </FieldSet>
