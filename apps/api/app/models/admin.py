@@ -27,6 +27,9 @@ class AdminUser(TimestampMixin, Base):
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     failed_login_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     login_locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    board_notify_opt_in: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
 
 
 class AdminPermissionMatrix(Base):

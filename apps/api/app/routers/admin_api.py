@@ -42,7 +42,6 @@ from app.lib.email_notify import (
     notify_notice_marketing,
     notify_photo_rejected,
     notify_temp_password,
-    resolve_admin_notify_email,
     count_active_applications,
 )
 from app.lib.profile import is_full_member
@@ -409,6 +408,7 @@ class AdminUserBody(BaseModel):
     name: str
     role: str = "admin"
     status: str = "active"
+    board_notify_opt_in: bool = False
 
 
 class AdminUserPatchBody(BaseModel):
@@ -416,6 +416,7 @@ class AdminUserPatchBody(BaseModel):
     email: str | None = None
     role: str | None = None
     status: str | None = None
+    board_notify_opt_in: bool | None = None
 
 
 def _normalize_admin_role(role: str) -> str:
@@ -2334,6 +2335,7 @@ async def list_admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSe
                 "role": a.role,
                 "status": a.status,
                 "last_login_at": a.last_login_at.isoformat() if a.last_login_at else None,
+                "board_notify_opt_in": bool(a.board_notify_opt_in),
             }
             for a in result.scalars().all()
         ]
@@ -2395,6 +2397,7 @@ async def create_admin_user(
         role=_normalize_admin_role(body.role),
         status=body.status,
         must_change_password=True,
+        board_notify_opt_in=body.board_notify_opt_in,
     )
     db.add(row)
     await db.flush()

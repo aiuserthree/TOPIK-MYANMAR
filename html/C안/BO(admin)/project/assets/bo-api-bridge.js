@@ -509,6 +509,7 @@
       lastLogin: fmtKst(row.last_login_at) || "—",
       lastIp: "—",
       note: "",
+      boardNotifyOptIn: !!row.board_notify_opt_in,
     };
   }
 
@@ -1401,6 +1402,7 @@
         password: data.pw,
         name: data.name,
         role: roleApi(data.role),
+        board_notify_opt_in: !!data.boardNotifyOptIn,
       }).then(function (res) {
         if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
         return DS.initFromApi();
@@ -1411,6 +1413,7 @@
       email: data.email,
       role: roleApi(data.role),
       status: data.status,
+      board_notify_opt_in: !!data.boardNotifyOptIn,
     }).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       return DS.initFromApi();

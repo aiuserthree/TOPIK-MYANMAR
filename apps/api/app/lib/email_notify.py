@@ -158,7 +158,7 @@ async def notify_photo_rejected(
 
 
 async def notify_board_post_created(
-    db: AsyncSession, post: BoardPost, user: User, *, admin_email: str | None = None
+    db: AsyncSession, post: BoardPost, user: User
 ) -> None:
     cfg = get_settings()
     base = _fo_base(cfg)
@@ -166,37 +166,38 @@ async def notify_board_post_created(
     board_name = _board_name(post.board_type)
     submitted = fmt_date(post.created_at) if post.created_at else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     post_url = _board_post_url(base, post.board_type, post.id)
-    await enqueue_email(
-        db,
-        template_key="board_refund_received",
-        to_email=user.email,
-        locale=user.preferred_lang,
-        user_id=user.id,
-        variables={
-            "userName": user.name_ko,
-            "boardName": board_name,
-            "postTitle": post.title,
-            "postId": str(post.id),
-            "submittedAt": submitted,
-            "postUrl": post_url,
-        },
-    )
-    notify_to = (admin_email or cfg.admin_notify_email or "").strip().lower()
-    if notify_to:
+    if post.board_type in ("refund", "refund_correction"):
+        await enqueue_email(
+            db,
+            template_key="board_refund_received",
+            to_email=user.email,
+            locale=user.preferred_lang,
+            user_id=user.id,
+            variables={
+                "userName": user.name_ko,
+                "boardName": board_name,
+                "postTitle": post.title,
+                "postId": str(post.id),
+                "submittedAt": submitted,
+                "postUrl": post_url,
+            },
+        )
+    admin_vars = {
+        "userName": user.name_ko,
+        "boardName": board_name,
+        "category": post.category or post.post_type or "—",
+        "postTitle": post.title,
+        "submittedAt": submitted,
+        "secretFlag": "예" if post.is_secret else "아니오",
+        "boPostUrl": _board_bo_post_url(bo_base, post.id),
+    }
+    for notify_to in await resolve_board_notify_admin_emails(db):
         await enqueue_email(
             db,
             template_key="board_admin_new_post",
             to_email=notify_to,
             locale="ko",
-            variables={
-                "userName": user.name_ko,
-                "boardName": board_name,
-                "category": post.category or post.post_type or "—",
-                "postTitle": post.title,
-                "submittedAt": submitted,
-                "secretFlag": "예" if post.is_secret else "아니오",
-                "boPostUrl": _board_bo_post_url(bo_base, post.id),
-            },
+            variables=admin_vars,
         )
 
 
@@ -438,8 +439,28 @@ async def notify_password_expiry_reminder(db: AsyncSession, user: User, *, days_
     )
 
 
+async def resolve_board_notify_admin_emails(db: AsyncSession) -> list[str]:
+    """게시글 신규 접수 알림 — board_notify_opt_in 체크된 활성 관리자만."""
+    res = await db.execute(
+        select(AdminUser.email)
+        .where(AdminUser.status == "active", AdminUser.board_notify_opt_in.is_(True))
+        .order_by(AdminUser.id)
+    )
+    seen: set[str] = set()
+    emails: list[str] = []
+    for raw in res.scalars().all():
+        addr = (raw or "").strip().lower()
+        if addr and addr not in seen:
+            seen.add(addr)
+            emails.append(addr)
+    return emails
+
+
 async def resolve_admin_notify_email(db: AsyncSession) -> str:
-    """운영자 알림 수신 — ADMIN_NOTIFY_EMAIL 우선, 없으면 super 관리자, 기본 admin@topik-myanmar.com."""
+    """댓글 등 기타 운영자 알림 — opt-in 관리자 우선, 없으면 ADMIN_NOTIFY_EMAIL·super 폴백."""
+    opted = await resolve_board_notify_admin_emails(db)
+    if opted:
+        return opted[0]
     cfg = get_settings()
     configured = (cfg.admin_notify_email or "").strip().lower()
     if configured:

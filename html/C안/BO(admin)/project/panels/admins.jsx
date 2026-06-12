@@ -51,7 +51,7 @@ function AdminAccounts({ canManage }) {
     if (data._isNew) {
       // unique id
       if (state.admins.some(a => a.id === data.id)) { toastErr('이미 사용 중인 아이디입니다.'); return; }
-      const nw = { id: data.id, name: data.name, email: data.email, role: data.role, status: 'active', lastLogin: '—', lastIp: '—', note: data.note || '' };
+      const nw = { id: data.id, name: data.name, email: data.email, role: data.role, status: 'active', lastLogin: '—', lastIp: '—', note: data.note || '', boardNotifyOptIn: !!data.boardNotifyOptIn };
       state.admins.push(nw);
       DataStore.addAudit({ type: '관리자계정', targetId: nw.id, action: '생성', after: { ...nw }, memo: '계정 신규 등록 · 초기 비밀번호 첫 로그인 시 변경 강제' });
       toastOk('관리자 계정이 등록되었습니다. 초기 비밀번호가 이메일로 전송됩니다.');
@@ -178,6 +178,7 @@ function AdminEditLP({ edit, onClose, onSave }) {
   const a0 = edit.id ? state.admins.find(x => x.id === edit.id) : null;
   const [f, setF] = useState(a0 ? { ...a0, _isNew: false } : {
     id: '', name: '', email: '', role: 'general', note: '', pw: '',
+    boardNotifyOptIn: false,
     _isNew: true,
   });
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
@@ -223,6 +224,16 @@ function AdminEditLP({ edit, onClose, onSave }) {
         )}
         <FormRow label="비고" span={2}>
           <input className="input" value={f.note || ''} onChange={e => set('note', e.target.value)} placeholder="예) 콘텐츠 편집 담당"/>
+        </FormRow>
+        <FormRow label="게시글 알림" span={2} hint="환불·정보정정신청·문의게시판 신규 글 접수 시 이 이메일로 알림(운영자 신규 접수 알림 템플릿)">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+            <input
+              type="checkbox"
+              checked={!!f.boardNotifyOptIn}
+              onChange={e => set('boardNotifyOptIn', e.target.checked)}
+            />
+            게시글 신규 접수 이메일 수신
+          </label>
         </FormRow>
       </FieldSet>
     </LP>

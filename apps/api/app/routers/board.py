@@ -14,7 +14,6 @@ from app.lib.fo_messages import fo_message
 from app.lib.email_notify import (
     notify_board_activity_to_operator,
     notify_board_post_created,
-    resolve_admin_notify_email,
 )
 from app.lib.board_helpers import (
     build_comment_tree,
@@ -300,8 +299,7 @@ async def create_post(
 
     user = (await db.execute(select(User).where(User.id == auth.id))).scalar_one_or_none()
     if user:
-        admin_email = await resolve_admin_notify_email(db)
-        await notify_board_post_created(db, post, user, admin_email=admin_email)
+        await notify_board_post_created(db, post, user)
     await db.commit()
     await db.refresh(post)
     return {
