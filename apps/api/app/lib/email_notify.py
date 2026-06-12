@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
@@ -17,16 +18,24 @@ from app.models.exam import ExamRound, ExamVenue
 from app.lib.profile import WITHDRAW_REREGISTRATION_DAYS
 from app.models.user import User
 
-BOARD_NAMES = {
-    "refund_correction": "환불·정보정정신청",
-    "refund": "환불·정보정정신청",
-    "inquiry": "1:1 문의",
+logger = logging.getLogger(__name__)
+
+BOARD_TYPE_ALIASES = {
+    "qna": "inquiry",
+    "refund-correction": "refund_correction",
+    "refund_correction": "refund_correction",
+    "refund": "refund_correction",
+    "inquiry": "inquiry",
 }
 
-# 운영자 신규 접수 알림(board_admin_new_post) 등 BO 발송용 표기
+BOARD_NAMES = {
+    "refund_correction": "환불·정보정정신청",
+    "inquiry": "문의 게시판",
+}
+
+# 운영자 신규 접수 알림(board_admin_new_post) — FO 메뉴명과 동일
 BOARD_NAMES_ADMIN = {
     "refund_correction": "환불·정보정정신청",
-    "refund": "환불·정보정정신청",
     "inquiry": "문의 게시판",
 }
 
@@ -64,12 +73,23 @@ def _bo_base(settings: Settings | None = None) -> str:
     return (settings or get_settings()).public_bo_base.rstrip("/")
 
 
+def _normalize_board_type(board_type: str) -> str:
+    key = (board_type or "").strip().lower()
+    return BOARD_TYPE_ALIASES.get(key, key)
+
+
 def _board_name(board_type: str) -> str:
-    return BOARD_NAMES.get(board_type, board_type)
+    norm = _normalize_board_type(board_type)
+    return BOARD_NAMES.get(norm, board_type)
 
 
 def _board_name_admin(board_type: str) -> str:
-    return BOARD_NAMES_ADMIN.get(board_type, _board_name(board_type))
+    norm = _normalize_board_type(board_type)
+    return BOARD_NAMES_ADMIN.get(norm, _board_name(norm))
+
+
+def _sends_user_submission_email(board_type: str) -> bool:
+    return _normalize_board_type(board_type) in ("refund_correction", "inquiry")
 
 
 def _user_locale(user: User) -> str:
@@ -82,7 +102,8 @@ async def _active_admin_email_set(db: AsyncSession) -> set[str]:
 
 
 def _board_post_url(base: str, board_type: str, post_id: int) -> str:
-    page = "refund-correction.html" if board_type in ("refund", "refund_correction") else "qna.html"
+    norm = _normalize_board_type(board_type)
+    page = "refund-correction.html" if norm == "refund_correction" else "qna.html"
     return f"{base}/{page}?post={post_id}"
 
 
@@ -183,17 +204,26 @@ async def notify_board_post_created(
     cfg = get_settings()
     base = _fo_base(cfg)
     bo_base = _bo_base(cfg)
-    board_name = _board_name(post.board_type)
-    admin_board_name = _board_name_admin(post.board_type)
+    norm_type = _normalize_board_type(post.board_type)
+    board_name = _board_name(norm_type)
+    admin_board_name = _board_name_admin(norm_type)
     submitted = fmt_date(post.created_at) if post.created_at else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    post_url = _board_post_url(base, post.board_type, post.id)
-    if post.board_type in ("refund", "refund_correction", "inquiry"):
+    post_url = _board_post_url(base, norm_type, post.id)
+    user_vars = {
+        "userName": user.name_ko,
+        "boardName": board_name,
+        "postTitle": post.title,
+        "postId": str(post.id),
+        "submittedAt": submitted,
+        "postUrl": post_url,
+    }
+    if _sends_user_submission_email(norm_type):
         user_email = user.email.strip().lower()
         locale = _user_locale(user)
         admin_emails = await _active_admin_email_set(db)
-        # 환불·정정: 관리자 주소로 미얀마어 접수 확인 중복 방지(운영자 알림은 아래 ko만)
+        # 환불·정정만: 관리자 주소 + 미얀마어 접수 확인 중복 방지
         skip_my_admin_dup = (
-            post.board_type in ("refund", "refund_correction")
+            norm_type == "refund_correction"
             and user_email in admin_emails
             and locale == "my"
         )
@@ -202,16 +232,16 @@ async def notify_board_post_created(
                 db,
                 template_key="board_refund_received",
                 to_email=user.email,
-                locale=user.preferred_lang,
+                locale=user.preferred_lang or "ko",
                 user_id=user.id,
-                variables={
-                    "userName": user.name_ko,
-                    "boardName": board_name,
-                    "postTitle": post.title,
-                    "postId": str(post.id),
-                    "submittedAt": submitted,
-                    "postUrl": post_url,
-                },
+                variables=user_vars,
+            )
+            logger.info(
+                "board user submission email queued post_id=%s board_type=%s to=%s locale=%s",
+                post.id,
+                norm_type,
+                user_email,
+                user.preferred_lang or "ko",
             )
     admin_vars = {
         "userName": user.name_ko,
@@ -229,6 +259,13 @@ async def notify_board_post_created(
             to_email=notify_to,
             locale="ko",
             variables=admin_vars,
+        )
+        logger.info(
+            "board admin new post email queued post_id=%s board_type=%s to=%s boardName=%s",
+            post.id,
+            norm_type,
+            notify_to,
+            admin_board_name,
         )
 
 

@@ -54,6 +54,9 @@ grep -q "memo" apps/api/app/routers/admin_api.py && echo "  admin_api: memo OK"
 grep -q "boardNotifyOptIn" public-bo/panels/admins.jsx && echo "  admins.jsx: 게시글 알림 OK" || echo "  admins.jsx: OLD (board notify missing)"
 grep -q "reloadBoardBadges" public-bo/assets/app.jsx && echo "  app.jsx: board badge poll OK" || echo "  app.jsx: OLD (board badge poll missing)"
 grep -q "board_notify_opt_in" apps/api/app/routers/admin_api.py && echo "  admin_api: board_notify_opt_in OK" || echo "  admin_api: OLD (board notify missing)"
+grep -q '_sends_user_submission_email' apps/api/app/lib/email_notify.py && \
+grep -q '문의 게시판' apps/api/app/lib/email_notify.py && \
+echo "  email_notify: inquiry board labels OK" || echo "  email_notify: OLD (inquiry email/labels missing)"
 test -f db/migrations/V015__admin_board_notify_opt_in.sql && echo "  migration V015: present" || echo "  migration V015: MISSING"
 if command -v psql >/dev/null 2>&1; then
   _env="${APP_ROOT}/apps/api/.env"
