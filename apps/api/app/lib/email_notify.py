@@ -187,13 +187,17 @@ async def notify_board_post_created(
     admin_board_name = _board_name_admin(post.board_type)
     submitted = fmt_date(post.created_at) if post.created_at else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     post_url = _board_post_url(base, post.board_type, post.id)
-    if post.board_type in ("refund", "refund_correction"):
+    if post.board_type in ("refund", "refund_correction", "inquiry"):
         user_email = user.email.strip().lower()
         locale = _user_locale(user)
         admin_emails = await _active_admin_email_set(db)
-        # 관리자 주소로 미얀마어 접수 확인 메일 중복 발송 방지(운영자 알림은 아래 ko 템플릿만)
-        send_user_confirm = not (user_email in admin_emails and locale == "my")
-        if send_user_confirm:
+        # 환불·정정: 관리자 주소로 미얀마어 접수 확인 중복 방지(운영자 알림은 아래 ko만)
+        skip_my_admin_dup = (
+            post.board_type in ("refund", "refund_correction")
+            and user_email in admin_emails
+            and locale == "my"
+        )
+        if not skip_my_admin_dup:
             await enqueue_email(
                 db,
                 template_key="board_refund_received",
