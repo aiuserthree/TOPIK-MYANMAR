@@ -426,7 +426,7 @@
 </script>
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
-<script src="assets/fo-board.js?v=20260609"></script>
+<script src="assets/fo-board.js?v=20260612"></script>
 <script>
   window.show = function (id) {
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
@@ -502,6 +502,8 @@
         radios[1].checked = (p.category || '') === '정보정정';
       }
       document.getElementById('rfdSecretPw').value = '';
+      var agree = document.getElementById('rfdAgree');
+      if (agree) agree.checked = false;
       rfdAttach.reset();
       document.querySelector('#writePane .h2').textContent =
         (window.TPKMLang && TPKMLang.t('board.edit_title')) || '글 수정';
@@ -539,9 +541,8 @@
   });
 
   var rfdSubmit = document.getElementById('btnRefundSubmit');
-  // 개인정보 처리 동의 확인 (제출 전 가드) — wireSubmit 실행 전에 가로채기
+  // 개인정보 처리 동의 확인 (작성·수정 공통) — wireSubmit 실행 전에 가로채기
   rfdSubmit.addEventListener('click', function (e) {
-    if (editingPostId) return;
     var agree = document.getElementById('rfdAgree');
     if (agree && !agree.checked) {
       e.stopImmediatePropagation();

@@ -383,17 +383,12 @@
         return;
       }
 
-      // 비밀글 비밀번호 (작성 시) — 페이지가 secretPwEl 을 제공하면 사용
+      // 비밀글 비밀번호 — 작성·수정 모두 필수 (수정 시에도 재입력)
       var secretPassword = '';
       var editingId = typeof opts.getEditingId === 'function' ? opts.getEditingId() : null;
       if (isSecret && opts.secretPwEl) {
         secretPassword = (opts.secretPwEl.value || '').trim();
-        if (!editingId) {
-          if (!secretPassword || secretPassword.length < 4) {
-            alert(bt('board.write_pw', '비밀글 비밀번호를 4자 이상 입력해 주세요.'));
-            return;
-          }
-        } else if (secretPassword && secretPassword.length < 4) {
+        if (!secretPassword || secretPassword.length < 4) {
           alert(bt('board.write_pw', '비밀글 비밀번호를 4자 이상 입력해 주세요.'));
           return;
         }
