@@ -890,6 +890,19 @@
     });
   };
 
+  DS.reloadRefunds = function () {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Api.getBoardPosts("refund_correction", { page_size: 200 }).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return false;
+      }
+      DS.state.refunds = ((res.body && res.body.items) || []).map(mapRefund);
+      DS.notify();
+      return true;
+    });
+  };
+
   DS.reloadInquiries = function () {
     if (!DS.isApiMode()) return Promise.resolve(false);
     return Api.getBoardPosts("inquiry", { page_size: 200 }).then(function (res) {
@@ -898,6 +911,27 @@
         return false;
       }
       DS.state.inquiries = ((res.body && res.body.items) || []).map(mapInquiry);
+      DS.notify();
+      return true;
+    });
+  };
+
+  /** 사이드바 배지(환불·정정 / 문의) — FO 신규 글 반영용 */
+  DS.reloadBoardBadges = function () {
+    if (!DS.isApiMode()) return Promise.resolve(false);
+    return Promise.all([
+      Api.getBoardPosts("refund_correction", { page_size: 200 }),
+      Api.getBoardPosts("inquiry", { page_size: 200 }),
+    ]).then(function (pair) {
+      var refRes = pair[0];
+      var inqRes = pair[1];
+      if (!refRes.ok || !inqRes.ok) {
+        if (!refRes.ok) toastErr(TopikBoApi.parseError(refRes));
+        else if (!inqRes.ok) toastErr(TopikBoApi.parseError(inqRes));
+        return false;
+      }
+      DS.state.refunds = ((refRes.body && refRes.body.items) || []).map(mapRefund);
+      DS.state.inquiries = ((inqRes.body && inqRes.body.items) || []).map(mapInquiry);
       DS.notify();
       return true;
     });

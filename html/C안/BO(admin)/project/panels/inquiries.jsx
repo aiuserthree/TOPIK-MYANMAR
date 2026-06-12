@@ -12,11 +12,8 @@ function InquiriesPanel() {
   const [tab, setTab] = useState('all'); // all|public|secret
 
   useEffect(() => {
-    if (!DataStore.isApiMode || !DataStore.isApiMode() || !DataStore.reloadInquiries) return;
-    DataStore.reloadInquiries();
-    const onFocus = () => DataStore.reloadInquiries();
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    if (!DataStore.isApiMode || !DataStore.isApiMode() || !DataStore.reloadBoardBadges) return;
+    DataStore.reloadBoardBadges();
   }, []);
   const [catF, setCatF] = useState('all');
   const [stF, setStF] = useState('all');

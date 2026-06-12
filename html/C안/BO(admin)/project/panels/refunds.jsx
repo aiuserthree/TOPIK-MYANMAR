@@ -10,6 +10,15 @@ function RefundsPanel() {
   const state = useStore();
   const canAnswer = DataStore.can('refunds', 'answer');
   const canDelete = DataStore.can('refunds', 'delete');
+
+  useEffect(() => {
+    if (!DataStore.isApiMode || !DataStore.isApiMode() || !DataStore.reloadRefunds) return;
+    DataStore.reloadRefunds();
+    const onFocus = () => DataStore.reloadRefunds();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   const [typeF, setTypeF] = useState('all');
   const [stF, setStF] = useState('all');
   const [ansF, setAnsF] = useState('all'); // all|none|has

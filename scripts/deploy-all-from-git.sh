@@ -52,6 +52,7 @@ echo "  BO admin: $(test -f public-bo/admin.html && echo ok || echo MISSING)"
 grep -q "처리 사유" public-bo/panels/audit.jsx && echo "  audit.jsx: 처리 사유 OK" || echo "  audit.jsx: OLD"
 grep -q "memo" apps/api/app/routers/admin_api.py && echo "  admin_api: memo OK"
 grep -q "boardNotifyOptIn" public-bo/panels/admins.jsx && echo "  admins.jsx: 게시글 알림 OK" || echo "  admins.jsx: OLD (board notify missing)"
+grep -q "reloadBoardBadges" public-bo/assets/app.jsx && echo "  app.jsx: board badge poll OK" || echo "  app.jsx: OLD (board badge poll missing)"
 grep -q "board_notify_opt_in" apps/api/app/routers/admin_api.py && echo "  admin_api: board_notify_opt_in OK" || echo "  admin_api: OLD (board notify missing)"
 test -f db/migrations/V015__admin_board_notify_opt_in.sql && echo "  migration V015: present" || echo "  migration V015: MISSING"
 if command -v psql >/dev/null 2>&1; then

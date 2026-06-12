@@ -271,10 +271,12 @@ function App() {
 
   useEffect(() => { setSbOpen(false); window.scrollTo(0, 0); }, [route]);
 
+  const apiReady = !mustChange && !state.apiLoading && DataStore.isApiMode && DataStore.isApiMode();
+
   // FO 신규 접수 반영 — 대시보드·접수자 화면에서 주기·포커스 시 목록 갱신
   useEffect(() => {
-    if (!['dashboard', 'applicants'].includes(route)) return;
-    if (!DataStore.isApiMode || !DataStore.isApiMode() || !DataStore.reloadApplicants) return;
+    if (!apiReady || !['dashboard', 'applicants'].includes(route)) return;
+    if (!DataStore.reloadApplicants) return;
     var sid = state.activeSessionId;
     if (!sid) return;
     var reload = function () { DataStore.reloadApplicants(sid); };
@@ -289,7 +291,24 @@ function App() {
       document.removeEventListener('visibilitychange', onVisible);
       clearInterval(timer);
     };
-  }, [route, state.activeSessionId]);
+  }, [apiReady, route, state.activeSessionId]);
+
+  // FO 신규 게시글 반영 — 사이드바 배지(환불·정정 / 문의) 주기·포커스 갱신
+  useEffect(() => {
+    if (!apiReady || !DataStore.reloadBoardBadges) return;
+    var reload = function () { DataStore.reloadBoardBadges(); };
+    reload();
+    var onFocus = function () { reload(); };
+    var onVisible = function () { if (!document.hidden) reload(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+    var timer = setInterval(reload, 20000);
+    return function () {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(timer);
+    };
+  }, [apiReady]);
 
   const navigate = useCallback((id) => { location.hash = id; }, []);
   const logout = useCallback(() => {
