@@ -92,15 +92,6 @@ def _sends_user_submission_email(board_type: str) -> bool:
     return _normalize_board_type(board_type) in ("refund_correction", "inquiry")
 
 
-def _user_locale(user: User) -> str:
-    return (user.preferred_lang or "ko")[:2].lower()
-
-
-async def _active_admin_email_set(db: AsyncSession) -> set[str]:
-    res = await db.execute(select(AdminUser.email).where(AdminUser.status == "active"))
-    return {(raw or "").strip().lower() for raw in res.scalars().all() if raw and str(raw).strip()}
-
-
 def _board_post_url(base: str, board_type: str, post_id: int) -> str:
     norm = _normalize_board_type(board_type)
     page = "refund-correction.html" if norm == "refund_correction" else "qna.html"
@@ -219,30 +210,21 @@ async def notify_board_post_created(
     }
     if _sends_user_submission_email(norm_type):
         user_email = user.email.strip().lower()
-        locale = _user_locale(user)
-        admin_emails = await _active_admin_email_set(db)
-        # 환불·정정만: 관리자 주소 + 미얀마어 접수 확인 중복 방지
-        skip_my_admin_dup = (
-            norm_type == "refund_correction"
-            and user_email in admin_emails
-            and locale == "my"
+        await enqueue_email(
+            db,
+            template_key="board_refund_received",
+            to_email=user.email,
+            locale=user.preferred_lang or "ko",
+            user_id=user.id,
+            variables=user_vars,
         )
-        if not skip_my_admin_dup:
-            await enqueue_email(
-                db,
-                template_key="board_refund_received",
-                to_email=user.email,
-                locale=user.preferred_lang or "ko",
-                user_id=user.id,
-                variables=user_vars,
-            )
-            logger.info(
-                "board user submission email queued post_id=%s board_type=%s to=%s locale=%s",
-                post.id,
-                norm_type,
-                user_email,
-                user.preferred_lang or "ko",
-            )
+        logger.info(
+            "board user submission email queued post_id=%s board_type=%s to=%s locale=%s",
+            post.id,
+            norm_type,
+            user_email,
+            user.preferred_lang or "ko",
+        )
     admin_vars = {
         "userName": user.name_ko,
         "boardName": admin_board_name,
