@@ -1025,30 +1025,31 @@ async def assign_exam_numbers(
     ).scalar_one_or_none()
     if not rnd:
         raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
-    # 이미 부여·공개된 수험번호의 재배정 방지(최초 부여는 허용).
-    if (
-        not body.dry_run
-        and rnd.exam_numbers_assigned_at
-        and rnd.exam_number_visible_at
-        and rnd.exam_number_visible_at <= datetime.now(timezone.utc)
-    ):
-        raise api_error("ALREADY_VISIBLE", "이미 공개된 수험번호는 재배정할 수 없습니다.", 409)
-
-    # 대상: 수납 완료 + 사진 승인 + 비반려 + 수험번호 미부여
+    # 대상: BO 접수자 목록 상태 '승인완료'(status=approved) + 수험번호 미부여
+    # (이미 부여된 건은 exam_number IS NULL 조건으로 제외 — 공개 후에도 미부여 건 추가 부여 가능)
     result = await db.execute(
         select(Application, User)
         .join(User, User.id == Application.user_id)
         .where(
             Application.exam_round_id == round_id,
+            Application.status == "approved",
+            Application.approved_at.isnot(None),
             Application.payment_status == "paid",
             Application.photo_review_status == "approved",
-            Application.status.notin_(("cancelled", "rejected")),
             Application.exam_number.is_(None),
         )
     )
     rows = result.all()
     if not rows:
-        return {"dry_run": body.dry_run, "assigned": 0, "preview": [], "groups": []}
+        return {
+            "dry_run": body.dry_run,
+            "assigned": 0,
+            "eligible_count": 0,
+            "preview": [],
+            "preview_rows": [],
+            "groups": [],
+            "skipped": [],
+        }
 
     # 편의지원 신청 submission 집합.
     sub_res = await db.execute(
@@ -1067,6 +1068,25 @@ async def assign_exam_numbers(
             venue_cache[vid] = v
         return venue_cache[vid]
 
+    async def _group_max_serial(venue_id: int, level: str) -> int:
+        """동일 (시험장×수준) 그룹에서 이미 부여된 응시자코드(끝 4자리) 최댓값."""
+        res = await db.execute(
+            select(Application.exam_number).where(
+                Application.exam_round_id == round_id,
+                Application.exam_venue_id == venue_id,
+                Application.exam_level == level,
+                Application.exam_number.isnot(None),
+            )
+        )
+        max_serial = 0
+        for (num,) in res.all():
+            if num and len(num) >= 4:
+                try:
+                    max_serial = max(max_serial, int(num[-4:]))
+                except ValueError:
+                    continue
+        return max_serial
+
     # (venue_id, level) 그룹핑.
     groups: dict[tuple[int, str], list[tuple[Application, User]]] = {}
     for app, user in rows:
@@ -1074,30 +1094,57 @@ async def assign_exam_numbers(
 
     assigned = 0
     preview: list[str] = []
+    preview_rows: list[dict] = []
+    skipped: list[dict] = []
     group_summ: list[dict] = []
     for (venue_id, level), pairs in groups.items():
         venue = await _venue(venue_id)
         if not venue:
+            for app, user in pairs:
+                skipped.append(
+                    {
+                        "application_id": app.id,
+                        "name_ko": user.name_ko,
+                        "name_en": user.name_en,
+                        "exam_level": level,
+                        "exam_venue_id": venue_id,
+                        "reason": "venue_not_found",
+                    }
+                )
             continue
         # 영문명 오름차순(동명 시 id 안정 정렬).
         pairs.sort(key=lambda pu: ((pu[1].name_en or "").upper(), pu[0].id))
         apps_sorted = [app for app, _ in pairs]
         accommodation_ids = {a.id for a in apps_sorted if a.submission_id in accommodation_subs}
         serials = _assign_group_serials(apps_sorted, accommodation_ids)
+        serial_offset = await _group_max_serial(venue_id, level)
 
-        level_code = "7" if level == "I" else "8"
+        level_norm = (level or "I").upper()
+        level_code = "7" if level_norm == "I" else "8"
         country = (venue.country_code or "025").zfill(3)
         region = (venue.region_code or "001").zfill(3)
         venue_code = (venue.venue_code or "01").zfill(2)
 
-        for app in apps_sorted:
-            serial = serials[app.id]
+        for app, user in zip(apps_sorted, [u for _, u in pairs]):
+            serial = serials[app.id] + serial_offset
             exam_number = f"{country}{region}{level_code}{venue_code}{serial:04d}"
             preview.append(exam_number)
+            preview_rows.append(
+                {
+                    "application_id": app.id,
+                    "name_ko": user.name_ko,
+                    "name_en": user.name_en,
+                    "exam_level": level_norm,
+                    "exam_number": exam_number,
+                }
+            )
             if not body.dry_run:
                 app.exam_number = exam_number
                 app.status = "exam_number_assigned"
-                app.exam_number_visible = False
+                app.exam_number_visible = (
+                    not rnd.exam_number_visible_at
+                    or rnd.exam_number_visible_at <= datetime.now(timezone.utc)
+                )
                 assigned += 1
         group_summ.append(
             {
@@ -1105,14 +1152,24 @@ async def assign_exam_numbers(
                 "venue_name": venue.name_ko,
                 "region_code": region,
                 "venue_code": venue_code,
-                "level": level,
+                "level": level_norm,
                 "count": len(apps_sorted),
                 "accommodation": len(accommodation_ids),
             }
         )
 
     preview.sort()
+    preview_rows.sort(key=lambda r: r["exam_number"])
+    if rows and not preview:
+        msg = (
+            f"부여 대상 {len(rows)}건이 있으나 시험장 정보를 찾을 수 없어 채번할 수 없습니다. "
+            "접수 건의 시험장(exam_venue_id)과 시험장 관리 데이터를 확인해 주세요."
+        )
+        raise api_error("VENUE_NOT_FOUND", msg, 400)
+
     if not body.dry_run:
+        if assigned <= 0:
+            raise api_error("VALIDATION_ERROR", "부여할 수험번호가 없습니다.", 400)
         rnd.exam_numbers_assigned_at = datetime.now(timezone.utc)
         if body.visible_at:
             rnd.exam_number_visible_at = body.visible_at
@@ -1129,8 +1186,11 @@ async def assign_exam_numbers(
     return {
         "dry_run": body.dry_run,
         "assigned": assigned if not body.dry_run else len(preview),
+        "eligible_count": len(rows),
         "preview": preview[:50],
+        "preview_rows": preview_rows[:50],
         "groups": group_summ,
+        "skipped": skipped,
     }
 
 

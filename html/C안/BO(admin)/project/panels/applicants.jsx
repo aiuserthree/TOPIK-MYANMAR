@@ -308,20 +308,39 @@ function ApplicantsPanel() {
       const body = await DataStore.apiAssignExamNumbers(sessionId, preview);
       if (!body) return null;
       if (preview) {
+        var rows = (body.preview_rows && body.preview_rows.length)
+          ? body.preview_rows.map(function (r) {
+              return {
+                id: String(r.application_id || ''),
+                name: r.name_en || '',
+                nameKo: r.name_ko || '',
+                exam: r.exam_number || '',
+                level: r.exam_level === 'II' ? 'Ⅱ' : (r.exam_level === 'I' ? 'Ⅰ' : (r.exam_level || '')),
+              };
+            })
+          : (body.preview || []).map(function (exam) {
+              return { id: '', name: '', nameKo: '', exam: exam, level: '' };
+            });
+        var skippedList = body.skipped || [];
         return {
-          result: (body.preview || []).map(function (exam, i) { return { id: '', name: '', nameKo: '', exam: exam, level: '' }; }),
-          targets: body.assigned || (body.preview || []).length,
-          skipped: 0,
+          result: rows,
+          targets: body.assigned || rows.length,
+          skipped: skippedList.length,
+          warning: skippedList.length
+            ? ('시험장 정보 없음으로 제외된 접수 ' + skippedList.length + '건이 있습니다. 시험장 관리를 확인해 주세요.')
+            : (rows.length === 0 && (body.eligible_count || 0) === 0
+              ? '부여 대상이 없습니다. (상태 승인완료 + 수험번호 미부여 건만 대상)'
+              : ''),
         };
       }
       toastOk(`${body.assigned || 0}건에 수험번호가 일괄 부여되었습니다.`, { title: '수험번호 부여 완료' });
       return { result: [], targets: body.assigned || 0 };
     }
     const session = state.sessions.find(s => s.id === sessionId);
-    // 대상: paid && photoOk && status NOT IN (cancel, rejected) && exam 비어있음
+    // 대상: BO 상태 승인완료(approved) + 수험번호 미부여
     const targets = state.applicants
       .filter(a => a.sessionId === sessionId)
-      .filter(a => a.paid && a.photoOk && !['cancel', 'rejected'].includes(a.status) && !a.exam);
+      .filter(a => a.status === 'approved' && !a.exam);
     // 같은 시험장에서 동시접수(Ⅰ+Ⅱ) 강제: 본 데모에서는 lvl=동시 동일 처리
     // 알파벳 오름차순(영문)
     const sorted = targets.slice().sort((a, b) => a.nameEn.localeCompare(b.nameEn));
@@ -357,7 +376,8 @@ function ApplicantsPanel() {
     return { result, targets: targets.length };
   };
 
-  const canAssignExam = DataStore.can('applicants', 'exam');
+  const isSuperAdmin = state.me?.role === 'super';
+  const canAssignExam = isSuperAdmin && DataStore.can('applicants', 'exam');
   const canDownload = DataStore.can('applicants', 'export');
   const canPhoto = DataStore.can('applicants', 'photo');
   const canPay = DataStore.can('applicants', 'pay');
@@ -388,7 +408,7 @@ function ApplicantsPanel() {
           <button className="btn btn-secondary" onClick={() => window.print()}>
             <I.Printer style={{ width: 14, height: 14 }}/> 인쇄
           </button>
-          <button className="btn btn-primary" disabled={!canAssignExam} onClick={() => setExamModal(true)}>
+          <button className="btn btn-primary" disabled={!canAssignExam} title={!isSuperAdmin ? '수험번호 일괄 부여는 최고관리자(super)만 가능합니다.' : ''} onClick={() => setExamModal(true)}>
             <I.Hash style={{ width: 14, height: 14 }}/> 수험번호 일괄 부여
           </button>
         </div>
@@ -1131,10 +1151,15 @@ function ExamAssignModal({ onClose, doAssign }) {
       <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
         <p>① 국가코드(3) <b>025</b> + ② 지역코드(3) + ③ 수준코드(1) <b>7=Ⅰ / 8=Ⅱ</b> + ④ 시험장코드(2) + ⑤ 응시자코드(4) — 영문 성명 알파벳 오름차순.</p>
         <p style={{ marginTop: 4, color: 'var(--text-3)', fontSize: 12 }}>
-          대상: 수납 완료 + 사진 승인 + 비반려/비취소 · 환불자는 수험번호 유지<br/>
+          대상: 접수자 목록 상태 <b>승인완료</b> + 수험번호 미부여 · 환불자는 수험번호 유지<br/>
           이메일 발송: <b style={{ color: 'var(--danger)' }}>안 함</b> · 노출 시점: 별도 설정한 날짜에 FO 접수확인 페이지에서 공개
         </p>
       </div>
+      {preview.warning ? (
+        <div style={{ margin: '12px 0', padding: '10px 12px', borderRadius: 6, background: 'var(--warning-bg, #fff8e6)', color: 'var(--text-2)', fontSize: 13 }}>
+          {preview.warning}
+        </div>
+      ) : null}
       <div className="kpi-grid" style={{ margin: '14px 0' }}>
         <div className="kpi"><div className="label">부여 대상</div><div className="val">{preview.result.length}</div></div>
         <div className="kpi"><div className="label">제외(누락 사유)</div><div className="val">{preview.skipped || 0}</div></div>
