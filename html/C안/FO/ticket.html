@@ -262,6 +262,7 @@
   }
 
   var TOPIK_URL = 'https://www.topik.go.kr';
+  var TOPIK_TICKET_PRINT_URL = 'https://www.topik.go.kr/TWMYPG/TWMYPG0030-001.do';
 
   function esc(s) {
     if (s == null) return '';
@@ -323,7 +324,7 @@
         '<h4>' + esc(roundTitle(item)) + '</h4>' +
         '<div class="meta">' + meta + '</div>' +
         '<div class="ticket-num-grid">' + nums + '</div>' +
-        '<a href="' + TOPIK_URL + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">' +
+        '<a href="' + TOPIK_TICKET_PRINT_URL + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">' +
           bt('tk.card_btn', 'TOPIK 본부에서 수험표 출력 ↗') + '</a>' +
       '</div>'
     );

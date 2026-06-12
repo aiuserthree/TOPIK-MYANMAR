@@ -57,6 +57,10 @@ grep -q "board_notify_opt_in" apps/api/app/routers/admin_api.py && echo "  admin
 grep -q '_sends_user_submission_email' apps/api/app/lib/email_notify.py && \
 grep -q '문의 게시판' apps/api/app/lib/email_notify.py && \
 echo "  email_notify: inquiry board labels OK" || echo "  email_notify: OLD (inquiry email/labels missing)"
+grep -q '작성·수정 모두 필수' public/assets/fo-board.js && \
+echo "  fo-board.js: edit password validation OK" || echo "  fo-board.js: OLD (edit password validation missing)"
+! grep -q 'if (editingPostId) return' public/refund-correction.html && \
+echo "  refund-correction.html: edit agree validation OK" || echo "  refund-correction.html: OLD (edit agree skip present)"
 test -f db/migrations/V015__admin_board_notify_opt_in.sql && echo "  migration V015: present" || echo "  migration V015: MISSING"
 if command -v psql >/dev/null 2>&1; then
   _env="${APP_ROOT}/apps/api/.env"
