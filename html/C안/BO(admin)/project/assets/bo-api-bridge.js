@@ -132,6 +132,9 @@
     var photoOk = row.photo_review_status === "approved";
     var paid = row.payment_status === "paid";
     var photoFileId = row.photo_file_id != null ? row.photo_file_id : null;
+    var adminKo = global.TOPIKBoAdminKo;
+    var nationRaw = row.nationality || "미얀마";
+    var l1Raw = row.first_language || "미얀마어";
     return {
       id: String(row.id),
       sessionId: String(row.exam_round_id),
@@ -141,8 +144,8 @@
       dob: row.birth_date || "",
       sx: String(row.gender) === "2" ? 2 : 1,
       genderCode: row.gender ? (String(row.gender) === "2" ? "2" : "1") : "",
-      nation: row.nationality || "미얀마",
-      l1: row.first_language || "미얀마어",
+      nation: adminKo && adminKo.nationalityKo ? adminKo.nationalityKo(nationRaw, "미얀마") : nationRaw,
+      l1: adminKo && adminKo.firstLanguageKo ? adminKo.firstLanguageKo(l1Raw, "미얀마어") : l1Raw,
       // 코드값(연명부 export 용) + 표시 라벨
       jobCode: row.job_code != null ? row.job_code : "",
       motiveCode: row.motivation_code != null ? row.motivation_code : (row.motive_code != null ? row.motive_code : ""),

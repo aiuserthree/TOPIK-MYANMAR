@@ -54,6 +54,12 @@ grep -q "memo" apps/api/app/routers/admin_api.py && echo "  admin_api: memo OK"
 grep -q "boardNotifyOptIn" public-bo/panels/admins.jsx && echo "  admins.jsx: 게시글 알림 OK" || echo "  admins.jsx: OLD (board notify missing)"
 grep -q "reloadBoardBadges" public-bo/assets/app.jsx && echo "  app.jsx: board badge poll OK" || echo "  app.jsx: OLD (board badge poll missing)"
 grep -q "board_notify_opt_in" apps/api/app/routers/admin_api.py && echo "  admin_api: board_notify_opt_in OK" || echo "  admin_api: OLD (board notify missing)"
+test -f public-bo/shared/bo-admin-ko.js && grep -q "TOPIKBoAdminKo" public-bo/shared/bo-admin-ko.js && \
+  echo "  bo-admin-ko.js: OK" || echo "  bo-admin-ko.js: MISSING (BO 상세/연명부 한글 표시 미반영)"
+grep -q "boAdminNationKo" public-bo/panels/applicants.jsx && \
+  echo "  applicants.jsx detail ko: OK" || echo "  applicants.jsx detail ko: MISSING"
+test -f apps/api/app/lib/profile_ko_labels.py && grep -q "nationality_ko" apps/api/app/lib/roster_export.py && \
+  echo "  roster_export API ko: OK" || echo "  roster_export API ko: MISSING"
 grep -q '_sends_user_submission_email' apps/api/app/lib/email_notify.py && \
 grep -q '문의 게시판' apps/api/app/lib/email_notify.py && \
 echo "  email_notify: inquiry board labels OK" || echo "  email_notify: OLD (inquiry email/labels missing)"
