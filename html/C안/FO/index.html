@@ -538,16 +538,24 @@
     });
     loadHomeFaq();
 
-    var el = document.getElementById('homeNoticeList');
-    if (!el || !window.TPKMNotices) return;
-    TPKMNotices.loadList({
-      homePreview: true,
-      onData: function (items) { TPKMNotices.renderHomeList(el, items); },
-      onFallback: function () {
-        el.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-3);">' +
-          escFaq(bt('home.notice_fail', '공지를 불러올 수 없습니다.')) + '</p>';
-      },
-    });
+    function loadHomeNotices() {
+      var el = document.getElementById('homeNoticeList');
+      if (!el || !window.TPKMNotices) return;
+      TPKMNotices.loadList({
+        homePreview: true,
+        onData: function (items) { TPKMNotices.renderHomeList(el, items); },
+        onError: function () {
+          el.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-3);">' +
+            escFaq(bt('home.notice_fail', '공지를 불러올 수 없습니다.')) + '</p>';
+        },
+        onFallback: function () {
+          el.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-3);">' +
+            escFaq(bt('home.notice_fail', '공지를 불러올 수 없습니다.')) + '</p>';
+        },
+      });
+    }
+    loadHomeNotices();
+    document.addEventListener('tpkm:langchange', loadHomeNotices);
   })();
 
   // 회차 일정 — BO 회차관리 API 데이터 반영 (달력 표시는 BO와 동일하게 KST).
