@@ -86,6 +86,24 @@ _NOTICE_CATEGORY_LABELS_EN = {
     "other": "Other",
 }
 
+_FAQ_CATEGORY_CANONICAL = {
+    "account": "account",
+    "apply": "apply",
+    "registration": "apply",
+    "접수": "apply",
+    "payment": "apply",
+    "photo": "apply",
+    "exam": "exam",
+    "시험": "exam",
+    "result": "result",
+    "결과": "result",
+    "other": "other",
+    "etc": "other",
+    "기타": "other",
+    "general": "other",
+    "계정": "account",
+}
+
 _FAQ_CATEGORY_LABELS = {
     "account": "계정",
     "apply": "접수",
@@ -165,9 +183,24 @@ def notice_category_label(category: str | None, lang: str | None = None) -> str:
     return _NOTICE_CATEGORY_LABELS.get(category, category)
 
 
+def normalize_faq_category(category: str | None) -> str:
+    """BO 한글 분류(접수 등)와 FO slug(apply 등)를 canonical slug로 통일."""
+    if not category:
+        return "other"
+    key = category.strip()
+    if key in _FAQ_CATEGORY_CANONICAL:
+        return _FAQ_CATEGORY_CANONICAL[key]
+    lower = key.lower()
+    if lower in _FAQ_CATEGORY_CANONICAL:
+        return _FAQ_CATEGORY_CANONICAL[lower]
+    if lower in _FAQ_CATEGORY_LABELS:
+        return lower
+    return "other"
+
+
 def faq_category_label(category: str | None, lang: str | None = None) -> str:
     return _label_for_lang(
-        category,
+        normalize_faq_category(category),
         _FAQ_CATEGORY_LABELS,
         _FAQ_CATEGORY_LABELS_MY,
         _FAQ_CATEGORY_LABELS_EN,

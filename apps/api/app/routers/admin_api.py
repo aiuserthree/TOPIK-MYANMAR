@@ -1741,7 +1741,11 @@ async def create_faq(
     ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    row = FaqItem(**body.model_dump())
+    from app.lib.formatting import normalize_faq_category
+
+    data = body.model_dump()
+    data["category"] = normalize_faq_category(data["category"])
+    row = FaqItem(**data)
     db.add(row)
     await db.flush()
     await write_audit(
@@ -1767,6 +1771,8 @@ async def update_faq(
         await assert_perm(db, admin, "faq", "delete")
     else:
         await assert_perm(db, admin, "faq", "edit")
+    from app.lib.formatting import normalize_faq_category
+
     for key in (
         "category",
         "question_ko",
@@ -1779,7 +1785,8 @@ async def update_faq(
         "sort_order",
     ):
         if key in body:
-            setattr(row, key, body[key])
+            val = normalize_faq_category(body[key]) if key == "category" else body[key]
+            setattr(row, key, val)
     await write_audit(
         db, admin_user_id=admin.id, action_type="faq_update",
         target_type="faq", target_id=faq_id, after_data=body, ip_address=ip,

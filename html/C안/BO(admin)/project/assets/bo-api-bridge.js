@@ -252,10 +252,27 @@
   }
 
   function mapFaq(row, idx) {
+    var FAQ_CAT_UI = {
+      account: '계정',
+      apply: '접수',
+      registration: '접수',
+      payment: '접수',
+      photo: '접수',
+      exam: '시험',
+      result: '결과',
+      other: '기타',
+      etc: '기타',
+      general: '기타',
+      '계정': '계정',
+      '접수': '접수',
+      '시험': '시험',
+      '결과': '결과',
+      '기타': '기타',
+    };
     return {
       id: String(row.id),
       no: idx + 1,
-      cat: row.category,
+      cat: FAQ_CAT_UI[row.category] || row.category,
       order: row.sort_order || idx + 1,
       question: row.question_ko,
       answer: row.answer_ko || "",
@@ -1187,8 +1204,15 @@
   };
 
   DS.apiSaveFaq = function (data) {
+    var FAQ_CAT_API = {
+      '접수': 'apply',
+      '시험': 'exam',
+      '결과': 'result',
+      '기타': 'other',
+      '계정': 'account',
+    };
     var payload = {
-      category: data.cat,
+      category: FAQ_CAT_API[data.cat] || data.cat,
       question_ko: data.question,
       answer_ko: data.answer,
       question_my: data.questionMy || null,

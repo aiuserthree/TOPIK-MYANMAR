@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.lib.errors import fo_api_error
 from app.lib.locale import resolve_request_locale
-from app.lib.formatting import faq_category_label, fmt_date, notice_category_label
+from app.lib.formatting import faq_category_label, fmt_date, normalize_faq_category, notice_category_label
 from app.models.admin import AdminUser
 from app.models.content import FaqItem, Notice, Term
 from app.models.system import FileAttachment
@@ -223,23 +223,24 @@ async def list_faq(
         answer = getattr(row, f"answer_{lang}", None) or row.answer_ko
         if q and q.lower() not in (question or "").lower() and q.lower() not in (answer or "").lower():
             continue
+        cat = normalize_faq_category(row.category)
         item = {
             "id": row.id,
-            "category": row.category,
-            "category_label": faq_category_label(row.category, lang),
+            "category": cat,
+            "category_label": faq_category_label(cat, lang),
             "question": question,
             "answer": answer,
             "sort_order": row.sort_order,
         }
         items.append(item)
-        grp = groups_map.get(row.category)
+        grp = groups_map.get(cat)
         if grp is None:
             grp = {
-                "category": row.category,
-                "category_label": faq_category_label(row.category, lang),
+                "category": cat,
+                "category_label": faq_category_label(cat, lang),
                 "items": [],
             }
-            groups_map[row.category] = grp
+            groups_map[cat] = grp
             groups.append(grp)
         grp["items"].append(item)
     return {"items": items, "groups": groups}
