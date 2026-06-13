@@ -125,8 +125,12 @@
 
   function currentLang() {
     try {
-      if (window.TPKMLang && TPKMLang.getLang) return TPKMLang.getLang();
-      if (window.TPKMLang && TPKMLang.lang) return TPKMLang.lang;
+      if (window.TPKMBt && TPKMBt.currentLang) return TPKMBt.currentLang();
+      if (window.TPKMLang && TPKMLang.get) {
+        var l = String(TPKMLang.get()).toLowerCase();
+        if (l === 'my' || l === 'mm') return 'my';
+        if (l === 'en') return 'en';
+      }
     } catch (e) { /* ignore */ }
     return 'ko';
   }
@@ -200,5 +204,6 @@
     renderTableRows: renderTableRows,
     openDetail: openDetailPage,
     sessionKey: sessionKey,
+    currentLang: currentLang,
   };
 })();

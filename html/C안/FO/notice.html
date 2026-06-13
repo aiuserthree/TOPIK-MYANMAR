@@ -379,10 +379,13 @@
     if (history.replaceState) history.replaceState(null, '', 'notice.html?id=' + encodeURIComponent(id));
 
     function noticeLang() {
+      if (window.TPKMNotices && TPKMNotices.currentLang) return TPKMNotices.currentLang();
       try {
-        if (window.TPKMLang && TPKMLang.getLang) return TPKMLang.getLang();
-        var stored = (localStorage.getItem('tpkm_lang') || 'KO').toLowerCase();
-        if (stored === 'my' || stored === 'en') return stored;
+        if (window.TPKMLang && TPKMLang.get) {
+          var l = String(TPKMLang.get()).toLowerCase();
+          if (l === 'my' || l === 'mm') return 'my';
+          if (l === 'en') return 'en';
+        }
       } catch (e) { /* ignore */ }
       return 'ko';
     }
