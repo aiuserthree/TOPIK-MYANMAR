@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오프라인 수납 처리 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-modal">
+  <p class="capture-label"><strong>●</strong> 일괄 처리 바 → 오프라인 수납 모달</p>
+  
+<div class="modal-backdrop open">
+  <div class="modal" role="dialog">
+    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between">
+      <h3>오프라인 수납 처리</h3>
+      <button class="lp-close" aria-label="닫기" style="margin-right:-8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:14px;font-size:13;color:var(--text-2)">
+        대상 <b>2</b>건 · 합계 응시료 <b style="color:var(--primary)">USD 24</b>
+        <div style="font-size:12;color:var(--text-3);margin-top:2px">※ 행 단위 낙관적 잠금 · 처리 즉시 관리자 처리 이력에 기록됩니다.</div>
+      </div>
+      <div id="pay-target-table" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden">
+        <table class="dg" style="font-size:12">
+          <thead><tr><th>사진</th><th>한글성명</th><th>영문성명</th><th>생년월일</th><th>급수</th><th>시험장</th><th>사진심사</th><th>현 상태</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="photo" style="background:var(--st-approved-bg);color:var(--st-approved);font-size:11px;display:flex;align-items:center;justify-content:center">승</div></td>
+              <td>김민수</td><td>Kim Minsu</td><td class="code">19980512</td><td>Ⅰ</td><td>양곤대</td>
+              <td><span class="pill pill-approved">승인</span></td><td><span class="pill pill-pay">수납대기</span></td>
+            </tr>
+            <tr>
+              <td><div class="photo" style="background:var(--st-approved-bg);color:var(--st-approved);font-size:11px;display:flex;align-items:center;justify-content:center">승</div></td>
+              <td>최영희</td><td>Choi Younghee</td><td class="code">19960320</td><td>Ⅱ</td><td>양곤대</td>
+              <td><span class="pill pill-approved">승인</span></td><td><span class="pill pill-pay">수납대기</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-row"><label class="label">영수증 번호(선택)</label><input class="input" placeholder="예) R-12345" value="R-20260528-001"/></div>
+      <div class="form-row"><label class="label">메모(선택)</label><textarea class="textarea" rows="2" placeholder="예) 양곤대 흘라잉캠퍼스 1층 접수 데스크">현장 현금 수납 확인</textarea></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">수납 완료 처리</button></div>
+  </div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,380 @@
+{
+"fo_404__mo": [
+"./screenshots/_pdf/fo_404__mo-1.png",
+"./screenshots/_pdf/fo_404__mo-2.png"
+],
+"fo_404__pc": [
+"./screenshots/_pdf/fo_404__pc-1.png"
+],
+"fo_apply-howto__mo": [
+"./screenshots/_pdf/fo_apply-howto__mo-1.png",
+"./screenshots/_pdf/fo_apply-howto__mo-2.png",
+"./screenshots/_pdf/fo_apply-howto__mo-3.png",
+"./screenshots/_pdf/fo_apply-howto__mo-4.png",
+"./screenshots/_pdf/fo_apply-howto__mo-5.png"
+],
+"fo_apply-howto__pc": [
+"./screenshots/_pdf/fo_apply-howto__pc-1.png",
+"./screenshots/_pdf/fo_apply-howto__pc-2.png"
+],
+"fo_common-layout__mo": [
+"./screenshots/_pdf/fo_common-layout__mo-1.png",
+"./screenshots/_pdf/fo_common-layout__mo-2.png",
+"./screenshots/_pdf/fo_common-layout__mo-3.png",
+"./screenshots/_pdf/fo_common-layout__mo-4.png",
+"./screenshots/_pdf/fo_common-layout__mo-5.png",
+"./screenshots/_pdf/fo_common-layout__mo-6.png"
+],
+"fo_common-layout__pc-hero": [
+"./screenshots/_pdf/fo_common-layout__pc-hero-1.png"
+],
+"fo_common-layout__pc": [
+"./screenshots/_pdf/fo_common-layout__pc-1.png",
+"./screenshots/_pdf/fo_common-layout__pc-2.png"
+],
+"fo_faq__mo": [
+"./screenshots/_pdf/fo_faq__mo-1.png",
+"./screenshots/_pdf/fo_faq__mo-2.png",
+"./screenshots/_pdf/fo_faq__mo-3.png"
+],
+"fo_faq__pc": [
+"./screenshots/_pdf/fo_faq__pc-1.png"
+],
+"fo_guide-evaluation__mo": [
+"./screenshots/_pdf/fo_guide-evaluation__mo-1.png",
+"./screenshots/_pdf/fo_guide-evaluation__mo-2.png",
+"./screenshots/_pdf/fo_guide-evaluation__mo-3.png",
+"./screenshots/_pdf/fo_guide-evaluation__mo-4.png",
+"./screenshots/_pdf/fo_guide-evaluation__mo-5.png"
+],
+"fo_guide-evaluation__pc": [
+"./screenshots/_pdf/fo_guide-evaluation__pc-1.png"
+],
+"fo_guide-intro__mo": [
+"./screenshots/_pdf/fo_guide-intro__mo-1.png",
+"./screenshots/_pdf/fo_guide-intro__mo-2.png",
+"./screenshots/_pdf/fo_guide-intro__mo-3.png",
+"./screenshots/_pdf/fo_guide-intro__mo-4.png",
+"./screenshots/_pdf/fo_guide-intro__mo-5.png"
+],
+"fo_guide-intro__pc": [
+"./screenshots/_pdf/fo_guide-intro__pc-1.png"
+],
+"fo_guide-overview__mo": [
+"./screenshots/_pdf/fo_guide-overview__mo-1.png",
+"./screenshots/_pdf/fo_guide-overview__mo-2.png",
+"./screenshots/_pdf/fo_guide-overview__mo-3.png",
+"./screenshots/_pdf/fo_guide-overview__mo-4.png",
+"./screenshots/_pdf/fo_guide-overview__mo-5.png"
+],
+"fo_guide-overview__pc": [
+"./screenshots/_pdf/fo_guide-overview__pc-1.png",
+"./screenshots/_pdf/fo_guide-overview__pc-2.png"
+],
+"fo_guide-questions__mo": [
+"./screenshots/_pdf/fo_guide-questions__mo-1.png",
+"./screenshots/_pdf/fo_guide-questions__mo-2.png",
+"./screenshots/_pdf/fo_guide-questions__mo-3.png",
+"./screenshots/_pdf/fo_guide-questions__mo-4.png"
+],
+"fo_guide-questions__pc": [
+"./screenshots/_pdf/fo_guide-questions__pc-1.png"
+],
+"fo_index__mo": [
+"./screenshots/_pdf/fo_index__mo-1.png",
+"./screenshots/_pdf/fo_index__mo-2.png",
+"./screenshots/_pdf/fo_index__mo-3.png",
+"./screenshots/_pdf/fo_index__mo-4.png",
+"./screenshots/_pdf/fo_index__mo-5.png",
+"./screenshots/_pdf/fo_index__mo-6.png"
+],
+"fo_index__pc": [
+"./screenshots/_pdf/fo_index__pc-1.png",
+"./screenshots/_pdf/fo_index__pc-2.png"
+],
+"fo_login__mo": [
+"./screenshots/_pdf/fo_login__mo-1.png",
+"./screenshots/_pdf/fo_login__mo-2.png"
+],
+"fo_login__pc": [
+"./screenshots/_pdf/fo_login__pc-1.png"
+],
+"fo_marketing__mo": [
+"./screenshots/_pdf/fo_marketing__mo-1.png",
+"./screenshots/_pdf/fo_marketing__mo-2.png",
+"./screenshots/_pdf/fo_marketing__mo-3.png"
+],
+"fo_marketing__pc": [
+"./screenshots/_pdf/fo_marketing__pc-1.png"
+],
+"fo_mypage-profile__mo": [
+"./screenshots/_pdf/fo_mypage-profile__mo-1.png",
+"./screenshots/_pdf/fo_mypage-profile__mo-2.png",
+"./screenshots/_pdf/fo_mypage-profile__mo-3.png",
+"./screenshots/_pdf/fo_mypage-profile__mo-4.png",
+"./screenshots/_pdf/fo_mypage-profile__mo-5.png",
+"./screenshots/_pdf/fo_mypage-profile__mo-6.png"
+],
+"fo_mypage-profile__pc": [
+"./screenshots/_pdf/fo_mypage-profile__pc-1.png",
+"./screenshots/_pdf/fo_mypage-profile__pc-2.png"
+],
+"fo_mypage__mo": [
+"./screenshots/_pdf/fo_mypage__mo-1.png",
+"./screenshots/_pdf/fo_mypage__mo-2.png"
+],
+"fo_mypage__pc": [
+"./screenshots/_pdf/fo_mypage__pc-1.png"
+],
+"fo_notice-list__mo": [
+"./screenshots/_pdf/fo_notice-list__mo-1.png",
+"./screenshots/_pdf/fo_notice-list__mo-2.png",
+"./screenshots/_pdf/fo_notice-list__mo-3.png",
+"./screenshots/_pdf/fo_notice-list__mo-4.png"
+],
+"fo_notice-list__pc": [
+"./screenshots/_pdf/fo_notice-list__pc-1.png"
+],
+"fo_password-reset__mo": [
+"./screenshots/_pdf/fo_password-reset__mo-1.png",
+"./screenshots/_pdf/fo_password-reset__mo-2.png",
+"./screenshots/_pdf/fo_password-reset__mo-3.png"
+],
+"fo_password-reset__pc": [
+"./screenshots/_pdf/fo_password-reset__pc-1.png"
+],
+"fo_privacy__mo": [
+"./screenshots/_pdf/fo_privacy__mo-1.png",
+"./screenshots/_pdf/fo_privacy__mo-2.png",
+"./screenshots/_pdf/fo_privacy__mo-3.png",
+"./screenshots/_pdf/fo_privacy__mo-4.png"
+],
+"fo_privacy__pc": [
+"./screenshots/_pdf/fo_privacy__pc-1.png"
+],
+"fo_qna__mo": [
+"./screenshots/_pdf/fo_qna__mo-1.png",
+"./screenshots/_pdf/fo_qna__mo-2.png",
+"./screenshots/_pdf/fo_qna__mo-3.png",
+"./screenshots/_pdf/fo_qna__mo-4.png",
+"./screenshots/_pdf/fo_qna__mo-5.png"
+],
+"fo_qna__pc": [
+"./screenshots/_pdf/fo_qna__pc-1.png",
+"./screenshots/_pdf/fo_qna__pc-2.png"
+],
+"fo_refund-correction__mo": [
+"./screenshots/_pdf/fo_refund-correction__mo-1.png",
+"./screenshots/_pdf/fo_refund-correction__mo-2.png",
+"./screenshots/_pdf/fo_refund-correction__mo-3.png",
+"./screenshots/_pdf/fo_refund-correction__mo-4.png",
+"./screenshots/_pdf/fo_refund-correction__mo-5.png"
+],
+"fo_refund-correction__pc": [
+"./screenshots/_pdf/fo_refund-correction__pc-1.png",
+"./screenshots/_pdf/fo_refund-correction__pc-2.png"
+],
+"fo_register__mo": [
+"./screenshots/_pdf/fo_register__mo-1.png",
+"./screenshots/_pdf/fo_register__mo-2.png",
+"./screenshots/_pdf/fo_register__mo-3.png",
+"./screenshots/_pdf/fo_register__mo-4.png",
+"./screenshots/_pdf/fo_register__mo-5.png",
+"./screenshots/_pdf/fo_register__mo-6.png",
+"./screenshots/_pdf/fo_register__mo-7.png",
+"./screenshots/_pdf/fo_register__mo-8.png",
+"./screenshots/_pdf/fo_register__mo-9.png"
+],
+"fo_register__pc": [
+"./screenshots/_pdf/fo_register__pc-1.png",
+"./screenshots/_pdf/fo_register__pc-2.png"
+],
+"fo_rules-answer__mo": [
+"./screenshots/_pdf/fo_rules-answer__mo-1.png",
+"./screenshots/_pdf/fo_rules-answer__mo-2.png",
+"./screenshots/_pdf/fo_rules-answer__mo-3.png",
+"./screenshots/_pdf/fo_rules-answer__mo-4.png",
+"./screenshots/_pdf/fo_rules-answer__mo-5.png"
+],
+"fo_rules-answer__pc": [
+"./screenshots/_pdf/fo_rules-answer__pc-1.png",
+"./screenshots/_pdf/fo_rules-answer__pc-2.png"
+],
+"fo_rules-fee__mo": [
+"./screenshots/_pdf/fo_rules-fee__mo-1.png",
+"./screenshots/_pdf/fo_rules-fee__mo-2.png",
+"./screenshots/_pdf/fo_rules-fee__mo-3.png",
+"./screenshots/_pdf/fo_rules-fee__mo-4.png",
+"./screenshots/_pdf/fo_rules-fee__mo-5.png"
+],
+"fo_rules-fee__pc": [
+"./screenshots/_pdf/fo_rules-fee__pc-1.png",
+"./screenshots/_pdf/fo_rules-fee__pc-2.png"
+],
+"fo_rules-id__mo": [
+"./screenshots/_pdf/fo_rules-id__mo-1.png",
+"./screenshots/_pdf/fo_rules-id__mo-2.png",
+"./screenshots/_pdf/fo_rules-id__mo-3.png",
+"./screenshots/_pdf/fo_rules-id__mo-4.png",
+"./screenshots/_pdf/fo_rules-id__mo-5.png"
+],
+"fo_rules-id__pc": [
+"./screenshots/_pdf/fo_rules-id__pc-1.png",
+"./screenshots/_pdf/fo_rules-id__pc-2.png"
+],
+"fo_rules-notice__mo": [
+"./screenshots/_pdf/fo_rules-notice__mo-1.png",
+"./screenshots/_pdf/fo_rules-notice__mo-2.png",
+"./screenshots/_pdf/fo_rules-notice__mo-3.png",
+"./screenshots/_pdf/fo_rules-notice__mo-4.png",
+"./screenshots/_pdf/fo_rules-notice__mo-5.png"
+],
+"fo_rules-notice__pc": [
+"./screenshots/_pdf/fo_rules-notice__pc-1.png",
+"./screenshots/_pdf/fo_rules-notice__pc-2.png"
+],
+"fo_signup__mo": [
+"./screenshots/_pdf/fo_signup__mo-1.png",
+"./screenshots/_pdf/fo_signup__mo-2.png",
+"./screenshots/_pdf/fo_signup__mo-3.png",
+"./screenshots/_pdf/fo_signup__mo-4.png",
+"./screenshots/_pdf/fo_signup__mo-5.png",
+"./screenshots/_pdf/fo_signup__mo-6.png",
+"./screenshots/_pdf/fo_signup__mo-7.png"
+],
+"fo_signup__pc": [
+"./screenshots/_pdf/fo_signup__pc-1.png",
+"./screenshots/_pdf/fo_signup__pc-2.png"
+],
+"fo_terms__mo": [
+"./screenshots/_pdf/fo_terms__mo-1.png",
+"./screenshots/_pdf/fo_terms__mo-2.png",
+"./screenshots/_pdf/fo_terms__mo-3.png",
+"./screenshots/_pdf/fo_terms__mo-4.png",
+"./screenshots/_pdf/fo_terms__mo-5.png",
+"./screenshots/_pdf/fo_terms__mo-6.png"
+],
+"fo_terms__pc": [
+"./screenshots/_pdf/fo_terms__pc-1.png",
+"./screenshots/_pdf/fo_terms__pc-2.png"
+],
+"fo_ticket__mo": [
+"./screenshots/_pdf/fo_ticket__mo-1.png",
+"./screenshots/_pdf/fo_ticket__mo-2.png",
+"./screenshots/_pdf/fo_ticket__mo-3.png",
+"./screenshots/_pdf/fo_ticket__mo-4.png",
+"./screenshots/_pdf/fo_ticket__mo-5.png"
+],
+"fo_ticket__pc": [
+"./screenshots/_pdf/fo_ticket__pc-1.png",
+"./screenshots/_pdf/fo_ticket__pc-2.png"
+],
+"bo_bo-admin-access-log": [
+"./screenshots/_pdf/bo_bo-admin-access-log-1.png"
+],
+"bo_bo-admins": [
+"./screenshots/_pdf/bo_bo-admins-1.png"
+],
+"bo_bo-applicants": [
+"./screenshots/_pdf/bo_bo-applicants-1.png"
+],
+"bo_bo-audit": [
+"./screenshots/_pdf/bo_bo-audit-1.png"
+],
+"bo_bo-dashboard": [
+"./screenshots/_pdf/bo_bo-dashboard-1.png"
+],
+"bo_bo-faq": [
+"./screenshots/_pdf/bo_bo-faq-1.png"
+],
+"bo_bo-inquiries": [
+"./screenshots/_pdf/bo_bo-inquiries-1.png"
+],
+"bo_bo-login": [
+"./screenshots/_pdf/bo_bo-login-1.png"
+],
+"bo_bo-lp-admin-access-detail": [
+"./screenshots/_pdf/bo_bo-lp-admin-access-detail-1.png"
+],
+"bo_bo-lp-admin-edit": [
+"./screenshots/_pdf/bo_bo-lp-admin-edit-1.png"
+],
+"bo_bo-lp-applicant-detail": [
+"./screenshots/_pdf/bo_bo-lp-applicant-detail-1.png"
+],
+"bo_bo-lp-approve": [
+"./screenshots/_pdf/bo_bo-lp-approve-1.png"
+],
+"bo_bo-lp-audit-detail": [
+"./screenshots/_pdf/bo_bo-lp-audit-detail-1.png"
+],
+"bo_bo-lp-exam-assign": [
+"./screenshots/_pdf/bo_bo-lp-exam-assign-1.png"
+],
+"bo_bo-lp-faq-edit": [
+"./screenshots/_pdf/bo_bo-lp-faq-edit-1.png"
+],
+"bo_bo-lp-inquiry-detail": [
+"./screenshots/_pdf/bo_bo-lp-inquiry-detail-1.png"
+],
+"bo_bo-lp-member-access-detail": [
+"./screenshots/_pdf/bo_bo-lp-member-access-detail-1.png"
+],
+"bo_bo-lp-member-detail": [
+"./screenshots/_pdf/bo_bo-lp-member-detail-1.png"
+],
+"bo_bo-lp-notice-edit": [
+"./screenshots/_pdf/bo_bo-lp-notice-edit-1.png"
+],
+"bo_bo-lp-pay": [
+"./screenshots/_pdf/bo_bo-lp-pay-1.png"
+],
+"bo_bo-lp-perm-history-detail": [
+"./screenshots/_pdf/bo_bo-lp-perm-history-detail-1.png"
+],
+"bo_bo-lp-refund-detail": [
+"./screenshots/_pdf/bo_bo-lp-refund-detail-1.png"
+],
+"bo_bo-lp-reject": [
+"./screenshots/_pdf/bo_bo-lp-reject-1.png"
+],
+"bo_bo-lp-session-edit": [
+"./screenshots/_pdf/bo_bo-lp-session-edit-1.png"
+],
+"bo_bo-lp-term-edit": [
+"./screenshots/_pdf/bo_bo-lp-term-edit-1.png"
+],
+"bo_bo-lp-venue-edit": [
+"./screenshots/_pdf/bo_bo-lp-venue-edit-1.png"
+],
+"bo_bo-member-access-log": [
+"./screenshots/_pdf/bo_bo-member-access-log-1.png"
+],
+"bo_bo-members": [
+"./screenshots/_pdf/bo_bo-members-1.png"
+],
+"bo_bo-notices": [
+"./screenshots/_pdf/bo_bo-notices-1.png"
+],
+"bo_bo-perm-history": [
+"./screenshots/_pdf/bo_bo-perm-history-1.png"
+],
+"bo_bo-permissions": [
+"./screenshots/_pdf/bo_bo-permissions-1.png"
+],
+"bo_bo-refunds": [
+"./screenshots/_pdf/bo_bo-refunds-1.png"
+],
+"bo_bo-sessions": [
+"./screenshots/_pdf/bo_bo-sessions-1.png"
+],
+"bo_bo-shell": [
+"./screenshots/_pdf/bo_bo-shell-1.png"
+],
+"bo_bo-terms": [
+"./screenshots/_pdf/bo_bo-terms-1.png"
+],
+"bo_bo-venues": [
+"./screenshots/_pdf/bo_bo-venues-1.png"
+]
+}

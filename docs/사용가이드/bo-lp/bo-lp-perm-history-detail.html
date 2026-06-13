@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>권한 변경 상세 — 메뉴 권한 변경 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> 권한 변경 이력 → 상세 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open lp-wide" role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>권한 변경 상세 — 메뉴 권한 변경</h2>
+      <div class="sub" style="margin-top:2px">권한매트릭스 · <span class="code-id">2026-06-09 14:22:10</span></div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <fieldset class="fs"><legend>기본</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">변경 시각</div><div style="font-size:14px;color:var(--text);font-weight:500"><span class="code-id">2026-06-09 14:22:10</span></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">변경 유형</div><div style="font-size:14px;color:var(--text);font-weight:500"><span class="pill" style="background:var(--bg-3)">메뉴 권한 변경</span></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">변경자</div><div style="font-size:14px;color:var(--text);font-weight:500"><code class="code-id">admin-dev@topik-mm.local</code></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">IP</div><div style="font-size:14px;color:var(--text);font-weight:500"><code class="code-id">127.0.0.1</code></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">대상</div><div style="font-size:14px;color:var(--text);font-weight:500"><code class="code-id">권한매트릭스</code></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">등급</div><div style="font-size:14px;color:var(--text);font-weight:500">일반관리자</div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">메뉴</div><div style="font-size:14px;color:var(--text);font-weight:500"><code class="code-id">applicants</code></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">로그 ID</div><div style="font-size:14px;color:var(--text);font-weight:500"><code class="code-id">ph-20260609-0015</code></div></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>변경 사유</legend><div class="fs-body"><div class="fs-grid ">
+        <div style="background:var(--bg-2);padding:10px;border-radius:6px;font-size:13;color:var(--text-2);white-space:pre-wrap">일반관리자 · applicants 메뉴 수험번호·보내기 권한 제거</div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>변경 내용 (Diff)</legend><div class="fs-body"><div class="fs-grid ">
+        <div class="diff">
+          <div>
+            <div class="h">Before</div>
+            <pre class="before">{
+  "role": "general",
+  "menu": "applicants",
+  "actions": ["view", "photo", "pay", "approve", "reject", "exam", "export"]
+}</pre>
+          </div>
+          <div>
+            <div class="h">After</div>
+            <pre class="after">{
+  "role": "general",
+  "menu": "applicants",
+  "actions": ["view", "photo", "pay", "approve", "reject"]
+}</pre>
+          </div>
+        </div>
+      </div></div></fieldset>
+      <div style="font-size:11.5;color:var(--text-3)">※ 권한 변경 이력은 append-only. 활성 세션은 다음 API 요청 시 새 권한이 적용됩니다.</div></div>
+  <div class="lp-foot">
+      <a class="btn btn-secondary">관리자 권한 바로가기 →</a>
+      <button class="btn btn-primary">닫기</button></div>
+</div>
+</div>
+</body>
+</html>

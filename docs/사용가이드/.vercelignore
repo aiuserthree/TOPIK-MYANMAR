@@ -1,0 +1,16 @@
+node_modules/
+.tmp-screenshots/
+bo-lp/
+*.mjs
+package.json
+package-lock.json
+screen-annotations.json
+*.pdf
+screenshots/_pdf/
+FO_사용가이드.md
+BO_사용가이드.md
+TOPIK_*_인쇄용.html
+TOPIK_사용가이드_슬라이드.html
+_test_common-layout__pc.png
+screenshots/details.json
+screenshots/markers.json

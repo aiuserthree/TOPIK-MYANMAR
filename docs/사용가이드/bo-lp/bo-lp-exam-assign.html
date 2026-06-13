@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수험번호 13자리 일괄 부여 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-modal modal-wide">
+  <p class="capture-label"><strong>●</strong> 접수자 목록 → 수험번호 일괄 부여 미리보기 모달</p>
+  
+<div class="modal-backdrop open">
+  <div class="modal" role="dialog">
+    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between">
+      <h3>수험번호 13자리 일괄 부여</h3>
+      <button class="lp-close" aria-label="닫기" style="margin-right:-8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13;color:var(--text-2)">
+        <p>① 국가코드(3) <b>025</b> + ② 지역코드(3) + ③ 수준코드(1) <b>7=Ⅰ / 8=Ⅱ</b> + ④ 시험장코드(2) + ⑤ 응시자코드(4) — 영문 성명 알파벳 오름차순.</p>
+        <p style="margin-top:4px;color:var(--text-3);font-size:12">대상: 수납 완료 + 사진 승인 + 비반려/비취소 · 이메일 발송: <b style="color:var(--danger)">안 함</b></p>
+      </div>
+      <div class="kpi-grid" style="margin:14px 0">
+        <div class="kpi"><div class="label">부여 대상</div><div class="val">48</div></div>
+        <div class="kpi"><div class="label">제외(누락 사유)</div><div class="val">3</div></div>
+      </div>
+      <div id="exam-preview-table" style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <table class="dg" style="font-size:12">
+          <thead><tr><th>한글성명</th><th>영문성명</th><th>급수</th><th>수험번호(미리보기)</th></tr></thead>
+          <tbody>
+            <tr><td>김민수</td><td>Kim Minsu</td><td>Ⅰ</td><td><code class="code-id" style="color:var(--st-number);font-weight:700">0250017010001</code></td></tr>
+            <tr><td>최영희</td><td>Choi Younghee</td><td>Ⅱ</td><td><code class="code-id" style="color:var(--st-number);font-weight:700">0250018020001</code></td></tr>
+            <tr><td>박지훈</td><td>Park Jihoon</td><td>Ⅰ</td><td><code class="code-id" style="color:var(--st-number);font-weight:700">0250017010002</code></td></tr>
+          </tbody>
+        </table>
+      </div></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">48건 일괄 부여</button></div>
+  </div>
+</div>
+</div>
+</body>
+</html>

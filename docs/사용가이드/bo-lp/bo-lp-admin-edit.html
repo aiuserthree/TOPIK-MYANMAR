@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 등록 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> 관리자 계정 → 등록 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open " role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>관리자 등록</h2>
+      <div class="sub" style="margin-top:2px">신규 계정</div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <fieldset class="fs"><legend>계정 정보</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">이름<span class="req">*</span></label><input class="input" value="홍길동"/></div>
+        <div class="form-row"><label class="label">이메일<span class="req">*</span></label><input class="input" value="admin02@topik-mm.local"/></div>
+        <div class="form-row"><label class="label">권한 등급<span class="req">*</span></label><select class="select"><option>최고관리자</option><option selected>일반관리자</option><option>조회관리자</option></select></div>
+        <div class="form-row"><label class="label">초기 비밀번호<span class="req">*</span></label><input type="password" class="input" value="TempPass!2026"/><div class="hint">8자 이상 · 영문·숫자·특수문자 · 첫 로그인 시 변경 강제</div></div>
+        <div class="form-row" style="grid-column:span 2"><label class="label">비고</label><textarea class="textarea" rows="2" placeholder="담당 업무 등"></textarea></div>
+      </div></div></fieldset></div>
+  <div class="lp-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">등록</button></div>
+</div>
+</div>
+</body>
+</html>

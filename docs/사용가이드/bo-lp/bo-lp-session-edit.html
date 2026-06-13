@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회차 수정 — 제107회 TOPIK — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> 회차 관리 → 회차 등록/수정 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open " role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>회차 수정 — 제107회 TOPIK</h2>
+      <div class="sub" style="margin-top:2px">회차 ID <code class="code-id">sess-107</code></div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <fieldset class="fs"><legend>기본 정보</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">회차 번호<span class="req">*</span></label><input type="number" class="input" value="107"/></div>
+        <div class="form-row"><label class="label">회차명<span class="req">*</span></label><input class="input" value="제107회 TOPIK"/></div>
+        <div class="form-row"><label class="label">접수 상태</label><div class="input" style="display:flex;align-items:center;background:var(--bg-2);color:var(--text-2);cursor:default">접수중</div><div class="hint">접수 시작일 00:00(KST) 이전=예정 · 기간 내=접수중 · 마감일 23:59(KST) 이후=마감</div></div>
+        <div class="form-row"><label class="label">정원<span class="req">*</span></label><input type="number" class="input" value="500"/></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>일정</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">접수 시작일<span class="req">*</span></label><input type="date" class="input" value="2026-05-01"/></div>
+        <div class="form-row"><label class="label">접수 마감일<span class="req">*</span></label><input type="date" class="input" value="2026-05-25"/></div>
+        <div class="form-row"><label class="label">시험일<span class="req">*</span></label><input type="date" class="input" value="2026-06-15"/></div>
+        <div class="form-row"><label class="label">합격발표일</label><input type="date" class="input" value="2026-07-20"/></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>응시료(USD)</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">TOPIK Ⅰ<span class="req">*</span></label><input type="number" class="input" value="12"/></div>
+        <div class="form-row"><label class="label">TOPIK Ⅱ<span class="req">*</span></label><input type="number" class="input" value="12"/></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>시험장 다중 선택</legend><div class="fs-body"><div class="fs-grid ">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+          <label class="kv" style="cursor:pointer;flex-direction:row;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px">
+            <input type="checkbox" checked/>
+            <div><div class="k">001 · 코드 01</div><div class="v" style="font-size:13px;font-weight:500">양곤대학교 흘라잉캠퍼스</div></div>
+          </label>
+          <label class="kv" style="cursor:pointer;flex-direction:row;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px">
+            <input type="checkbox" checked/>
+            <div><div class="k">001 · 코드 02</div><div class="v" style="font-size:13px;font-weight:500">양곤공과대학교</div></div>
+          </label>
+        </div>
+      </div></div></fieldset></div>
+  <div class="lp-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">저장</button></div>
+</div>
+</div>
+</body>
+</html>

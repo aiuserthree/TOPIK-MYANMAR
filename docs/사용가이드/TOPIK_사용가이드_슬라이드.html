@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOPIK Myanmar · FO / BO 사용 가이드 (전문)</title>
+<style>
+:root{
+  --bg:#F0EEE6;--paper:#FBFAF7;--ink:#262420;--ink-soft:#54514A;--ink-faint:#8C887E;
+  --line:#E3DFD3;--coral:#CC785C;--coral-soft:#E8C5B6;--coral-wash:#F6EAE2;--gold:#B7975A;
+  --shadow:0 18px 50px -24px rgba(60,48,38,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;}
+.serif{font-family:"Iowan Old Style","Palatino Linotype",Georgia,"Times New Roman",serif;}
+#bar{position:fixed;top:0;left:0;height:3px;background:var(--coral);z-index:60;transition:width .35s ease;}
+#deck{position:fixed;inset:0;}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;}
+.slide.active{display:flex;}
+
+/* ---- cover / divider ---- */
+.center{align-items:flex-start;justify-content:center;padding:clamp(40px,7vw,120px);}
+.center.cover{background:radial-gradient(120% 90% at 85% 10%,var(--coral-wash) 0%,rgba(246,234,226,0) 55%);}
+.cover .mark{font-size:46px;color:var(--coral);margin-bottom:24px;line-height:1}
+.cover h1{font-size:clamp(38px,6.4vw,84px);line-height:1.03;letter-spacing:-.02em;font-weight:600}
+.cover h1 em{font-style:normal;color:var(--coral)}
+.cover .rule{width:64px;height:4px;background:var(--coral);border-radius:3px;margin:28px 0}
+.cover .lede{font-size:clamp(17px,1.9vw,22px);color:var(--ink-soft);max-width:48ch;line-height:1.55}
+.cover .meta{margin-top:42px;display:flex;gap:34px;flex-wrap:wrap;font-size:14px;color:var(--ink-faint)}
+.cover .meta b{display:block;color:var(--ink);font-size:16px;font-weight:600;margin-bottom:3px}
+.divider{background:radial-gradient(120% 90% at 88% 12%,var(--coral-wash) 0%,rgba(246,234,226,0) 55%);}
+.divider .big{font-size:clamp(130px,24vw,330px);line-height:.78;color:var(--coral-soft);font-weight:600;letter-spacing:-.04em;opacity:.75}
+.divider h2{font-size:clamp(34px,5vw,64px);font-weight:600;letter-spacing:-.02em;margin-top:-.12em}
+.divider h2 .spark{font-size:.5em;vertical-align:.5em;color:var(--coral);margin-right:.12em}
+.divider .desc{margin-top:20px;font-size:clamp(16px,1.7vw,20px);color:var(--ink-soft);max-width:54ch;line-height:1.55}
+
+/* ---- content slide ---- */
+.shead{flex:0 0 auto;padding:clamp(22px,3vw,40px) clamp(34px,6vw,90px) clamp(14px,1.6vw,20px);
+  border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--bg),rgba(240,238,230,.4));}
+.kicker{display:flex;align-items:center;gap:10px;font-size:12.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--coral);font-weight:600;margin-bottom:10px}
+.kicker .dot{width:5px;height:5px;border-radius:50%;background:var(--coral-soft)}
+.kicker .num{color:var(--ink-faint);font-weight:500;letter-spacing:.05em}
+.shead h3{font-size:clamp(23px,3vw,40px);font-weight:600;letter-spacing:-.015em;line-height:1.1}
+.sbody{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:clamp(22px,3vw,40px) clamp(34px,6vw,90px) 70px;scroll-behavior:smooth;}
+.doc{max-width:1180px;margin:0 auto;font-size:clamp(14.5px,1.18vw,16.5px);line-height:1.62;color:var(--ink);}
+
+/* doc elements */
+.doc h3{font-size:1.32em;font-weight:700;color:var(--coral);margin:1.7em 0 .7em;padding-top:.7em;border-top:1px solid var(--line);letter-spacing:-.01em;}
+.doc h3:first-child{margin-top:0;border-top:none;padding-top:0}
+.doc h4{font-size:1.12em;font-weight:700;color:var(--ink);margin:1.3em 0 .5em}
+.doc h5{font-size:1em;font-weight:700;color:var(--ink-soft);margin:1.1em 0 .4em}
+.doc p{margin:.65em 0}
+.doc strong{font-weight:700;color:#1f1d1a}
+.doc a{color:var(--coral);text-decoration:underline;text-underline-offset:2px}
+.doc .ln{color:var(--coral);font-weight:600;border-bottom:1px dotted var(--coral-soft)}
+.doc code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.86em;background:#EFEbE1;color:#8a5a44;padding:1.5px 6px;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+.doc hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+.doc ul,.doc ol{margin:.6em 0 .6em;padding-left:0;list-style:none}
+.doc li{position:relative;padding-left:26px;margin:.42em 0;line-height:1.58}
+.doc ul>li::before{content:"✳";position:absolute;left:2px;top:.04em;color:var(--coral);font-size:.85em}
+.doc ol{counter-reset:li}
+.doc ol>li{counter-increment:li}
+.doc ol>li::before{content:counter(li);position:absolute;left:0;top:.05em;color:#fff;background:var(--coral);
+  width:19px;height:19px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+.doc li ul,.doc li ol{margin:.4em 0 .2em}
+.doc li ul>li::before{content:"–";color:var(--coral-soft)}
+.doc blockquote{margin:1em 0;padding:14px 20px;background:var(--coral-wash);border-left:4px solid var(--coral);border-radius:0 10px 10px 0;color:var(--ink-soft)}
+.doc blockquote strong{color:var(--ink)}
+/* tables */
+.tw{overflow-x:auto;margin:1em 0;border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.01)}
+.doc table{border-collapse:collapse;width:100%;font-size:.92em;background:var(--paper)}
+.doc thead th{background:var(--coral-wash);color:#8a4a32;font-weight:700;text-align:left;padding:10px 14px;border-bottom:2px solid var(--coral-soft);white-space:nowrap;font-size:.95em}
+.doc tbody td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5}
+.doc tbody tr:nth-child(even){background:rgba(240,238,230,.45)}
+.doc tbody tr:last-child td{border-bottom:none}
+.doc td code{white-space:normal}
+/* figure / images */
+.doc figure{margin:1.1em auto;max-width:780px}
+.doc figure img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);cursor:zoom-in}
+/* scrollbar */
+.sbody::-webkit-scrollbar{width:11px}
+.sbody::-webkit-scrollbar-thumb{background:#D8D0C0;border-radius:8px;border:3px solid var(--bg)}
+.sbody::-webkit-scrollbar-track{background:transparent}
+
+/* footer controls */
+#ctrls{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(20px,4vw,40px);background:linear-gradient(180deg,rgba(240,238,230,0),var(--bg) 60%);z-index:50;pointer-events:none}
+#ctrls .grp{display:flex;align-items:center;gap:10px;pointer-events:auto}
+.btn{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:7px 14px;font:inherit;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--coral-soft);color:var(--coral)}
+.btn:disabled{opacity:.4;cursor:default}
+#counter{font-size:13px;color:var(--ink-faint);letter-spacing:.05em}
+#counter b{color:var(--coral);font-weight:600}
+#scrollhint{font-size:11.5px;color:var(--ink-faint)}
+kbd{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:11px;color:var(--ink-soft)}
+
+/* lightbox */
+#lb{position:fixed;inset:0;background:rgba(38,30,24,.86);display:none;align-items:center;justify-content:center;z-index:80;cursor:zoom-out;padding:30px}
+#lb.on{display:flex}
+#lb img{max-width:96vw;max-height:94vh;border-radius:10px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+
+@media(max-width:760px){
+  .doc{font-size:14px}
+  .shead,.sbody{padding-left:20px;padding-right:20px}
+}
+</style>
+</head><body>
+<div id="bar"></div>
+<div id="deck"><section class="slide center cover active">
+    <div>
+      <div class="mark serif">✳</div>
+      <h1 class="serif">TOPIK Myanmar<br><em>FO · BO 사용 가이드</em></h1>
+      <div class="rule"></div>
+      <p class="lede">응시자용 프론트오피스(FO)와 운영진용 백오피스(BO) 가이드 전문을 화면 단위 슬라이드로 정리했습니다. 원문 텍스트를 빠짐없이 담았습니다.</p>
+      <div class="meta">
+        <div><b>구성</b>FO 26화면 · BO 15화면</div>
+        <div><b>언어</b>KO / MY / EN</div>
+        <div><b>권한</b>최고 · 일반 · 조회</div>
+        <div><b>작성 기준</b>2026-06-10</div>
+      </div>
+    </div>
+  </section><section class="slide center divider">
+    <div>
+      <div class="big serif">FO</div>
+      <h2 class="serif"><span class="spark">✳</span>응시자용 프론트오피스</h2>
+      <p class="desc">처음 사이트를 이용하는 일반 사용자를 위한 안내. 공통 레이아웃부터 접수·게시판·계정·약관·에러까지 26개 화면의 전체 설명을 담았습니다.</p>
+    </div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">사용 가이드</span></div>
+      <h3 class="serif">FO 사용 가이드</h3>
+    </div>
+    <div class="sbody"><div class="doc"><blockquote><strong>목적:</strong> TOPIK Myanmar 웹사이트(응시자용) 이용 방법을 안내합니다. <strong>대상:</strong> 처음 사이트를 이용하는 일반 사용자 <strong>작성 기준:</strong> 2026-06-10</blockquote>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO</div>
+      <h3 class="serif">목차</h3>
+    </div>
+    <div class="sbody"><div class="doc"><ol><li><span class="ln">공통 레이아웃</span></li><li><span class="ln">메인 홈</span></li><li><span class="ln">TOPIK 안내 · 시험 개요</span></li><li><span class="ln">TOPIK 안내 · 시험 소개</span></li><li><span class="ln">TOPIK 안내 · 문항 구성</span></li><li><span class="ln">TOPIK 안내 · 평가 기준</span></li><li><span class="ln">TOPIK 규정 · 유의 사항</span></li><li><span class="ln">TOPIK 규정 · 답안 작성 요령</span></li><li><span class="ln">TOPIK 규정 · 응시료 규정</span></li><li><span class="ln">TOPIK 규정 · 신분증 규정</span></li><li><span class="ln">TOPIK 접수 · 접수 방법</span></li><li><span class="ln">TOPIK 접수 · 시험 접수 (4단계)</span></li><li><span class="ln">TOPIK 접수 · 접수 확인</span></li><li><span class="ln">TOPIK 접수 · 수험표 출력</span></li><li><span class="ln">게시판 · 공지사항 (SPA)</span></li><li><span class="ln">게시판 · FAQ</span></li><li><span class="ln">게시판 · 문의게시판 (SPA)</span></li><li><span class="ln">게시판 · 환불·정보정정</span></li><li><span class="ln">계정 · 로그인</span></li><li><span class="ln">계정 · 회원가입 (3단계)</span></li><li><span class="ln">계정 · 비밀번호 재설정</span></li><li><span class="ln">계정 · 내정보 수정</span></li><li><span class="ln">약관 · 이용약관</span></li><li><span class="ln">약관 · 개인정보처리방침</span></li><li><span class="ln">약관 · 마케팅 수신</span></li><li><span class="ln">에러 · 404</span></li></ol></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO</div>
+      <h3 class="serif">이 가이드 사용법</h3>
+    </div>
+    <div class="sbody"><div class="doc"><ul><li><strong>필수 표기:</strong> 입력 필드 표에서 ● = 반드시 입력, ○ = 선택 입력입니다.</li><li><strong>로그인이 필요한 메뉴:</strong> 시험 접수, 접수 확인, 환불·정보정정, 문의게시판은 로그인 후 이용할 수 있습니다. 로그인하지 않은 상태에서 해당 메뉴를 누르면 로그인 화면으로 이동하며, 로그인을 마치면 원래 가려던 페이지로 돌아갑니다.</li><li><strong>언어 변경:</strong> 화면 오른쪽 상단의 KO / MY / EN 버튼을 누르면 한국어, 미얀마어, 영어로 전환됩니다. 선택한 언어는 다음 방문 때도 유지됩니다.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">01</span></div>
+      <h3 class="serif">공통 레이아웃 (GNB · 푸터 · 모바일)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><p>모든 페이지는 같은 상단 메뉴(GNB), 하단 푸터, 모바일 하단 탭바를 사용합니다. 어느 화면에서든 메뉴 구성과 로그인 상태가 동일하게 보입니다.</p>
+<figure><img src="./screenshots/fo/common-layout.png" alt="공통 레이아웃 (GNB · 푸터 · 모바일)" loading="lazy"></figure>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>페이지를 열면 상단 메뉴·하단 푸터·모바일 탭바가 자동으로 표시됩니다.</li><li>로그인한 상태라면 오른쪽에 내 이름과 로그아웃 버튼이 보이고, 로그인하지 않았다면 <strong>로그인</strong>·<strong>회원가입</strong> 버튼이 보입니다.</li><li>시험 접수·접수 확인·환불·정정·문의처럼 로그인이 필요한 메뉴를 누르면 먼저 로그인 화면으로 이동합니다.</li></ol>
+<h3>요소별 상세</h3>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 동작 / 결과</th></tr></thead><tbody><tr><td>1</td><td>로고</td><td>TOPIK Myanmar 로고. 클릭하면 홈으로 이동합니다.</td></tr><tr><td>2</td><td>TOPIK 안내</td><td>마우스를 올리거나 탭하면 시험 개요·소개·문항 구성·평가 기준 메뉴가 펼쳐집니다.</td></tr><tr><td>3</td><td>TOPIK 규정 메뉴</td><td>드롭다운: 유의 사항·답안 작성 요령·응시료 규정·신분증 규정.</td></tr><tr><td>4</td><td>TOPIK 접수 메뉴</td><td>드롭다운: 접수 방법·<strong>시험 접수(로그인)</strong>·<strong>접수 확인(로그인)</strong>·수험표 출력.</td></tr><tr><td>5</td><td>게시판 메뉴</td><td>드롭다운: 공지사항·<strong>환불·정보정정신청(로그인)</strong>·<strong>문의게시판(로그인)</strong>·FAQ.</td></tr><tr><td>6</td><td>로그인·회원가입</td><td>로그인 전: <strong>로그인</strong>·<strong>회원가입</strong> 버튼. 로그인 후: 내 이름(클릭 시 마이페이지) + <strong>로그아웃</strong>.</td></tr><tr><td>7</td><td>언어 전환 (KO/MY/EN)</td><td>버튼을 누르면 바로 해당 언어로 화면이 바뀝니다.</td></tr><tr><td>8</td><td>햄버거 메뉴 (≤768px)</td><td>우측 슬라이드 드로어. 4대 메뉴 아코디언 + 로그인/마이 + 언어 토글. <strong>ESC·배경 클릭·닫기(✕)</strong> 로 닫힘, 열린 동안 본문 스크롤 잠금.</td></tr><tr><td>9</td><td>하단 탭바 (모바일)</td><td>홈·접수·게시판·마이 4탭 자동 생성. 현재 페이지에 맞춰 활성 탭 표시(예: 마이페이지·로그인은 "마이").</td></tr><tr><td>10</td><td>푸터</td><td>운영기관 안내, 바로가기, TOPIK·NIIED 등 외부 링크, 문의 이메일, 업무시간(월–금 09:00–17:00, 미얀마 시간).</td></tr><tr><td>11</td><td>로그인 필요 페이지</td><td>시험 접수·접수 확인·환불·정정·문의는 로그인 후 이용합니다.</td></tr></tbody></table></div></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">02</span></div>
+      <h3 class="serif">메인 홈 (`index.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/index.png" alt="메인 홈" loading="lazy"></figure>
+<p>홈 화면에는 현재 회차 정보, 접수 마감까지 남은 시간, 시험 일정, 최신 공지, 자주 묻는 질문 요약이 표시됩니다.</p>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 회차 배지 (<code>#heroRoundBadge</code>)</strong> — 현재/다음 회차 + 시험일을 표시합니다. 상태에 따라 모양이 바뀝니다: 접수 전 = "제N회 …(시험일)", 접수 중 = "… 접수 진행 중"(초록 점 깜빡임), 마감 = "접수 마감"(회색). 접수 중인 회차가 우선 표시되고, 없으면 가장 가까운 예정 회차가 표시됩니다.</li><li><strong>2) 주요 버튼</strong> — <strong>시험 접수하기</strong>, <strong>시험 안내 보기</strong>. PC는 가로, 모바일은 세로로 배치됩니다.</li><li><strong>3) D-Day 카운트다운 (<code>#ddayGrid</code>: <code>dd-d/h/m/s</code>)</strong> — <strong>접수 마감 시각까지</strong> 남은 일/시/분/초를 1초마다 갱신. 0이 되면 "접수가 마감되었습니다 + 다음 회차 일정 보기" 안내로 자동 전환. 하단 메타(접수기간/응시료 납부/시험일)는 모바일에서 숨김.</li><li><strong>4) 일정 타임라인 (<code>#examTimeline</code>)</strong> — 4단계 카드: 원서 접수 → 응시료 납부(오프라인) → 시험 시행 → 합격 발표(추후 공지). 현재 진행 중 단계는 <code>진행중</code>, 지난 단계는 <code>종료</code> 배지(KST 기준).</li><li><strong>5) 공지 미리보기 (<code>#homeNoticeList</code>)</strong> — 최신 공지 최대 5건. 각 행 = 카테고리 배지 + 제목(고정글은 <code>NEW</code>) + 날짜. 행을 클릭하면 공지 상세로 이동합니다.</li><li><strong>6) 바로가기 카드</strong> — 시험 접수 / 접수 확인 / 수험표 출력 / 환불·정보정정.</li><li><strong>7) FAQ 아코디언 (<code>#homeFaqAccordion</code>)</strong> — FAQ 상위 3건 요약. 질문 클릭 시 답변 펼침. 전체 FAQ는 FAQ 메뉴에서 볼 수 있습니다.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">03</span></div>
+      <h3 class="serif">TOPIK 안내 · 시험 개요 (`guide-overview.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/guide-overview.png" alt="TOPIK 안내 · 시험 개요" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 동작</th></tr></thead><tbody><tr><td>1</td><td>외부 링크 3종</td><td>주미얀마 대한민국 대사관·Facebook·YouTube (새 탭).</td></tr><tr><td>2</td><td>핵심 요약 카드</td><td>주관(국립국제교육원 NIIED) / 시행 기관(주미얀마 대한민국 대사관) / 응시 자격(국적 제한 없음).</td></tr><tr><td>3</td><td>본문</td><td>"TOPIK이란?"(1997년~ 시행 목적), 응시 목적 4가지.</td></tr><tr><td>4</td><td>연간 시험 일정 표</td><td>등록된 시험 회차 일정이 표로 표시됩니다. 현재 접수 중인 회차는 표에서 강조 표시됩니다. 시각은 미얀마(UTC+6:30) 기준 표시.</td></tr><tr><td>5</td><td>CTA 블록</td><td>시험 접수하기 / 시험 규정 보기 / 자주 묻는 질문.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">04</span></div>
+      <h3 class="serif">TOPIK 안내 · 시험 소개 (`guide-intro.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/guide-intro.png" alt="TOPIK 안내 · 시험 소개" loading="lazy"></figure>
+<p>정적 안내 페이지. TOPIK Ⅰ/Ⅱ의 차이와 등급별 활용처를 카드로 설명합니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>내용</th></tr></thead><tbody><tr><td>1</td><td>TOPIK Ⅰ 카드</td><td>초급(1·2급) · 2개 영역 · 100분 · 200점. 듣기 30 + 읽기 40(객관식). 급수별 어휘 안내.</td></tr><tr><td>2</td><td>TOPIK Ⅱ 카드</td><td>중·고급(3~6급) · 3개 영역 · 180분 · 300점. 듣기 50 + 쓰기 4 + 읽기 50(객관식+주관식).</td></tr><tr><td>3</td><td>동시 접수 안내 콜아웃</td><td>Ⅰ·Ⅱ 동시 접수 가능, 동일 시험장 코드, 응시료는 수준별 개별 오프라인 수납.</td></tr><tr><td>4</td><td>활용처 카드 3종</td><td>한국 유학(권장 3급+) / EPS·취업(권장 2급+) / 거주·이민(권장 3급+).</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">05</span></div>
+      <h3 class="serif">TOPIK 안내 · 문항 구성 (`guide-questions.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/guide-questions.png" alt="TOPIK 안내 · 문항 구성" loading="lazy"></figure>
+<p>정적 표 페이지. 영역별 문항 수·배점·시간을 정리합니다.</p>
+<div class="tw"><table><thead><tr><th>시험</th><th>영역 (유형)</th><th>문항</th><th>배점</th><th>시간</th></tr></thead><tbody><tr><td><strong>TOPIK Ⅰ</strong></td><td>듣기 (객관식)</td><td>30</td><td>100</td><td>40분</td></tr><tr><td></td><td>읽기 (객관식)</td><td>40</td><td>100</td><td>60분</td></tr><tr><td></td><td><strong>총계</strong></td><td><strong>70</strong></td><td><strong>200</strong></td><td><strong>100분</strong></td></tr><tr><td><strong>TOPIK Ⅱ</strong></td><td>듣기 (객관식)</td><td>50</td><td>100</td><td>110분(듣기+쓰기)</td></tr><tr><td></td><td>쓰기 (주관식)</td><td>4</td><td>100</td><td></td></tr><tr><td></td><td>읽기 (객관식)</td><td>50</td><td>100</td><td>70분</td></tr><tr><td></td><td><strong>총계</strong></td><td><strong>104</strong></td><td><strong>300</strong></td><td><strong>180분</strong></td></tr></tbody></table></div>
+<ul><li><strong>쓰기 안내 콜아웃:</strong> TOPIK Ⅱ 쓰기 = 단문 완성형 2 + 작문형 2, 응시자 본인 손으로 답안지에 직접 작성. 모범 답안·채점 기준은 <code>topik.go.kr</code>.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">06</span></div>
+      <h3 class="serif">TOPIK 안내 · 평가 기준 (`guide-evaluation.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/guide-evaluation.png" alt="TOPIK 안내 · 평가 기준" loading="lazy"></figure>
+<p>정적 표 페이지. 등급별 합격 점수와 채점·인정 기준을 안내합니다.</p>
+<div class="tw"><table><thead><tr><th>시험</th><th>등급</th><th>최저 점수</th></tr></thead><tbody><tr><td>TOPIK Ⅰ (200점)</td><td>1급 / 2급</td><td>80점 이상 / 140점 이상</td></tr><tr><td>TOPIK Ⅱ (300점)</td><td>3급 / 4급 / 5급 / 6급</td><td>120 / 150 / 190 / 230점 이상</td></tr></tbody></table></div>
+<ul><li><strong>추가 정보 카드 4종:</strong> 채점 방식(객관식 OMR 자동, 쓰기 평가위원 채점) · 성적 인정 기간(발표일로부터 <strong>2년</strong>) · 등급 부여 방식(총점 기준 자동, 미달 시 '불합격') · 성적표 발급(발표 약 1주 후 <code>topik.go.kr</code> PDF).</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">07</span></div>
+      <h3 class="serif">TOPIK 규정 · 유의 사항 (`rules-notice.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/rules-notice.png" alt="TOPIK 규정 · 유의 사항" loading="lazy"></figure>
+<p>정적 규정 페이지. 시험 당일 입실·금지 물품·진행 준수·부정행위 제재를 정리합니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>상단 경고</td><td>시험 시작 후 입실 불가, 규정 위반 시 무효 처리 가능.</td></tr><tr><td>2</td><td>입실 및 신분 확인</td><td>시작 <strong>30분 전</strong> 도착, 인정 신분증+수험표 지참, 사진·본인 일치 확인(마스크 잠시 벗기).</td></tr><tr><td>3</td><td>휴대 금지 물품</td><td>휴대전화·스마트워치, 전자사전·계산기, 이어폰·블루투스, 카메라·녹음기, 서적·노트·메모지, 사전류·참고서, 디지털 시계, 기타 전자기기.</td></tr><tr><td>4</td><td>진행 중 준수 사항</td><td>통신기기 전원 OFF·가방 보관, 책상 위 허용물(신분증·수험표·검정 사인펜·수정테이프), 화장실 사용 불가 원칙, 답안 교체·교환 금지, 감독관 지시 준수.</td></tr><tr><td>5</td><td>부정행위 제재</td><td>회차 무효·향후 응시 제한·형사 고발 가능. (대리응시·신분증 위변조·문제/답안 촬영 유출·외부 정보 검색·답안 교환)</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">08</span></div>
+      <h3 class="serif">TOPIK 규정 · 답안 작성 요령 (`rules-answer.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/rules-answer.png" alt="TOPIK 규정 · 답안 작성 요령" loading="lazy"></figure>
+<p>정적 규정 페이지. OMR 마킹·쓰기 답안 작성법과 필기구 규정을 안내합니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>블록</th><th>핵심 내용</th></tr></thead><tbody><tr><td>1</td><td>사용 가능한 필기구</td><td><strong>검정색 컴퓨터용 사인펜만</strong> 사용(시험장 제공·본인 휴대 가능). 수정테이프·수정액·연필·볼펜 금지.</td></tr><tr><td>2</td><td>OMR 카드 마킹</td><td>올바른 예(원 안을 완전히 진하게) vs 잘못된 예(빗금·점·반칸) 일러스트로 비교.</td></tr><tr><td>3</td><td>해야 할 것 / 하지 말 것</td><td>Do/Don't 2열 표로 정답 마킹·정정 방법·답안지 훼손 금지 등 안내.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">09</span></div>
+      <h3 class="serif">TOPIK 규정 · 응시료 규정 (`rules-fee.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/rules-fee.png" alt="TOPIK 규정 · 응시료 규정" loading="lazy"></figure>
+<p>정적 규정 페이지(2026 기준). 금액·결제·환불 정책을 안내합니다.</p>
+<ul><li><strong>1) 응시료:</strong> TOPIK Ⅰ = <strong>$25 USD</strong>, TOPIK Ⅱ = <strong>$25 USD</strong>. (회차별 변경 가능 — 정확 금액은 회차 공지·접수 화면의 실제 표시값 우선)</li><li><strong>2) 결제 방법:</strong> <strong>오프라인 수납만</strong> (온라인 카드·계좌이체 미지원). 지정 계좌/수납처에서 직접 납부, 수납 시 <strong>접수번호</strong> 확인, 영수증 보관, <strong>Ⅰ·Ⅱ 동시 접수 시 수준별 개별 납부</strong>.</li><li><strong>3) 환불 정책 표:</strong></li></ul>
+<div class="tw"><table><thead><tr><th>시점</th><th>환불률</th><th>비고</th></tr></thead><tbody><tr><td>접수 기간 중</td><td>100%</td><td>오프라인 수납 전 — 마이페이지에서 직접 취소</td></tr><tr><td>접수 마감 후 ~ 시험 7일 전</td><td>60%</td><td>환불·정보정정신청 게시판으로 신청</td></tr><tr><td>시험 7일 전 ~ 1일 전</td><td>30%</td><td>환불·정보정정신청 게시판으로 신청</td></tr><tr><td>시험 당일 이후</td><td>0%</td><td>환불 불가</td></tr></tbody></table></div>
+<ul><li><strong>4) 영수증 발급:</strong> 종이 영수증은 환불·정정 신청 시 필요할 수 있음. 전자 영수증은 시행 기관 문의.</li></ul>
+<blockquote>취소 가능 시점은 <strong>오프라인 수납 전까지</strong> — 수납 후에는 마이페이지 직접 취소가 막히고 <span class="ln">환불·정보정정신청 게시판</span>으로만 신청 가능합니다.</blockquote>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">10</span></div>
+      <h3 class="serif">TOPIK 규정 · 신분증 규정 (`rules-id.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/rules-id.png" alt="TOPIK 규정 · 신분증 규정" loading="lazy"></figure>
+<p>정적 규정 페이지. 시험 당일 인정/불인정 신분증과 미소지 시 대응을 안내합니다.</p>
+<div class="tw"><table><thead><tr><th>구분</th><th>내용</th></tr></thead><tbody><tr><td><strong>인정</strong></td><td>여권(Passport) / 미얀마 NRC(국민등록증) / 거주증(미얀마 발급) / 국가 발급 사진 부착 신분증(운전면허증 등). 모두 <strong>유효기간 내 + 사진 부착 + 본인 일치</strong>.</td></tr><tr><td><strong>불인정</strong></td><td>학생증·사원증(국가 발급 아님) / 사진 없는 신분증 / 만료된 신분증 / 사본·휴대폰 화면 이미지.</td></tr><tr><td><strong>미소지 시</strong></td><td>인정 신분증 없으면 <strong>응시 불가</strong>. 당일 분실 시 시작 30분 전까지 감독관에 즉시 신고, 대체 확인 가능 여부는 감독관 판단.</td></tr><tr><td><strong>사진 일치 확인</strong></td><td>머리·안경 변화는 인정, 안면 윤곽이 크게 다르면 추가 확인. 마스크·모자·선글라스는 잠시 벗기.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">11</span></div>
+      <h3 class="serif">TOPIK 접수 · 접수 방법 (`apply-howto.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/apply-howto.png" alt="TOPIK 접수 · 접수 방법" loading="lazy"></figure>
+<p>정적 안내 페이지. 회원가입부터 수험표 출력까지 전체 흐름을 6단계로 설명합니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>단계</th><th>채널</th><th>내용</th></tr></thead><tbody><tr><td>1</td><td>회원가입</td><td>온라인</td><td>이메일 인증 + 기본정보·증명사진 등록 (사진은 접수 시 자동 사용).</td></tr><tr><td>2</td><td>로그인</td><td>온라인</td><td>이메일+비밀번호 또는 Google 계정.</td></tr><tr><td>3</td><td>시험 접수 (4단계)</td><td>온라인</td><td>회차·급수 → 회원정보 확인 → 사진 규격 확인 → 최종 제출. Ⅰ·Ⅱ 동시 가능.</td></tr><tr><td>4</td><td>사진 심사 + 응시료 수납</td><td>오프라인</td><td>운영진 사진 심사 + 지정 수납처 직접 납부 (동시 접수 시 수준별 개별).</td></tr><tr><td>5</td><td>수험번호 부여</td><td>온라인</td><td>사진 승인 + 수납 완료 확인 시 일괄 부여 → 마이페이지에서 확인.</td></tr><tr><td>6</td><td>수험표 출력</td><td>외부</td><td>시험 2주 전부터 <strong>topik.go.kr</strong>에서 출력, 당일 신분증과 지참.</td></tr></tbody></table></div>
+<ul><li><strong>준비물 체크리스트:</strong> 유효 이메일 / 본인 연락처(미얀마 휴대전화 권장) / 여권용 증명사진(JPG·PNG, 3:4, 200KB~2MB, 6개월 이내) / 신분증 정보(여권·NRC) / 응시료(오프라인).</li><li><strong>경고 콜아웃:</strong> 본 사이트는 응시료 온라인 결제 불가 → 오프라인 수납 후 수험번호 부여.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">12</span></div>
+      <h3 class="serif">TOPIK 접수 · 시험 접수 (4단계) (`register.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/register.png" alt="TOPIK 접수 · 시험 접수 (4단계)" loading="lazy"></figure>
+<p><strong>로그인 필수</strong> — 이용 전 로그인해 주세요.</p>
+<p>4단계로 나뉜 접수 화면입니다. 상단 단계 표시에서 <strong>완료한 단계를 클릭하면</strong>, 각 패널의 <code>다음</code>(<code>data-next</code>)·<code>이전</code>(<code>data-back</code>) 버튼으로 이동합니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li><strong>STEP1 회차·급수</strong> — 접수 가능한 회차 라디오 선택 → 시험장 선택 → TOPIK Ⅰ/Ⅱ 체크(복수 가능) → <code>다음</code>.</li><li><strong>STEP2 회원정보 확인</strong> — 가입 시 등록한 내 정보가 읽기 전용으로 표시. 수정은 <span class="ln">내정보 수정</span>에서.</li><li><strong>STEP3 사진 규격 확인</strong> — 가입 시 등록한 증명사진 미리보기 + 5개 규격 체크리스트 <strong>전부 체크해야</strong> <code>다음</code> 활성화.</li><li><strong>STEP4 최종 확인</strong> — 요약 확인 + 약관 동의 → <code>접수하기</code> → 완료 모달 → 마이페이지.</li><li>어느 단계에서든 <strong><code>저장 후 나가기</code></strong>로 임시저장 가능. 다음 진입 시 이어쓰기 여부를 묻습니다.</li></ol>
+<h3>STEP별 핵심 동작</h3>
+<div class="tw"><table><thead><tr><th>단계</th><th><code>data-s</code></th><th>주요 동작</th></tr></thead><tbody><tr><td>1</td><td>1</td><td><code>roundList</code> 회차 라디오 → <code>venueSelect</code> 시험장 → <code>lvl1</code>/<code>lvl2</code> 급수(복수) → 검증 후 다음</td></tr><tr><td>2</td><td>2</td><td><code>profileGrid</code>에  프로필 읽기전용 표시(수정 불가, 링크 제공)</td></tr><tr><td>3</td><td>3</td><td><code>photo-frame</code> 증명사진 미리보기 + <code>photo-checks</code> 5항목 전체 체크 시 <code>btnGoStep4</code> 활성</td></tr><tr><td>4</td><td>4</td><td><code>sumRound</code>/<code>sumLevels</code>/<code>sumVenue</code>/<code>sumFee</code> 요약 + <code>agreeTerms</code> 동의 → <code>btnSubmit</code> 제출</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 단계 인디케이터 (<code>#registerSteps</code>)</strong> — ①회차·급수 ②회원정보 확인 ③사진 규격 확인 ④최종 확인. 완료 단계 클릭 시 해당 단계로 점프(모바일은 활성 탭을 화면 중앙으로 스크롤).</li><li><strong>2) 저장 후 나가기</strong> — 입력 중인 내용을 임시 저장하고 마이페이지로 나갈 수 있습니다. 저장된 내용은 <strong>30일간</strong> 보관되며, 다음에 접수 화면에 들어오면 이어서 작성할지 묻습니다.</li><li><strong>3) 회차 목록 (<code>#roundList</code>)</strong> — <code>open</code>·<code>scheduled</code> 회차만 카드로 노출. 카드에 제N회/제목, 상태 배지(접수 중/접수 마감/예정/접수 예정), 시험일, 접수 기간. <strong>접수 중이 아닌 회차는 비활성</strong>(선택 불가). 라디오 단일 선택.</li><li><strong>4) 시험장 (<code>#venueSelect</code>)</strong> — 시험장 목록 드롭다운. 시험장이 1개면 자동 선택. <strong>잠금 케이스:</strong> ⓐ재접수, ⓑ같은 회차에 진행 중 급수가 있을 때 → 기존 시험장으로 고정(드롭다운 비활성 + <code>venueLockNote</code> 안내). 다른 시험장을 선택할 수 없을 때는 안내 문구가 표시됩니다.</li><li><strong>5) 급수 체크박스 (<code>lvl1</code>/<code>lvl2</code>)</strong> — TOPIK Ⅰ·Ⅱ 복수 선택. <strong>잠금:</strong> 선택 회차에 이미 진행 중인 급수는 비활성 + 사유 노트(사진 심사중/수납 대기/접수 진행중). <strong>재접수 모드</strong>에서는 반려·취소된 급수만 선택 가능(진행 중 급수 선택 시 경고).</li><li><strong>6) 응시료 표시 (<code>feeLvl1</code>/<code>feeLvl2</code>)</strong> — 선택 회차의 회차별 응시료로 각 급수 응시료 표시. 동시 선택 시 STEP4 합계에 합산.</li><li><strong>7) 회원정보 그리드 (STEP2)</strong> — 한글·영문 성명, 생년월일, 성별, 국적, 제1언어, 연락처, 이메일, 직업·응시동기·응시목적이 표시됩니다. 이 화면에서는 수정할 수 없으며, 변경이 필요하면 <strong>내정보 수정</strong> 메뉴를 이용하세요.</li><li><strong>8) 사진 프레임 (<code>.photo-frame</code>, STEP3)</strong> — 가입 사진을 인증된 이미지로 표시(없으면 더미). <strong>이 단계에서 업로드·교체 불가</strong> — 교체는 내정보 수정에서.</li><li><strong>9) 규격 체크리스트 (<code>.photo-checks</code>, STEP3)</strong> — 5항목: 여권용 정면 컬러(JPG)·흰색 배경 / 최근 6개월 이내 / 흑백·흐릿 아님 / 모자·선글라스·이어폰·앞머리로 얼굴 안 가림 / 정면·본인. <strong>전부 체크해야</strong> <code>btnGoStep4</code>(다음) 활성.</li><li><strong>10) 최종 요약 (STEP4)</strong> — <code>sumRound</code>(회차+시험일), <code>sumLevels</code>(급수, 2개면 "동시 접수"), <code>sumVenue</code>, 성명·생년월일·연락처·이메일, <code>sumFee</code>(합계). 응시료/환불 안내 콜아웃 동반.</li><li><strong>11) 약관 동의 (<code>#agreeTerms</code>)</strong> — <code>[필수]</code> 체크. 미체크 시 제출 차단(알림). 제출 시 서비스·개인정보 약관 동의 이력이 <code>terms_agreed</code>로 전송됨.</li><li><strong>12) 제출</strong> — <strong>접수하기</strong> 버튼을 누르면 접수가 완료됩니다. 완료 안내 창이 뜨고, <strong>접수확인</strong>을 누르면 마이페이지로 이동합니다.</li></ul>
+<h3>자주 보는 안내 메시지</h3>
+<div class="tw"><table><thead><tr><th>상황</th><th>동작 / 메시지</th></tr></thead><tbody><tr><td>급수 미선택</td><td>"응시 급수를 1개 이상 선택해 주세요."</td></tr><tr><td>사진 체크리스트 미완료</td><td>STEP3에서 <code>다음</code> 비활성 / 서버 <code>photo_checklist_confirmed</code> 누락 시 검증 오류</td></tr><tr><td>접수 불가 회차</td><td><code>ROUND_NOT_OPEN</code> (400) — "접수 가능한 회차가 아닙니다."</td></tr><tr><td>동일 회차·급수 중복</td><td><code>ALREADY_SUBMITTED</code> (409) — "이미 …접수 진행 중입니다."</td></tr><tr><td>잠긴 시험장 위반</td><td>400 — "다른 급수가 진행 중일 때는 기존 시험장으로만 접수할 수 있습니다."</td></tr><tr><td>잘못된 시험장</td><td><code>INVALID_VENUE</code> (400)</td></tr><tr><td>로그인 만료</td><td>401 → "로그인이 만료되었습니다." → <code>login.html?next=register.html</code></td></tr></tbody></table></div>
+<h3>재접수 진입</h3>
+<p>마이페이지에서 <code>재접수</code> 클릭 시 <code>register.html?reapply=1&amp;exam_round_id=…&amp;level=…&amp;application_id=…</code>로 진입. 재접수 모드는 임시저장 복원을 건너뛰고, <strong>반려·취소된 급수만</strong> 다시 선택해 제출합니다.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">13</span></div>
+      <h3 class="serif">TOPIK 접수 · 접수 확인 (`mypage.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/mypage.png" alt="TOPIK 접수 · 접수 확인" loading="lazy"></figure>
+<p><strong>로그인 필수.</strong></p>
+<p>내 접수 현황을 급수 단위 카드로 보여주고, 상태별로 가능한 액션(확인증·수험표·취소·재접수·사유보기)을 제공합니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>접수 확인 화면에 들어오면 접수 목록을 받아 <strong>진행 중 / 지난</strong> 탭으로 분리.</li><li>각 카드의 상태 배지로 현재 단계를 확인하고, 하단 액션 버튼으로 확인증 인쇄·취소·재접수 등을 수행.</li><li><strong>접수 취소</strong>를 누르면 확인 창이 뜨고, 확인하면 취소되며 목록이 갱신됩니다.</li></ol>
+<h3>상태 배지 의미 (<code>fo_card_status</code>)</h3>
+<div class="tw"><table><thead><tr><th>값</th><th>배지 라벨</th><th>의미</th></tr></thead><tbody><tr><td><code>applied</code></td><td>접수 완료</td><td>제출됨, 사진 심사 대기</td></tr><tr><td><code>photo</code></td><td>사진 심사중</td><td>운영진 사진 심사 진행</td></tr><tr><td><code>pay</code></td><td>수납 대기</td><td>사진 승인 후 응시료 미납</td></tr><tr><td><code>approved</code></td><td>수납 완료</td><td>납부 완료, 채번 대기</td></tr><tr><td><code>number</code></td><td>수험번호 부여</td><td>수험번호 부여(공개일 게이팅)</td></tr><tr><td><code>photo_rejected</code></td><td>사진 반려</td><td>사진 재등록 필요</td></tr><tr><td><code>app_rejected</code></td><td>반려</td><td>접수 반려 → 재접수 필요</td></tr><tr><td><code>cancelled</code></td><td>접수 취소</td><td>취소됨(지난 접수 탭)</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 프로필 카드 (<code>#meCard</code>)</strong> — 아바타(증명사진), 한글 이름(<code>meNameKo</code>)·영문 이름(<code>meNameEn</code>), 메타(연락처 · 이메일). <code>내정보 수정</code> 링크.</li><li><strong>2) 탭 (<code>진행 중인 접수</code>/<code>지난 접수</code>)</strong> — 각 탭 옆 카운트 배지(<code>ctActive</code>/<code>ctPast</code>). 취소·완료 건은 지난 접수로 이동.</li><li><strong>3) 접수 카드</strong> — 상단: 회차 + 급수 + 상태 배지 + 접수번호. 본문 4칸 그리드: <strong>수험번호</strong> / <strong>사진 심사</strong> / <strong>응시료 수납</strong> / <strong>접수일</strong>.<ul><li>수험번호: 미부여 시 "부여 전", 부여됐으나 공개일 전이면 "공개 예정 (날짜)", 공개 후 실제 번호 표시.</li><li>사진 심사: 대기 / 심사 중 / 승인 완료 / 반려(반려 코드 표기 — 정면 아님·모자·안경·흑백·흐림·본인 아님 등).</li><li>응시료 수납: 대기 / 완료 / 환불.</li></ul></li><li><strong>4) 접수 확인증 (<code>modalConfirm</code>)</strong> — <code>접수 확인증</code> 버튼 → 인쇄용 표(회차·접수번호·수험번호·급수·응시료·접수일·응시자·생년월일·수납 상태). <code>인쇄</code> 버튼은 해당 모달만 인쇄(<code>printing-confirm</code>).</li><li><strong>5) 반려 사유 (<code>modalReason</code>)</strong> — 사진/접수 반려 카드의 <code>사유보기</code> 버튼 → 반려 코드+메모 표시.</li><li><strong>6) 접수 취소 (<code>modalCancel</code> + <code>#btnConfirmCancel</code>)</strong> — 수납 전(applied/photo/pay)·미반려 건에만 노출. 확인 시 .</li><li><strong>7) 재접수 링크</strong> — 반려 건에 노출 → <code>register.html?reapply=1&amp;exam_round_id=…&amp;level=…&amp;application_id=…</code>.</li></ul>
+<h3>액션 노출 규칙 / 에러</h3>
+<div class="tw"><table><thead><tr><th>상태</th><th>노출 버튼</th></tr></thead><tbody><tr><td>applied·photo·pay</td><td>접수 확인증 · 접수 취소</td></tr><tr><td>approved</td><td>접수 확인증</td></tr><tr><td>number</td><td>접수 확인증 · 수험표 출력</td></tr><tr><td>photo_rejected</td><td>사진 재등록 · 사유보기</td></tr><tr><td>app_rejected</td><td>재접수 · 사유보기</td></tr></tbody></table></div>
+<ul><li><strong>취소 불가:</strong> 이미 취소되었거나 수납이 완료된 접수는 마이페이지에서 직접 취소할 수 없습니다. 환불이 필요하면 <span class="ln">환불·정보정정신청 게시판</span>을 이용하세요.</li><li>한 회차에 여러 급수가 있을 때 <strong>급수 단위 취소</strong>가 가능하며, 모든 급수가 취소되면 접수 건 전체가 취소 처리됩니다.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">14</span></div>
+      <h3 class="serif">TOPIK 접수 · 수험표 출력 (`ticket.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/ticket.png" alt="TOPIK 접수 · 수험표 출력" loading="lazy"></figure>
+<p>로그인 없이도 안내 내용을 볼 수 있습니다. 수험번호 확인은 로그인 후 가능합니다.</p>
+<p>수험표는 <strong>topik.go.kr</strong>(TOPIK 본부 사이트)에서 출력합니다. 아래 안내를 따라 주세요.</p>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 상태 영역 (<code>#ticketStatus</code>)</strong> — 로그인 상태/접수 상태에 따라 동적 배너:<ul><li>비로그인: "로그인하면 수험번호 공개 여부를 확인" 안내(로그인 링크).</li><li>수험번호 공개됨: 회차별 카드 + 급수별 수험번호 + <code>TOPIK 본부에서 수험표 출력 ↗</code> 버튼. (마이페이지에서 넘어오면 해당 건 강조)</li><li>부여됐으나 공개 전: "아직 공개일 전" 경고 배너.</li><li>대상 없음/진행 중만 있음: 안내 배너 + 접수/확인 링크.</li></ul></li><li><strong>2) topik.go.kr 안내 (<code>#heroTopikLink</code>)</strong> — 본부 사이트로 이동 버튼.</li><li><strong>3) 안내 블록 4종</strong> — 출력 시점(시험 2주 전 월요일 10시~), 확인 방법(로그인→마이페이지→접수현황→수험표), 시험 당일(수험표+신분증 지참), 출력 유의사항(Chrome 권장·팝업 차단 해제 등).</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">15</span></div>
+      <h3 class="serif">게시판 · 공지사항 (SPA) (`notice.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/notice-list.png" alt="게시판 · 공지사항 (SPA)" loading="lazy"></figure>
+<p>한 페이지에서 목록(<code>#listView</code>)과 상세(<code>#detailView</code>)를 토글하는 SPA입니다. <code>notice.html?id=N</code> 딥링크로 상세 직진 가능.</p>
+<h3>뷰 구성</h3>
+<div class="tw"><table><thead><tr><th>뷰</th><th>DOM</th><th>설명</th></tr></thead><tbody><tr><td>목록</td><td><code>#listView</code></td><td>카테고리 칩 + 검색 + <code>#noticeTbody</code>(번호·분류·제목·작성일)</td></tr><tr><td>상세</td><td><code>#detailView</code></td><td><code>#noticeDetailTitle</code>·<code>#noticeDetailMeta</code>·<code>#noticeDetailBody</code>·첨부·<code>#noticeNavPn</code></td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 카테고리 칩</strong> — 전체 / 중요 / 접수 / 시험 / 결과. 클릭 시 <code>category</code>로 재조회(중요→<code>important/imp</code>, 접수→<code>apply/registration</code> 별칭 흡수).</li><li><strong>2) 검색</strong> — 입력 300ms 디바운스 후 <code>q</code>로 재조회. <strong>제목</strong>을 기준으로 검색합니다. 결과 없으면 "검색 조건에 맞는 공지가 없습니다." 표시.</li><li><strong>3) 목록 행 (<code>#noticeTbody</code>)</strong> — 고정 공지는 번호 대신 <code>—</code>+<code>NEW</code> 배지. 행 클릭 → 상세. 노출 기간(<code>display_start/end</code>)·게시 상태(<code>is_published</code>)에 맞는 공지만 표시.</li><li><strong>4) 상세 본문 (<code>#noticeDetailBody</code>)</strong> — 관리자가 작성한 내용이 표시됩니다. 외부 링크는 새 탭에서 열립니다. 상세 조회 시 조회수 1 증가.</li><li><strong>5) 첨부 (<code>#noticeDetailAttach</code>)</strong> — 파일명+크기, 다운로드 링크(<code>/api/v1/files/{id}</code>).</li><li><strong>6) 이전글/다음글 (<code>#noticeNavPn</code>)</strong> — 목록과 동일 정렬(고정↓·게시일↓·id↓) 기준 prev/next. 클릭 시 해당 글 상세로 이동.</li><li><strong>7) 언어 전환</strong> — KO/MY/EN 변경 시 목록 + 상세를 <strong>재조회</strong>(<code>getNotice</code> + <code>lang</code>)해 다국어 제목·본문 반영. URL은 <code>history.replaceState</code>로 <code>?id=</code> 동기화/복원.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">16</span></div>
+      <h3 class="serif">게시판 · FAQ (`faq.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/faq.png" alt="게시판 · FAQ" loading="lazy"></figure>
+<p>카테고리별로 묶인 자주 묻는 질문 아코디언.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>카테고리 칩</td><td>전체 / 계정 / 접수 / 시험 / 결과 / 기타. 카테고리를 누르면 해당 분류만 표시됩니다.</td></tr><tr><td>2</td><td>검색</td><td>질문과 답변에서 검색합니다. 일치 항목은 자동으로 펼쳐집니다.</td></tr><tr><td>3</td><td>아코디언 그룹</td><td>카테고리별 그룹 헤더(건수 배지) + 질문 클릭 시 답변 펼침(<code>details</code>).</td></tr><tr><td>4</td><td>언어 전환</td><td>KO/MY/EN 변경 시 로 <strong>재조회</strong>해 다국어 질문·답변 반영.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">17</span></div>
+      <h3 class="serif">게시판 · 문의게시판 (SPA) (`qna.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/qna.png" alt="게시판 · 문의게시판 (SPA)" loading="lazy"></figure>
+<p><strong>로그인 필수.</strong></p>
+<p>한 페이지에서 <strong>목록</strong>, <strong>글쓰기</strong>, <strong>상세 보기</strong> 세 화면을 전환하며 이용합니다.</p>
+<h3>사용 흐름 (비밀글 문의 시나리오)</h3>
+<ol><li><code>문의하기</code> → 작성 패널. 카테고리·공개 범위 선택. <strong>비밀</strong>을 고르면 비밀번호 입력칸이 나타남(4자 이상).</li><li>제목(≤100자)·내용(≥10자)·첨부(jpg/png/pdf ≤5MB, 최대 3개) 입력 후 <strong>제출</strong>합니다.</li><li>목록에서 내 비밀글은 자물쇠 아이콘과 함께 보이며, <strong>로그인 작성자 본인</strong>이면 클릭 시 본문 열람. <strong>타인의 비밀글</strong>을 클릭하면 "작성자·관리자만 열람" 안내 창이 표시됩니다. 비밀글은 작성자와 관리자만 볼 수 있습니다.</li></ol>
+<h3>입력 필드 (작성 패널)</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th><th>예시</th></tr></thead><tbody><tr><td>카테고리 (<code>#qnaCategory</code>)</td><td>●</td><td>접수 / 시험 / 기타</td><td>접수</td></tr><tr><td>공개 범위 (<code>visNormal</code>/<code>visSecret</code>)</td><td>●</td><td>일반(누구나) / 비밀(작성자·관리자만)</td><td>비밀</td></tr><tr><td>비밀글 비밀번호 (<code>#qnaSecretPw</code>)</td><td>비밀 선택 시 ●</td><td>4자 이상 (비밀글일 때만 노출)</td><td><code>1234</code></td></tr><tr><td>제목 (<code>#qnaTitle</code>)</td><td>●</td><td>1~100자</td><td>응시료 수납 문의</td></tr><tr><td>내용 (<code>#qnaBody</code>)</td><td>●</td><td>10자 이상</td><td>…</td></tr><tr><td>첨부 (<code>#qnaFileInput</code>)</td><td>○</td><td>jpg/png/pdf, ≤5MB, 최대 3개 (선택 즉시 업로드)</td><td>receipt.jpg</td></tr></tbody></table></div>
+<h3>게시글 상태 배지 (<code>workflow_status</code>)</h3>
+<div class="tw"><table><thead><tr><th>값</th><th>라벨</th></tr></thead><tbody><tr><td>received</td><td>접수</td></tr><tr><td>in_review</td><td>처리중</td></tr><tr><td>awaiting_reply</td><td>답변 대기</td></tr><tr><td>answered</td><td>답변 완료</td></tr><tr><td>completed</td><td>완료</td></tr><tr><td>rejected</td><td>반려</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 목록 뷰 (<code>#qnaListBody</code>)</strong> — 번호·분류·제목·작성자·작성일·상태. 탭(전체/일반/비밀)·카테고리·검색으로 목록을 좁힐 수 있습니다. 페이지네이션(<code>#qnaPager</code>)은 서버 페이지(20건/페이지). 내 글 작성자는 "본인", 관리자 답변자는 "관리자"로만 표기.</li><li><strong>2) 작성 폼 (<code>#writePane</code>)</strong> — 위 입력 필드 표 참조. 첨부는 <strong>선택 즉시 업로드</strong>되고 칩으로 상태(업로드 중/✓/실패) 표시. 업로드 진행 중 제출 시 대기 안내.</li><li><strong>3) 상세 뷰 (<code>#detailPane</code>)</strong> — 제목·메타(작성자·날짜·비밀 표시)·본문(<code>#bdBody</code>)·첨부 다운로드·관리자 답변 이력(<code>#bdReply</code>, 최신순)·댓글(<code>#bdComments</code>).</li><li><strong>4) 본인 글 수정·삭제</strong> — 관리자 답변이 등록되기 전에만 <strong>수정</strong>·<strong>삭제</strong> 버튼이 보입니다. 답변 후에는 수정·삭제할 수 없습니다.</li><li><strong>5) 비밀글 안내</strong> — 다른 사람의 비밀글을 클릭하면 "비밀글입니다. 작성자·관리자만 열람할 수 있습니다." 안내 창이 표시됩니다. 비밀글은 작성자와 관리자만 본문을 볼 수 있습니다.</li><li><strong>6) 댓글·대댓글</strong> — 로그인 사용자만 작성(<code>POST .../comments</code>). <code>답글</code>로 대댓글(스레드) 작성. 관리자 작성 댓글은 실명 대신 "관리자"로 표시.</li></ul>
+<h3>검증·에러</h3>
+<div class="tw"><table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>제목 길이</td><td>"제목을 100자 이내로 입력해 주세요."</td></tr><tr><td>내용 길이</td><td>"내용을 10자 이상 입력해 주세요."</td></tr><tr><td>비밀글 비번</td><td>"비밀글 비밀번호를 4자 이상 입력해 주세요."</td></tr><tr><td>첨부 형식/크기</td><td>"jpg, png, pdf 형식만…" / "파일 크기는 5MB 이하…"</td></tr><tr><td>첨부 개수</td><td>"첨부파일은 최대 3개까지 가능합니다."</td></tr><tr><td>비로그인</td><td><code>login.html?next=qna.html</code>로 이동</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">18</span></div>
+      <h3 class="serif">게시판 · 환불·정보정정 (SPA) (`refund-correction.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/refund-correction.png" alt="게시판 · 환불·정보정정" loading="lazy"></figure>
+<p><strong>로그인 필수.</strong></p>
+<p>문의게시판과 같은 방식으로 이용하되, <strong>모든 글이 비밀글</strong>로 등록되며 유형(환불/정보정정)을 분류로 사용합니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li><code>글쓰기</code> → 유형(환불/정보정정) 선택 → 제목·내용 → 비밀번호(4자 이상, 필수) → 첨부(영수증·신분증 사본 등) → <strong>개인정보 처리 동의</strong> 체크 → <code>제출</code>.</li><li>모든 글은 비밀글이므로 <strong>작성자 본인과 관리자</strong>만 본문을 볼 수 있습니다. 다른 사람의 글을 클릭하면 안내 창만 표시됩니다.</li></ol>
+<h3>입력 필드 (작성 패널)</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th><th>예시</th></tr></thead><tbody><tr><td>유형 (<code>name=type</code>)</td><td>●</td><td>환불 / 정보정정 (라디오 → 분류)</td><td>환불</td></tr><tr><td>제목 (<code>#rfdTitle</code>)</td><td>●</td><td>1~100자</td><td>제107회 응시료 환불</td></tr><tr><td>내용 (<code>#rfdBody</code>)</td><td>●</td><td>10자 이상 (사유·접수번호·회차 등)</td><td>…</td></tr><tr><td>비밀번호 (<code>#rfdSecretPw</code>)</td><td>●</td><td>4자 이상 (모든 글 비밀)</td><td><code>1234</code></td></tr><tr><td>첨부 (<code>#rfdFileInput</code>)</td><td>○</td><td>jpg/png/pdf, ≤5MB, 최대 5개</td><td>receipt.pdf</td></tr><tr><td>개인정보 동의 (<code>#rfdAgree</code>)</td><td>●</td><td>미체크 시 제출 차단(알림)</td><td>✔</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 유형 칩</strong> — 전체 / 환불 / 정보정정. 유형별로 목록을 필터할 수 있습니다.</li><li><strong>2) 목록 (<code>#rfdListBody</code>) + 페이지네이션 (<code>#rfdPager</code>)</strong> — 번호·유형 배지·제목·작성자·작성일·상태.</li><li><strong>3) 작성 폼 (<code>#writePane</code>)</strong> — 위 표 참조. <code>🔒 모든 신청 글은 비밀글로 등록</code> 안내 고정.</li><li><strong>4) 상세 (<code>#detailPane</code>)</strong> — 본문·관리자 답변 이력(<code>#bdReply</code>)·댓글. 본인 글 수정·삭제는 <strong>관리자 답변 전</strong>까지.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">19</span></div>
+      <h3 class="serif">계정 · 로그인 (`login.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/login.png" alt="계정 · 로그인" loading="lazy"></figure>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>이메일+비밀번호 입력 → <code>로그인</code>. <code>로그인 상태 유지</code> 체크 시 브라우저를 닫아도 로그인 상태가 유지됩니다.</li><li>로그인에 성공하면, 로그인 전에 가려던 페이지가 있으면 그곳으로, 없으면 홈으로 이동합니다.</li><li>비밀번호를 6개월 이상 변경하지 않았다면, 먼저 변경을 권하는 안내 창이 뜹니다(나중에 / 변경 선택).</li></ol>
+<h3>입력 필드</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>이메일 (<code>#email</code>)</td><td>●</td><td>이메일 형식(= 로그인 아이디)</td></tr><tr><td>비밀번호 (<code>#password</code>)</td><td>●</td><td><code>표시/숨김</code> 토글 제공</td></tr><tr><td>로그인 상태 유지 (<code>#remember</code>)</td><td>○</td><td>체크 시 브라우저를 닫아도 로그인 유지</td></tr></tbody></table></div>
+<h3>모달</h3>
+<div class="tw"><table><thead><tr><th>기능</th><th>설명</th></tr></thead><tbody><tr><td>아이디(이메일) 찾기</td><td>이름·생년월일·연락처를 입력하면 가입 이메일 일부가 안내됩니다.</td></tr><tr><td>비밀번호 찾기</td><td>이메일로 인증코드를 받은 뒤 비밀번호 재설정 화면으로 이동합니다.</td></tr><tr><td>비밀번호 변경 권고</td><td>6개월 이상 비밀번호를 바꾸지 않았을 때 표시됩니다. <strong>변경</strong>을 누르면 내정보 수정으로 이동합니다.</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 로그인 폼</strong> — 이메일과 비밀번호를 입력하고 <strong>로그인</strong>을 누르면 접속됩니다.</li><li><strong>2) Google 로그인</strong> — Google 계정으로 로그인할 수 있습니다. Google 가입을 시작했지만 프로필을 완성하지 않은 경우, 회원가입 화면으로 이어집니다.</li><li><strong>3) 아이디 찾기</strong> — 이름·생년월일·연락처가 <strong>모두 정확히 일치</strong>하는 활성 회원의 이메일을 마스킹해 안내(없으면 "일치하는 계정을 찾을 수 없습니다.").</li><li><strong>4) 비밀번호 찾기</strong> — 이메일 입력 → OTP 발송. Google 계정이면 "구글 로그인을 이용" 안내, 미가입이면 "가입된 계정이 없습니다.".</li><li><strong>5) 비밀번호 변경 권고</strong> — 이메일 계정으로 6개월 이상 비밀번호를 변경하지 않았을 때 표시됩니다.</li><li><strong>6) 회원가입 링크</strong> — 회원가입 화면으로 이동합니다.</li></ul>
+<h3>로그인 실패 시 안내</h3>
+<div class="tw"><table><thead><tr><th>상황</th><th>안내 메시지</th></tr></thead><tbody><tr><td>이메일·비밀번호 불일치</td><td>"이메일 또는 비밀번호가 일치하지 않습니다."</td></tr><tr><td>계정 잠금</td><td>"로그인 실패가 누적되어 계정이 잠겼습니다." (5회 실패 시 30분 잠금)</td></tr><tr><td>일시적 오류</td><td>"서버를 일시적으로 사용할 수 없습니다."</td></tr><tr><td>연결 오류</td><td>"서버에 연결할 수 없습니다." — 잠시 후 다시 시도해 주세요.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">20</span></div>
+      <h3 class="serif">계정 · 회원가입 (3단계) (`signup.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/signup.png" alt="계정 · 회원가입 (3단계)" loading="lazy"></figure>
+<h3>사용 흐름 (가입 시나리오)</h3>
+<ol><li><strong>STEP1 이메일 인증</strong> — 이메일 입력 → <code>인증코드 발송</code> → 받은 6자리 OTP 입력(<code>otpTimer</code> 05:00) → <code>확인</code>. 또는 Google 계정으로 진행(이메일 인증 생략). 인증 완료 시 <code>다음</code> 활성.</li><li><strong>STEP2 기본정보 + 증명사진</strong> — 이름·생년월일·성별·국적·언어·연락처·직업/동기/목적·비밀번호 + 증명사진 업로드.</li><li><strong>STEP3 약관 동의</strong> — 필수 약관 동의 → <code>가입 완료</code> → 완료 모달(<code>modalDone</code>) → 로그인.</li></ol>
+<h3>단계별 화면</h3>
+<div class="tw"><table><thead><tr><th>단계</th><th><code>data-s</code></th><th>주요 동작</th></tr></thead><tbody><tr><td>1</td><td>1</td><td><code>su-email</code> → <code>btnSendCode</code> → <code>su-otp</code>+<code>otpTimer</code> → <code>btnConfirmCode</code> 또는 Google → <code>btnGoStep2</code></td></tr><tr><td>2</td><td>2</td><td>프로필 필드 + <code>signupPhotoZone</code> 사진 → <code>다음</code></td></tr><tr><td>3</td><td>3</td><td>약관 동의 → <code>btnFinish</code> → <code>modalDone</code></td></tr></tbody></table></div>
+<h3>입력 필드 (STEP2)</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th><th>예시</th></tr></thead><tbody><tr><td>이메일(아이디)</td><td>●</td><td>STEP1에서 인증된 값, 읽기 전용</td><td>a@b.com</td></tr><tr><td>한글 성명 (<code>su-name-ko</code>)</td><td>●</td><td>100자 이내</td><td>홍길동</td></tr><tr><td>영문 성명 (<code>su-name-en</code>)</td><td>●</td><td>여권 표기, <strong>입력 시 자동 대문자</strong></td><td>HONG GILDONG</td></tr><tr><td>생년월일 (<code>su-birth</code>)</td><td>●</td><td>YYYYMMDD 8자리, <strong>만 14세 이상</strong></td><td>19960101</td></tr><tr><td>성별 (<code>su-gender</code>)</td><td>●</td><td>남(1)/여(2)</td><td>남</td></tr><tr><td>국적 (<code>su-nationality</code>)</td><td>●</td><td>미얀마/대한민국/기타</td><td>미얀마</td></tr><tr><td>제1언어 (<code>su-lang1</code>)</td><td>●</td><td>미얀마어/한국어/영어/기타</td><td>미얀마어</td></tr><tr><td>연락처 (<code>su-phone</code>)</td><td>●</td><td>국가번호 포함 권장</td><td>+95 9…</td></tr><tr><td>직업/응시동기/응시목적</td><td>●</td><td>연명부 코드 드롭다운(직업 1–8 등)</td><td>학생</td></tr><tr><td>비밀번호 (<code>su-pw</code>) / 확인 (<code>su-pw2</code>)</td><td>●</td><td>8자 이상 + 영문·숫자·특수문자 (강도 막대) <strong>Google 가입 시 숨김</strong></td><td>Abc1!…</td></tr><tr><td>증명사진 (<code>signupPhotoZone</code>)</td><td>●</td><td>JPG/PNG, <strong>≤2MB</strong> (규격 안내 모달)</td><td>photo.jpg</td></tr></tbody></table></div>
+<h3>모달</h3>
+<div class="tw"><table><thead><tr><th>기능</th><th>설명</th></tr></thead><tbody><tr><td>약관 보기</td><td><strong>보기</strong>를 누르면 약관 전문을 확인할 수 있습니다.</td></tr><tr><td><code>modalDone</code></td><td>가입 완료 → 로그인 / 시험 접수</td></tr><tr><td><code>modalPhotoSpec</code></td><td>증명사진 규격 안내(7개 규칙, <code>photo-upload.js</code>)</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 단계 인디케이터 (<code>#signupSteps</code>)</strong> — ①이메일 인증 ②기본정보 입력 ③약관 동의.</li><li><strong>2) 이메일 + 인증코드 발송</strong> — 이메일을 입력하고 <strong>인증코드 발송</strong>을 누르면 6자리 코드가 이메일로 전송됩니다. 코드는 <strong>5분간</strong> 유효합니다.</li><li><strong>3) OTP + 타이머 (<code>su-otp</code>/<code>otpTimer</code>)</strong> — <strong>확인</strong>을 누르면 "이메일 인증 완료" 메시지가 표시됩니다.</li><li><strong>4) Google 영역</strong> — Google 인증 시 이메일 인증 생략, 프로필 단계로 진행. 비밀번호 입력은 숨김.</li><li><strong>5~7) 프로필 필드</strong> — 위 입력 표 참조(직업·동기·목적은 연명부 코드).</li><li><strong>8) 비밀번호 강도 (<code>pwBar</code>)</strong> — 길이·영문·숫자·특수 충족도에 따라 약함~매우 강함 표시.</li><li><strong>9) 증명사진 (<code>signupPhotoZone</code>, <code>photo-upload.js</code>)</strong> — 파일 선택/미리보기, <strong>JPG/PNG, 2MB 이하</strong>, 규격 안내 모달 제공.</li><li><strong>10) 약관 (<code>termsAll</code> + 개별)</strong> — 서비스·개인정보 <strong>필수</strong>, 마케팅 <strong>선택</strong>. 전체동의 토글. <code>보기</code>로 약관 전문 모달.</li><li><strong>13) 가입 완료 (<code>btnFinish</code>)</strong> — <strong>가입 완료</strong>를 누르면 가입이 완료되고 안내 창이 표시됩니다.</li></ul>
+<h3>자주 보는 안내 메시지</h3>
+<div class="tw"><table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>비밀번호 규칙</td><td>"비밀번호는 8자 이상, 영문·숫자·특수문자를 포함해야 합니다."</td></tr><tr><td>비밀번호 불일치</td><td>"비밀번호 확인이 일치하지 않습니다."</td></tr><tr><td>만 14세 미만</td><td><code>AGE_RESTRICTED</code> (422) — 생년월일 필드 오류 표시</td></tr><tr><td>이미 가입된 이메일</td><td><code>EMAIL_ALREADY_REGISTERED</code> (409)</td></tr><tr><td>탈퇴 30일 이내 재가입</td><td><code>REJOIN_RESTRICTED</code> (403) — "탈퇴 후 30일간 동일 이메일로 재가입 불가"</td></tr><tr><td>정지 계정</td><td><code>ACCOUNT_INACTIVE</code> (403)</td></tr><tr><td>OTP 오류/만료</td><td><code>INVALID_CODE</code> (400)</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">21</span></div>
+      <h3 class="serif">계정 · 비밀번호 재설정 (`password-reset.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/password-reset.png" alt="계정 · 비밀번호 재설정" loading="lazy"></figure>
+<p>로그인 화면의 <code>비밀번호 찾기</code>에서 OTP를 받은 뒤 이 페이지(<code>?email=…</code>)로 진입합니다. 이메일 파라미터가 없으면 "잘못된 접근" 패널을 보여줍니다.</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li>(이미 발송된) <strong>OTP 6자리</strong> 입력 → <code>확인</code>(<code>verify-reset-code</code>) → <code>reset_token</code> 발급 + 새 비밀번호 입력칸 잠금 해제.</li><li>새 비밀번호·확인 입력 → <code>비밀번호 저장</code>(<code>reset-password</code>) → 성공 패널 → <code>login.html?reset=ok</code>.</li></ol>
+<h3>입력 필드</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>인증코드 (<code>#prCode</code>)</td><td>●</td><td>6자리, <strong>유효 30분</strong>(<code>otpTimer</code> 30:00)</td></tr><tr><td>새 비밀번호 (<code>#newPw1</code>)</td><td>●</td><td>8자 이상 + 영문·숫자·특수문자 (인증 전 비활성)</td></tr><tr><td>새 비밀번호 확인 (<code>#newPw2</code>)</td><td>●</td><td>위와 동일 값</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 인증코드 + 확인 (<code>btnVerify</code>)</strong> — 성공 시 코드칸이 읽기 전용으로 잠기고 "인증 완료" 상태. <code>재발송</code>(<code>btnResend</code>)은 새 코드 발송 후 다시 인증 요구.</li><li><strong>2) 새 비밀번호 (<code>btnSave</code>)</strong> — 인증 완료 전에는 입력·저장 버튼 비활성. 강도 막대 제공.</li><li><strong>3) 완료/에러 패널</strong> — 성공 → 로그인 이동, 직접 접근(이메일 없음) → 에러 패널.</li></ul>
+<h3>검증·에러</h3>
+<div class="tw"><table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>코드 오류/만료</td><td>"인증코드가 올바르지 않거나 만료되었습니다."</td></tr><tr><td>토큰 무효</td><td>"재설정 토큰이 유효하지 않습니다."</td></tr><tr><td>비번 규칙</td><td>"영문·숫자·특수문자를 각각 포함하여 8자 이상…"</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">22</span></div>
+      <h3 class="serif">계정 · 내정보 수정 (`mypage-profile.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/mypage-profile.png" alt="계정 · 내정보 수정" loading="lazy"></figure>
+<p><strong>로그인 필수.</strong></p>
+<p>탭 2개: <strong>기본정보·사진</strong> / <strong>계정·비밀번호</strong>. (Google 계정은 비밀번호 탭이 숨겨지고 안내 표시)</p>
+<h3>사용 흐름 (시나리오)</h3>
+<ol><li><strong>기본정보·사진</strong> — 프로필 수정 후 <strong>기본정보 저장</strong>을 누르면 반영됩니다. 사진 교체 시 <strong>진행 중 접수 건에 즉시 반영되고 사진 심사가 자동 재실행</strong>됩니다.</li><li><strong>계정·비밀번호</strong> — 현재/새 비밀번호 입력 후 저장(<code>change-password</code>) → 보안상 재로그인 유도. 하단 위험 구역에서 회원 탈퇴.</li></ol>
+<h3>입력 필드 (기본정보)</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>한글/영문 성명</td><td>●</td><td>영문은 여권 표기</td></tr><tr><td>생년월일</td><td>●</td><td>YYYYMMDD, 만 14세 이상</td></tr><tr><td>성별/국적/제1언어</td><td>●</td><td>드롭다운</td></tr><tr><td>연락처</td><td>●</td><td>—</td></tr><tr><td>직업/응시동기/응시목적</td><td>●</td><td>연명부 코드</td></tr><tr><td>증명사진 (<code>profilePhotoZone</code>)</td><td>○</td><td>JPG/PNG ≤2MB, 교체 시 진행 중 접수 재심사</td></tr></tbody></table></div>
+<h3>비밀번호 변경 필드</h3>
+<div class="tw"><table><thead><tr><th>필드</th><th>필수</th><th>형식·제약</th></tr></thead><tbody><tr><td>현재 비밀번호</td><td>●</td><td>일치해야 함</td></tr><tr><td>새 비밀번호 / 확인</td><td>●</td><td>8자 이상 + 영문·숫자·특수문자</td></tr></tbody></table></div>
+<h3>요소별 상세</h3>
+<ul><li><strong>1) 프로필 폼</strong> — 정보를 수정한 뒤 <strong>기본정보 저장</strong>을 누르면 반영됩니다. 저장되면 상단 메뉴의 이름도 함께 바뀝니다.</li><li><strong>2) 사진 교체</strong> — <code>photo-upload.js</code>로 미리보기. 저장 시 새 <code>photo_file_id</code>로 갱신되고 <strong>진행 중 접수의 사진 심사 상태가 <code>pending</code>으로 재설정</strong>(자동 재심사). 사진만 실패 시 "기본정보는 저장됐지만 사진 업로드 실패" 안내.</li><li><strong>3) 비밀번호 변경</strong> — 이메일로 가입한 계정만 변경할 수 있습니다(Google 가입은 Google에서 관리). 변경 후 보안을 위해 다시 로그인합니다.</li><li><strong>4) 회원 탈퇴 (<code>#modalLeave</code>)</strong> — 본인 확인 방식이 가입 유형에 따라 분기:<ul><li>이메일 계정: <strong>비밀번호</strong>를 입력하고 탈퇴를 확인합니다.</li><li>Google 계정: <strong>Google 본인 확인</strong>(GIS) → <code>google_id_token</code> 전송(발급 후 300초 내 유효).</li><li>하이브리드(비번+Google 둘 다)면 둘 중 하나로 확인.</li><li>탈퇴 시 <strong>진행 중 접수 전부 취소</strong>, 상태 <code>withdrawn</code>, 동일 이메일 <strong>30일 재가입 제한</strong>.</li></ul></li><li><strong>5) Google 안내 (<code>pf-google-notice</code>)</strong> — Google 가입 계정에 표시(비밀번호는 Google에서 관리).</li><li><strong>6) 마지막 변경일 (<code>pf-pw-changed</code>)</strong> — <code>password_changed_at</code> 표시(6개월마다 변경 권장 안내).</li></ul>
+<h3>검증·에러</h3>
+<div class="tw"><table><thead><tr><th>상황</th><th>메시지</th></tr></thead><tbody><tr><td>현재 비번 불일치</td><td>"현재 비밀번호가 올바르지 않습니다."</td></tr><tr><td>Google 비번 변경 시도</td><td>"Google 계정은 비밀번호 변경을 사용할 수 없습니다."</td></tr><tr><td>만 14세 미만 생일</td><td><code>AGE_RESTRICTED</code> (422)</td></tr><tr><td>Google 인증 만료</td><td>"Google 인증이 만료되었습니다. 다시 시도해 주세요."</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">23</span></div>
+      <h3 class="serif">약관 · 이용약관 (`terms.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/terms.png" alt="약관 · 이용약관" loading="lazy"></figure>
+<p>운영 기관이 게시한 이용약관 전문이 표시됩니다. 하단에 버전과 시행일이 함께 표시됩니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>약관 본문</td><td>약관 전문과 버전·시행일(<code>#termsUpdated</code>) 표기.</td></tr><tr><td>2</td><td>언어 전환</td><td>KO/MY/EN 변경 시 로 재조회.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">24</span></div>
+      <h3 class="serif">약관 · 개인정보처리방침 (`privacy.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/privacy.png" alt="약관 · 개인정보처리방침" loading="lazy"></figure>
+<p>이용약관과 같은 방식으로 개인정보처리방침 전문이 표시됩니다. KO / MY / EN 언어 전환을 지원합니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>개인정보 본문</td><td>개인정보처리방침 전문이 표시됩니다.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">25</span></div>
+      <h3 class="serif">약관 · 마케팅 수신 (`marketing.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/marketing.png" alt="약관 · 마케팅 수신" loading="lazy"></figure>
+<p><code>terms-page.js</code>(<code>data-term-type="marketing"</code>). 가입 시 <strong>선택</strong> 동의 항목의 전문 안내.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>마케팅 약관</td><td>마케팅 정보 수신 동의 관련 약관 전문입니다.</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>FO<span class="num">26</span></div>
+      <h3 class="serif">에러 · 404 (`404.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/fo/404.png" alt="에러 · 404" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>동작</th></tr></thead><tbody><tr><td>1</td><td>안내 문구</td><td>"요청하신 페이지를 찾을 수 없습니다" + 설명.</td></tr><tr><td>2</td><td>이동 버튼</td><td><code>홈으로</code>(index.html) · <code>접수 방법</code>(apply-howto.html).</td></tr></tbody></table></div>
+<ul><li>헤더·푸터는 공통 레이아웃 사용. <code>robots: noindex</code>.</li></ul>
+<hr></div></div>
+  </section><section class="slide center divider">
+    <div>
+      <div class="big serif">BO</div>
+      <h2 class="serif"><span class="spark">✳</span>운영진용 백오피스</h2>
+      <p class="desc">신규 관리자가 이 가이드만으로 접수 심사부터 수험번호 부여·내보내기, 공지·약관 운영까지 수행할 수 있도록 15개 화면의 전체 설명을 담았습니다.</p>
+    </div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">사용 가이드</span></div>
+      <h3 class="serif">BO 사용 가이드 (백오피스)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><blockquote><strong>대상:</strong> TOPIK Myanmar BO (<code>html/C안/BO(admin)/project/</code>) <strong>로컬 URL:</strong> http://localhost:8081 (빌드: <code>python build-bo.py</code> → <code>public-bo/</code>) <strong>API:</strong> http://localhost:8000 · <code>TopikBoApi</code> + <code>bo-api-bridge.js</code> <strong>작성 기준:</strong> 2026-06-10 · panels/*.jsx + admin.html + <code>apps/api/app/routers/admin_api.py</code> 기반</blockquote>
+<p>이 문서는 <strong>신규 관리자가 이 문서만으로 전 업무(접수 심사→수납→승인→수험번호 부여→내보내기, 공지 다국어 등록, 약관 버전 관리)를 수행</strong>할 수 있도록 각 화면 요소를 1) 무엇인지 2) 관리자 행동 3) 결과·피드백 4) 검증·제약 5) 연동 API 6) 권한·조건부 노출 7) 에러·충돌 케이스로 나누어 설명합니다.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO</div>
+      <h3 class="serif">목차</h3>
+    </div>
+    <div class="sbody"><div class="doc"><ol><li><span class="ln">관리자 로그인</span></li><li><span class="ln">관리자 셸</span></li><li><span class="ln">대시보드 (<code>#dashboard</code>)</span></li><li><span class="ln">접수자 목록 (<code>#applicants</code>)</span></li><li><span class="ln">회차 관리 (<code>#sessions</code>)</span></li><li><span class="ln">시험장 관리 (<code>#venues</code>)</span></li><li><span class="ln">공지사항 (<code>#notices</code>)</span></li><li><span class="ln">FAQ (<code>#faq</code>)</span></li><li><span class="ln">환불·정보정정 (<code>#refunds</code>)</span></li><li><span class="ln">문의 게시판 (<code>#inquiries</code>)</span></li><li><span class="ln">회원 관리 (<code>#members</code>)</span></li><li><span class="ln">약관 관리 (<code>#terms</code>)</span></li><li><span class="ln">관리자 계정 (<code>#admins</code>)</span></li><li><span class="ln">관리자 권한 (<code>#permissions</code>)</span></li><li><span class="ln">처리 이력 (<code>#audit</code>)</span></li></ol>
+<p>부록: <span class="ln">공통 운영 모델 — 역할·상태·동시 작업·내보내기</span></p></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">01</span></div>
+      <h3 class="serif">관리자 로그인 (`admin-login.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-login.png" alt="관리자 로그인" loading="lazy"></figure>
+<p>관리자 전용 로그인 화면입니다. <strong>관리자 계정</strong>으로만 로그인할 수 있으며, 일반 회원 계정으로는 접속할 수 없습니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>설명</th></tr></thead><tbody><tr><td>1</td><td><strong>adminEmail</strong></td><td>관리자 이메일(로그인 ID). 빈 값이면 제출 시 「입력 누락」 배너. <code>autocomplete="username"</code>.</td></tr><tr><td>2</td><td><strong>adminPw / pwToggle</strong></td><td>비밀번호 입력 + 「표시/숨기기」 토글(<code>type=password↔text</code>). 빈 값이면 제출 차단.</td></tr><tr><td>3</td><td><strong>remember</strong></td><td>「로그인 유지」 체크. 체크하면 브라우저를 닫아도 로그인 상태가 유지됩니다. 체크하지 않으면 탭을 닫으면 로그아웃됩니다.</td></tr><tr><td>4</td><td><strong>로그인 버튼</strong></td><td>이메일·비밀번호 입력 후 <strong>로그인</strong>을 누르면 관리 화면으로 이동합니다.</td></tr><tr><td>5</td><td><strong>오류 안내</strong></td><td>로그인 실패 시 원인별 메시지가 표시됩니다. 예: 이메일·비밀번호 불일치, 5회 실패 시 30분 잠금, 관리자 계정 아님, 서버 연결 실패.</td></tr><tr><td>6</td><td><strong>okBanner</strong></td><td>URL에 <code>?pw_changed=1</code>이 있을 때 표시 — 「비밀번호 변경 완료 · 새 비밀번호로 다시 로그인」. (비밀번호 변경 게이트 통과 후 자동 이동)</td></tr><tr><td>7</td><td><strong>비밀번호 찾기</strong></td><td>비밀번호를 잊은 경우 최고관리자에게 초기화를 요청하세요.</td></tr></tbody></table></div>
+<p>이미 로그인된 상태에서 이 페이지에 들어오면 바로 관리 화면으로 이동합니다.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">02</span></div>
+      <h3 class="serif">관리자 셸 (`admin.html`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><p>로그인 후 보이는 관리 화면입니다. 왼쪽 메뉴를 누르면 각 업무 화면으로 이동합니다. 로그인하지 않은 상태로 접속하면 로그인 화면으로 이동합니다.</p>
+<figure><img src="./screenshots/bo/bo-shell.png" alt="관리자 셸" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>설명</th></tr></thead><tbody><tr><td>1</td><td><strong>왼쪽 메뉴</strong></td><td>메인·접수·시험 운영·콘텐츠·회원·약관·시스템 그룹의 13개 메뉴. 클릭하면 해당 업무 화면으로 이동합니다.</td></tr><tr><td>2</td><td><strong>회차 선택</strong></td><td>대시보드·접수자 목록 상단에서 작업할 회차를 선택합니다. 옵션에 상태 표기(진행중/예정/종료). 전 회차 데이터의 필터 기준.</td></tr><tr><td>3</td><td><strong>배지(알림 숫자)</strong></td><td>메뉴 옆 숫자는 처리 대기 건수입니다. <strong>로그인·화면 이동·새로고침</strong>할 때 갱신됩니다.</td></tr><tr><td>4</td><td><strong>탑바(tb)</strong></td><td>breadcrumb + 패널 제목 + 회차 드롭다운(2) + <strong>FO 사이트 새 창 링크</strong>(<code>../../FO/index.html</code>) + 우측 사용자(이름·역할).</td></tr><tr><td>5</td><td><strong>주소(북마크)</strong></td><td>화면 주소를 북마크하면 같은 화면으로 다시 들어올 수 있습니다. 접수자 목록은 검색·필터 조건도 주소에 저장됩니다.</td></tr><tr><td>6</td><td><strong>비밀번호 변경 안내</strong></td><td>첫 로그인 등 비밀번호 변경이 필요하면, 다른 메뉴 사용 전 새 비밀번호를 설정해야 합니다(8자 이상·영문·숫자·특수문자·현재와 다름). 완료 후 다시 로그인합니다.</td></tr><tr><td>7</td><td><strong>사용자/로그아웃</strong></td><td>이름·역할(최고/일반/조회)이 표시됩니다. <strong>로그아웃</strong>을 누르면 확인 후 로그인 화면으로 이동합니다.</td></tr></tbody></table></div>
+<p>데이터를 불러오는 동안 화면 상단에 진행 안내가 표시되고, 오류가 있으면 빨간 안내 띠가 나타납니다.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">03</span></div>
+      <h3 class="serif">대시보드 (`#dashboard`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-dashboard.png" alt="대시보드" loading="lazy"></figure>
+<p>현재 <strong>회차 컨텍스트</strong>(상단 드롭다운)에 속한 접수자만 집계합니다. 회차를 바꾸면 모든 카드·차트가 즉시 재계산됩니다.</p>
+<h3>3-1. KPI 카드 (9종) — 산출 기준</h3>
+<div class="tw"><table><thead><tr><th>#</th><th>카드</th><th>의미 / 산출 기준 (현재 회차)</th></tr></thead><tbody><tr><td>1</td><td><strong>전체 접수자</strong></td><td>현재 회차 접수 건수(취소 포함 전체). hint=회차 번호</td></tr><tr><td>2</td><td><strong>접수완료</strong></td><td>UI 상태 <code>applied</code>(사진·수납 완료됐으나 <strong>승인 처리 전</strong> 미처리 건)</td></tr><tr><td>3</td><td><strong>수납대기</strong></td><td>UI 상태 <code>pay</code>(사진 승인 + <strong>오프라인 수납 전</strong>)</td></tr><tr><td>4</td><td><strong>승인완료</strong></td><td>UI 상태 <code>approved</code>(승인 또는 수험번호 부여 완료)</td></tr><tr><td>5</td><td><strong>반려</strong></td><td>일괄·반려 모달</td><td>접수 반려</td><td><strong>사유 필수</strong></td><td>응시자 안내</td></tr><tr><td><strong>수험번호 부여</strong></td><td><strong>수험번호 일괄 부여</strong></td><td>13자리 채번</td><td><strong>최고관리자만</strong></td><td>4-F 참고</td></tr></tbody></table></div></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">04</span></div>
+      <h3 class="serif">접수자 목록 (`#applicants`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-applicants.png" alt="접수자 목록" loading="lazy"></figure>
+<h3>4-C. 필터·검색·그리드 (요소)</h3>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>상태 칩 8종</strong></td><td>전체/접수완료/사진심사중/수납대기/승인완료/반려/취소/환불자. 각 칩에 현재 회차 기준 건수 배지. 선택 시 그리드 필터 + URL <code>?s=</code>.</td></tr><tr><td>2</td><td><strong>venueF / levelF</strong></td><td>시험장(활성만)·급수(Ⅰ/Ⅱ/동시) 드롭다운. URL <code>?v=</code>,<code>?l=</code>.</td></tr><tr><td>3</td><td><strong>검색창</strong></td><td>한글·영문 성명/이메일/생년월일/수험번호 부분 일치(대소문자 무시). URL <code>?q=</code>.</td></tr><tr><td>4</td><td><strong>조건 초기화</strong></td><td>필터·검색이 하나라도 걸렸을 때만 노출. 클릭 시 전체 초기화.</td></tr><tr><td>5</td><td><strong>applicants-grid</strong></td><td>체크박스 + 정렬 가능 컬럼(번호·한글성명·영문성명·이메일·접수일) + 사진 썸네일 + 사진심사 Pill + 수납 Pill + 수험번호 + 상태 Pill + 상세보기. 페이지당 12행.</td></tr><tr><td>6</td><td><strong>사진 썸네일</strong></td><td>등록된 증명사진을 우선 표시, 없으면 미심사/반려/이니셜 박스로 대체.</td></tr><tr><td>7</td><td><strong>전체선택 체크박스</strong></td><td>헤더 체크박스는 <strong>현재 페이지 행</strong>만 선택/해제.</td></tr><tr><td>8</td><td><strong>인쇄</strong></td><td><code>window.print()</code> — <code>.no-print</code> 영역(사이드바·탑바·관리 컬럼 등) 숨김 인쇄용 CSS 적용.</td></tr></tbody></table></div>
+<h3>4-D. 일괄 처리 바 (BulkBar)</h3>
+<p>체크박스로 1건 이상 선택하면 하단 고정 바가 뜹니다. 계정 등급에 따라 사용할 수 없는 버튼은 비활성화됩니다.</p>
+<div class="tw"><table><thead><tr><th>버튼</th><th>조건/대상</th><th>결과</th></tr></thead><tbody><tr><td>사진 일괄 승인</td><td><code>photo</code> 권한 · 선택 건 중 미승인만 처리</td><td>처리 건수 토스트, 이미 전부 승인이면 안내</td></tr><tr><td>오프라인 수납</td><td><code>pay</code> 권한</td><td>수납 모달(pay) 오픈</td></tr><tr><td>승인</td><td><code>approve</code> 권한</td><td>승인 모달 오픈 — <strong>사진 미심사 포함 시 차단</strong></td></tr><tr><td>반려</td><td><code>reject</code> 권한</td><td>반려 모달(사유 필수) 오픈</td></tr><tr><td>수납 취소(환불)</td><td><code>pay</code> 권한 · 선택 중 수납완료 건만</td><td>수납 모달(cancel) 오픈</td></tr></tbody></table></div>
+<h3>4-E. 인라인 사진 심사 · 상세 LP · 모달</h3>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과</th></tr></thead><tbody><tr><td>1</td><td><strong>사진 심사</strong></td><td>사진 확대·회전(화면에서만)·원본 다운로드·승인/반려. 반려 사유 6종. 기타는 상세 입력 필수.</td></tr><tr><td>2</td><td><strong>상세 LP(ApplicantDetailLP)</strong></td><td>탭 3개 — <strong>기본 정보</strong>(응시자/시험 정보 KV, 사진 심사 인라인 승인·반려), <strong>메모</strong>(관리자 메모 누적, 로컬), <strong>처리 이력</strong>(해당 접수 audit 타임라인). 푸터에 반려/수납·수납취소/승인 버튼(조회 전용·취소 건은 비활성).</td></tr><tr><td>3</td><td><strong>수납 모달(PayModal)</strong></td><td>pay/cancel 모드. <strong>선택 건 사진·기본정보 표 + 사진 미심사 행은 모달 내에서 즉시 사진 승인</strong> 가능. 합계 응시료 표시. pay: 영수증·메모(선택). cancel: 취소 사유(본인 요청/중복 접수/정보 오류/기타) 필수.</td></tr><tr><td>4</td><td><strong>승인 모달(ApproveModal)</strong></td><td>대상 건수·안내. <strong>사진 미심사 포함 시 명단 표기 + 승인 버튼 비활성</strong>.</td></tr><tr><td>5</td><td><strong>반려 모달(RejectModal)</strong></td><td>일반 반려 사유(정보 불일치/중복 접수/기타) + 추가 안내. 기타 시 상세 필수. 사유는 응시자 이메일·마이페이지 안내.</td></tr></tbody></table></div>
+<h3>4-F. 수험번호 13자리 일괄 부여 (ExamAssignModal)</h3>
+<p>상단 「수험번호 일괄 부여」 → 미리보기 모달이 먼저 <code>dry_run</code>으로 채번 결과를 보여주고, 확정 시 실제 부여합니다.</p>
+<ul><li><strong>13자리 구성:</strong> <code>국가(3)=025</code> + <code>지역(3)</code> + <code>수준(1: 7=Ⅰ / 8=Ⅱ)</code> + <code>시험장(2)</code> + <code>응시자(4)</code> 예: <code>0250017010001</code> (양곤 001 · Ⅰ급 7 · 시험장 01 · 0001번)</li><li><strong>대상 조건:</strong> 수납 완료(<code>paid</code>) + 사진 승인(<code>approved</code>) + 비반려·비취소 + <strong>수험번호 미부여</strong></li><li><strong>정렬:</strong> <code>(시험장, 수준)</code> 그룹 내 <strong>영문 성명 오름차순</strong>으로 4자리 일련번호 배정</li><li><strong>편의지원(장애인) 신청자:</strong> 같은 그룹의 <strong>마지막 홀수 좌석부터 내림차순(…,7,5,3,1)</strong> 배정(좌석 분리 배려)</li><li><strong>권한:</strong> <strong>최고관리자(super)만</strong> 실행 가능 — 일반/조회는 버튼 비활성(<code>can('applicants','exam')</code>)</li><li><strong>재부여 차단:</strong> 이미 부여되고 <strong>노출 시점이 지난</strong> 회차는 재배정 불가(409 <code>ALREADY_VISIBLE</code>)</li><li><strong>이메일 발송 안 함</strong> · 노출은 아래 「노출 시점」 설정일에 FO 접수확인에서 공개</li></ul>
+<h3>4-G. 노출 시점 설정 (ExamVisibilityCard)</h3>
+<p>그리드 아래 카드. 노출 시작일(date)+시각(time) 선택 후 <strong>노출 시점 저장</strong>을 누르면 설정이 저장됩니다. 이 일시 <strong>이전에는 FO 접수확인에서 수험번호 미노출</strong>. 현재 설정값을 카드에 표기.</p>
+<h3>4-H. 내보내기 (Excel / ZIP) — 포함 항목</h3>
+<div class="tw"><table><thead><tr><th>버튼</th><th>모달/모드</th><th>포함 항목·구조</th><th>조건</th><th>연동</th></tr></thead><tbody><tr><td><strong>연명부 엑셀</strong></td><td>현재 필터 / 회차 전체</td><td>「연명부 양식.xlsx」 <strong>10컬럼</strong>: 한글성명·영문성명·생년월일(8)·성별(1/2)·국적·제1언어·직업코드·응시동기코드·응시목적코드·수험번호(13). <strong>지역·시험장·수준별 개별 파일(단일 시트)</strong>, 파일명 <code>TOPIK Ⅰ_미얀마_{지역}_{시험장}.xlsx</code>, 행은 수험번호(영문명 정렬)순. 2개 이상이면 zip 묶음.</td><td><code>export</code> 권한</td><td><code>GET …/roster.xlsx</code></td></tr><tr><td><strong>사진 zip</strong></td><td>—</td><td><code>{지역}/{시험장}/{수준}/{13자리 수험번호}.jpg</code> 폴더 구조 + <code>_누락리포트.txt</code>(수험번호 미부여/사진 없음 목록). 취소 건 제외, 회차/시험장/급수 필터 적용.</td><td><code>export</code> 권한 · <strong>API 연결 필수</strong></td><td></td></tr></tbody></table></div>
+<h3>4-I. 권한·조건부 노출 / 에러</h3>
+<ul><li><strong>조회 전용(viewer)</strong> 계정은 상단에 안내 배너 + 사진 심사·수납·승인·반려·수험번호·내보내기 버튼 전부 비활성.</li><li><strong>일반관리자(general)</strong>: 사진심사·수납·승인·반려는 가능하나 <strong>수험번호 부여·내보내기는 비활성</strong>(권장 매트릭스 기준).</li><li><strong>409 충돌:</strong> 다른 관리자가 먼저 처리한 건은 <code>bo-api-bridge.js handleMutation</code>이 「다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.」 토스트 후 자동 재조회 → 다시 시도.</li><li><strong>400 PHOTO_NOT_APPROVED:</strong> 사진 승인 전 수납 시도 → 먼저 사진 승인 필요.</li><li><strong>취소(FO) 건:</strong> 사진 심사·수납·승인·반려 버튼이 잠깁니다.</li></ul>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">05</span></div>
+      <h3 class="serif">회차 관리 (`#sessions`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-sessions.png" alt="회차 관리" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증 · 권한</th></tr></thead><tbody><tr><td>1</td><td><strong>회차 목록</strong></td><td>시험일 내림차순. 컬럼: 회차·회차명·접수기간·시험일·발표일(미정 시 「미정」)·정원·접수자·응시료(Ⅰ/Ⅱ)·시험장 수·상태·관리. 폐지 행은 흐리게.</td></tr><tr><td>2</td><td><strong>상태 Pill</strong></td><td><code>예정</code>(planned)·<code>접수중</code>(open)·<code>마감</code>(closed)·<code>폐지</code>(revoked). <strong>상태는 접수기간 기준 자동 산정</strong> — 별도 수동 전환 버튼 없음(아래 5-A).</td></tr><tr><td>3</td><td><strong>회차 등록 / 수정 LP</strong></td><td>기본(회차번호·회차명·접수상태 안내·정원), 일정(접수시작·마감·시험일·합격발표일), 응시료(Ⅰ/Ⅱ USD), 시험장 다중 선택(활성만).</td><td>4</td><td><strong>복제</strong></td><td>다음 회차 번호로 설정 복사(상태: 예정). 등록 권한 필요.</td></tr><tr><td>5</td><td><strong>폐지</strong></td><td>확인 모달 → <code>POST …/{id}/revoke</code>. <strong>접수자 정보는 유지</strong>, 회차 비공개 전환. (복원 API <code>restore</code> 존재)</td></tr></tbody></table></div>
+<h3>5-A. 등록·수정 검증 규칙 (SessionEditLP)</h3>
+<p>저장 버튼은 다음을 <strong>모두</strong> 만족해야 활성화됩니다.</p>
+<ul><li>회차명 필수, 접수시작·마감·시험일 필수</li><li>정원 ≥ 0 (0은 「미정」 의미), <strong>응시료 Ⅰ·Ⅱ 각각 &gt; 0</strong></li><li>시험장 <strong>1개 이상</strong> 선택(활성 시험장만 선택 가능)</li><li><strong>일정 순서:</strong> 접수시작 &lt; 접수마감 &lt; 시험일</li><li>합격발표일은 입력 시 <strong>시험일 이후</strong>여야 함(미정 시 비움)</li><li>접수기간은 저장 시 <strong>KST 자정/말일</strong>로 변환 저장(시작 00:00, 마감 23:59 +09:00)</li></ul>
+<p><strong>상태 자동 규칙:</strong> 접수 시작일 00:00(KST) 이전=예정 · 기간 내=접수중 · 마감일 23:59(KST) 이후=마감. 폐지는 목록에서 별도 처리.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">06</span></div>
+      <h3 class="serif">시험장 관리 (`#venues`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-venues.png" alt="시험장 관리" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>시험장 그리드</strong></td><td>지역코드·코드 순 정렬. 컬럼: 코드(<code>025·{지역}·{시험장}</code>)·지역·한글/영문/미얀마어 명칭·주소·정원·상태·비고·관리. <strong>코드는 13자리 수험번호 생성에 사용</strong> → 변경 신중.</td></tr><tr><td>2</td><td><strong>활성/비활성 토글</strong></td><td>행의 「활성/비활성」 버튼. 비활성 시험장은 회차·필터 선택에서 제외.</td></tr><tr><td>3</td><td><strong>등록/수정 LP</strong></td><td>국가(미얀마 025 고정)·지역(드롭다운)·<strong>시험장 코드(2자리 01~99, 동일 지역 내 unique, 00 불가)</strong>·정원(&gt;0)·한글/영문(필수)·미얀마어 명칭·주소·상태·비고.</td></tr><tr><td>4</td><td><strong>미얀마어 「적용」</strong></td><td>한글 명칭 기준 미얀마어 번역 채움. 필요 시 직접 수정.</td></tr><tr><td>5</td><td><strong>비고(memo)</strong></td><td><strong>좌석배치도·시험장 책임자·연락처 등 운영 정보는 별도 입력란 없이 이 비고란에 자유 기재</strong>(고객사 수정 0526).</td></tr></tbody></table></div>
+<p><strong>검증:</strong> 코드 <code>^[0-9]{2}$</code> 且 <code>00</code> 아님, 한글·영문 명칭, 정원 &gt; 0. 신규 등록 시 <strong>동일 지역 내 코드 중복은 거부</strong>(토스트). 이미 수험번호가 부여된 시험장 코드는 변경하지 마세요.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">07</span></div>
+      <h3 class="serif">공지사항 (`#notices`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-notices.png" alt="공지사항" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>목록/휴지통 탭 + 카테고리 칩</strong></td><td>「목록」/「휴지통」 전환 + 카테고리(중요/접수/시험/결과) 필터 + 제목 검색. 목록은 <strong>고정(pin) 우선, 작성일 내림차순</strong>. 휴지통 탭은 진입 시 <code>?trash=true</code>로 별도 조회하며 삭제일 컬럼 노출.</td></tr><tr><td>2</td><td><strong>공지 작성 / 수정 LP</strong></td><td>Quill 리치 에디터 + 첨부 + 다국어.</td><td>3</td><td><strong>다국어(KO/MY/EN) 탭</strong></td><td>언어 세그먼트로 제목·본문 각각 입력. <strong>KO 필수, MY/EN 선택</strong>. 저장 시 <code>title_my/title_en/body_my/body_en</code>로 전송 → FO에서 언어별 노출. 제목 최대 80자.</td></tr><tr><td>4</td><td><strong>노출 시작/종료(datetime-local)</strong></td><td><code>display_start_at/display_end_at</code> 저장(KST→서버 ISO). <strong>종료는 시작 이후</strong>여야 하며, 입력 단계와 저장 직전 모두 검증(아니면 토스트로 거부).</td></tr><tr><td>5</td><td><strong>옵션(공개/상단 고정)</strong></td><td>공개 체크 해제 시 비공개(초안) 저장. 상단 고정 시 목록·FO 상단 노출.</td></tr><tr><td>6</td><td><strong>첨부파일</strong></td><td><strong>최대 5개·파일당 10MB</strong>. 이미지(jpg/png/gif/webp 등)·문서(pdf/doc/docx/xls/xlsx/ppt/pptx/hwp/txt/zip/csv). 업로드 후 file_id 머지. 본문 인라인 이미지의 file_id도 자동 첨부에 합산. <strong>업로드 진행 중에는 저장 차단.</strong></td></tr><tr><td>7</td><td><strong>마케팅 발송</strong></td><td><strong>신규 공개 공지 등록 시</strong> 마케팅 수신 동의 활성 회원에게 알림 이메일 일괄 발송(<code>POST …/{id}/send-marketing</code>). <strong>제목 + FO 공지 링크만 발송(본문 전체 미발송)</strong>, 수정·삭제 시 미발송. 발송 인원은 결과 토스트로 표기.</td></tr><tr><td>8</td><td><strong>삭제(휴지통)/복원</strong></td><td>삭제는 <strong>soft-delete → 휴지통 30일 보관 후 영구 삭제</strong>. 휴지통에서 「복구」(<code>POST …/{id}/restore</code>) — 복구 후 공개 여부 재설정 권장.</td></tr></tbody></table></div>
+<p><strong>권한:</strong> <code>create/edit/delete</code>는 <code>can('notices', …)</code>. 조회 전용은 안내 배너 + 버튼 비활성.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">08</span></div>
+      <h3 class="serif">FAQ (`#faq`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-faq.png" alt="FAQ" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>카테고리 칩 + 검색</strong></td><td>접수/시험/결과/기타 필터 + 질문 검색. 목록은 <strong>카테고리→노출 순서</strong>로 정렬.</td></tr><tr><td>2</td><td><strong>등록/수정 LP</strong></td><td>분류·노출 순서(작을수록 상단)·다국어 질문/답변.</td><td>3</td><td><strong>KO/MY/EN 편집</strong></td><td>언어 세그먼트로 질문(최대 120자)·답변(최대 3000자) 입력. <strong>KO 필수, MY/EN 선택</strong>. FO FAQ와 직접 연동.</td></tr><tr><td>4</td><td><strong>삭제</strong></td><td>확인 모달 → <code>PATCH {is_active:false}</code>(soft delete) → 목록에서 제거.</td></tr></tbody></table></div>
+<p><strong>권한:</strong> <code>create/edit/delete</code> 권한 기반 버튼 활성. 권장 매트릭스상 일반관리자도 FAQ 전체 CRUD 가능.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">09</span></div>
+      <h3 class="serif">환불·정보정정 (`#refunds`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-refunds.png" alt="환불·정보정정" loading="lazy"></figure>
+<p><strong>전 게시글이 비밀글</strong>입니다. 관리자가 상세를 열면 서버가 <strong>비밀글 열람 이력(audit)</strong>을 자동 기록합니다.</p>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>답변 유무 칩 + 유형/상태/검색</strong></td><td>칩: 전체/답변없음/답변있음. 드롭다운: 유형(환불/정보정정)·상태(접수/검토중/처리완료/반려)·제목·작성자 검색. 작성일 내림차순.</td></tr><tr><td>2</td><td><strong>목록 그리드</strong></td><td>번호·유형 Pill·제목(자물쇠)·작성자·작성일·처리상태 Pill·답변 유무·담당자·관리(상세/삭제).</td></tr><tr><td>3</td><td><strong>상세 LP(RefundDetailLP)</strong></td><td>신청 내용(유형·본문·첨부) + 처리(상태·담당자) + <strong>답변 이력(누적)</strong> + 답변 작성 + 댓글/대댓글. 상세 진입 시 <code>GET …/{id}</code>로 <code>admin_replies</code> 전체를 재조회.</td></tr><tr><td>4</td><td><strong>처리 상태 + 답변 등록</strong></td><td>상태 드롭다운 변경 후 답변 작성 → 「답변 등록·상태 저장」. 상태가 바뀌었으면 <code>PATCH …/workflow</code> 후 <code>POST …/reply</code>. <strong>답변 필수</strong>. 매 등록마다 <strong>이력에 추가</strong>(이전 답변 덮어쓰지 않음). FO·BO 모두 전체 이력 표시. 토스트 「FO 게시판에 노출」.</td></tr><tr><td>5</td><td><strong>환불 금액·방법</strong></td><td>유형이 <strong>환불</strong>일 때만 노출(환불 금액 입력·방법: 계좌이체/현장환불/기타). 처리 메모 용도.</td></tr><tr><td>6</td><td><strong>회원 정보 수정 바로가기</strong></td><td>정보정정 유형일 때 <strong>회원 관리에서 정보 정정 →</strong>로 회원 관리 화면 이동 후 직접 수정.</td></tr><tr><td>7</td><td><strong>답변 이력 / 댓글·대댓글</strong></td><td><strong>답변 이력</strong>(<code>답변 이력 (N)</code>): 등록순 목록. 각 항목 = 담당 관리자명 · 「공식 답변」 라벨 · 등록 시각 · 본문. 여러 관리자·여러 차례 답변도 <strong>전부 유지</strong>. <strong>댓글·대댓글</strong>(<code>board-comments.jsx</code>)은 공식 답변과 별도 스레드 — 비밀글이므로 자동 비공개.</td></tr></tbody></table></div>
+<h3>9-A. 처리 상태 전이 (workflow)</h3>
+<div class="tw"><table><thead><tr><th>UI 상태</th><th>API workflow</th><th>비고</th></tr></thead><tbody><tr><td>접수</td><td><code>received</code></td><td>신규 신청 기본값</td></tr><tr><td>검토중</td><td><code>in_review</code></td><td>처리 진행 중</td></tr><tr><td>처리완료</td><td><code>completed</code></td><td>환불·정정 완료</td></tr><tr><td>반려</td><td><code>rejected</code></td><td>신청 반려</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">10</span></div>
+      <h3 class="serif">문의 게시판 (`#inquiries`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-inquiries.png" alt="문의 게시판" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>공개 탭 + 카테고리/상태/검색</strong></td><td>탭: 전체/일반/비밀. 드롭다운: 카테고리(접수/시험/기타)·상태(답변대기/답변완료)·검색. 비밀글은 자물쇠 아이콘.</td></tr><tr><td>2</td><td><strong>상세 LP(InquiryDetailLP)</strong></td><td>문의 내용 + <strong>답변 이력(누적)</strong> + 답변 작성 + 댓글/대댓글. 상세 진입 시 <code>GET …/{id}</code>로 <code>admin_replies</code> 전체 재조회. <strong>비밀글 열람 시 audit 자동 기록</strong>(서버).</td></tr><tr><td>3</td><td><strong>답변 등록·완료 처리</strong></td><td>「답변 작성」 textarea 입력 후 「답변 등록·완료 처리」 → <code>POST …/reply {mark_complete:true}</code>. 매 등록마다 <strong>답변 이력에 추가</strong>(담당자·시각·「공식 답변」 라벨, 덮어쓰기 없음). <strong>추가 답변 가능</strong>. <code>mark_complete:true</code> 시 상태 <strong>답변완료(answered)</strong> 전환 — 이후에도 이력에 답변 추가 가능.</td></tr><tr><td>4</td><td><strong>댓글 공개 여부</strong></td><td>일반글은 댓글 작성 시 「공개」 체크로 공개/비공개 선택. <strong>비밀글은 자동 비공개</strong>. <code>POST …/comments {content, parent_id?, is_public}</code>. 대댓글은 부모 아래 들여쓰기.</td></tr><tr><td>5</td><td><strong>삭제</strong></td><td>확인 모달 → <code>DELETE …/{id}</code>. <code>delete</code> 권한 필요.</td></tr></tbody></table></div>
+<h3>10-A. 상태 전이 (workflow)</h3>
+<div class="tw"><table><thead><tr><th>UI 상태</th><th>API workflow</th><th>트리거</th></tr></thead><tbody><tr><td>답변대기</td><td><code>awaiting_reply</code></td><td>신규 문의</td></tr><tr><td>답변완료</td><td><code>answered</code></td><td>답변 등록(자동) 또는 상태 직접 변경</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">11</span></div>
+      <h3 class="serif">회원 관리 (`#members`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-members.png" alt="회원 관리" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증</th></tr></thead><tbody><tr><td>1</td><td><strong>상태 칩 + 국적/검색</strong></td><td>전체/활성/정지/탈퇴 + 국적 드롭다운 + 이름·이메일·연락처 검색. 가입일 내림차순, 페이지당 12행.</td></tr><tr><td>2</td><td><strong>목록 그리드</strong></td><td>번호·한글/영문성명·이메일·연락처·국적·<strong>가입유형(일반/Google)</strong>·가입일·마지막 로그인·상태·관리(상세/수정/PW/정지·해제/탈퇴).</td></tr><tr><td>3</td><td><strong>상세 LP(MemberDetailLP)</strong></td><td>프로필 + <strong>접수 이력</strong>(이메일 매칭, 회차·급수·시험장·상태·수험번호) + 관리자 처리 이력 타임라인.</td></tr><tr><td>4</td><td><strong>정보 수정</strong></td><td>성명·연락처·국적·마케팅 수신 수정. <strong>이메일 변경 불가</strong>. <strong>수정 사유 필수</strong>.</td></tr><tr><td>5</td><td><strong>정지(SuspendModal)</strong></td><td>활성 회원 대상. 사유(약관 위반/부정 행위/장기 미접속/보안 위협/기타) 필수 → <code>PATCH {status:suspended}</code>. <strong>활성 세션 즉시 무효화</strong> 안내. 정지 회원은 「해제」로 활성 복귀.</td></tr><tr><td>6</td><td><strong>탈퇴(WithdrawModal)</strong></td><td><strong>진행 중 접수(취소·반려 제외)가 자동 취소</strong>됨을 명단으로 경고 후 처리 → <code>PATCH {status:withdrawn}</code>. 사유 필수.</td></tr><tr><td>7</td><td><strong>비밀번호 초기화(PwResetLP)</strong></td><td>임시 비밀번호 발급(<code>POST …/reset-password</code>) → <strong>1회 노출</strong> + 이메일 발송, 첫 로그인 시 변경 강제. <strong>Google 간편가입 회원은 비활성</strong>(안내: Google 로그인 사용).</td></tr><tr><td>8</td><td><strong>CSV 다운로드</strong></td><td>현재 필터 회원을 CSV로. 컬럼: 번호·한글성명·영문성명·이메일·연락처·국적·가입유형·가입일·마지막 로그인·상태·마케팅수신.</td></tr></tbody></table></div>
+<h3>11-A. 회원 상태 전이</h3>
+<div class="tw"><table><thead><tr><th>전이</th><th>트리거</th><th>결과</th></tr></thead><tbody><tr><td>활성 → 정지</td><td>정지(사유 필수)</td><td>로그인 차단·세션 무효화. 해제 가능</td></tr><tr><td>정지 → 활성</td><td>해제</td><td>즉시 활성</td></tr><tr><td>활성/정지 → 탈퇴</td><td>탈퇴(사유 필수)</td><td>진행 중 접수 자동 취소, 복구 불가</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">12</span></div>
+      <h3 class="serif">약관 관리 (`#terms`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-terms.png" alt="약관 관리" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증 · 권한</th></tr></thead><tbody><tr><td>1</td><td><strong>종류 칩 + 버전 목록</strong></td><td>이용약관/개인정보/마케팅. 컬럼: 종류·버전·게시일·폐지일·상태(초안/게시/폐지)·작성자·관리. 게시일 내림차순.</td></tr><tr><td>2</td><td><strong>약관 등록(신규 초안)</strong></td><td>종류·버전(시맨틱, 예 v2.0)·게시 예정일·본문(KO 필수, MY/EN 선택 Quill). 저장 시 <strong>상태=초안</strong>.</td></tr><tr><td>3</td><td><strong>초안 수정</strong></td><td>상태가 <strong>초안일 때만</strong> 본문·버전 수정 가능.(게시본 수정은 400 거부).</td></tr><tr><td>4</td><td><strong>게시</strong></td><td>초안의 「게시」 → 확인 모달 → <code>POST …/{id}/publish</code>. <strong>동종 기존 게시 버전은 자동 폐지</strong>. <strong>최고관리자만</strong>.</td></tr><tr><td>5</td><td><strong>신규 버전(게시본 기반)</strong></td><td>게시 중 약관은 직접 수정 불가 → 「신규 버전」으로 <strong>현재 게시본 복사 + 버전 자동 bump(v1.0→v1.1)</strong> 한 초안 생성 → 저장 후 「게시」로 교체.</td></tr><tr><td>6</td><td><strong>폐지</strong></td><td>게시 중 약관 「폐지」 → <code>POST …/{id}/retire</code>(게시 상태만 가능). <strong>버전·동의 이력 보존</strong>, FO 노출 중단. <strong>최고관리자만</strong>.</td></tr><tr><td>7</td><td><strong>미리보기</strong></td><td>FO 표시 형태로 본문 렌더(<code>dangerouslySetInnerHTML</code>).</td></tr><tr><td>8</td><td><strong>동의 이력(ConsentLogLP)</strong></td><td>진입 시 동의 이력을 조회합니다. 회원·약관 종류 필터 + CSV 내보내기(시각·회원ID·약관·버전·IP·방식). 감사 자료(영구 보관).</td></tr></tbody></table></div>
+<h3>12-A. 약관 상태 전이</h3>
+<div class="tw"><table><thead><tr><th>전이</th><th>트리거</th><th>결과</th></tr></thead><tbody><tr><td>(없음) → 초안</td><td>등록/신규 버전</td><td><code>draft</code></td></tr><tr><td>초안 → 게시</td><td>게시(super)</td><td><code>published</code>, 동종 기존 게시본 자동 폐지</td></tr><tr><td>게시 → 폐지</td><td>폐지(super)</td><td><code>retired</code>, FO 노출 중단</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">13</span></div>
+      <h3 class="serif">관리자 계정 (`#admins`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-admins.png" alt="관리자 계정" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과 · 검증 · 권한</th></tr></thead><tbody><tr><td>1</td><td><strong>권한 안내 배너</strong></td><td>super가 아니면 「최고관리자만 관리 가능 · 조회 전용」 배너 + 모든 관리 버튼 비활성.</td></tr><tr><td>2</td><td><strong>관리자 목록</strong></td><td>아이디·이름·이메일·<strong>권한 등급(최고/일반/조회)</strong>·마지막 로그인·마지막 IP·상태·비고.</td></tr><tr><td>3</td><td><strong>관리자 등록(AdminEditLP)</strong></td><td>이름·이메일·권한 등급·<strong>초기 비밀번호(8자+영문·숫자·특수문자)</strong>·비고. API 모드는 이메일이 계정 식별자. 첫 로그인 시 비밀번호 변경 강제.</td></tr><tr><td>4</td><td><strong>수정</strong></td><td>이름·이메일·권한·상태 수정.</td></tr><tr><td>5</td><td><strong>PW 초기화</strong></td><td>확인 모달 → <code>POST …/{id}/reset-password</code> → <strong>임시 비밀번호 발급(토스트 5초 노출)</strong> + 이메일, 첫 로그인 변경 강제.</td></tr><tr><td>6</td><td><strong>비활성/활성</strong></td><td>상태 토글(사유 입력). <strong>본인 계정은 비활성화 불가</strong>(가드). 비활성 시 활성 세션 즉시 무효화.</td></tr></tbody></table></div>
+<p><strong>역할 매핑:</strong> UI(최고/일반/조회) ↔ API(<code>super</code>/<code>admin</code>/<code>readonly</code>). 권한 검증은 서버 RBAC가 최종.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">14</span></div>
+      <h3 class="serif">관리자 권한 (`#permissions`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-permissions.png" alt="관리자 권한" loading="lazy"></figure>
+<blockquote><strong>안내:</strong> 각 역할별 권한을 <strong>표로 확인</strong>하는 참고 화면입니다. 실제 권한은 계정 등급(최고/일반/조회)에 따라 적용됩니다.</blockquote>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>무엇 / 행동 / 결과</th></tr></thead><tbody><tr><td>1</td><td><strong>권한 안내</strong></td><td>실제 버튼 사용 가능 여부는 계정 등급에 따라 달라집니다.</td></tr><tr><td>2</td><td><strong>등급 선택 + 권장값 적용</strong></td><td>최고/일반/조회 세그먼트(각 활성 계정 수 표기) + 「권장값 적용」(역할별 recommendedPerms 로드).</td></tr><tr><td>3</td><td><strong>편집 매트릭스</strong></td><td>섹션(구분)별 「전체선택」 + 메뉴별 tri-check + 액션 칩(조회/등록/수정/삭제/사진심사/수납/승인/반려/수험번호부여/답변/게시·폐지/정지·탈퇴/비번초기화/비활성/내보내기/전체이력/본인이력).</td></tr><tr><td>4</td><td><strong>저장 / 되돌리기</strong></td><td>최고관리자만 편집 가능. 참고용 저장입니다.</td></tr><tr><td>5</td><td><strong>내보내기</strong></td><td>매트릭스를 CSV로(구분·메뉴·액션·역할별 O/X).</td></tr></tbody></table></div>
+<h3>14-A. 역할별 권한 요약</h3>
+<div class="tw"><table><thead><tr><th>메뉴</th><th>최고(super)</th><th>일반(general)</th><th>조회(viewer)</th></tr></thead><tbody><tr><td>접수자</td><td>전체(사진·수납·승인·반려·<strong>수험번호</strong>·<strong>내보내기</strong>)</td><td>사진·수납·승인·반려 (<strong>수험번호·내보내기 제외</strong>)</td><td>조회</td></tr><tr><td>회차·시험장</td><td>전체</td><td>조회</td><td>조회</td></tr><tr><td>공지·FAQ</td><td>전체</td><td>등록·수정·삭제</td><td>조회</td></tr><tr><td>환불·문의</td><td>전체</td><td>조회·답변·삭제</td><td>조회</td></tr><tr><td>회원·약관</td><td>전체</td><td>조회</td><td>조회</td></tr><tr><td>관리자 계정·권한</td><td>전체</td><td>없음</td><td>없음</td></tr><tr><td>처리 이력</td><td>전체 이력</td><td>본인 이력</td><td>본인 이력</td></tr></tbody></table></div>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO<span class="num">15</span></div>
+      <h3 class="serif">처리 이력 (`#audit`)</h3>
+    </div>
+    <div class="sbody"><div class="doc"><figure><img src="./screenshots/bo/bo-audit.png" alt="처리 이력" loading="lazy"></figure>
+<div class="tw"><table><thead><tr><th>번호</th><th>요소</th><th>설명</th></tr></thead><tbody><tr><td>1</td><td><strong>기간 칩 + 필터</strong></td><td>전체/최근 7일/30일 + 처리자·유형·액션 드롭다운 + 대상 ID 검색. 페이지당 25행.</td></tr><tr><td>2</td><td><strong>이력 테이블</strong></td><td>시각·처리자·IP·유형·대상 ID·액션 Pill·메모·상세. <strong>일반/조회 관리자는 본인 처리 이력만</strong>(처리자 드롭다운 비활성), 최고관리자는 전체.</td></tr><tr><td>3</td><td><strong>상세 보기</strong></td><td>처리 시각·담당자·변경 내용(변경 전/후)과 관련 화면으로 바로 이동하는 링크를 확인할 수 있습니다.</td></tr><tr><td>4</td><td><strong>CSV 내보내기</strong></td><td><strong>최고관리자만</strong>. 현재 필터 결과를 CSV로(시각·처리자·IP·유형·대상ID·액션·메모).</td></tr></tbody></table></div>
+<p><strong>기록 안내:</strong> 처리 이력은 수정·삭제할 수 없으며, 최소 3년간 보관하는 것을 권장합니다. 비밀글 열람·접수 처리·약관 게시 등 주요 행위가 자동 기록됩니다.</p>
+<hr></div></div>
+  </section><section class="slide">
+    <div class="shead">
+      <div class="kicker"><span class="dot"></span>BO</div>
+      <h3 class="serif">부록: 공통 운영 모델</h3>
+    </div>
+    <div class="sbody"><div class="doc"><h3>A. 역할(Role) — 3등급</h3>
+<div class="tw"><table><thead><tr><th>등급</th><th>시스템 역할</th><th>주요 권한</th></tr></thead><tbody><tr><td>최고관리자</td><td><code>super</code></td><td>전 기능 + 수험번호 부여 + 관리자 계정/권한 + 약관 게시·폐지 + 전체 이력·내보내기</td></tr><tr><td>일반관리자</td><td><code>admin</code></td><td>접수 처리(사진·수납·승인·반려) + 콘텐츠(공지·FAQ·환불·문의) + 본인 이력</td></tr><tr><td>조회관리자</td><td><code>readonly</code></td><td>전 패널 조회 전용(변경 버튼 비활성)</td></tr></tbody></table></div>
+<h3>B. 동시 작업 시 안내</h3>
+<p>여러 관리자가 같은 접수 건을 동시에 처리할 수 있습니다. 다른 관리자가 먼저 처리한 경우 <strong>「다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.」</strong> 안내가 표시되고 화면이 갱신됩니다. 최신 상태를 확인한 뒤 다시 작업하세요.</p>
+<h3>C. 이메일 알림</h3>
+<p>승인·반려·사진 반려·마케팅 공지 등 주요 처리 시 응시자·회원에게 <strong>이메일 안내</strong>가 발송됩니다.</p>
+<h3>D. 내보내기 요약</h3>
+<div class="tw"><table><thead><tr><th>내보내기</th><th>위치</th><th>형식/컬럼</th></tr></thead><tbody><tr><td>연명부 엑셀</td><td>접수자</td><td>10컬럼, 지역·시험장·수준별 단일 시트 파일</td></tr><tr><td>사진 zip</td><td>접수자</td><td><code>{지역}/{시험장}/{수준}/{수험번호}.jpg</code> + 누락 리포트</td></tr><tr><td>회원 CSV</td><td>회원</td><td>11컬럼(가입유형·마케팅 포함)</td></tr><tr><td>동의 이력 CSV</td><td>약관&gt;동의 이력</td><td>시각·회원·약관·버전·IP·방식</td></tr><tr><td>처리 이력 CSV</td><td>처리 이력(super)</td><td>시각·처리자·IP·유형·대상·액션·메모</td></tr><tr><td>권한 매트릭스 CSV</td><td>권한</td><td>구분·메뉴·액션·역할별 O/X</td></tr></tbody></table></div>
+<hr></div></div>
+  </section></div>
+<div id="ctrls">
+  <div class="grp"><button class="btn" id="prev">← 이전</button><button class="btn" id="next">다음 →</button>
+    <span id="scrollhint">화면 내용이 길면 스크롤 · <kbd>←</kbd><kbd>→</kbd> 슬라이드 이동</span></div>
+  <div class="grp"><span id="counter"><b id="cur">1</b> / <span id="tot">1</span></span></div>
+</div>
+<div id="lb"><img src="" alt=""></div>
+<script>
+const nodes=[...document.querySelectorAll('.slide')];
+const tot=nodes.length; document.getElementById('tot').textContent=tot;
+let idx=0;
+function show(n){
+  idx=Math.max(0,Math.min(tot-1,n));
+  nodes.forEach((el,i)=>el.classList.toggle('active',i===idx));
+  const b=nodes[idx].querySelector('.sbody'); if(b) b.scrollTop=0;
+  document.getElementById('cur').textContent=idx+1;
+  document.getElementById('bar').style.width=((idx+1)/tot*100)+'%';
+  document.getElementById('prev').disabled=idx===0;
+  document.getElementById('next').disabled=idx===tot-1;
+}
+function next(){show(idx+1)} function prev(){show(idx-1)}
+document.getElementById('next').onclick=next;
+document.getElementById('prev').onclick=prev;
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('lb').classList.contains('on')){ if(e.key==='Escape'){closeLb();} return; }
+  if(['ArrowRight','PageDown'].includes(e.key)){e.preventDefault();next();}
+  else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev();}
+  else if(e.key==='Home'){show(0)} else if(e.key==='End'){show(tot-1)}
+});
+// lightbox
+const lb=document.getElementById('lb'), lbImg=lb.querySelector('img');
+function closeLb(){lb.classList.remove('on');lbImg.src='';}
+lb.onclick=closeLb;
+document.addEventListener('click',e=>{
+  const img=e.target.closest('.doc figure img');
+  if(img){ lbImg.src=img.getAttribute('src'); lb.classList.add('on'); }
+});
+show(0);
+</script>
+</body></html>

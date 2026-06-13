@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>환불 신청 — 접수 취소 및 환불 요청 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> 환불·정보정정 → 상세 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open lp-wide" role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>환불 신청 — 접수 취소 및 환불 요청</h2>
+      <div class="sub" style="margin-top:2px">작성자 demo@topik-mm.local · 작성일 2026-05-20 · 비밀글</div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <fieldset class="fs"><legend>신청 내용</legend><div class="fs-body"><div class="fs-grid ">
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">유형</div><div style="font-size:14px;color:var(--text);font-weight:500"><span class="pill pill-pay">환불</span></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">본문</div><div style="font-size:14px;color:var(--text);font-weight:500"><pre style="background:var(--bg-2);padding:10px;border-radius:6px;font-size:13;white-space:pre-wrap;font-family:inherit;color:var(--text)">개인 사정으로 시험 응시가 불가하여 환불을 요청합니다.
+수납 영수증 번호: R-20260515-003</pre></div></div>
+        <div class="form-row" style="margin-bottom:0"><div class="label" style="font-size:11.5px;color:var(--text-3);margin-bottom:2px">첨부</div><div style="font-size:14px;color:var(--text);font-weight:500"><span class="tag">📎 receipt.jpg</span></div></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>처리</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">처리 상태<span class="req">*</span></label><select class="select"><option>접수</option><option selected>검토중</option><option>처리완료</option><option>반려</option></select></div>
+        <div class="form-row"><label class="label">담당자</label><input class="input" value="admin-dev@topik-mm.local" disabled/></div>
+        <div class="form-row"><label class="label">환불 금액</label><input class="input" placeholder="예) 12,000 MMK" value="USD 12"/></div>
+        <div class="form-row"><label class="label">환불 방법</label><select class="select"><option selected>계좌이체</option><option>현장환불</option><option>기타</option></select></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>답변 이력 (1)</legend><div class="fs-body"><div class="fs-grid ">
+        <div style="padding:10px;background:#eef4ff;border:1px solid var(--border);border-radius:6px;font-size:13">
+          <div style="display:flex;justify-content:space-between;font-size:12;color:var(--text-3);margin-bottom:4px">
+            <span><b>admin-dev@topik-mm.local</b> · <span class="code-id" style="color:var(--primary)">공식 답변</span></span>
+            <span class="code-id">2026-05-21 10:15</span>
+          </div>
+          <div>환불 신청이 접수되었습니다. 영업일 기준 7일 이내 처리 예정입니다.</div>
+        </div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>답변 작성</legend><div class="fs-body"><div class="fs-grid ">
+        <div class="form-row"><label class="label">답변 내용<span class="req">*</span></label><textarea class="textarea" rows="5" placeholder="작성자에게 보낼 답변을 입력하세요.">환불 처리가 완료되었습니다. 3~5 영업일 내 입금 확인 부탁드립니다.</textarea></div>
+      </div></div></fieldset></div>
+  <div class="lp-foot">
+      <button class="btn btn-secondary">닫기</button>
+      <button class="btn btn-primary">답변 등록 · 상태 저장</button></div>
+</div>
+</div>
+</body>
+</html>

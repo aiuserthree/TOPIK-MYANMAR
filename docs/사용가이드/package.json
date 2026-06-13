@@ -1,0 +1,13 @@
+{
+  "name": "topik-user-guide-screenshots",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node capture-screenshots.mjs",
+    "capture:bo": "CAPTURE_BO=1 node capture-screenshots.mjs",
+    "capture:bo-lp": "CAPTURE_BO_LP=1 node capture-screenshots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.52.0"
+  }
+}

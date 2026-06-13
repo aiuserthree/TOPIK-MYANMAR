@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ 수정 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> FAQ → 등록/수정 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open " role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>FAQ 수정</h2>
+      <div class="sub" style="margin-top:2px">FAQ ID <code class="code-id">faq-012</code></div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <div class="seg" style="margin-bottom:14px">
+        <button class="active">KO</button><button>MY</button><button>EN</button>
+      </div>
+      <fieldset class="fs"><legend>FAQ</legend><div class="fs-body"><div class="fs-grid ">
+        <div class="form-row"><label class="label">분류</label><select class="select"><option selected>접수</option><option>시험</option><option>결과</option><option>기타</option></select></div>
+        <div class="form-row"><label class="label">노출 순서</label><input type="number" class="input" value="10" style="width:120px"/><div class="hint">작을수록 상단 노출</div></div>
+        <div class="form-row"><label class="label">질문<span class="req">*</span></label><input class="input" value="접수 후 수정이 가능한가요?"/></div>
+        <div class="form-row"><label class="label">답변<span class="req">*</span></label><textarea class="textarea" rows="5">접수 마감 전까지 마이페이지에서 일부 정보 수정이 가능합니다. 시험장·급수 변경은 취소 후 재접수해야 합니다.</textarea></div>
+      </div></div></fieldset></div>
+  <div class="lp-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">저장</button></div>
+</div>
+</div>
+</body>
+</html>

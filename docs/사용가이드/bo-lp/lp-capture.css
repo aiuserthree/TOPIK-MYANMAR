@@ -1,0 +1,117 @@
+/* BO LP/Modal — full-page screenshot overrides (fixed → document flow) */
+
+html, body.admin {
+  min-height: auto;
+  height: auto;
+  overflow: visible;
+  background: #eef1f5;
+}
+
+.lp-capture-page {
+  padding: 24px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.lp-capture-page .capture-label {
+  font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #54514a;
+  margin-bottom: 12px;
+}
+
+.lp-capture-page .capture-label strong {
+  color: #CC785C;
+}
+
+/* LP panel */
+.lp-capture-wrap .lp-backdrop {
+  position: static;
+  opacity: 1;
+  pointer-events: none;
+  background: rgba(15, 27, 45, 0.06);
+  height: auto;
+  min-height: 0;
+}
+
+.lp-capture-wrap .lp {
+  position: static;
+  transform: none;
+  max-width: none;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-shadow: 0 4px 24px rgba(15, 27, 45, 0.12);
+  border-radius: 8px;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-capture-wrap .lp.open {
+  transform: none;
+}
+
+.lp-capture-wrap .lp-body {
+  overflow: visible;
+  flex: none;
+  max-height: none;
+}
+
+.lp-capture-wrap .lp-tabs {
+  flex: none;
+}
+
+/* Modal */
+.lp-capture-modal {
+  padding: 24px;
+  min-height: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef1f5;
+}
+
+.lp-capture-modal .modal-backdrop {
+  position: static;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 640px;
+  width: 100%;
+  background: rgba(15, 27, 45, 0.45);
+  border-radius: 8px;
+}
+
+.lp-capture-modal .modal {
+  max-width: 560px;
+  width: 100%;
+  margin: 24px;
+}
+
+.lp-capture-modal .modal-wide .modal {
+  max-width: 720px;
+}
+
+/* Pills outside .dg */
+.lp-capture-wrap .pill,
+.lp-capture-modal .pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--bg-3);
+  color: var(--text-2);
+}
+
+.lp-capture-wrap .pill::before,
+.lp-capture-modal .pill::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 5px;
+}

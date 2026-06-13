@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시험장 수정 — 양곤대학교 흘라잉캠퍼스 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> 시험장 관리 → 등록/수정 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open " role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>시험장 수정 — 양곤대학교 흘라잉캠퍼스</h2>
+      <div class="sub" style="margin-top:2px">코드 <code class="code-id">025·001·01</code></div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <fieldset class="fs"><legend>기본 정보</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">국가</label><input class="input" value="미얀마 (025)" disabled/></div>
+        <div class="form-row"><label class="label">지역<span class="req">*</span></label><select class="select"><option selected>001 양곤</option><option>002 만달레이</option></select></div>
+        <div class="form-row"><label class="label">시험장 코드<span class="req">*</span></label><input class="input" value="01"/><div class="hint">2자리 01~99, 동일 지역 내 unique</div></div>
+        <div class="form-row"><label class="label">정원<span class="req">*</span></label><input type="number" class="input" value="120"/></div>
+        <div class="form-row"><label class="label">한글 명칭<span class="req">*</span></label><input class="input" value="양곤대학교 흘라잉캠퍼스"/></div>
+        <div class="form-row"><label class="label">영문 명칭<span class="req">*</span></label><input class="input" value="Yangon University Hlaing Campus"/></div>
+        <div class="form-row"><label class="label">미얀마어 명칭</label><div style="display:flex;gap:8px"><input class="input" value="ရန်ကုန်တက္ကသိုလ်"/><button class="btn btn-secondary" style="height:38px;white-space:nowrap">적용</button></div></div>
+        <div class="form-row"><label class="label">주소</label><input class="input" value="Hlaing Township, Yangon"/></div>
+        <div class="form-row"><label class="label">상태</label><select class="select"><option selected>활성</option><option>비활성</option></select></div>
+        <div class="form-row" style="grid-column:span 2"><label class="label">비고</label><textarea class="textarea" rows="2" placeholder="좌석배치도·책임자·연락처 등">1층 강의실 A·B · 담당: U Aung Kyaw (+95 9 xxx)</textarea></div>
+      </div></div></fieldset></div>
+  <div class="lp-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">저장</button></div>
+</div>
+</div>
+</body>
+</html>

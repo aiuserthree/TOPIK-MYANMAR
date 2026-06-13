@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>공지 수정 — 제107회 접수 안내 — BO LP 캡처</title>
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/fo-styles.css">
+<link rel="stylesheet" href="../../../html/C안/BO(admin)/project/assets/admin.css">
+<link rel="stylesheet" href="lp-capture.css">
+</head>
+<body class="admin">
+<div class="lp-capture-page lp-capture-wrap">
+  <p class="capture-label"><strong>●</strong> 공지사항 → 작성/수정 LP</p>
+  
+<div class="lp-backdrop open"></div>
+<div class="lp open lp-wide" role="dialog">
+  <div class="lp-head">
+    <div style="flex:1">
+      <h2>공지 수정 — 제107회 접수 안내</h2>
+      <div class="sub" style="margin-top:2px">공지 ID <code class="code-id">ntc-2026-042</code></div>
+    </div>
+    <button class="lp-close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  
+  <div class="lp-body">
+      <div class="seg" style="margin-bottom:14px">
+        <button class="active">KO</button><button>MY</button><button>EN</button>
+      </div>
+      <fieldset class="fs"><legend>기본</legend><div class="fs-body"><div class="fs-grid cols-2">
+        <div class="form-row"><label class="label">카테고리</label><select class="select"><option>중요</option><option selected>접수</option><option>시험</option><option>결과</option></select></div>
+        <div class="form-row"><label class="label">제목<span class="req">*</span></label><input class="input" value="제107회 TOPIK 접수 안내"/></div>
+        <div class="form-row"><label class="label">노출 시작</label><input type="datetime-local" class="input" value="2026-05-01T09:00"/></div>
+        <div class="form-row"><label class="label">노출 종료</label><input type="datetime-local" class="input" value="2026-05-25T23:59"/></div>
+        <div class="form-row" style="grid-column:span 2"><label class="label">옵션</label><label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> 공개</label><label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:6px"><input type="checkbox"/> 상단 고정</label></div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>본문</legend><div class="fs-body"><div class="fs-grid ">
+        <div id="notice-editor" style="border:1px solid var(--border);border-radius:6px;min-height:180px;padding:12px;background:#fff;font-size:14px;line-height:1.65;color:var(--text)">
+          <p><strong>제107회 TOPIK</strong> 접수가 2026년 5월 1일부터 시작됩니다.</p>
+          <ul style="margin:8px 0 0 20px"><li>접수 기간: 5/1 ~ 5/25</li><li>시험일: 6/15</li><li>응시료: USD 12 (Ⅰ·Ⅱ 동일)</li></ul>
+        </div>
+      </div></div></fieldset>
+      <fieldset class="fs"><legend>첨부파일</legend><div class="fs-body"><div class="fs-grid ">
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span class="tag">📎 접수안내.pdf</span>
+          <button class="btn btn-secondary" style="height:32px;font-size:12px">+ 파일 추가</button>
+        </div>
+        <div class="hint" style="margin-top:8px">최대 5개 · 파일당 10MB · jpg/png/pdf/doc/xlsx 등</div>
+      </div></div></fieldset></div>
+  <div class="lp-foot">
+      <button class="btn btn-secondary">취소</button>
+      <button class="btn btn-primary">저장</button></div>
+</div>
+</div>
+</body>
+</html>
