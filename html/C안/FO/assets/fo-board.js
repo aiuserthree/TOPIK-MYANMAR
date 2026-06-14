@@ -247,7 +247,7 @@
     if (!replies || !replies.length) return '';
     return replies.map(function (r) {
       var when = r.created_at_label || (r.created_at
-        ? new Date(r.created_at).toLocaleDateString('ko-KR')
+        ? (window.TPKMDate ? TPKMDate.formatDate(r.created_at) : '')
         : '');
       return (
         '<div class="reply-block">' +
@@ -788,7 +788,7 @@
               author: bt('board.admin', '관리자'),
               created_at: p.admin_replied_at,
               created_at_label: p.admin_replied_at
-                ? new Date(p.admin_replied_at).toLocaleDateString('ko-KR')
+                ? (window.TPKMDate ? TPKMDate.formatDate(p.admin_replied_at) : '')
                 : '',
             }] : []);
         if (replies.length) {

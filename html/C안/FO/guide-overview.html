@@ -257,7 +257,43 @@
   if (!tbody) return;
 
   var scheduleItems = null;
-  var MMT_MS = (6 * 60 + 30) * 60000;
+  var CAL_TZ = 'Asia/Yangon';
+
+  function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+  function calParts(v) {
+    if (!v) return null;
+    var raw = String(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      var bits = raw.split('-');
+      return { y: bits[0], m: bits[1], d: bits[2] };
+    }
+    var d = (v instanceof Date) ? v : new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    try {
+      var bits2 = new Intl.DateTimeFormat('en-CA', {
+        timeZone: CAL_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(d).split('-');
+      return { y: bits2[0], m: bits2[1], d: bits2[2] };
+    } catch (e) {
+      return null;
+    }
+  }
+  function ymdDot(v) {
+    var p = calParts(v);
+    return p ? p.y + '.' + p.m + '.' + p.d : '--';
+  }
+  function mdDot(v) {
+    var p = calParts(v);
+    return p ? p.m + '.' + p.d : '--';
+  }
+  function period(start, end) {
+    if (!start || !end) return '—';
+    return ymdDot(start) + ' — ' + mdDot(end);
+  }
+  function payPeriod(start, end) {
+    if (!start || !end) return '—';
+    return ymdDot(start) + ' — ' + mdDot(end);
+  }
 
   var STATIC_ROWS = [
     { round_no: 106, registration_status: null, _static: { reg: '2026.02.19 — 02.25', pay: '2026.02.27 — 03.02', exam: '2026.05.17' } },
@@ -275,29 +311,6 @@
   }
   function btf(key, fallback, n) { return bt(key, fallback).replace('{n}', n); }
   function roundLabel(n) { return btf('go.round_tag', '제{n}회', n); }
-
-  function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
-  function mmt(v) {
-    if (!v) return null;
-    var d = (v instanceof Date) ? v : new Date(v);
-    return isNaN(d.getTime()) ? null : new Date(d.getTime() + MMT_MS);
-  }
-  function ymdDot(v) {
-    var d = mmt(v);
-    return d ? d.getUTCFullYear() + '.' + pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--';
-  }
-  function mdDot(v) {
-    var d = mmt(v);
-    return d ? pad(d.getUTCMonth() + 1) + '.' + pad(d.getUTCDate()) : '--';
-  }
-  function period(start, end) {
-    if (!start || !end) return '—';
-    return ymdDot(start) + ' — ' + mdDot(end);
-  }
-  function payPeriod(start, end) {
-    if (!start || !end) return '—';
-    return ymdDot(start) + ' — ' + mdDot(end);
-  }
 
   function mergeWithStatic(apiItems) {
     /* 안내 페이지: 정적 마케팅 일정(106·107) 유지. API에만 있는 추가 회차만 append */

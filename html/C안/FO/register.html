@@ -662,21 +662,22 @@
     });
   }
 
+  function calPartsMmt(v) {
+    if (window.TPKMDate && TPKMDate.calParts) return TPKMDate.calParts(v);
+    return null;
+  }
+
   function fmtDateYmd(iso) {
-    if (!iso) return '—';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) return String(iso).slice(0, 10).replace(/-/g, '.');
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    return y + '.' + m + '.' + day;
+    var p = calPartsMmt(iso);
+    if (!p) return '—';
+    return p.y + '.' + p.m + '.' + p.d;
   }
 
   function fmtRegPeriod(start, end) {
     if (!start || !end) return '—';
     function short(s) {
-      var d = new Date(s);
-      return String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+      var p = calPartsMmt(s);
+      return p ? p.m + '.' + p.d : '—';
     }
     return short(start) + ' — ' + short(end);
   }
@@ -1597,7 +1598,7 @@
       clearDraftStores();
       return;
     }
-    const when = d.savedAt ? new Date(d.savedAt).toLocaleString('ko-KR') : '';
+    const when = d.savedAt ? (window.TPKMDate ? TPKMDate.formatDateTime(d.savedAt) : '') : '';
     const src = sourceLabel ? ' (' + sourceLabel + ')' : '';
     if (!confirm('임시 저장된 접수 정보가 있습니다' + src + (when ? ' — ' + when + ' 저장' : '') +
         '.\n이어서 작성하시겠습니까?\n[취소] 시 임시저장을 삭제하고 새로 시작합니다.')) {

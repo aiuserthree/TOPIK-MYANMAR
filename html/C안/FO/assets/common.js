@@ -534,6 +534,46 @@
   }
 
   // ---- Public helpers ----
+  var MMT_TZ = 'Asia/Yangon';
+
+  function mmtCalParts(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    try {
+      var bits = new Intl.DateTimeFormat('en-CA', {
+        timeZone: MMT_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(d).split('-');
+      return { y: bits[0], m: bits[1], d: bits[2] };
+    } catch (e) { return null; }
+  }
+
+  function formatDateMmt(iso) {
+    var p = mmtCalParts(iso);
+    return p ? p.y + '.' + p.m + '.' + p.d : '';
+  }
+
+  function formatDateTimeMmt(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    try {
+      return new Intl.DateTimeFormat('ko-KR', {
+        timeZone: MMT_TZ,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(d);
+    } catch (e) { return ''; }
+  }
+
+  window.TPKMDate = {
+    TZ: MMT_TZ,
+    calParts: mmtCalParts,
+    formatDate: formatDateMmt,
+    formatDateTime: formatDateTimeMmt,
+    today: function () { return mmtCalParts(new Date().toISOString()); },
+  };
+
   window.TPKM = {
     openModal(id) { document.getElementById(id)?.classList.add('open'); },
     closeModal(id) { document.getElementById(id)?.classList.remove('open'); },

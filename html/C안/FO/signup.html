@@ -702,11 +702,13 @@
     var m = Number(birthYmd.slice(4, 6));
     var day = Number(birthYmd.slice(6, 8));
     if (!isFinite(y) || !isFinite(m) || !isFinite(day)) return false;
-    var ref = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
-    var birth = new Date(y, m - 1, day);
-    var age = ref.getFullYear() - birth.getFullYear();
-    var md = ref.getMonth() - birth.getMonth();
-    if (md < 0 || (md === 0 && ref.getDate() < birth.getDate())) age -= 1;
+    var today = window.TPKMDate ? TPKMDate.today() : null;
+    var refY = today ? Number(today.y) : asOf.getFullYear();
+    var refM = today ? Number(today.m) : asOf.getMonth() + 1;
+    var refD = today ? Number(today.d) : asOf.getDate();
+    var age = refY - y;
+    var md = refM - m;
+    if (md < 0 || (md === 0 && refD < day)) age -= 1;
     return age < minAge;
   }
 

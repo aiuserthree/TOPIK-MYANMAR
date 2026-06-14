@@ -571,19 +571,21 @@ function ExamVisibilityCard({ sessionId }) {
   const state = useStore();
   const session = state.sessions.find(s => s.id === sessionId);
   const iso = session?.examNumberVisibleAt || '';
-  const initDate = iso ? iso.slice(0, 10) : '';
-  const initTime = iso ? (iso.replace('T', ' ').slice(11, 16) || '09:00') : '09:00';
+  const formatted = iso && DataStore.fmtMmt ? DataStore.fmtMmt(iso) : '';
+  const initDate = formatted ? formatted.slice(0, 10) : '';
+  const initTime = formatted ? formatted.slice(11, 16) : '09:00';
   const [date, setDate] = useState(initDate);
   const [time, setTime] = useState(initTime);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    setDate(iso ? iso.slice(0, 10) : '');
-    setTime(iso ? (iso.replace('T', ' ').slice(11, 16) || '09:00') : '09:00');
+    const f = iso && DataStore.fmtMmt ? DataStore.fmtMmt(iso) : '';
+    setDate(f ? f.slice(0, 10) : '');
+    setTime(f ? f.slice(11, 16) : '09:00');
   }, [iso, sessionId]);
 
   const save = async () => {
     if (!date) { toastErr('노출 시작일을 선택해주세요.'); return; }
-    const visibleAt = `${date}T${(time || '00:00')}:00`;
+    const visibleAt = `${date}T${(time || '00:00')}`;
     if (DataStore.isApiMode && DataStore.isApiMode()) {
       setSaving(true);
       const ok = await DataStore.apiSetExamVisibility(sessionId, visibleAt);
@@ -601,7 +603,7 @@ function ExamVisibilityCard({ sessionId }) {
         <h3>수험번호 / 수험표 노출 시점 설정 (FO 접수확인)</h3>
       </div>
       <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <FormRow label="노출 시작일" hint="이 일시 이전에는 사용자 화면(FO)에서 수험번호 미노출">
+        <FormRow label="노출 시작일" hint="이 일시(MMT) 이전에는 사용자 화면(FO)에서 수험번호 미노출">
           <input type="date" className="input" style={{ height: 38, width: 200 }} value={date} onChange={e => setDate(e.target.value)}/>
         </FormRow>
         <FormRow label="노출 시작 시각">
@@ -610,7 +612,7 @@ function ExamVisibilityCard({ sessionId }) {
         <button className="btn btn-primary" style={{ marginTop: 23 }} onClick={save} disabled={saving}>
           {saving ? '저장 중…' : '노출 시점 저장'}
         </button>
-        {iso && <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 설정: <code className="code-id">{iso.replace('T', ' ').slice(0, 16)}</code></div>}
+        {iso && <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 설정(MMT): <code className="code-id">{(DataStore.fmtMmt ? DataStore.fmtMmt(iso) : iso).replace('T', ' ').slice(0, 16)}</code></div>}
       </div>
     </div>
   );

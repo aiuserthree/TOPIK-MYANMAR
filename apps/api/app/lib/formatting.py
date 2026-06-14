@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone, timedelta
 
-# 운영 표시 기준 시간대(한국, UTC+9). TIMESTAMPTZ(UTC) → 표시 변환에 사용.
-DISPLAY_TZ = timezone(timedelta(hours=9))
+# 운영 표시 기준 시간대(미얀마, UTC+6:30). TIMESTAMPTZ(UTC) → 표시 변환에 사용.
+DISPLAY_TZ = timezone(timedelta(hours=6, minutes=30))
 
 
 def _as_aware(dt: datetime) -> datetime:

@@ -22,8 +22,8 @@
     return String(v).slice(0, 10);
   }
 
-  /** timestamptz → 달력용 날짜(YYYY-MM-DD, Asia/Seoul). UTC slice 시 접수기간이 하루 밀리는 문제 방지 */
-  function isoDateKst(v) {
+  /** timestamptz → 달력용 날짜(YYYY-MM-DD, Asia/Yangon). UTC slice 시 접수기간이 하루 밀리는 문제 방지 */
+  function isoDateMmt(v) {
     if (!v) return "";
     var raw = String(v);
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
@@ -31,7 +31,7 @@
     if (isNaN(d.getTime())) return raw.slice(0, 10);
     try {
       return new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Seoul",
+        timeZone: "Asia/Yangon",
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -41,22 +41,22 @@
     }
   }
 
-  /** BO 회차 접수기간 — 달력에서 고른 날짜를 KST 자정/말일로 저장 */
-  function kstDayStart(ymd) {
-    return ymd + "T00:00:00+09:00";
+  /** BO 회차 접수기간 — 달력에서 고른 날짜를 미얀마 현지(MMT) 자정/말일로 저장 */
+  function mmtDayStart(ymd) {
+    return ymd + "T00:00:00+06:30";
   }
-  function kstDayEnd(ymd) {
-    return ymd + "T23:59:59+09:00";
+  function mmtDayEnd(ymd) {
+    return ymd + "T23:59:59+06:30";
   }
 
-  /** UTC ISO → BO 관리자 표시용 한국시간(KST, UTC+9) 'YYYY-MM-DD HH:MM' */
-  function fmtKst(v) {
+  /** UTC ISO → BO/FO 표시용 미얀마 현지시각(MMT, UTC+6:30) 'YYYY-MM-DD HH:MM' */
+  function fmtMmt(v) {
     if (!v) return "";
     var d = new Date(String(v));
     if (isNaN(d.getTime())) return String(v).replace("T", " ").slice(0, 16);
     try {
       var parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Seoul",
+        timeZone: "Asia/Yangon",
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -160,11 +160,11 @@
       photoOk: photoOk,
       photoStatus: row.photo_review_status || "pending",
       paid: paid,
-      paidAt: fmtKst(row.paid_at),
+      paidAt: fmtMmt(row.paid_at),
       receipt: row.payment_receipt_no || "",
       exam: row.exam_number || "",
       status: mapApplicantStatus(row),
-      appliedAt: fmtKst(row.created_at),
+      appliedAt: fmtMmt(row.created_at),
       rejectReason: row.reject_reason || "",
       memo: "",
       email: row.email || "",
@@ -180,8 +180,8 @@
       id: String(row.id),
       no: row.round_no,
       name: row.title,
-      applyStart: isoDateKst(row.registration_start_at),
-      applyEnd: isoDateKst(row.registration_end_at),
+      applyStart: isoDateMmt(row.registration_start_at),
+      applyEnd: isoDateMmt(row.registration_end_at),
       examDate: isoDate(row.exam_date),
       resultDate: isoDate(row.result_date), // null/empty → BO UI에서 '미정'
       cap: row.capacity,
@@ -210,14 +210,14 @@
     };
   }
 
-  function toDatetimeLocalKst(iso) {
+  function toDatetimeLocalMmt(iso) {
     if (!iso) return "";
-    return fmtKst(iso).replace(" ", "T");
+    return fmtMmt(iso).replace(" ", "T");
   }
 
-  function fromDatetimeLocalKst(local) {
+  function fromDatetimeLocalMmt(local) {
     if (!local || !String(local).trim()) return null;
-    return String(local).trim() + ":00+09:00";
+    return String(local).trim() + ":00+06:30";
   }
 
   function mapNotice(row, idx, author) {
@@ -232,14 +232,14 @@
       bodyMy: row.body_my || "",
       bodyEn: row.body_en || "",
       author: author || "admin",
-      createdAt: fmtKst(row.created_at || row.published_at),
+      createdAt: fmtMmt(row.created_at || row.published_at),
       views: row.view_count || 0,
       public: !!row.is_published,
       pin: !!row.is_pinned,
-      showStart: toDatetimeLocalKst(row.display_start_at),
-      showEnd: toDatetimeLocalKst(row.display_end_at),
+      showStart: toDatetimeLocalMmt(row.display_start_at),
+      showEnd: toDatetimeLocalMmt(row.display_end_at),
       deleted: !!row.is_deleted,
-      deletedAt: fmtKst(row.deleted_at),
+      deletedAt: fmtMmt(row.deleted_at),
       attachments: (row.attachments || []).map(function (a) {
         return {
           file_id: a.file_id,
@@ -393,7 +393,7 @@
       type: row.category || row.post_type || "환불",
       title: row.title,
       author: row.author_email || row.author_name || ("user" + row.user_id),
-      createdAt: fmtKst(row.created_at),
+      createdAt: fmtMmt(row.created_at),
       status: REFUND_STATUS_UI[row.workflow_status] || "접수",
       hasAnswer: !!row.has_admin_reply || !!row.admin_reply,
       assignee: resolveAdminLabel(row.admin_replier_id),
@@ -413,7 +413,7 @@
       secret: !!row.is_secret,
       title: row.title,
       author: row.author_email || row.author_name || ("user" + row.user_id),
-      createdAt: fmtKst(row.created_at),
+      createdAt: fmtMmt(row.created_at),
       status: done ? "done" : "wait",
       assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
@@ -427,7 +427,7 @@
       id: r.id != null ? String(r.id) : undefined,
       author: r.author || "관리자",
       body: r.body || "",
-      ts: r.created_at_label || fmtKst(r.created_at),
+      ts: r.created_at_label || fmtMmt(r.created_at),
       kind: "reply",
     };
   }
@@ -440,7 +440,7 @@
       return [{
         author: resolveAdminLabel(row.admin_replier_id) || "관리자",
         body: row.admin_reply,
-        ts: fmtKst(row.admin_replied_at),
+        ts: fmtMmt(row.admin_replied_at),
         kind: "reply",
       }];
     }
@@ -456,7 +456,7 @@
       author: c.author || c.author_name || (c.is_admin ? "관리자" : (c.author_email || "작성자")),
       body: c.content || c.body || "",
       public: c.is_public != null ? !!c.is_public : (c.is_secret != null ? !c.is_secret : true),
-      ts: c.created_at_label || fmtKst(c.created_at),
+      ts: c.created_at_label || fmtMmt(c.created_at),
       kind: "comment",
       replies: (c.replies || []).map(mapComment),
     };
@@ -478,7 +478,7 @@
       memberId: row.user_email || row.member_id || (row.user_id != null ? String(row.user_id) : "—"),
       termsKind: TERM_KIND_UI[row.term_type] || row.term_type || row.terms_kind || "—",
       version: row.version || "",
-      ts: row.created_at_label || fmtKst(row.agreed_at || row.created_at),
+      ts: row.created_at_label || fmtMmt(row.agreed_at || row.created_at),
       ip: row.ip_address || "—",
       method: row.consent_method || row.method || "체크박스",
     };
@@ -494,7 +494,7 @@
       tel: row.phone || "",
       nation: row.nationality || "—",
       joinedAt: isoDate(row.created_at),
-      lastLogin: fmtKst(row.last_login_at) || "—",
+      lastLogin: fmtMmt(row.last_login_at) || "—",
       status: memberStatusUi(row.status || "active"),
       marketing: !!row.marketing_opt_in,
       signupProvider: row.signup_provider || "email",
@@ -526,7 +526,7 @@
       email: row.email,
       role: roleUi(row.role),
       status: row.status === "inactive" ? "inactive" : "active",
-      lastLogin: fmtKst(row.last_login_at) || "—",
+      lastLogin: fmtMmt(row.last_login_at) || "—",
       lastIp: "—",
       note: "",
       boardNotifyOptIn: !!row.board_notify_opt_in,
@@ -536,7 +536,7 @@
   function mapAudit(row) {
     return {
       id: "log" + row.id,
-      ts: fmtKst(row.created_at),
+      ts: fmtMmt(row.created_at),
       actor: row.admin_email || (row.admin_user_id ? String(row.admin_user_id) : "admin"),
       ip: row.ip_address || "—",
       type: AUDIT_TYPE_UI[row.target_type] || row.target_type || "—",
@@ -551,7 +551,7 @@
   function mapAdminAccessLog(row) {
     return {
       id: "aal" + row.id,
-      ts: fmtKst(row.created_at),
+      ts: fmtMmt(row.created_at),
       adminId: row.admin_id || String(row.admin_user_id || "unknown"),
       adminEmail: row.admin_email || "—",
       name: row.admin_name || "—",
@@ -566,7 +566,7 @@
   function mapMemberAccessLog(row) {
     return {
       id: "mal" + row.id,
-      ts: fmtKst(row.created_at),
+      ts: fmtMmt(row.created_at),
       memberId: row.user_id ? String(row.user_id) : null,
       email: row.email || "—",
       nameKo: row.name_ko || "—",
@@ -586,7 +586,7 @@
     if (role === "readonly") role = "viewer";
     return {
       id: "ph" + row.id,
-      ts: fmtKst(row.created_at),
+      ts: fmtMmt(row.created_at),
       actor: row.actor || "—",
       ip: row.ip_address || "—",
       target: row.target || "—",
@@ -1075,8 +1075,8 @@
       round_no: data.no,
       title: data.name,
       exam_date: data.examDate,
-      registration_start_at: kstDayStart(data.applyStart),
-      registration_end_at: kstDayEnd(data.applyEnd),
+      registration_start_at: mmtDayStart(data.applyStart),
+      registration_end_at: mmtDayEnd(data.applyEnd),
       fee_level_i: data.feeI,
       fee_level_ii: data.feeII,
       capacity: data.cap,
@@ -1144,8 +1144,8 @@
       body_en: data.bodyEn || null,
       is_pinned: !!data.pin,
       is_published: !!data.public,
-      display_start_at: fromDatetimeLocalKst(data.showStart),
-      display_end_at: fromDatetimeLocalKst(data.showEnd),
+      display_start_at: fromDatetimeLocalMmt(data.showStart),
+      display_end_at: fromDatetimeLocalMmt(data.showEnd),
       attachment_file_ids: data.attachmentFileIds || [],
       remove_attachment_file_ids: data.removeAttachmentFileIds || [],
     };
@@ -1251,7 +1251,7 @@
         row.replies.push({
           author: currentAdminLabel(),
           body: body,
-          ts: new Date().toISOString().slice(0, 16).replace("T", " "),
+          ts: fmtMmt(new Date().toISOString()),
           kind: "reply",
         });
         if (boardKind === "inquiry" && opts.markDone) row.status = "done";
@@ -1354,12 +1354,13 @@
   };
 
   // 수험번호/수험표 노출 시점 저장 (계약서 5절 — exam_number_visible_at)
-  DS.apiSetExamVisibility = function (roundId, visibleAtIso) {
+  DS.apiSetExamVisibility = function (roundId, visibleAtLocal) {
     if (!DS.isApiMode()) return Promise.resolve(false);
-    return Api.setExamNumberVisibility(roundId, visibleAtIso).then(function (res) {
+    var iso = fromDatetimeLocalMmt(visibleAtLocal);
+    return Api.setExamNumberVisibility(roundId, iso).then(function (res) {
       if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       var s = DS.state.sessions.find(function (x) { return x.id === String(roundId); });
-      if (s) s.examNumberVisibleAt = visibleAtIso || "";
+      if (s) s.examNumberVisibleAt = iso || "";
       DS.notify();
       return true;
     });
@@ -1575,7 +1576,8 @@
     });
   };
 
-  DS.fmtKst = fmtKst;
+  DS.fmtMmt = fmtMmt;
+  DS.fmtKst = fmtMmt;
 
   var origSetSession = DS.setSession;
   DS.setSession = function (sessionId) {

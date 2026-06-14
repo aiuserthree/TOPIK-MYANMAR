@@ -229,7 +229,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
               ? ({ planned: '예정', open: '접수중', closed: '마감', revoked: '폐지' }[f.status] || f.status)
               : '저장 시 접수기간 기준 자동 설정'}
           </div>
-          <span className="hint">접수 시작일 00:00(KST) 이전=예정 · 기간 내=접수중 · 마감일 23:59(KST) 이후=마감. 폐지는 목록에서 별도 처리.</span>
+          <span className="hint">접수 시작일 00:00(MMT) 이전=예정 · 기간 내=접수중 · 마감일 23:59(MMT) 이후=마감. 폐지는 목록에서 별도 처리.</span>
         </FormRow>
         <FormRow label="정원" required>
           <input type="number" className="input" value={f.cap} min={0} onFocus={selectAllOnFocus} onChange={e => set('cap', parseRequiredInt(e.target.value))}/>

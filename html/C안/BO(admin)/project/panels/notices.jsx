@@ -261,10 +261,7 @@ function NoticeEditLP({ edit, onClose, onSave, canSave = true }) {
 
   const validateDisplayWindow = (start, end) => {
     if (!start || !end) return true;
-    const s = new Date(start);
-    const e = new Date(end);
-    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return true;
-    if (e <= s) {
+    if (end <= start) {
       toastErr('노출 종료는 노출 시작 이후여야 합니다.');
       return false;
     }
@@ -327,20 +324,20 @@ function NoticeEditLP({ edit, onClose, onSave, canSave = true }) {
             </label>
           </div>
         </FormRow>
-        <FormRow label="노출 시작">
+        <FormRow label="노출 시작" hint="미얀마 현지시각(MMT, UTC+6:30)">
           <input type="datetime-local" className="input" value={f.showStart} onChange={e => {
             const v = e.target.value;
-            if (f.showEnd && v && new Date(f.showEnd) <= new Date(v)) {
+            if (f.showEnd && v && f.showEnd <= v) {
               toastErr('노출 종료는 노출 시작 이후여야 합니다.');
               return;
             }
             set('showStart', v);
           }}/>
         </FormRow>
-        <FormRow label="노출 종료">
+        <FormRow label="노출 종료" hint="미얀마 현지시각(MMT, UTC+6:30)">
           <input type="datetime-local" className="input" value={f.showEnd} onChange={e => {
             const v = e.target.value;
-            if (f.showStart && v && new Date(v) <= new Date(f.showStart)) {
+            if (f.showStart && v && v <= f.showStart) {
               toastErr('노출 종료는 노출 시작 이후여야 합니다.');
               return;
             }

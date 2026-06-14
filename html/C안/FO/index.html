@@ -558,19 +558,19 @@
     document.addEventListener('tpkm:langchange', loadHomeNotices);
   })();
 
-  // 회차 일정 — BO 회차관리 API 데이터 반영 (달력 표시는 BO와 동일하게 KST).
+  // 회차 일정 — BO 회차관리 API 데이터 반영 (달력·D-Day는 미얀마 현지 MMT 기준).
   // API 미가용/실패 시에는 아래 정적 폴백값으로 기존 화면을 그대로 유지한다.
   (function () {
-    var CAL_TZ = 'Asia/Seoul';
-    var DAY_TZ = '+09:00';
-    // 정적 폴백값. 접수시작/마감은 KST 절대 시각.
+    var CAL_TZ = 'Asia/Yangon';
+    var DAY_TZ = '+06:30';
+    // 정적 폴백값. 접수시작/마감은 MMT(UTC+6:30) 절대 시각.
     var SCHED = {
       roundNo: 107,
       examDate: '2026-10-18',
-      regStart: '2026-07-17T00:00:00+09:00',
-      regEnd: '2026-07-21T23:59:59+09:00',
-      payStart: '2026-07-24T00:00:00+09:00',
-      payEnd: '2026-07-26T23:59:59+09:00',
+      regStart: '2026-07-17T00:00:00+06:30',
+      regEnd: '2026-07-21T23:59:59+06:30',
+      payStart: '2026-07-24T00:00:00+06:30',
+      payEnd: '2026-07-26T23:59:59+06:30',
       resultDate: null,
     };
 

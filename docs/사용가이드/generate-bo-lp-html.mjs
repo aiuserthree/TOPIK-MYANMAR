@@ -270,7 +270,7 @@ const pages = {
       ${fieldSet('기본 정보', 2, `
         ${formRow('회차 번호', '<input type="number" class="input" value="107"/>', { required: true })}
         ${formRow('회차명', '<input class="input" value="제107회 TOPIK"/>', { required: true })}
-        ${formRow('접수 상태', '<div class="input" style="display:flex;align-items:center;background:var(--bg-2);color:var(--text-2);cursor:default">접수중</div>', { hint: '접수 시작일 00:00(KST) 이전=예정 · 기간 내=접수중 · 마감일 23:59(KST) 이후=마감' })}
+        ${formRow('접수 상태', '<div class="input" style="display:flex;align-items:center;background:var(--bg-2);color:var(--text-2);cursor:default">접수중</div>', { hint: '접수 시작일 00:00(MMT) 이전=예정 · 기간 내=접수중 · 마감일 23:59(MMT) 이후=마감' })}
         ${formRow('정원', '<input type="number" class="input" value="500"/>', { required: true })}
       `)}
       ${fieldSet('일정', 2, `
