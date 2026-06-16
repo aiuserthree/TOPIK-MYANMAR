@@ -184,7 +184,7 @@ Myanmar_v2.0/
 | POST | `/admin/applications/{id}/photo-review` | admin | 사진 승인/반려(If-Match) |
 | POST | `/admin/applications/{id}/payment`, `/payment/cancel` | admin | 오프라인 수납·환불(수험번호 유지) |
 | POST | `/admin/applications/{id}/approve`, `/reject` | admin | 승인·반려(메일) |
-| POST | `/admin/exam-rounds/{id}/assign-exam-numbers` | **super** | 13자리 일괄 채번(dry_run 지원) |
+| POST | `/admin/exam-rounds/{id}/assign-exam-numbers` | **super** | 13자리 일괄 채번(dry_run). 대상: `status=approved`·미부여·사진승인·수납완료 (2026-06-12) |
 | GET | `/admin/exam-rounds/{id}/roster.xlsx`, `/photos.zip`, `/admin/applications/photos.zip` | admin | 연명부 xlsx·사진 zip |
 | GET | `/admin/exam-rounds`, `/exam-venues`, `/region-codes` | any | 마스터 조회 |
 | POST/PATCH | `/admin/exam-rounds`(+status/revoke/restore), `/exam-venues` | **super** | 회차·시험장 CRUD (`name_my` V008) |

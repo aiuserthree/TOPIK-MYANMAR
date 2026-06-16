@@ -301,7 +301,25 @@
       { "n": 2, "selector": ".filterbar .controls select:nth-of-type(1)", "anchor": "center" },
       { "n": 3, "selector": ".filterbar .input.search", "anchor": "center" },
       { "n": 4, "selector": "#applicants-grid thead", "anchor": "center" },
-      { "n": 5, "selector": ".panel-head .actions .btn-primary", "anchor": "center" }
+      { "n": 5, "selector": ".panel-head .actions .btn-primary", "anchor": "center" },
+      { "n": 6, "selector": ".panel-head .actions .btn-secondary:nth-of-type(1)", "anchor": "center" },
+      { "n": 7, "selector": ".panel-head .actions .btn-secondary:nth-of-type(2)", "anchor": "center" }
+    ]
+  },
+  "bo/bo-lp-excel-export": {
+    "markers": [
+      { "n": 1, "selector": ".modal-body > div:first-child" },
+      { "n": 2, "selector": ".modal-body .seg" },
+      { "n": 3, "selector": ".modal-body .label + div" },
+      { "n": 4, "selector": ".modal-foot .btn-primary", "anchor": "center" }
+    ]
+  },
+  "bo/bo-lp-zip-export": {
+    "markers": [
+      { "n": 1, "selector": ".modal-body > div:first-child" },
+      { "n": 2, "selector": ".modal-body > div:nth-child(3)" },
+      { "n": 3, "selector": ".modal-foot .btn-primary", "anchor": "center" },
+      { "n": 4, "selector": ".modal-body > div:nth-child(2)" }
     ]
   },
   "bo/bo-sessions": {

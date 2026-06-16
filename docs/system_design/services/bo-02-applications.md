@@ -153,8 +153,8 @@
 
 - **발급 시점(0526)**: 개별 수납 시 즉시 부여하지 않고, **응시료 전체 수납 마감(예: 7.26) 후 관리자가 일괄 부여**.
 - **부여 순서**: 그룹(시험장×수준) 내 **영문 성명 알파벳 오름차순**으로 응시자 일련번호(⑤) 배정.
-- **대상**: `payment_status='paid'` AND `status<>'cancelled'`. (환불자=`refunded`는 신규 부여 대상 아님 — 단, 부여 후 환불된 건은 번호 유지.)
-- **권한**: `require_admin` + `_require_super` → **super 전용**.
+- **대상(2026-06-12)**: `status='approved'` AND `approved_at IS NOT NULL` AND `exam_number IS NULL` AND `photo_review_status='approved'` AND `payment_status='paid'`. (`cancelled`·`rejected` 제외. **접수완료·수납대기만** 된 건은 미포함.)
+- **권한**: `require_super` + 권한 매트릭스 → **super 전용**(일반 admin 버튼 비활성).
 
 #### 액션 상세
 
@@ -168,8 +168,8 @@
 | 알림 | ❌ | ❌ **수험번호 발급 이메일 미발송(0527)** |
 | 연동 API | `POST /api/v1/admin/exam-rounds/{round_id}/assign-exam-numbers` | 동일 |
 | 연동 DB | (조회) | `applications.exam_number/status/exam_number_visible`, `exam_rounds.exam_numbers_assigned_at/exam_number_visible_at` |
-| 결과 | `{dry_run, assigned, preview[], groups[]}` | `{assigned, groups[]}` |
-| 동시성/예외 | — | **재배정 가드**: 이미 부여+공개(`exam_numbers_assigned_at` 있고 `exam_number_visible_at<=now`) → `409 ALREADY_VISIBLE`("공개된 수험번호 재배정 불가") |
+| 결과 | `{dry_run, eligible_count, preview_rows[], skipped[], groups[]}` | `{assigned, eligible_count, preview_rows[], skipped[], groups[]}` |
+| 동시성/예외 | 시험장 마스터 없음 → 명확한 4xx 오류 | **미부여 승인완료 건**은 노출일(`exam_number_visible_at`) 이후에도 추가 부여 가능. `assigned=0`이면 `exam_numbers_assigned_at` 미갱신. 동일 (venue, level) 그룹 내 기존 번호의 serial을 이어서 채번 |
 
 > **노출 시점 분리(0527)**: 부여 즉시 FO 마이페이지에 노출하지 않음. **정해진 날짜(`exam_rounds.exam_number_visible_at`)에 FO 접수확인 페이지(`TPKM_FO_4_3_0`)에서만** 수험번호·수험표 노출. 노출 일시 설정은 회차 수정(`bo-03`) 또는 본 확정 시 `visible_at`로 지정. 각 `applications.exam_number_visible`는 FO 노출 게이팅 보조 플래그.
 
@@ -188,7 +188,10 @@
 ```text
 # 의사코드 (실제: admin_api.assign_exam_numbers / _assign_group_serials)
 대상 = SELECT a JOIN users u
-       WHERE a.exam_round_id=R AND a.payment_status='paid' AND a.status<>'cancelled'
+       WHERE a.exam_round_id=R
+         AND a.status='approved' AND a.approved_at IS NOT NULL
+         AND a.exam_number IS NULL
+         AND a.photo_review_status='approved' AND a.payment_status='paid'
 편의지원_submission = {sub.id | sub.exam_round_id=R AND sub.accommodation_requested}
 
 그룹 = group_by(대상, key=(a.exam_venue_id, a.exam_level))
@@ -275,14 +278,14 @@ FO 4단계 접수 → applications(status=submitted)
    └ [접수자 목록 단일 메뉴, 0526]
        ├ 사진 심사 인라인(2_1_3): 승인→payment_pending / 반려→photo_review(+메일)
        └ 오프라인 수납(2_1_4): photo=approved 가드 → paid/approved (사진 미심사 시 모달서 승인 후 수납)
-   → 수납 마감(7.26) 후 [수험번호 일괄 부여, super] : paid AND not cancelled, 영문명 ASC
+   → 수납·승인 완료 후 [수험번호 일괄 부여, super] : status=approved·미부여, 영문명 ASC
    → exam_number_assigned (FO는 visible_at 도달 후 접수확인 페이지서 노출, 0527)
 ```
 
 ### 3.3 동시성·감사
 
 - 사진심사·수납·승인·반려: `applications.rev` 낙관적 잠금 → `409 CONFLICT`(처리자 표시).
-- 수험번호 부여: super 단독 + 공개 후 재배정 `409 ALREADY_VISIBLE`.
+- 수험번호 부여: super 단독. 미부여 승인완료 건은 노출일 이후에도 추가 부여 가능. `assigned=0` 시 회차 `exam_numbers_assigned_at` 미갱신.
 - **모든 상태 변경/수납/부여/다운로드는 `admin_audit_logs` 자동 기록**(action_type별: `photo_review_approve/reject`, `payment_complete`, `payment_cancel`, `approve`, `reject`, `exam_number_assign`, `roster_export`, `photos_export`). 보존 1년 이상(기능정의서) / 3년 권고(bo-06).
 
 ---

@@ -1,7 +1,7 @@
 # TOPIK Myanmar — DB 논리 명세 (Database Logical Spec)
 
 > **문서 위치:** `docs/system_design/database.md`
-> **기준일:** 2026-06-11 · **DB 엔진:** PostgreSQL 15+ (+ pgvector)
+> **기준일:** 2026-06-12 · **DB 엔진:** PostgreSQL 15+ (+ pgvector)
 > **1차 근거:** [`docs/기능정의서/DB스키마_초안.md`](../기능정의서/DB스키마_초안.md)
 > **정합 기준(실제 우선):** `db/migrations/V001~V012`, `apps/api/app/models/*.py`
 > **상호 문서:** [개요](overview.md) · [개발 스펙](tech-spec.md)
@@ -677,19 +677,22 @@ DB는 `CHECK` enum 대신 **`VARCHAR` + 애플리케이션 검증** 방식입니
 
 ```mermaid
 flowchart TB
-  A["POST /admin/exam-rounds/{id}/assign-exam-numbers<br/>(super 전용, dry_run 미리보기 지원)"] --> B{이미 공개됨?}
-  B -- "assigned_at & visible_at ≤ now" --> X[409 ALREADY_VISIBLE]
-  B -- 아니오 --> C["대상 = payment_status=paid AND status≠cancelled"]
-  C --> D["(venue_id, level)별 그룹핑"]
-  D --> E["그룹 내 name_en ASC 정렬<br/>(편의지원=마지막 홀수석 내림차순)"]
-  E --> F["serial 0001~ 부여 → exam_number 13자리"]
+  A["POST /admin/exam-rounds/{id}/assign-exam-numbers<br/>(super 전용, dry_run 미리보기 지원)"] --> B["대상 = status=approved AND approved_at 있음<br/>AND exam_number IS NULL<br/>AND photo approved AND payment paid"]
+  B --> C{시험장 마스터 유효?}
+  C -- 아니오 --> X[4xx 시험장 오류]
+  C -- 예 --> D["(venue_id, level)별 그룹핑"]
+  D --> E["그룹 내 name_en ASC 정렬<br/>기존 serial 이어 채번<br/>(편의지원=마지막 홀수석 내림차순)"]
+  E --> F["serial 부여 → exam_number 13자리"]
   F --> G["status=exam_number_assigned, exam_number_visible=false"]
-  G --> H["exam_numbers_assigned_at 기록 + admin_audit_logs(exam_number_assign)"]
-  H --> I[COMMIT]
+  G --> H{assigned > 0?}
+  H -- 예 --> I["exam_numbers_assigned_at + audit(exam_number_assign)"]
+  H -- 아니오 --> J[미리보기 0건 — assigned_at 미갱신]
+  I --> K[COMMIT]
+  J --> K
 ```
 
-- **원자성**: 단일 트랜잭션 내 일괄 UPDATE. 별도 `exam_number_sequences`/`FOR UPDATE` **미사용**(초안과 차이) — 채번은 운영상 1회/super 단독 실행 전제.
-- **재배정 방지**: 이미 부여·공개(`exam_numbers_assigned_at` + `exam_number_visible_at ≤ now`)면 409.
+- **원자성**: 단일 트랜잭션 내 일괄 UPDATE. 별도 `exam_number_sequences`/`FOR UPDATE` **미사용**(초안과 차이) — 채번은 운영상 super 단독 실행 전제.
+- **추가 부여(2026-06-12)**: 노출일 이후에도 **미부여 승인완료** 건은 부여 가능(기존 `ALREADY_VISIBLE` 전면 차단 제거).
 - **FO 노출**: `exam_rounds.exam_number_visible_at` 이후 + `exam_number` 존재 시에만 마이페이지 노출.
 - **편의지원**(`application_submissions.accommodation_requested`): 해당 그룹 "마지막 홀수석"부터 내림차순 배정(좌석 간격).
 

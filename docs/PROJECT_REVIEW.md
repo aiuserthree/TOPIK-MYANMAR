@@ -21,7 +21,7 @@
 | | `mypage-profile.html` | 프로필·비번·탈퇴·사진 | me PATCH, change-password, withdraw |
 | **접수** | `register.html` | 4단계 시험 접수 + 임시저장 | exam-rounds/venues, draft, submit |
 | | `apply-howto.html` | 접수 방법 안내 | 정적 |
-| | `ticket.html` | 수험표 안내 + topik.go.kr 링크 | 선택적 `getMyApplications` (로그인 시) |
+| | `ticket.html` | 수험표 안내 + 본부 홈(`topik.go.kr`)·카드 출력(`TWMYPG0030-001.do`) | 선택적 `getMyApplications` (로그인 시) |
 | **TOPIK 안내** | `guide-overview.html` | 시험 개요 (+ 회차 API) | exam-rounds |
 | | `guide-intro.html` | 시험 소개 | 정적 |
 | | `guide-questions.html` | 문항 구성 | 정적 |
@@ -84,7 +84,7 @@
 
 ### A.5 정책·구현 차이 (주의)
 
-- **0527 수험표:** IA·`common.js` — `ticket.html`은 로그인 가드 **제외**. 구현은 비로그인도 topik.go.kr 안내 가능, 로그인 시 수험번호 공개 건 표시 (`getMyApplications`).
+- **0527 수험표:** IA·`common.js` — `ticket.html`은 로그인 가드 **제외**. 비로그인은 본부 홈 안내, 로그인 시 수험번호 공개 건 표시. 카드 **수험표 출력** 버튼은 `TWMYPG0030-001.do`, 하단 **본부 홈**은 `topik.go.kr` (2026-06-12).
 - **로그인 필수 5메뉴:** 시험 접수, 접수 확인, 환불·정정, 문의 (수험표 제외) — `common.js` `PROTECTED` Set과 일치.
 
 ---

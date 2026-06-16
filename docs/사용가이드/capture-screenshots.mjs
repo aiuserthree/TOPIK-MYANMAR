@@ -150,6 +150,14 @@ const BO_OVERLAY_PREPARE = {
     await page.locator('.panel-head .btn-primary:has-text("수험번호")').click({ timeout: 10000 });
     await page.waitForSelector('.modal-backdrop.open .modal-body table.dg', { timeout: 15000 });
   },
+  'bo-lp-excel-export': async (page) => {
+    await page.locator('.panel-head .actions .btn-secondary:has-text("연명부")').click({ timeout: 10000 });
+    await page.waitForSelector('.modal-backdrop.open .modal-body .seg', { timeout: 10000 });
+  },
+  'bo-lp-zip-export': async (page) => {
+    await page.locator('.panel-head .actions .btn-secondary:has-text("사진 zip")').click({ timeout: 10000 });
+    await page.waitForSelector('.modal-backdrop.open', { timeout: 10000 });
+  },
   'bo-lp-session-edit': async (page) => {
     const btn = page.locator('table.dg tbody tr .ibtn:has-text("수정")').first();
     await btn.waitFor({ state: 'visible', timeout: 10000 });
@@ -240,6 +248,8 @@ const BO_OVERLAY_ROUTES = {
   'bo-lp-approve': 'applicants',
   'bo-lp-reject': 'applicants',
   'bo-lp-exam-assign': 'applicants',
+  'bo-lp-excel-export': 'applicants',
+  'bo-lp-zip-export': 'applicants',
   'bo-lp-session-edit': 'sessions',
   'bo-lp-venue-edit': 'venues',
   'bo-lp-notice-edit': 'notices',
@@ -563,10 +573,24 @@ const DETAIL_PATCH = {
 const BO_DETAIL_PATCH = {
   'screenshots/bo/bo-applicants.png': {
     1: '<strong>상태 필터</strong> — 전체 / 접수완료 / 사진심사중 / 수납대기 / 승인완료 / 반려 / 취소 / 환불. 각 칩에 <strong>건수</strong> 표시.',
-    2: '<strong>시험장·급수</strong> — 시험장(활성만)과 급수(Ⅰ / Ⅱ / 동시)로 목록 필터.',
+    2: '<strong>시험장·급수</strong> — 시험장(활성만)과 급수(Ⅰ / Ⅱ / 동시)로 목록 필터. 연명부·사진 zip 내보내기 범위에도 반영.',
     3: '<strong>검색</strong> — 한글·영문 이름, 이메일, 생년월일, 수험번호 일부 검색.',
     4: '<strong>접수자 표</strong> — 체크박스, 사진심사·수납·상태, 수험번호, <strong>상세보기</strong>. 12행/페이지.',
     5: '<strong>수험번호 일괄 부여</strong> — <strong>승인완료</strong>·수험번호 미부여 건 13자리 일괄 채번. <strong>최고관리자(super)</strong> 만 활성.',
+    6: '<strong>연명부 엑셀</strong> — TOPIK 본부 제출용 연명부 양식 xlsx 내보내기. <strong>최고관리자(super)</strong> 만 활성.',
+    7: '<strong>사진 zip</strong> — 증명사진 원본 zip 일괄 다운로드. <strong>최고관리자(super)</strong> 만 활성. API 연결 필요.',
+  },
+  'screenshots/bo/bo-lp-excel-export.png': {
+    1: '<strong>양식 안내</strong> — 「연명부 양식.xlsx」 10컬럼 구성. 직업·동기·목적은 숫자 코드값.',
+    2: '<strong>범위 선택</strong> — <strong>현재 필터</strong> / <strong>회차 전체</strong>.',
+    3: '<strong>생성 파일 미리보기</strong> — 지역·시험장·급수별 xlsx 파일명·행 수.',
+    4: '<strong>다운로드</strong> — 확인 후 파일 생성·저장.',
+  },
+  'screenshots/bo/bo-lp-zip-export.png': {
+    1: '<strong>폴더 구조 안내</strong> — {지역}/{시험장}/{급수}/{수험번호}.jpg 규격 설명.',
+    2: '<strong>대상 회차·필터</strong> — 상단 회차·목록 시험장·급수 필터 적용.',
+    3: '<strong>다운로드</strong> — 서버가 실제 사진으로 zip 생성.',
+    4: '<strong>폴더 예시</strong> — zip 내부 구조·<code>_누락리포트.txt</code> 위치.',
   },
   'screenshots/bo/bo-venues.png': {
     1: '<strong>시험장 목록</strong> — 코드·지역·한/영/미얀마어 명칭·주소·정원·상태·비고.',
@@ -1428,6 +1452,8 @@ async function main() {
     'bo-lp-approve',
     'bo-lp-reject',
     'bo-lp-exam-assign',
+    'bo-lp-excel-export',
+    'bo-lp-zip-export',
     'bo-lp-session-edit',
     'bo-lp-venue-edit',
     'bo-lp-notice-edit',
