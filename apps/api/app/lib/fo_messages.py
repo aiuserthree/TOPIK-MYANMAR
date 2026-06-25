@@ -370,6 +370,11 @@ _CATALOG: dict[str, dict[str, str]] = {
         "my": "Google အကောင့်တွင် စကားဝှက် ပြောင်းလဲခြင်း မရပါ။",
         "en": "Password change is not available for Google accounts.",
     },
+    "profile_basic_edit_locked": {
+        "ko": "시험 접수가 최종 완료(승인)되어 기본정보 및 사진 수정이 불가합니다. 정보 정정이 필요한 경우, 환불·정보정정신청 게시판을 통해 요청을 하시기 바랍니다.",
+        "my": "လျှောက်လွှာ အတည်ပြုပြီးသားဖြစ်သောကြောင့် အခြေခံအချက်အလက်နှင့် ဓာတ်ပုံ ပြင်ဆင်ခြင်း မပြုလုပ်နိုင်ပါ။ အချက်အလက် ပြင်ဆင်ရန် လိုအပ်ပါက 'ငွေပြန်အမ်း · အချက်အလက်ပြင်ဆင်ရန် လျှောက်ထားမှု' မှတဆင့် တောင်းဆိုပါ။",
+        "en": "Basic information and photo cannot be edited because your registration has been approved. If you need a correction, please submit a request via the Refund & Info Correction board.",
+    },
     "notice_not_found": {
         "ko": "공지를 찾을 수 없습니다.",
         "my": "ကြေညာချက် မတွေ့ပါ။",

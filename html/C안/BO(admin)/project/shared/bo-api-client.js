@@ -790,6 +790,44 @@
           return { ok: false, status: 0, body: { error: { message: "연명부 다운로드에 실패했습니다." } } };
         });
     },
+    downloadPaymentRoster: function (roundId) {
+      if (!canUseApi()) {
+        return Promise.resolve({ ok: false, status: 0, body: { error: { message: "API not configured" } } });
+      }
+      return authBlobFetch(
+        apiUrl("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/payment-roster.xlsx"),
+        { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*" }
+      ).then(function (result) {
+          if (!result.ok || !result.res) {
+            return { ok: false, status: result.status || 0, body: result.body || {} };
+          }
+          var res = result.res;
+          var ct = (res.headers && res.headers.get && res.headers.get("Content-Type")) || "";
+          if (!res.ok || ct.indexOf("application/json") > -1) {
+            return res.json().catch(function () { return {}; }).then(function (body) {
+              return { ok: false, status: res.status, body: body };
+            });
+          }
+          return res.blob().then(function (blob) {
+            triggerBlobDownload(blob, filenameFromDisposition(res, "TOPIK_수납대상자.xlsx"));
+            return { ok: true, status: res.status };
+          });
+        })
+        .catch(function () {
+          return { ok: false, status: 0, body: { error: { message: "수납 대상자 명단 다운로드에 실패했습니다." } } };
+        });
+    },
+    importPaymentRoster: function (roundId, file) {
+      if (!canUseApi()) {
+        return Promise.resolve({ ok: false, status: 0, body: { error: { message: "API not configured" } } });
+      }
+      var fd = new FormData();
+      fd.append("file", file);
+      return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/payment-roster/import", {
+        method: "POST",
+        body: fd,
+      });
+    },
     getFaq: function (q) {
       var parts = [];
       var query = q || {};

@@ -95,9 +95,8 @@
       photoStatus: photoOk ? 'approved' : (st === 'rejected' ? 'rejected' : 'pending'),
       paid,
       paidAt: paid ? `2026-07-${pad(rint(24, 26), 2)} ${pad(rint(9,17),2)}:${pad(rint(0,59),2)}` : '',
-      receipt: paid ? `R-${pad(rint(10000, 99999), 5)}` : '',
       exam,
-      applicationNo: 'APP-' + i + '-' + (lvl === 'Ⅱ' ? 'II' : lvl === '동시' ? 'I' : 'I'),
+      applicationNo: 'APP-' + i + '-' + (lvl === 'Ⅱ' ? '2' : '1'),
       status: st,
       appliedAt: `2026-07-${pad(rint(17, 21), 2)} ${pad(rint(9,18), 2)}:${pad(rint(0,59),2)}`,
       rejectReason: st === 'rejected' ? pick(['사진 부적합','정보 불일치','중복 접수','기타']) : '',
@@ -126,9 +125,8 @@
       venueId: pick(['v01','v02','v03']),
       photoOk: true, photoStatus: 'approved', paid: true,
       paidAt: `2026-03-${pad(rint(1,15),2)} 11:30`,
-      receipt: `R-${pad(rint(10000, 99999), 5)}`,
       exam: `025001${pick(['7','8'])}${pad(rint(1,3),2)}${pad(seq105++, 4)}`,
-      applicationNo: 'APP-5' + pad(i, 4) + '-' + (pick(['I', 'II'])),
+      applicationNo: 'APP-5' + pad(i, 4) + '-' + pick(['1', '2']),
       status: 'approved',
       appliedAt: `2026-02-${pad(rint(10,28), 2)} 10:00`,
       rejectReason: '', memo: '',
@@ -521,8 +519,12 @@
     const s = state.activeSessionId;
     const apps = state.applicants.filter(a => a.sessionId === s);
     return {
-      // 접수자 목록 사이드바 배지 — 현재 회차·미수납(!paid)만 (취소/반려/환불 제외)
-      unpaid: apps.filter(a => !a.paid && !['cancel', 'rejected', 'refund'].includes(a.status)).length,
+      // 접수자 목록 사이드바 배지 — 현재 회차·미수납(payment_status=unpaid)만
+      unpaid: apps.filter(a => {
+        if (a.status === 'cancel' || a.status === 'cancelled') return false;
+        if (a.paymentStatus) return a.paymentStatus === 'unpaid';
+        return !a.paid && a.status !== 'refund' && a.status !== 'rejected';
+      }).length,
       photoWait: apps.filter(a => a.photoStatus === 'pending' && a.status !== 'cancel').length,
       refundNew: state.refunds.filter(r => r.status === '접수' || r.status === '검토중').length,
       inquiryWait: state.inquiries.filter(q => q.status === 'wait').length,

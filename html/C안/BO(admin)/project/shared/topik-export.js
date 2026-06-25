@@ -113,6 +113,109 @@
     ROSTER_HEADERS: ROSTER_HEADERS,
     downloadRosterXlsx: downloadRosterXlsx,
     downloadRosterXlsxZip: downloadRosterXlsxZip,
-    downloadCsv: downloadCsv
+    downloadCsv: downloadCsv,
+    // 수납 대상자 명단
+    PAYMENT_HEADERS: [
+      '접수번호', '접수ID', '한글성명', '영문성명', '생년월일', '시험장', '급수', '사진심사', '수납상태'
+    ],
+    PAYMENT_GUIDE: [
+      '수정·삭제 금지 — 매칭 키',
+      '수정·삭제 금지 — 매칭 키(보조)',
+      '참고용',
+      '참고용',
+      '참고용(YYYYMMDD)',
+      '참고용',
+      '참고용(Ⅰ/Ⅱ/동시)',
+      '참고용 — 수정하지 마세요',
+      '미수납 / 수납완료 (또는 X / O)\n※ 사진심사가 \'승인\'인 건만 수납완료 반영'
+    ],
+    photoStatusLabel: function (s) {
+      if (s === 'approved') return '승인';
+      if (s === 'rejected') return '반려';
+      return '미심사';
+    },
+    parsePaymentStatus: function (raw) {
+      var orig = String(raw || '').trim();
+      var s = orig.toLowerCase();
+      if (s === 'o' || s === 'y' || s === 'yes' || s === '1' || s === 'paid' || s === 'p') return 'paid';
+      if (s === 'x' || s === 'n' || s === 'no' || s === '0' || s === 'unpaid' || s === '') return 'unpaid';
+      if (orig === '수납완료' || orig === '완료') return 'paid';
+      if (orig === '미수납' || orig === '미납') return 'unpaid';
+      return null;
+    },
+    writePaymentBlob: function (headers, rows) {
+      headers = headers || g.TOPIKExport.PAYMENT_HEADERS;
+      var guide = g.TOPIKExport.PAYMENT_GUIDE;
+      var aoa = [];
+      aoa.push([''].concat(guide.slice(0, headers.length)));
+      aoa.push([''].concat(headers));
+      (rows || []).forEach(function (r) {
+        aoa.push([''].concat(headers.map(function (_, i) { return r[i] != null ? r[i] : ''; })));
+      });
+      var ws = g.XLSX.utils.aoa_to_sheet(aoa);
+      var wb = g.XLSX.utils.book_new();
+      g.XLSX.utils.book_append_sheet(wb, ws, '수납대상');
+      var buf = g.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    },
+    downloadPaymentXlsx: function (opts) {
+      opts = opts || {};
+      return g.TOPIKLibLoader.loadXLSX().then(function () {
+        var headers = opts.headers || g.TOPIKExport.PAYMENT_HEADERS;
+        var blob = g.TOPIKExport.writePaymentBlob(headers, opts.rows || []);
+        triggerDownload(blob, ensureName(opts.filename || '수납대상자.xlsx', 'xlsx'));
+      });
+    },
+    parsePaymentXlsxFile: function (file) {
+      return g.TOPIKLibLoader.loadXLSX().then(function () {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            try {
+              var data = new Uint8Array(e.target.result);
+              var wb = g.XLSX.read(data, { type: 'array' });
+              var ws = wb.Sheets[wb.SheetNames[0]];
+              var aoa = g.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+              var headerIdx = -1;
+              var headers = [];
+              for (var i = 0; i < aoa.length; i++) {
+                var labels = (aoa[i] || []).map(function (c) { return String(c || '').trim(); });
+                if (labels.indexOf('접수번호') >= 0 || labels.indexOf('수납상태') >= 0) {
+                  headerIdx = i;
+                  headers = aoa[i];
+                  break;
+                }
+              }
+              if (headerIdx < 0) { resolve([]); return; }
+              var col = {};
+              headers.forEach(function (h, idx) {
+                var k = String(h || '').trim();
+                if (k) col[k] = idx;
+              });
+              if (col['수납상태'] == null) { resolve([]); return; }
+              var out = [];
+              for (var r = headerIdx + 1; r < aoa.length; r++) {
+                var row = aoa[r] || [];
+                if (!row.some(function (c) { return c != null && String(c).trim(); })) continue;
+                var status = g.TOPIKExport.parsePaymentStatus(row[col['수납상태']]);
+                if (!status) continue;
+                out.push({
+                  applicationNo: col['접수번호'] != null ? row[col['접수번호']] : '',
+                  applicationId: col['접수ID'] != null ? row[col['접수ID']] : '',
+                  nameKo: col['한글성명'] != null ? row[col['한글성명']] : '',
+                  nameEn: col['영문성명'] != null ? row[col['영문성명']] : '',
+                  paymentStatus: status
+                });
+              }
+              resolve(out);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = function () { reject(new Error('파일을 읽을 수 없습니다.')); };
+          reader.readAsArrayBuffer(file);
+        });
+      });
+    }
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -30,7 +30,7 @@ from app.lib.deps import (
 )
 from app.lib.errors import api_error
 from app.lib.translate import translate_text
-from app.lib.formatting import board_status_label, fmt_date, fmt_datetime
+from app.lib.formatting import board_status_label, fmt_date, fmt_datetime, resolve_application_no
 from app.config import get_settings
 from app.lib.email_notify import (
     notify_account_status,
@@ -46,6 +46,12 @@ from app.lib.email_notify import (
 )
 from app.lib.profile import is_full_member
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
+from app.lib.payment_roster import (
+    build_payment_xlsx,
+    match_application,
+    parse_payment_xlsx,
+    payment_export_filename,
+)
 from app.lib.roster_export import build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
@@ -490,7 +496,7 @@ def _app_row_dict(
         "photo_file_id": app.photo_file_id,
         "exam_number": app.exam_number,
         "exam_number_visible": app.exam_number_visible,
-        "application_no": app.application_no or f"APP-{app.submission_id}-{app.exam_level}",
+        "application_no": resolve_application_no(app.application_no, app.submission_id, app.exam_level),
         # --- 연명부 10개 컬럼 채울 필드(계약서 3절) ---
         "name_ko": user.name_ko if user else None,
         "name_en": user.name_en if user else None,
@@ -514,6 +520,7 @@ def _app_row_dict(
         "phone": user.phone if user else None,
         "reject_reason": app.reject_reason,
         "payment_receipt_no": app.payment_receipt_no,
+        "payment_memo": app.payment_memo,
         "paid_at": app.paid_at.isoformat() if app.paid_at else None,
         "created_at": app.created_at.isoformat() if app.created_at else None,
         "rev": app.rev,
@@ -748,6 +755,197 @@ async def export_roster_xlsx(
     )
 
 
+@router.get("/exam-rounds/{round_id}/payment-roster.xlsx")
+async def export_payment_roster_xlsx(
+    round_id: int,
+    admin: AuthUser = Depends(matrix_perm("applicants", "pay")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """미수납 접수자 수납 대상 명단 xlsx — 현장 수납 후 일괄 업로드용."""
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    apps = (
+        await db.execute(
+            select(Application).where(
+                Application.exam_round_id == round_id,
+                Application.status != "cancelled",
+                Application.payment_status == "unpaid",
+            )
+        )
+    ).scalars().all()
+    users, venues, _rounds = await _load_app_refs(db, apps)
+    row_dicts = [
+        _app_row_dict(a, users.get(a.user_id), venues.get(a.exam_venue_id), rnd)
+        for a in apps
+    ]
+    row_dicts.sort(key=lambda r: (str(r.get("name_en") or "").lower(), str(r.get("application_no") or "")))
+    xlsx_bytes = build_payment_xlsx(row_dicts)
+    fname = payment_export_filename(round_no=rnd.round_no)
+
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="payment_roster_export",
+        target_type="exam_rounds",
+        target_id=round_id,
+        after_data={"rows": len(row_dicts)},
+        ip_address=ip,
+    )
+    await db.commit()
+
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": _attachment_disposition(fname)},
+    )
+
+
+@router.post("/exam-rounds/{round_id}/payment-roster/import")
+async def import_payment_roster_xlsx(
+    round_id: int,
+    file: UploadFile = File(...),
+    admin: AuthUser = Depends(matrix_perm("applicants", "pay")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """수납 대상 명단 xlsx 업로드 — 수납상태 일괄 반영. 사진 미승인 건은 수납완료 처리하지 않음."""
+    rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+
+    raw = await file.read()
+    if not raw:
+        raise api_error("INVALID_FILE", "빈 파일입니다.", 400)
+    try:
+        items = parse_payment_xlsx(raw)
+    except Exception:
+        raise api_error("INVALID_FILE", "엑셀 파일을 읽을 수 없습니다.", 400)
+    if not items:
+        raise api_error("INVALID_FILE", "수납상태 열을 찾을 수 없거나 데이터 행이 없습니다.", 400)
+
+    apps = (
+        await db.execute(
+            select(Application).where(
+                Application.exam_round_id == round_id,
+                Application.status != "cancelled",
+            )
+        )
+    ).scalars().all()
+    users, venues, _rounds = await _load_app_refs(db, apps)
+    by_id = {str(a.id): a for a in apps}
+    by_no: dict[str, Application] = {}
+    for a in apps:
+        row = _app_row_dict(a, users.get(a.user_id), venues.get(a.exam_venue_id), rnd)
+        key = re.sub(r"\s+", "", str(row.get("application_no") or "")).lower()
+        if key:
+            by_no[key] = a
+
+    updated = 0
+    skipped_unchanged = 0
+    skipped_photo_not_approved: list[dict] = []
+    skipped_not_found: list[dict] = []
+    skipped_invalid_status: list[dict] = []
+
+    now = datetime.now(timezone.utc)
+
+    for item in items:
+        app = match_application(item, by_id=by_id, by_no=by_no)
+        if not app:
+            skipped_not_found.append(
+                {
+                    "application_no": item.get("application_no"),
+                    "application_id": item.get("application_id"),
+                    "name_ko": item.get("name_ko"),
+                    "name_en": item.get("name_en"),
+                }
+            )
+            continue
+
+        target = item["payment_status"]
+        current = app.payment_status
+
+        if target == "paid":
+            if current == "paid":
+                skipped_unchanged += 1
+                continue
+            if app.photo_review_status != "approved":
+                user = users.get(app.user_id)
+                skipped_photo_not_approved.append(
+                    {
+                        "application_no": resolve_application_no(
+                            app.application_no, app.submission_id, app.exam_level
+                        ),
+                        "application_id": app.id,
+                        "name_ko": user.name_ko if user else item.get("name_ko"),
+                        "name_en": user.name_en if user else item.get("name_en"),
+                        "photo_review_status": app.photo_review_status,
+                    }
+                )
+                continue
+            app.payment_status = "paid"
+            if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
+                app.status = "payment_pending"
+            app.paid_at = now
+            bump_rev(app)
+            await write_audit(
+                db,
+                admin_user_id=admin.id,
+                action_type="payment_complete",
+                target_type="applications",
+                target_id=app.id,
+                memo="수납 명단 엑셀 일괄 업로드",
+                ip_address=ip,
+            )
+            updated += 1
+        elif target == "unpaid":
+            if current == "unpaid":
+                skipped_unchanged += 1
+                continue
+            skipped_invalid_status.append(
+                {
+                    "application_no": resolve_application_no(
+                        app.application_no, app.submission_id, app.exam_level
+                    ),
+                    "application_id": app.id,
+                    "reason": "이미 수납 완료된 접수는 엑셀 업로드로 미수납 되돌릴 수 없습니다.",
+                }
+            )
+        else:
+            skipped_invalid_status.append(
+                {
+                    "application_no": item.get("application_no"),
+                    "application_id": item.get("application_id"),
+                    "reason": "수납상태 값을 인식할 수 없습니다.",
+                }
+            )
+
+    if updated:
+        await write_audit(
+            db,
+            admin_user_id=admin.id,
+            action_type="payment_roster_import",
+            target_type="exam_rounds",
+            target_id=round_id,
+            after_data={
+                "updated": updated,
+                "skipped_photo_not_approved": len(skipped_photo_not_approved),
+                "skipped_not_found": len(skipped_not_found),
+            },
+            ip_address=ip,
+        )
+    await db.commit()
+
+    return {
+        "updated": updated,
+        "skipped_unchanged": skipped_unchanged,
+        "skipped_photo_not_approved": skipped_photo_not_approved,
+        "skipped_not_found": skipped_not_found,
+        "skipped_invalid_status": skipped_invalid_status,
+    }
+
+
 @router.get("/exam-rounds/{round_id}/photos.zip")
 async def export_round_photos_zip(
     round_id: int,
@@ -846,6 +1044,7 @@ async def approve_application(
     body: RevBody | None = None,
     if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(matrix_perm("applicants", "approve")),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -865,7 +1064,7 @@ async def approve_application(
     venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == app.exam_venue_id))).scalar_one_or_none()
     if user and rnd:
         await notify_application_approved(db, app, user, rnd, venue)
-    await write_audit(db, admin_user_id=admin.id, action_type="approve", target_type="applications", target_id=app_id, before_data={"status": before}, after_data={"status": app.status})
+    await write_audit(db, admin_user_id=admin.id, action_type="approve", target_type="applications", target_id=app_id, before_data={"status": before}, after_data={"status": app.status}, ip_address=ip)
     await db.commit()
     return {"approved": True, "rev": app.rev}
 
@@ -877,6 +1076,7 @@ async def reject_application(
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(matrix_perm("applicants", "reject")),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -890,7 +1090,7 @@ async def reject_application(
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
     if user and rnd:
         await notify_application_rejected(db, app, user, rnd, reject_reason=body.reject_reason)
-    await write_audit(db, admin_user_id=admin.id, action_type="reject", target_type="applications", target_id=app_id, memo=body.reject_reason)
+    await write_audit(db, admin_user_id=admin.id, action_type="reject", target_type="applications", target_id=app_id, memo=body.reject_reason, ip_address=ip)
     await db.commit()
     return {"rejected": True, "rev": app.rev}
 
@@ -902,6 +1102,7 @@ async def payment_application(
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(matrix_perm("applicants", "pay")),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -918,7 +1119,15 @@ async def payment_application(
     app.payment_receipt_no = body.receipt_no
     app.payment_memo = body.payment_memo
     bump_rev(app)
-    await write_audit(db, admin_user_id=admin.id, action_type="payment_complete", target_type="applications", target_id=app_id)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="payment_complete",
+        target_type="applications",
+        target_id=app_id,
+        memo=body.payment_memo,
+        ip_address=ip,
+    )
     await db.commit()
     return {"paid": True, "rev": app.rev}
 
@@ -930,6 +1139,7 @@ async def cancel_payment(
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(matrix_perm("applicants", "pay")),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -948,6 +1158,7 @@ async def cancel_payment(
         target_type="applications",
         target_id=app_id,
         memo=reason or None,
+        ip_address=ip,
     )
     await db.commit()
     return {"refunded": True, "rev": app.rev}
@@ -960,6 +1171,7 @@ async def photo_review(
     request: Request,
     if_match: str | None = Header(None, alias="If-Match"),
     admin: AuthUser = Depends(matrix_perm("applicants", "photo")),
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
@@ -986,7 +1198,14 @@ async def photo_review(
     else:
         raise api_error("VALIDATION_ERROR", "action은 approve 또는 reject여야 합니다.")
     bump_rev(app)
-    await write_audit(db, admin_user_id=admin.id, action_type=f"photo_review_{body.action}", target_type="applications", target_id=app_id)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type=f"photo_review_{body.action}",
+        target_type="applications",
+        target_id=app_id,
+        ip_address=ip,
+    )
     await db.commit()
     return {"photo_review_status": app.photo_review_status, "rev": app.rev}
 

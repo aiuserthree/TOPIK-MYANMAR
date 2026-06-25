@@ -78,6 +78,20 @@
     padding-bottom: 12px; border-bottom: 1px solid var(--border);
   }
   .terms-modal-body.plain { white-space: pre-wrap; word-break: break-word; }
+
+  .profile-basic-locked .input,
+  .profile-basic-locked .select,
+  .profile-basic-locked input[type="checkbox"] {
+    pointer-events: none;
+    opacity: 0.72;
+  }
+  .profile-basic-locked [data-photo-select],
+  .profile-basic-locked #profilePhotoZone .ph-prev {
+    pointer-events: none;
+    cursor: default;
+  }
+  .profile-basic-locked .mkt-view { pointer-events: none; opacity: 0.72; }
+  #pf-approved-notice a { color: inherit; font-weight: 600; text-decoration: underline; }
 </style>
 </head>
 <body data-require-login>
@@ -94,6 +108,11 @@
   </header>
 
   <div class="profile-wrap">
+
+    <div class="callout callout-warning" id="pf-approved-notice" style="display: none; margin-bottom: 20px;">
+      <div class="ico"></div>
+      <div id="pf-approved-notice-body"></div>
+    </div>
 
     <div class="callout" id="pf-pw-notice" style="margin-bottom: 20px;">
       <div class="ico"></div>
@@ -117,7 +136,7 @@
     </div>
 
     <!-- ============ 기본정보 + 사진 ============ -->
-    <section class="tab-pane active" data-tab="basic">
+    <section class="tab-pane active" data-tab="basic" id="pf-basic-pane">
 
       <h2 class="h3" style="margin-bottom: 12px;" data-i18n-content="mpp.photo_title">증명사진</h2>
       <div class="photo-section" id="profilePhotoZone">
@@ -357,7 +376,12 @@
     'mpp.leave_google_hint': { ko: 'Google 계정으로 본인 확인 후 탈퇴합니다.', my: 'Google အကောင့်ဖြင့် အတည်ပြုပြီးမှ အကောင့်ပိတ်ပါ။', en: 'Verify with your Google account to delete your account.' },
     'mpp.leave_google_disabled': { ko: 'Google 본인 확인은 운영 OAuth 설정 후 이용 가능합니다.', my: 'Google အတည်ပြုခြင်းကို OAuth ပြင်ဆင်ပြီးမှ အသုံးပြုနိုင်ပါမည်။', en: 'Google verification will be available after OAuth setup.' },
     'mpp.leave_pw_required': { ko: '비밀번호를 입력해 주세요.', my: 'စကားဝှက် ထည့်ပါ။', en: 'Please enter your password.' },
-    'mpp.leave_google_fail': { ko: 'Google 본인 확인에 실패했습니다. 다시 시도해 주세요.', my: 'Google အတည်ပြုခြင်း မအောင်မြင်ပါ။ ထပ်စမ်းကြည့်ပါ။', en: 'Google verification failed. Please try again.' }
+    'mpp.leave_google_fail': { ko: 'Google 본인 확인에 실패했습니다. 다시 시도해 주세요.', my: 'Google အတည်ပြုခြင်း မအောင်မြင်ပါ။ ထပ်စမ်းကြည့်ပါ။', en: 'Google verification failed. Please try again.' },
+    'mpp.approved_lock_notice': {
+      ko: '시험 접수가 최종 완료(승인)되어 기본정보 및 사진 수정이 불가합니다. 정보 정정이 필요한 경우, <a href="refund-correction.html">환불·정보정정신청</a> 게시판을 통해 요청을 하시기 바랍니다.',
+      my: 'လျှောက်လွှာ အတည်ပြုပြီးသားဖြစ်သောကြောင့် အခြေခံအချက်အလက်နှင့် ဓာတ်ပုံ ပြင်ဆင်ခြင်း မပြုလုပ်နိုင်ပါ။ အချက်အလက် ပြင်ဆင်ရန် လိုအပ်ပါက <a href="refund-correction.html">ငွေပြန်အမ်း · အချက်အလက်ပြင်ဆင်ရန် လျှောက်ထားမှု</a> မှတဆင့် တောင်းဆိုပါ။',
+      en: 'Basic information and photo cannot be edited because your registration has been approved. If you need a correction, please submit a request via the <a href="refund-correction.html">Refund &amp; Info Correction</a> board.'
+    }
   };
 </script>
 <script src="shared/api-client.js"></script>
@@ -383,6 +407,7 @@
   var photoChanged = false;
   var lastKnownPhotoFileId = null;
   var profileUser = null;
+  var profileBasicEditLocked = false;
   var leaveGoogleClientId = null;
   var leaveGoogleReady = false;
   var profilePhotoCtrl = TPKMPhoto.bind({
@@ -476,6 +501,40 @@
     }
   }
 
+  function applyProfileEditLock(locked) {
+    profileBasicEditLocked = !!locked;
+    var notice = $('pf-approved-notice');
+    var noticeBody = $('pf-approved-notice-body');
+    var basicPane = $('pf-basic-pane');
+    var saveBtn = $('pf-save-basic');
+    var photoSelect = document.querySelector('#profilePhotoZone [data-photo-select]');
+    var fieldIds = [
+      'pf-name-ko', 'pf-name-en', 'pf-birth', 'pf-gender', 'pf-nationality',
+      'pf-lang1', 'pf-phone', 'pf-job', 'pf-motive', 'pf-purpose', 'pf-marketing'
+    ];
+
+    if (notice) notice.style.display = locked ? '' : 'none';
+    if (noticeBody) {
+      noticeBody.innerHTML = i18nText('mpp.approved_lock_notice');
+    }
+    if (basicPane) basicPane.classList.toggle('profile-basic-locked', locked);
+    if (saveBtn) saveBtn.disabled = locked;
+    fieldIds.forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      el.disabled = locked;
+      if (locked) el.setAttribute('aria-readonly', 'true');
+      else el.removeAttribute('aria-readonly');
+    });
+    if (photoSelect) photoSelect.disabled = locked;
+    var photoPrev = document.querySelector('#profilePhotoZone .ph-prev');
+    if (photoPrev) {
+      photoPrev.style.cursor = locked ? 'default' : 'pointer';
+      if (locked) photoPrev.removeAttribute('title');
+      else photoPrev.title = bt('photo.click_select', '클릭하여 파일 선택');
+    }
+  }
+
   // ---- 회원정보 로드 (GET /me) ----
   function loadProfile() {
     if (!window.TopikApi || !TopikApi.canUseApi() || !TopikApi.isLoggedIn()) return;
@@ -497,6 +556,7 @@
       $('pf-email').value = u.email || '';
       profileUser = u;
       applyAccountUi(u.signup_provider || 'email');
+      applyProfileEditLock(!!(res.body && res.body.profile_basic_edit_locked));
       var pwEl = $('pf-pw-changed');
       if (pwEl) pwEl.textContent = formatPwChangedAt(u.password_changed_at);
       lastKnownPhotoFileId = u.photo_file_id != null ? Number(u.photo_file_id) : null;
@@ -505,9 +565,17 @@
   }
   loadProfile();
 
+  document.addEventListener('tpkm:langchange', function () {
+    if (profileBasicEditLocked) applyProfileEditLock(true);
+  });
+
   // ---- 기본정보 저장 (PATCH /me) ----
   $('pf-save-basic').addEventListener('click', function () {
     var btn = this;
+    if (profileBasicEditLocked) {
+      alert(i18nText('mpp.approved_lock_notice').replace(/<[^>]+>/g, ''));
+      return;
+    }
     if (!window.TopikApi || !TopikApi.canUseApi()) { alert(bt('common.no_server', '서버에 연결할 수 없습니다.')); return; }
     var birthRaw = $('pf-birth').value.trim();
     var phoneRaw = $('pf-phone').value.trim();

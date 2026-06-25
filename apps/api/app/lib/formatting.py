@@ -399,3 +399,42 @@ def exam_number_visible(exam_number: str | None, round_visible_at: datetime | No
     if not round_visible_at:
         return True
     return datetime.now(timezone.utc) >= _as_aware(round_visible_at)
+
+
+# ---------------------------------------------------------------------------
+# 접수번호 (APP-{submission_id}-{1|2})
+# ---------------------------------------------------------------------------
+
+def application_no_level_digit(exam_level: str) -> str:
+    lv = (exam_level or "").strip().upper()
+    if lv == "II":
+        return "2"
+    if lv == "I":
+        return "1"
+    return lv
+
+
+def format_application_no(submission_id: int, exam_level: str) -> str:
+    return f"APP-{submission_id}-{application_no_level_digit(exam_level)}"
+
+
+def resolve_application_no(
+    application_no: str | None,
+    submission_id: int | None = None,
+    exam_level: str | None = None,
+) -> str:
+    """표시용 접수번호 — 로마숫자(I/II) 접미사를 아라비아 숫자(1/2)로 통일."""
+    import re
+
+    if application_no:
+        m = re.match(r"^(APP-\d+)-(.+)$", application_no.strip(), re.IGNORECASE)
+        if m:
+            prefix, suffix = m.group(1), m.group(2).upper()
+            if suffix in ("I", "1"):
+                return f"{prefix}-1"
+            if suffix in ("II", "2"):
+                return f"{prefix}-2"
+        return application_no.strip()
+    if submission_id is not None and exam_level:
+        return format_application_no(submission_id, exam_level)
+    return ""

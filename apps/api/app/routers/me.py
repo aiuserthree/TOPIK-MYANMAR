@@ -11,7 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db_session
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user, require_user
-from app.lib.profile import AUTH_USER_STATUSES, is_profile_incomplete
+from app.lib.profile import (
+    AUTH_USER_STATUSES,
+    PROFILE_BASIC_EDIT_LOCK_FIELDS,
+    is_profile_incomplete,
+    user_profile_basic_edit_locked,
+)
 from app.lib.email_notify import count_active_applications, notify_account_status
 from app.lib.errors import api_error, fo_api_error
 from app.lib.locale import resolve_request_locale
@@ -146,7 +151,12 @@ async def get_me(
     user = result.scalar_one_or_none()
     if not user:
         raise fo_api_error("NOT_FOUND", "user_not_found", lang, 404)
-    return {"user": serialize_user(user), "profile_incomplete": is_profile_incomplete(user)}
+    locked = await user_profile_basic_edit_locked(db, user.id)
+    return {
+        "user": serialize_user(user),
+        "profile_incomplete": is_profile_incomplete(user),
+        "profile_basic_edit_locked": locked,
+    }
 
 
 @router.patch("/me")
@@ -168,6 +178,10 @@ async def update_me(
     check_rev(user, expected_rev_from_request(request, body.rev, if_match), label="프로필")
     data = body.model_dump(exclude_unset=True)
     data.pop("rev", None)
+    if await user_profile_basic_edit_locked(db, user.id):
+        attempted = set(data.keys()) - {"terms_agreed"}
+        if attempted & PROFILE_BASIC_EDIT_LOCK_FIELDS:
+            raise fo_api_error("VALIDATION_ERROR", "profile_basic_edit_locked", lang)
     if "birth_date" in data and data["birth_date"]:
         birth = normalize_birth_date(data["birth_date"])
         if not birth:
@@ -229,7 +243,12 @@ async def update_me(
         user.status = "active"
     await db.commit()
     await db.refresh(user)
-    return {"user": serialize_user(user), "profile_incomplete": is_profile_incomplete(user)}
+    locked = await user_profile_basic_edit_locked(db, user.id)
+    return {
+        "user": serialize_user(user),
+        "profile_incomplete": is_profile_incomplete(user),
+        "profile_basic_edit_locked": locked,
+    }
 
 
 @router.post("/me/change-password")

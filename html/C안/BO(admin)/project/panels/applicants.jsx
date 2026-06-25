@@ -49,13 +49,19 @@ function normalizeApplicantSearchQuery(raw) {
   return s.trim();
 }
 
-/** APP-20-I / APP-20-II 처럼 급수까지 있는 접수번호는 정확 일치만 허용 */
+/** APP-20-1 / APP-20-2 처럼 급수까지 있는 접수번호는 정확 일치만 허용 */
+function normalizeApplicationNoSuffix(no) {
+  return String(no || '').toLowerCase().replace(/-(i|ii)$/, function (_, lv) {
+    return lv === 'ii' ? '-2' : '-1';
+  });
+}
+
 function applicationNoMatchesSearch(appNo, query) {
   if (!appNo || !query) return false;
-  var a = String(appNo).toLowerCase();
-  var q = String(query).trim().toLowerCase();
-  if (/^app-\d+-[a-z]+$/i.test(q)) return a === q;
-  if (/^app-\d+-?$/i.test(q)) return a.indexOf(q) === 0;
+  var a = normalizeApplicationNoSuffix(appNo);
+  var q = normalizeApplicationNoSuffix(String(query).trim());
+  if (/^app-\d+-[0-9]+$/.test(q)) return a === q;
+  if (/^app-\d+-?$/.test(q)) return a.indexOf(q) === 0;
   return a.includes(q);
 }
 
@@ -104,6 +110,47 @@ function applicantFeeAmount(a, session) {
   if (a.level === 'Ⅱ') return session.feeII;
   if (a.level === '동시') return session.feeI + session.feeII;
   return session.feeI;
+}
+
+function applicantPaymentStatus(a) {
+  if (window.TOPIKBoBridge && TOPIKBoBridge.applicantPaymentStatus) {
+    return TOPIKBoBridge.applicantPaymentStatus(a);
+  }
+  if (!a) return 'unpaid';
+  if (a.paymentStatus) return a.paymentStatus;
+  if (a.paid) return 'paid';
+  if (a.status === 'refund') return 'refunded';
+  return 'unpaid';
+}
+
+function isUnpaidRosterApplicant(a) {
+  if (window.TOPIKBoBridge && TOPIKBoBridge.isUnpaidRosterApplicant) {
+    return TOPIKBoBridge.isUnpaidRosterApplicant(a);
+  }
+  if (!a || a.status === 'cancel' || a.status === 'cancelled') return false;
+  return applicantPaymentStatus(a) === 'unpaid';
+}
+
+function applicantPaymentPill(a) {
+  var ps = applicantPaymentStatus(a);
+  if (ps === 'paid') return <Pill kind="approved">수납완료</Pill>;
+  if (ps === 'refunded') return <Pill kind="refund">환불</Pill>;
+  return <Pill kind="pay">미수납</Pill>;
+}
+
+function applicantPaymentStatusView(a) {
+  if (!a) return <Pill kind="pay">미수납</Pill>;
+  var ps = applicantPaymentStatus(a);
+  if (ps === 'refunded') return <Pill kind="refund">환불</Pill>;
+  if (ps !== 'paid') return <Pill kind="pay">미수납</Pill>;
+  var memo = String(a.paymentMemo || '').trim();
+  if (!memo) return <Pill kind="approved">수납완료</Pill>;
+  return (
+    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+      <Pill kind="approved">수납완료</Pill>
+      <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 400, lineHeight: 1.45 }}>{memo}</span>
+    </span>
+  );
 }
 
 /** FO 마이페이지 접수 확인증과 동일한 수험번호 표시 */
@@ -230,6 +277,7 @@ function ApplicantsPanel() {
   const [rejectModal, setRejectModal] = useState(null);    // { ids:[] }
   const [examModal, setExamModal] = useState(false);
   const [excelModal, setExcelModal] = useState(false);
+  const [paymentExcelModal, setPaymentExcelModal] = useState(false);
   const [zipModal, setZipModal] = useState(false);
   const [photoLP, setPhotoLP] = useState(null);   // 사진 심사 인라인 패널 id (TPKM_BO_2_1_3)
   const [confirmId, setConfirmId] = useState(null); // 접수 확인증 (TPKM_BO_2_1_11)
@@ -376,8 +424,9 @@ function ApplicantsPanel() {
       if (!a || a.paid) return;
       const before = { paid: a.paid, status: a.status };
       a.paid = true;
+      a.paymentStatus = 'paid';
       a.paidAt = new Date().toISOString().replace('T', ' ').slice(0, 16);
-      a.receipt = info.receipt || `R-${Math.floor(10000 + Math.random() * 89999)}`;
+      a.paymentMemo = info.memo || '';
       a.memo = (a.memo || '') + (info.memo ? `[수납] ${info.memo}\n` : '');
       // 사진·수납 완료 시 접수완료(승인처리는 별도)
       if (a.photoOk && (a.status === 'pay' || a.status === 'photo')) a.status = 'applied';
@@ -406,6 +455,8 @@ function ApplicantsPanel() {
       if (!a || !a.paid) return;
       const before = { paid: a.paid, status: a.status };
       a.paid = false;
+      a.paymentStatus = 'refunded';
+      a.paymentMemo = '';
       a.status = 'refund';                 // 환불자 상태로 분류 (수험번호는 유지)
       a.memo = (a.memo || '') + `[환불] ${reason}\n`;
       n++;
@@ -517,6 +568,9 @@ function ApplicantsPanel() {
           <button className="btn btn-secondary" onClick={() => setExcelModal(true)} disabled={!canDownload}>
             <I.Download style={{ width: 14, height: 14 }}/> 연명부 엑셀
           </button>
+          <button className="btn btn-secondary" onClick={() => setPaymentExcelModal(true)} disabled={!canPay}>
+            <I.Download style={{ width: 14, height: 14 }}/> 수납 명단
+          </button>
           <button className="btn btn-secondary" onClick={() => setZipModal(true)} disabled={!canDownload}>
             <I.Download style={{ width: 14, height: 14 }}/> 사진 zip
           </button>
@@ -616,7 +670,7 @@ function ApplicantsPanel() {
                   <td className="code muted">{a.appliedAt}</td>
                   <td className="code"><b style={{ color: a.applicationNo ? 'var(--primary)' : 'var(--text-4)' }}>{a.applicationNo || '—'}</b></td>
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
-                  <td>{a.paid ? <Pill kind="approved">수납완료</Pill> : <Pill kind="pay">미수납</Pill>}</td>
+                  <td>{applicantPaymentPill(a)}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
                   <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
                   <td className="no-print">
@@ -667,6 +721,7 @@ function ApplicantsPanel() {
       {rejectModal && <RejectModal modal={rejectModal} onClose={() => setRejectModal(null)} onConfirm={(reason) => doReject(rejectModal.ids, reason)}/>}
       {examModal && <ExamAssignModal onClose={() => setExamModal(false)} doAssign={doAssignExam}/>}
       {excelModal && <ExcelExportModal onClose={() => setExcelModal(false)} rows={filtered}/>}
+      {paymentExcelModal && <PaymentExcelModal onClose={() => setPaymentExcelModal(false)} sessionId={sessionId}/>}
       {zipModal && <ZipExportModal onClose={() => setZipModal(false)} rows={filtered}
         venueId={venueF !== 'all' ? venueF : null}
         level={levelF === 'Ⅰ' ? 'I' : levelF === 'Ⅱ' ? 'II' : null}/>}
@@ -1036,9 +1091,8 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
               <KV k="사진 승인 여부" v={a.photoOk ? '승인' : '미승인'}/>
               <KV k="응시동기" v={a.motive}/>
               <KV k="응시목적" v={a.purpose}/>
-              <KV k="수납 상태" v={a.paid ? <Pill kind="approved">수납완료</Pill> : <Pill kind="pay">미수납</Pill>}/>
+              <KV k="수납 상태" v={applicantPaymentStatusView(a)}/>
               <KV k="수납 일시" v={a.paidAt || '—'}/>
-              <KV k="영수증" v={a.receipt || '—'}/>
               <KV k="수험번호" v={a.exam ? <code className="code-id" style={{ color: 'var(--st-number)', fontWeight: 700 }}>{a.exam}</code> : '미부여'}/>
               <KV k="접수일시" v={a.appliedAt}/>
               <KV k="반려 사유" v={a.rejectReason || '—'}/>
@@ -1136,8 +1190,7 @@ function ApplicationConfirmModal({ id, onClose }) {
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>접수일</th><td>{a.appliedAt || '—'}</td></tr>
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>응시자</th><td>{a.nameKo} / {a.nameEn}</td></tr>
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>생년월일</th><td><code className="code-id">{formatApplicantDob(a.dob)}</code></td></tr>
-            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>수납 상태</th><td>{a.paid ? <Pill kind="approved">완료</Pill> : <Pill kind="pay">대기</Pill>}</td></tr>
-            {a.receipt ? <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>영수증 번호</th><td><code className="code-id">{a.receipt}</code></td></tr> : null}
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>수납 상태</th><td>{applicantPaymentPill(a)}</td></tr>
           </tbody>
         </table>
         {exam.adminNote && (
@@ -1165,7 +1218,6 @@ function PhotoLarge({ status, name, seed, photoUrl, rotate, onClick }) {
 function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
   const state = useStore();
   const [memo, setMemo] = useState('');
-  const [receipt, setReceipt] = useState('');
   const [reason, setReason] = useState('본인 요청');
   const [reasonOther, setReasonOther] = useState('');
   const ids = modal.ids || [];
@@ -1192,7 +1244,7 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
         {cancelMode ? (
           <button className="btn btn-danger" onClick={() => onCancel(ids, finalReason)} disabled={!finalReason.trim()}>수납 취소</button>
         ) : (
-          <button className="btn btn-primary" onClick={() => onPay(ids, { memo, receipt })}>수납 완료 처리</button>
+          <button className="btn btn-primary" onClick={() => onPay(ids, { memo })}>수납 완료 처리</button>
         )}
       </>}>
       <div style={{ marginBottom: 14, fontSize: 13, color: 'var(--text-2)' }}>
@@ -1244,9 +1296,6 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
         </>
       ) : (
         <>
-          <FormRow label="영수증 번호(선택)">
-            <input className="input" placeholder="예) R-12345" value={receipt} onChange={e => setReceipt(e.target.value)}/>
-          </FormRow>
           <FormRow label="메모(선택)">
             <textarea className="textarea" rows="2" placeholder="예) 양곤대 흘라잉캠퍼스 1층 접수 데스크" value={memo} onChange={e => setMemo(e.target.value)}/>
           </FormRow>
@@ -1468,6 +1517,151 @@ function ExcelExportModal({ onClose, rows }) {
               ))}
         </div>
         <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>※ 수험번호(영문명 정렬) 순으로 행 배치 · 파일당 단일 시트(여러 시트 작성 시 등록 불가).</div>
+      </div>
+    </Modal>
+  );
+}
+
+// ===== 수납 대상자 명단 엑셀 다운로드·일괄 업로드 =====
+function PaymentExcelModal({ onClose, sessionId }) {
+  const state = useStore();
+  const activeSessionId = sessionId || state.activeSessionId;
+  const session = state.sessions.find(s => String(s.id) === String(activeSessionId));
+  const apiMode = !!(DataStore.isApiMode && DataStore.isApiMode());
+  const unpaidRows = useMemo(() => (
+    state.applicants.filter(a =>
+      String(a.sessionId) === String(activeSessionId) && isUnpaidRosterApplicant(a)
+    )
+  ), [state.applicants, activeSessionId]);
+  const [busy, setBusy] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const fileRef = useRef(null);
+
+  const doDownload = () => {
+    const role = (DataStore.getAdminSession && DataStore.getAdminSession()?.role) || 'super';
+    if (window.TOPIKBoBridge && !TOPIKBoBridge.enforcePerm(role, '접수 관리|수납', 'execute')) return;
+    if (!unpaidRows.length) { toastErr('미수납 대상자가 없습니다.'); return; }
+    setBusy(true);
+    const run = () => {
+      DataStore.addAudit({ type: '접수자', targetId: '—', action: '게시', memo: `수납 대상자 명단 엑셀 내보내기(${unpaidRows.length}건)` });
+      toastOk(`수납 대상자 명단 ${unpaidRows.length}건을 다운로드했습니다.`, { title: '엑셀 다운로드' });
+      setBusy(false);
+    };
+    if (apiMode && DataStore.apiDownloadPaymentRoster) {
+      DataStore.apiDownloadPaymentRoster(activeSessionId).then(res => {
+        if (res && res.ok) run();
+        else { toastErr((res && res.body && res.body.error && res.body.error.message) || '다운로드 실패'); setBusy(false); }
+      }).catch(e => { toastErr(e.message || '다운로드 실패'); setBusy(false); });
+      return;
+    }
+    if (window.TOPIKBoBridge && TOPIKBoBridge.exportPaymentExcel) {
+      TOPIKBoBridge.exportPaymentExcel({ rows: unpaidRows, state }).then(run).catch(e => { toastErr(e.message || '다운로드 실패'); setBusy(false); });
+      return;
+    }
+    setBusy(false);
+    toastErr('엑셀 내보내기 모듈을 불러올 수 없습니다.');
+  };
+
+  const doUpload = (file) => {
+    if (!file) return;
+    const role = (DataStore.getAdminSession && DataStore.getAdminSession()?.role) || 'super';
+    if (window.TOPIKBoBridge && !TOPIKBoBridge.enforcePerm(role, '접수 관리|수납', 'execute')) return;
+    setBusy(true);
+    setUploadResult(null);
+
+    const finish = (body) => {
+      setUploadResult(body);
+      setBusy(false);
+      if (body && body.updated > 0) {
+        DataStore.addAudit({ type: '접수자', targetId: '—', action: '수납', memo: `수납 명단 엑셀 일괄 업로드(${body.updated}건 반영)` });
+        toastOk(`${body.updated}건 수납 상태가 반영되었습니다.`, { title: '업로드 완료', type: 'success' });
+      } else if (body && !body.updated && !(body.skipped_photo_not_approved || []).length) {
+        toastOk('변경할 수납 상태가 없습니다.', { title: '업로드 완료' });
+      }
+    };
+
+    if (apiMode && DataStore.apiImportPaymentRoster) {
+      DataStore.apiImportPaymentRoster(activeSessionId, file).then(body => {
+        if (body) finish(body);
+        else setBusy(false);
+      }).catch(e => { toastErr(e.message || '업로드 실패'); setBusy(false); });
+      return;
+    }
+
+    if (window.TOPIKExport && window.TOPIKBoBridge) {
+      TOPIKExport.parsePaymentXlsxFile(file).then(items => {
+        if (!items.length) { toastErr('엑셀에서 수납상태 데이터를 찾을 수 없습니다.'); setBusy(false); return; }
+        return TOPIKBoBridge.importPaymentExcelLocal({ items, state }).then(finish);
+      }).catch(e => { toastErr(e.message || '엑셀 파싱 실패'); setBusy(false); });
+      return;
+    }
+    setBusy(false);
+    toastErr('엑셀 업로드 모듈을 불러올 수 없습니다.');
+  };
+
+  const skippedPhoto = uploadResult && (uploadResult.skipped_photo_not_approved || []);
+
+  return (
+    <Modal open onClose={onClose} title="수납 대상자 명단 (엑셀)"
+      footer={<button className="btn btn-primary" onClick={onClose}>닫기</button>}>
+      <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        현장 수납 처리용 <b>미수납 대상자</b> 명단을 엑셀로 받아, 현장에서 <b>수납상태</b>만 수정한 뒤 다시 업로드하면 일괄 반영됩니다.
+      </div>
+
+      <div style={{ marginTop: 14, padding: 12, background: 'var(--bg-2)', borderRadius: 8, fontSize: 12.5, color: 'var(--text-2)' }}>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>엑셀 컬럼</div>
+        접수번호 · 접수ID · 한글성명 · 영문성명 · 생년월일 · 시험장 · 급수 · 사진심사(참고) · <b>수납상태</b>
+        <div style={{ marginTop: 8, color: 'var(--text-3)' }}>
+          수납상태: <code className="code-id">미수납</code> / <code className="code-id">수납완료</code> (또는 <code className="code-id">X</code> / <code className="code-id">O</code>)
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14, padding: 12, background: 'var(--st-rejected-bg)', borderRadius: 8, fontSize: 12.5, color: 'var(--st-rejected)' }}>
+        <b>⚠ 업로드 시 필수 조건</b>
+        <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+          <li><b>사진심사가 「승인」되지 않은 접수자</b>는 엑셀에 수납완료(O)로 표시되어 있어도 <b>수납 상태가 업데이트되지 않습니다.</b></li>
+          <li>사진 승인 후에만 수납완료 처리가 반영됩니다. 사진 미심사 건은 먼저 사진 심사를 완료해 주세요.</li>
+          <li>접수번호·접수ID 열은 수정·삭제하지 마세요 (매칭 키).</li>
+        </ul>
+      </div>
+
+      <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" onClick={doDownload} disabled={busy || !unpaidRows.length}>
+          {busy ? '처리 중…' : `미수납 명단 다운로드 (${unpaidRows.length}건)`}
+        </button>
+        <button className="btn btn-secondary" onClick={() => fileRef.current && fileRef.current.click()} disabled={busy}>
+          엑셀 업로드 (일괄 반영)
+        </button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files && e.target.files[0]; if (f) doUpload(f); e.target.value = ''; }}/>
+      </div>
+
+      {uploadResult && (
+        <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-2)', borderRadius: 8, fontSize: 12.5 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>업로드 결과</div>
+          <div>수납 반영: <b style={{ color: 'var(--primary)' }}>{uploadResult.updated || 0}</b>건</div>
+          <div style={{ color: 'var(--text-3)' }}>변경 없음: {uploadResult.skipped_unchanged || 0}건 · 미매칭: {(uploadResult.skipped_not_found || []).length}건</div>
+          {skippedPhoto && skippedPhoto.length > 0 && (
+            <div style={{ marginTop: 10, padding: 10, background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)', borderRadius: 6 }}>
+              <b>사진 미승인으로 수납 미반영 {skippedPhoto.length}건</b>
+              <ul style={{ marginTop: 6, paddingLeft: 16, maxHeight: 120, overflow: 'auto' }}>
+                {skippedPhoto.slice(0, 10).map((r, i) => (
+                  <li key={i}>{r.name_ko || r.nameKo || '—'} ({r.application_no || r.applicationNo || '—'}) — 사진심사 미승인</li>
+                ))}
+              </ul>
+              {skippedPhoto.length > 10 && <div style={{ fontSize: 11, marginTop: 4 }}>… 외 {skippedPhoto.length - 10}건</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-3)' }}>
+        대상 회차: <b>{session?.name || '—'}</b>
+        {unpaidRows.length === 0 && (
+          <span style={{ display: 'block', marginTop: 6, color: 'var(--text-2)' }}>
+            ※ 현재 선택한 회차에 수납 대상(미수납) 접수자가 없습니다. 환불 처리된 건은 「환불」로 표시되며 명단에 포함되지 않습니다. 미수납이 다른 회차에 있다면 상단 회차 선택에서 해당 회차를 선택해 주세요.
+          </span>
+        )}
       </div>
     </Modal>
   );

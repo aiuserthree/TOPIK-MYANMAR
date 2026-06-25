@@ -22,6 +22,8 @@ from app.lib.formatting import (
     exam_number_visible as _exam_number_visible,
     fmt_date,
     fmt_date_only,
+    format_application_no,
+    resolve_application_no,
 )
 from app.models.application import Application, ApplicationDraft, ApplicationSubmission
 from app.models.exam import ExamRound, ExamVenue
@@ -312,7 +314,7 @@ async def submit_application(
                     exam_round_id=body.exam_round_id,
                     exam_venue_id=venue_id,
                     exam_level=level,
-                    application_no=f"APP-{existing.id}-{level}",
+                    application_no=format_application_no(existing.id, level),
                     photo_file_id=user.photo_file_id,
                     status="submitted",
                 )
@@ -358,7 +360,7 @@ async def submit_application(
             exam_round_id=body.exam_round_id,
             exam_venue_id=body.exam_venue_id,
             exam_level=level,
-            application_no=f"APP-{submission.id}-{level}",
+            application_no=format_application_no(submission.id, level),
             photo_file_id=user.photo_file_id,
             status="submitted",
         )
@@ -378,7 +380,7 @@ def _level_payload(app: Application, round_visible_at) -> dict:
         "id": app.id,
         "exam_level": app.exam_level,
         "level_text": _LEVEL_TEXT.get(app.exam_level, app.exam_level),
-        "application_no": app.application_no or f"APP-{app.submission_id}-{app.exam_level}",
+        "application_no": resolve_application_no(app.application_no, app.submission_id, app.exam_level),
         "status": app.status,
         "display_status": app.status,
         "photo_review_status": app.photo_review_status,
@@ -420,7 +422,7 @@ def _serialize_level_item(
         "exam_venue_id": sub.exam_venue_id,
         "exam_level": app.exam_level,
         "level_text": level_text,
-        "application_no": app.application_no,
+        "application_no": resolve_application_no(app.application_no, app.submission_id, app.exam_level),
         "status": app.status,
         "payment_status": app.payment_status,
         "photo_review_status": app.photo_review_status,

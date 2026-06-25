@@ -41,6 +41,17 @@
     }
   }
 
+  function formatApplicationNo(applicationNo, submissionId, examLevel) {
+    if (applicationNo) {
+      return String(applicationNo).replace(/-(I|II)$/i, function (_, lv) {
+        return lv.toUpperCase() === "II" ? "-2" : "-1";
+      });
+    }
+    if (submissionId == null || !examLevel) return "";
+    var lv = String(examLevel).toUpperCase();
+    return "APP-" + submissionId + "-" + (lv === "II" ? "2" : "1");
+  }
+
   /** BO 회차 접수기간 — 달력에서 고른 날짜를 미얀마 현지(MMT) 자정/말일로 저장 */
   function mmtDayStart(ymd) {
     return ymd + "T00:00:00+06:30";
@@ -160,15 +171,14 @@
       photoOk: photoOk,
       photoStatus: row.photo_review_status || "pending",
       paid: paid,
+      paymentStatus: row.payment_status || (paid ? "paid" : "unpaid"),
       paidAt: fmtMmt(row.paid_at),
-      receipt: row.payment_receipt_no || "",
+      paymentMemo: row.payment_memo || "",
       exam: row.exam_number || "",
       examNumberVisible: !!row.exam_number_visible,
       roundNo: row.round_no != null ? row.round_no : null,
       roundTitle: row.round_title || "",
-      applicationNo: row.application_no || (row.submission_id != null
-        ? ("APP-" + row.submission_id + "-" + row.exam_level)
-        : ""),
+      applicationNo: formatApplicationNo(row.application_no, row.submission_id, row.exam_level),
       status: mapApplicantStatus(row),
       appliedAt: fmtMmt(row.created_at),
       rejectReason: row.reject_reason || "",
@@ -1081,7 +1091,7 @@
   DS.apiPay = function (ids, info) {
     var sessionId = DS.state.activeSessionId;
     return Promise.all(ids.map(function (id) {
-      return Api.paymentApplication(id, { receipt_no: info.receipt, payment_memo: info.memo }, { rev: applicantRev(id) });
+      return Api.paymentApplication(id, { payment_memo: info.memo }, { rev: applicantRev(id) });
     })).then(function (ress) {
       var conflict = ress.find(function (r) { return Api.isConflict(r); });
       if (conflict) {
@@ -1434,6 +1444,22 @@
   DS.apiDownloadPhotosZip = function (query) {
     if (!DS.isApiMode()) return Promise.resolve({ ok: false, body: { error: { message: "API 모드가 아닙니다." } } });
     return Api.downloadPhotosZip(query || {});
+  };
+
+  DS.apiDownloadPaymentRoster = function (roundId) {
+    if (!DS.isApiMode()) return Promise.resolve({ ok: false, body: { error: { message: "API 모드가 아닙니다." } } });
+    return Api.downloadPaymentRoster(roundId);
+  };
+
+  DS.apiImportPaymentRoster = function (roundId, file) {
+    if (!DS.isApiMode()) return Promise.resolve({ ok: false, body: { error: { message: "API 모드가 아닙니다." } } });
+    return Api.importPaymentRoster(roundId, file).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return null;
+      }
+      return DS.reloadApplicants(roundId).then(function () { return res.body; });
+    });
   };
 
   DS.reloadMembers = function () {

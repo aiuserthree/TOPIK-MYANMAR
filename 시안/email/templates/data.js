@@ -4,37 +4,16 @@
    KO master content. Three visual concepts (A / B / C).
    ============================================================ */
 (function () {
-  // ---- Shared footer config (locale-aware) -----------------
-  const FOOTER_I18N = {
-    ko: {
-      sendingNote: "본 메일은 발신 전용입니다. 회신하셔도 답변을 받으실 수 없습니다.",
-      supportLabel: "문의",
-      operator: "주미얀마 대한민국 대사관 운영 · 국립국제교육원(NIIED) 주관",
-      copyright: "© {year} TOPIK Myanmar. All rights reserved.",
-      marketingNote:
-        "본 메일은 광고성 정보 수신에 동의하신 회원에게 발송되었습니다. 수신을 원하지 않으시면 아래 수신거부를 눌러 주세요.",
-      unsubscribeLabel: "수신거부",
-    },
-    my: {
-      sendingNote: "ဤအီးမေးလ်သည် ပို့ခြင်းသက်သက်သာ ဖြစ်ပါသည်။ ပြန်လည်ဖြေကြားချက်ကို မလက်ခံပါ။",
-      supportLabel: "မေးမြန်းရန်",
-      operator: "မြန်မာနိုင်ငံရှိ ကိုရီးယားသံရုံးက ကြီးကြပ်ဆောင်ရွက်ခြင်း · NIIED",
-      copyright: "© {year} TOPIK Myanmar. All rights reserved.",
-      marketingNote:
-        "ဤအီးမေးလ်ကို ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူထားသော အဖွဲ့ဝင်များသို့ ပို့ထားပါသည်။ လက်မခံပါက အောက်ပါ စာရင်းမှ ထုတ်ဖျက်ရန် ကို နှိပ်ပါ။",
-      unsubscribeLabel: "စာရင်းမှ ထုတ်ဖျက်ရန်",
-    },
-    en: {
-      sendingNote: "This is a send-only email. Replies will not be answered.",
-      supportLabel: "Support",
-      operator: "Operated by the Embassy of the Republic of Korea in Myanmar · Hosted by NIIED",
-      copyright: "© {year} TOPIK Myanmar. All rights reserved.",
-      marketingNote:
-        "This email was sent to members who agreed to receive marketing information. If you no longer wish to receive these emails, use the unsubscribe link below.",
-      unsubscribeLabel: "Unsubscribe",
-    },
+  // ---- Shared footer config --------------------------------
+  const FOOTER = {
+    sendingNote: "본 메일은 발신 전용입니다. 회신하셔도 답변을 받으실 수 없습니다.",
+    supportLabel: "문의",
+    operator: "주미얀마 대한민국 대사관 운영 · 국립국제교육원(NIIED) 주관",
+    copyright: "© {year} TOPIK Myanmar. All rights reserved.",
+    marketingNote:
+      "본 메일은 광고성 정보 수신에 동의하신 회원에게 발송되었습니다. 수신을 원하지 않으시면 아래 수신거부를 눌러 주세요.",
+    unsubscribeLabel: "수신거부",
   };
-  const FOOTER = FOOTER_I18N.ko;
 
   // ---- Sample values (for live preview rendering) ----------
   const SAMPLE = {
@@ -42,14 +21,16 @@
     userNameEn: "Min Thet Aung",
     siteUrl: "topik-myanmar.example",
     siteUrlFull: "https://topik-myanmar.example",
-    supportEmail: "support@topik-myanmar.com",
+    supportEmail: "topik.myanmar@koica.go.kr",
     supportBoardUrl: "https://topik-myanmar.example/qna",
     year: "2026",
     // signup
-    verificationCode: "482915",
+    verificationCode: "482 915",
     expiresMinutes: "5",
+    signupUrl: "https://topik-myanmar.example/signup?step=2",
     // password
     email: "m****@gmail.com",
+    resetLink: "https://topik-myanmar.example/reset?token=••••",
     // approve / reject
     applicantNo: "MMR-098-00471",
     roundName: "제98회",
@@ -63,7 +44,7 @@
     rejectCode: "정보 불일치",
     photoRejectReason: "정면 사진이 아닙니다. 얼굴이 정면을 향하도록 다시 촬영해 주세요.",
     photoRejectCode: "정면 아님",
-    editProfileUrl: "https://topik-myanmar.example/mypage-profile.html",
+    editProfileUrl: "https://topik-myanmar.example/mypage/profile",
     // temp pw
     temporaryPassword: "Tmp9#kQ2m",
     loginUrl: "https://topik-myanmar.example/login",
@@ -208,37 +189,37 @@
       eyebrowKo: "이메일 인증", eyebrowEn: "EMAIL VERIFICATION", indexNo: "01",
       h1: "이메일 인증코드",
       intro:
-        "{userName} 님, TOPIK Myanmar 회원가입을 진행하고 있습니다. 아래 인증코드를 회원가입 화면에 입력해 이메일 인증을 완료해 주세요.",
+        "{userName} 님, TOPIK Myanmar 회원가입을 진행하고 있습니다. 아래 인증코드를 입력해 이메일 인증을 완료해 주세요.",
       blocks: [
         { type: "code", label: "인증코드", value: "{verificationCode}", sub: "유효시간 {expiresMinutes}분" },
         { type: "paragraph", text: "인증코드는 발송 시점부터 {expiresMinutes}분간 유효합니다. 시간이 지났다면 인증코드를 다시 요청해 주세요." },
         { type: "notice", tone: "info", text: "본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다." },
       ],
-      ctas: [],
-      variables: ["userName", "verificationCode", "expiresMinutes"],
+      ctas: [{ label: "회원가입 계속하기", href: "{signupUrl}", kind: "primary" }],
+      variables: ["userName", "verificationCode", "expiresMinutes", "signupUrl"],
     },
 
     {
       key: "password-reset",
       templateKey: "password_reset",
-      specRef: "FO/06 TPKM_FO_6_1_3 — 비밀번호 찾기(일반 가입, 인증코드 30분)",
+      specRef: "FO/06 TPKM_FO_6_1_3 — 비밀번호 찾기(일반 가입, 링크 30분)",
       nav: "비밀번호 재설정",
       navNo: "02",
       group: "인증·계정",
       trigger: "FO 비밀번호 찾기 — 일반 가입 계정 (구글 가입 미발송)",
       subject: "[TOPIK Myanmar] 비밀번호 재설정 안내",
-      preheader: "아래 인증코드를 비밀번호 찾기 화면에 입력하고 30분 안에 새 비밀번호를 설정하세요.",
+      preheader: "아래 버튼을 눌러 30분 안에 비밀번호를 재설정하세요.",
       eyebrowKo: "비밀번호 재설정", eyebrowEn: "PASSWORD RESET", indexNo: "02",
-      h1: "비밀번호 재설정 인증코드",
+      h1: "비밀번호를 재설정하세요",
       intro:
-        "{userName} 님, 비밀번호 재설정 요청을 접수했습니다. 아래 인증코드를 비밀번호 찾기 화면에 입력한 뒤 새 비밀번호를 설정해 주세요.",
+        "{userName} 님, 비밀번호 재설정 요청을 접수했습니다. 아래 버튼을 눌러 새 비밀번호를 설정해 주세요.",
       blocks: [
-        { type: "code", label: "인증코드", value: "{verificationCode}", sub: "유효시간 30분" },
-        { type: "notice", tone: "warn", text: "이 코드는 발송 후 30분간만 유효하며, 한 번만 사용할 수 있습니다." },
-        { type: "paragraph", text: "본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 변경되지 않습니다." },
+        { type: "infoTable", rows: [["요청 계정", "{email}"]] },
+        { type: "notice", tone: "warn", text: "이 링크는 발송 후 30분간만 유효하며, 한 번만 사용할 수 있습니다." },
+        { type: "paragraph", text: "보안을 위해 링크를 직접 복사하기보다 버튼을 눌러 접속하시길 권장합니다. 본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 변경되지 않습니다." },
       ],
-      ctas: [],
-      variables: ["userName", "verificationCode"],
+      ctas: [{ label: "비밀번호 재설정", href: "{resetLink}", kind: "primary" }],
+      variables: ["userName", "email", "resetLink"],
     },
 
     {
@@ -256,10 +237,13 @@
       intro: "{userName} 님, 신청하신 TOPIK 접수가 정상적으로 승인되었습니다.",
       blocks: [
         { type: "infoTable", rows: [["회차", "{roundName}"], ["급수", "{level}"], ["시험일", "{examDate}"], ["시험장", "{venueName}"]] },
-        { type: "steps", title: "다음 단계", items: ["오프라인 응시료 수납 (수납처·일정은 공지 참고)", "수납 확인 후 정해진 날짜에 수험번호 일괄 부여", "마이페이지·접수확인에서 수험번호 확인"] },
-        { type: "notice", tone: "info", text: "수험번호는 이메일로 발송되지 않습니다. 응시료 수납이 확인된 후 정해진 날짜에 마이페이지·접수확인에서 확인하실 수 있습니다." },
+        { type: "steps", title: "다음 단계", items: ["오프라인 응시료 수납 (수납처·일정은 공지 참고)", "수납 확인 후 수험번호 부여", "마이페이지·공지사항에서 수험번호 확인"] },
+        { type: "notice", tone: "info", text: "수험번호는 이메일로 발송되지 않습니다. 응시료 수납이 확인된 후 마이페이지와 공지사항에서 확인하실 수 있습니다." },
       ],
-      ctas: [{ label: "마이페이지", href: "{myPageUrl}", kind: "primary" }],
+      ctas: [
+        { label: "마이페이지", href: "{myPageUrl}", kind: "primary" },
+        { label: "공지사항 보기", href: "{noticeUrl}", kind: "secondary" },
+      ],
       variables: ["userName", "applicantNo", "roundName", "level", "examDate", "venueName"],
     },
 
@@ -394,9 +378,9 @@
       intro: "새로운 게시글이 접수되었습니다. 아래 정보를 확인하고 처리해 주세요.",
       blocks: [
         { type: "infoTable", rows: [["작성자", "{userName}"], ["게시판", "{boardName}"], ["유형", "{category}"], ["제목", "{postTitle}"], ["접수일시", "{submittedAt}"], ["비밀글", "{secretFlag}"]] },
-        { type: "notice", tone: "info", text: "비밀글은 본문이 메일에 포함되지 않습니다. 관리자에서 직접 확인해 주세요." },
+        { type: "notice", tone: "info", text: "비밀글은 본문이 메일에 포함되지 않습니다. BO에서 직접 확인해 주세요." },
       ],
-      ctas: [{ label: "관리자에서 처리하기", href: "{boPostUrl}", kind: "primary" }],
+      ctas: [{ label: "BO에서 처리하기", href: "{boPostUrl}", kind: "primary" }],
       variables: ["userName", "boardName", "category", "postTitle", "secretFlag", "boPostUrl"],
     },
 
@@ -489,10 +473,13 @@
             },
             {
               type: "paragraph",
-              text: "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 으로 문의해 주세요.",
+              text: "본인이 요청하지 않은 처리라면 즉시 {supportEmail} 또는 문의 게시판으로 연락해 주세요.",
             },
           ],
-          ctas: [],
+          ctas: [
+            { label: "문의 게시판", href: "{supportBoardUrl}", kind: "primary" },
+            { label: "사이트 바로가기", href: "{siteUrlFull}", kind: "secondary" },
+          ],
         },
         my: {
           subject: "[TOPIK Myanmar] အဖွဲ့ဝင်အကောင့် {accountStatusLabel} အကြောင်းကြားချက်",
@@ -526,10 +513,13 @@
             },
             {
               type: "paragraph",
-              text: "ဤလုပ်ဆောင်ချက်ကို သင်တောင်းဆိုခြင်းမရှိပါက ချက်ချင်း {supportEmail} သို့ ဆက်သွယ်ပါ။",
+              text: "ဤလုပ်ဆောင်ချက်ကို သင်တောင်းဆိုခြင်းမရှိပါက {supportEmail} သို့မဟုတ် မေးမြန်းစာမျက်နှာသို့ ဆက်သွယ်ပါ။",
             },
           ],
-          ctas: [],
+          ctas: [
+            { label: "မေးမြန်းစာမျက်နှာ", href: "{supportBoardUrl}", kind: "primary" },
+            { label: "ဝဘ်ဆိုက်သို့", href: "{siteUrlFull}", kind: "secondary" },
+          ],
         },
         en: {
           subject: "[TOPIK Myanmar] Account {accountStatusLabel} notice",
@@ -563,10 +553,13 @@
             },
             {
               type: "paragraph",
-              text: "If you did not request this action, please contact us immediately at {supportEmail}.",
+              text: "If you did not request this action, contact us at {supportEmail} or via the inquiry board.",
             },
           ],
-          ctas: [],
+          ctas: [
+            { label: "Inquiry board", href: "{supportBoardUrl}", kind: "primary" },
+            { label: "Visit website", href: "{siteUrlFull}", kind: "secondary" },
+          ],
         },
       },
     },
@@ -603,7 +596,7 @@
             {
               type: "reasonBox",
               tone: "info",
-              title: "변경 내역",
+              title: "변경 내역 (diff)",
               reason: "{changeDiffHtml}",
             },
             {
@@ -671,7 +664,7 @@
             {
               type: "reasonBox",
               tone: "info",
-              title: "Change details",
+              title: "Change details (diff)",
               reason: "{changeDiffHtml}",
             },
             {
@@ -817,48 +810,18 @@
     };
   }
 
-  function koFieldsFromTpl(tpl) {
-    return {
-      subject: tpl.subject,
-      preheader: tpl.preheader,
-      eyebrowKo: tpl.eyebrowKo,
-      eyebrowEn: tpl.eyebrowEn,
-      indexNo: tpl.indexNo,
-      h1: tpl.h1,
-      intro: tpl.intro,
-      blocks: tpl.blocks,
-      ctas: tpl.ctas,
-    };
-  }
-
-  /** Attach MY/EN packs (i18n_packs.js) to KO-only templates for preview + registry. */
-  function attachLocalePacks(tpl) {
-    if (tpl.i18n) return tpl;
-    const packs = (window.TOPIK_I18N_PACKS || {})[tpl.key];
-    if (!packs) return tpl;
-    return {
-      ...tpl,
-      i18n: {
-        ko: koFieldsFromTpl(tpl),
-        my: packs.my,
-        en: packs.en,
-      },
-    };
-  }
-
-  const TRANSACTIONAL_I18N = TRANSACTIONAL.map(attachLocalePacks);
-  const TRANSACTIONAL_RENDER = TRANSACTIONAL_I18N.map(withKoDefaults);
+  const TRANSACTIONAL_RENDER = TRANSACTIONAL.map(withKoDefaults);
 
   const TEMPLATES = [LAYOUT_PREVIEW, ...TRANSACTIONAL_RENDER];
   const TEMPLATE_BY_KEY = Object.fromEntries(
-    TRANSACTIONAL_I18N.concat([LAYOUT_PREVIEW]).map((t) => [t.key, t])
+    TRANSACTIONAL.concat([LAYOUT_PREVIEW]).map((t) => [t.key, t])
   );
   const TEMPLATE_BY_TEMPLATE_KEY = Object.fromEntries(
-    TRANSACTIONAL_I18N.filter((t) => t.templateKey).map((t) => [t.templateKey, t])
+    TRANSACTIONAL.filter((t) => t.templateKey).map((t) => [t.templateKey, t])
   );
 
   /** 14 transactional types for email_outbox (snake_case keys). */
-  const TEMPLATE_REGISTRY = TRANSACTIONAL_I18N.filter((t) => t.templateKey).map((t) => ({
+  const TEMPLATE_REGISTRY = TRANSACTIONAL.filter((t) => t.templateKey).map((t) => ({
     templateKey: t.templateKey,
     previewKey: t.key,
     nav: t.nav,
@@ -871,7 +834,6 @@
     THEMES,
     TEMPLATES,
     TRANSACTIONAL,
-    TRANSACTIONAL_I18N,
     TRANSACTIONAL_RENDER,
     LAYOUT_PREVIEW,
     TEMPLATE_BY_KEY,
@@ -879,7 +841,6 @@
     TEMPLATE_REGISTRY,
     DEFAULT_THEME,
     FOOTER,
-    FOOTER_I18N,
     SAMPLE,
     FONT,
     MONO,

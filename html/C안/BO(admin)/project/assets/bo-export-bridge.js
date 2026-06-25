@@ -201,9 +201,139 @@
     finally { g.TOPIKBoCore.releaseRecordLock(id, userId); }
   }
 
+  /** API payment_status 와 동일 — 수납 명단 대상(unpaid) 판별 */
+  function applicantPaymentStatus(a) {
+    if (!a) return 'unpaid';
+    if (a.paymentStatus) return a.paymentStatus;
+    if (a.paid) return 'paid';
+    if (a.status === 'refund') return 'refunded';
+    return 'unpaid';
+  }
+
+  function isUnpaidRosterApplicant(a) {
+    if (!a || a.status === 'cancel' || a.status === 'cancelled') return false;
+    return applicantPaymentStatus(a) === 'unpaid';
+  }
+
+  function sameApplicantSession(a, sessionId) {
+    return String(a.sessionId) === String(sessionId);
+  }
+
+  function paymentRow(a, state) {
+    var venue = (state.venues || []).find(function (v) { return v.id === a.venueId; });
+    var exp = g.TOPIKExport || {};
+    return [
+      a.applicationNo || '',
+      a.id || '',
+      a.nameKo && a.nameKo !== '—' ? a.nameKo : '',
+      a.nameEn && a.nameEn !== '—' ? a.nameEn : '',
+      birth8(a.birth || a.dob),
+      venue ? venue.nameKo : '',
+      a.level || '',
+      exp.photoStatusLabel ? exp.photoStatusLabel(a.photoStatus) : (a.photoStatus || ''),
+      '미수납'
+    ];
+  }
+
+  function paymentExportFilename(roundNo) {
+    var roundPart = roundNo ? ('제' + roundNo + '회 ') : '';
+    return roundPart + 'TOPIK 수납대상자 명단(미얀마).xlsx';
+  }
+
+  function exportPaymentExcel(opts) {
+    opts = opts || {};
+    if (!g.TOPIKExport) return Promise.reject(new Error('TOPIKExport not loaded'));
+    var state = opts.state || {};
+    var session = state.sessions && state.sessions.find(function (s) { return s.id === state.activeSessionId; });
+    var sessionNo = session ? session.no : '';
+    var rows = (opts.rows || []).filter(isUnpaidRosterApplicant);
+    rows = sortByExam(rows);
+    if (!rows.length) return Promise.reject(new Error('미수납 대상자가 없습니다.'));
+    return g.TOPIKExport.downloadPaymentXlsx({
+      filename: paymentExportFilename(sessionNo),
+      rows: rows.map(function (a) { return paymentRow(a, state); })
+    });
+  }
+
+  function importPaymentExcelLocal(opts) {
+    opts = opts || {};
+    var state = opts.state || {};
+    var items = opts.items || [];
+    var applicants = state.applicants || [];
+    var byId = {};
+    var byNo = {};
+    applicants.forEach(function (a) {
+      if (a.id) byId[String(a.id)] = a;
+      var no = String(a.applicationNo || '').replace(/\s+/g, '').toLowerCase();
+      if (no) byNo[no] = a;
+    });
+
+    var updated = 0;
+    var skippedUnchanged = 0;
+    var skippedPhotoNotApproved = [];
+    var skippedNotFound = [];
+
+    items.forEach(function (item) {
+      var app = null;
+      var id = String(item.applicationId || '').trim();
+      if (id && byId[id]) app = byId[id];
+      if (!app) {
+        var no = String(item.applicationNo || '').replace(/\s+/g, '').toLowerCase();
+        if (no && byNo[no]) app = byNo[no];
+      }
+      if (!app) {
+        skippedNotFound.push(item);
+        return;
+      }
+      if (item.paymentStatus === 'paid') {
+        if (app.paid) { skippedUnchanged++; return; }
+        if (app.photoStatus !== 'approved') {
+          skippedPhotoNotApproved.push({
+            applicationNo: app.applicationNo,
+            nameKo: app.nameKo,
+            nameEn: app.nameEn,
+            photoStatus: app.photoStatus
+          });
+          return;
+        }
+        app.paid = true;
+        app.paymentStatus = 'paid';
+        app.paidAt = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        app.paymentMemo = (app.paymentMemo || '') + '[엑셀 일괄 업로드]';
+        if (app.status === 'pay' || app.status === 'photo') app.status = 'applied';
+        else if (app.status === 'applied' && !app.photoOk) app.status = 'photo';
+        if (g.DataStore) {
+          g.DataStore.addAudit({
+            type: '접수자', targetId: app.id, action: '수납',
+            before: { paid: false }, after: { paid: true, status: app.status },
+            memo: '수납 명단 엑셀 일괄 업로드'
+          });
+        }
+        updated++;
+      } else if (item.paymentStatus === 'unpaid') {
+        if (!app.paid) skippedUnchanged++;
+      }
+    });
+
+    if (updated && g.DataStore) g.DataStore.notify();
+    return Promise.resolve({
+      updated: updated,
+      skipped_unchanged: skippedUnchanged,
+      skipped_photo_not_approved: skippedPhotoNotApproved,
+      skipped_not_found: skippedNotFound
+    });
+  }
+
   g.TOPIKBoBridge = {
     exportRosterExcel: exportRosterExcel,
     exportPhotosZip: exportPhotosZip,
+    exportPaymentExcel: exportPaymentExcel,
+    importPaymentExcelLocal: importPaymentExcelLocal,
+    paymentExportFilename: paymentExportFilename,
+    paymentRow: paymentRow,
+    applicantPaymentStatus: applicantPaymentStatus,
+    isUnpaidRosterApplicant: isUnpaidRosterApplicant,
+    sameApplicantSession: sameApplicantSession,
     sendMail: sendMail,
     enforcePerm: enforcePerm,
     withApplicantLock: withApplicantLock,

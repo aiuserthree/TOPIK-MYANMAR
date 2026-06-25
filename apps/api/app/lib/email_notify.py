@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
-from app.lib.formatting import board_status_label, fmt_date
+from app.lib.formatting import board_status_label, fmt_date, resolve_application_no
 from app.lib.mail import cancel_pending_outbox, enqueue_email
 from app.models.admin import AdminUser
 from app.models.application import Application
@@ -155,7 +155,7 @@ async def notify_application_rejected(
         user_id=user.id,
         variables={
             "userName": user.name_ko,
-            "applicantNo": app.application_no or str(app.id),
+            "applicantNo": resolve_application_no(app.application_no, app.submission_id, app.exam_level) or str(app.id),
             "roundName": rnd.title,
             "rejectReason": reject_reason or "사유 미기재",
             "rejectCode": reject_code,
