@@ -185,9 +185,9 @@ function ApplicantsPanel() {
   const [levelF, setLevelF] = useState('all');
   const [qInput, setQInput] = useState('');
   const [appliedQ, setAppliedQ] = useState('');
-  const [sort, setSort] = useState({ k: 'no', dir: 'asc' });
+  const [sort, setSort] = useState({ k: 'id', dir: 'desc' }); // 최신 접수 우선
   const [page, setPage] = useState(1);
-  const PER_PAGE = 12;
+  const PER_PAGE = 10;
 
   const runSearch = () => {
     setAppliedQ(normalizeApplicantSearchQuery(qInput));
@@ -234,10 +234,17 @@ function ApplicantsPanel() {
     if (venueF !== 'all')  r = r.filter(a => a.venueId === venueF);
     if (levelF !== 'all')  r = r.filter(a => a.level === levelF);
     if (appliedQ) r = r.filter(a => applicantMatchesSearch(a, appliedQ));
-    // sort
+    // sort — id/appliedAt 은 최신순 기본, 번호(no) 클릭은 id 기준
     r = r.slice().sort((a, b) => {
-      const va = a[sort.k], vb = b[sort.k];
-      const cmp = String(va).localeCompare(String(vb), 'ko');
+      const key = sort.k === 'no' ? 'id' : sort.k;
+      let cmp = 0;
+      if (key === 'id') {
+        cmp = Number(a.id) - Number(b.id);
+      } else if (key === 'appliedAt') {
+        cmp = String(a.appliedAt || '').localeCompare(String(b.appliedAt || ''));
+      } else {
+        cmp = String(a[key] ?? '').localeCompare(String(b[key] ?? ''), 'ko');
+      }
       return sort.dir === 'asc' ? cmp : -cmp;
     });
     return r;
@@ -246,6 +253,7 @@ function ApplicantsPanel() {
   useEffect(() => { setPage(1); setSelected(new Set()); }, [statusF, venueF, levelF, appliedQ, sessionId]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const rowNo = (index) => filtered.length - (page - 1) * PER_PAGE - index;
 
   // status counts (for chip badges)
   const counts = useMemo(() => {
@@ -554,8 +562,13 @@ function ApplicantsPanel() {
   // bulk action helpers
   const bulkIds = Array.from(selected);
 
-  // sort helper
-  const sortBy = (k) => setSort(s => s.k === k ? { k, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { k, dir: 'asc' });
+  // sort helper — 번호 열 클릭 시 접수 ID(최신순) 정렬
+  const sortBy = (k) => {
+    const key = k === 'no' ? 'id' : k;
+    setSort(s => s.k === key
+      ? { k: key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+      : { k: key, dir: (key === 'id' || key === 'appliedAt') ? 'desc' : 'asc' });
+  };
 
   return (
     <>
@@ -656,10 +669,10 @@ function ApplicantsPanel() {
               </tr>
             </thead>
             <tbody>
-              {pageRows.map(a => (
+              {pageRows.map((a, i) => (
                 <tr key={a.id} className={selected.has(a.id) ? 'sel' : ''}>
                   <td className="cb"><input type="checkbox" checked={selected.has(a.id)} onChange={() => toggleOne(a.id)}/></td>
-                  <td className="num">{a.no}</td>
+                  <td className="num">{rowNo(i)}</td>
                   <td>
                     <PhotoThumb status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl}/>
                   </td>
@@ -948,6 +961,13 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
   const state = useStore();
   const appId = String(id);
   const a = state.applicants.find(x => x.id === appId);
+  const displayNo = useMemo(() => {
+    if (!a) return '—';
+    const sessionApps = state.applicants.filter(x => x.sessionId === a.sessionId);
+    const sorted = sessionApps.slice().sort((x, y) => Number(y.id) - Number(x.id));
+    const idx = sorted.findIndex(x => x.id === a.id);
+    return idx >= 0 ? sessionApps.length - idx : '—';
+  }, [state.applicants, a]);
   const isReadonly = DataStore.isReadonly();
   const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
   const [tab, setTab] = useState('profile');
@@ -1066,7 +1086,7 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
           </div>
           <div>
             <FieldSet legend="응시자 정보" cols={2}>
-              <KV k="번호" v={a.no}/>
+              <KV k="번호" v={displayNo}/>
               <KV k="접수번호" v={a.applicationNo ? <code className="code-id" style={{ color: 'var(--primary)', fontWeight: 700 }}>{a.applicationNo}</code> : '—'}/>
               <KV k="접수 ID" v={<code className="code-id">{a.id}</code>}/>
               <KV k="한글 성명" v={a.nameKo}/>
