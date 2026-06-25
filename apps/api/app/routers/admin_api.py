@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -490,7 +490,7 @@ def _app_row_dict(
         "photo_file_id": app.photo_file_id,
         "exam_number": app.exam_number,
         "exam_number_visible": app.exam_number_visible,
-        "application_no": app.application_no,
+        "application_no": app.application_no or f"APP-{app.submission_id}-{app.exam_level}",
         # --- 연명부 10개 컬럼 채울 필드(계약서 3절) ---
         "name_ko": user.name_ko if user else None,
         "name_en": user.name_en if user else None,
@@ -547,12 +547,13 @@ async def admin_list_applications(
     exam_venue_id: int | None = Query(None),
     exam_level: str | None = Query(None),
     status: str | None = Query(None),
+    q: str | None = Query(None, description="이름·이메일·생년월일·접수번호·수험번호 검색"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     _: AuthUser = Depends(require_any_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    stmt = select(Application).order_by(Application.id.desc())
+    stmt = select(Application)
     if exam_round_id:
         stmt = stmt.where(Application.exam_round_id == exam_round_id)
     if exam_venue_id:
@@ -561,7 +562,23 @@ async def admin_list_applications(
         stmt = stmt.where(Application.exam_level == exam_level)
     if status:
         stmt = stmt.where(Application.status == status)
-    stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        app_no_expr = func.coalesce(
+            Application.application_no,
+            func.concat("APP-", Application.submission_id, "-", Application.exam_level),
+        )
+        stmt = stmt.join(User, User.id == Application.user_id).where(
+            or_(
+                app_no_expr.ilike(term),
+                Application.exam_number.ilike(term),
+                User.name_ko.ilike(term),
+                User.name_en.ilike(term),
+                User.email.ilike(term),
+                User.birth_date.ilike(term),
+            )
+        )
+    stmt = stmt.order_by(Application.id.desc()).offset((page - 1) * page_size).limit(page_size)
     apps = (await db.execute(stmt)).scalars().all()
     users, venues, rounds = await _load_app_refs(db, apps)
     return {

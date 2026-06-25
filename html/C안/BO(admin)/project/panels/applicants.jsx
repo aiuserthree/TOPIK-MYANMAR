@@ -11,6 +11,7 @@
      TPKM_BO_2_1_8  엑셀(연명부 양식) 내보내기
      TPKM_BO_2_1_9  사진 zip 다운로드(폴더 구조)
      TPKM_BO_2_1_10 인쇄
+     TPKM_BO_2_1_11 학생 접수 확인증 열람(FO 접수 확인증 동일)
    ============================================================ */
 
 const STATUS_CHIPS = [
@@ -42,24 +43,130 @@ function applicantReadyForApprove(a) {
   return !!a && a.photoStatus === 'approved' && !!a.paid;
 }
 
+function normalizeApplicantSearchQuery(raw) {
+  var s = (raw || '').trim();
+  s = s.replace(/^접수번호\s*/i, '');
+  return s.trim();
+}
+
+/** APP-20-I / APP-20-II 처럼 급수까지 있는 접수번호는 정확 일치만 허용 */
+function applicationNoMatchesSearch(appNo, query) {
+  if (!appNo || !query) return false;
+  var a = String(appNo).toLowerCase();
+  var q = String(query).trim().toLowerCase();
+  if (/^app-\d+-[a-z]+$/i.test(q)) return a === q;
+  if (/^app-\d+-?$/i.test(q)) return a.indexOf(q) === 0;
+  return a.includes(q);
+}
+
+function applicantMatchesSearch(a, query) {
+  if (!query) return true;
+  var qq = query.toLowerCase();
+  return (
+    (a.nameKo && a.nameKo.includes(query)) ||
+    (a.nameEn && a.nameEn.toLowerCase().includes(qq)) ||
+    (a.email && a.email.toLowerCase().includes(qq)) ||
+    (a.dob && a.dob.includes(query)) ||
+    (a.exam && String(a.exam).toLowerCase().includes(qq)) ||
+    applicationNoMatchesSearch(a.applicationNo, query) ||
+    (a.id && String(a.id) === query)
+  );
+}
+
+function formatApplicantDob(dob) {
+  if (!dob) return '—';
+  var s = String(dob);
+  if (s.length === 8 && /^\d+$/.test(s)) {
+    return s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8);
+  }
+  return s;
+}
+
+function applicantRoundTitle(a, session) {
+  if (a && a.roundTitle) return a.roundTitle;
+  if (session && session.name) return session.name;
+  if (session && session.no) return '제' + session.no + '회 TOPIK';
+  if (a && a.roundNo) return '제' + a.roundNo + '회 TOPIK';
+  return 'TOPIK';
+}
+
+function applicantLevelText(a) {
+  if (!a) return '—';
+  if (a.level === 'Ⅰ') return 'TOPIK Ⅰ';
+  if (a.level === 'Ⅱ') return 'TOPIK Ⅱ';
+  if (a.level === '동시') return 'TOPIK Ⅰ + Ⅱ';
+  return 'TOPIK ' + a.level;
+}
+
+function applicantFeeAmount(a, session) {
+  if (!session || !a) return 25;
+  if (a.level === 'Ⅰ') return session.feeI;
+  if (a.level === 'Ⅱ') return session.feeII;
+  if (a.level === '동시') return session.feeI + session.feeII;
+  return session.feeI;
+}
+
+/** FO 마이페이지 접수 확인증과 동일한 수험번호 표시 */
+function applicantConfirmExamNumber(a, session) {
+  if (!a) return { text: '—', adminNote: null };
+  if (a.examNumberVisible && a.exam) {
+    return { text: a.exam, adminNote: null };
+  }
+  if (a.exam) {
+    var awaiting = '공개 예정';
+    var visAt = session && session.examNumberVisibleAt;
+    if (visAt) awaiting += ' (' + String(visAt).slice(0, 10).replace(/-/g, '.') + ')';
+    return { text: awaiting, adminNote: '관리자 참고: 수험번호 ' + a.exam };
+  }
+  return { text: '부여 전', adminNote: null };
+}
+
+function applicantConfirmAvailable(a) {
+  return !!(a && a.applicationNo && a.status !== 'cancel');
+}
+
 function ApplicantsPanel() {
   const state = useStore();
   const sessionId = state.activeSessionId;
   const apps = useMemo(() => state.applicants.filter(a => a.sessionId === sessionId), [state.applicants, sessionId]);
 
-  useEffect(() => {
-    if (!sessionId || !DataStore.isApiMode || !DataStore.isApiMode() || !DataStore.reloadApplicants) return;
-    DataStore.reloadApplicants(sessionId);
-  }, [sessionId]);
+  const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
 
   // ---- Filter / search ----
   const [statusF, setStatusF] = useState('all');
   const [venueF, setVenueF] = useState('all');
   const [levelF, setLevelF] = useState('all');
-  const [q, setQ] = useState('');
+  const [qInput, setQInput] = useState('');
+  const [appliedQ, setAppliedQ] = useState('');
   const [sort, setSort] = useState({ k: 'no', dir: 'asc' });
   const [page, setPage] = useState(1);
   const PER_PAGE = 12;
+
+  const runSearch = () => {
+    setAppliedQ(normalizeApplicantSearchQuery(qInput));
+  };
+
+  const resetFilters = () => {
+    setStatusF('all');
+    setVenueF('all');
+    setLevelF('all');
+    setQInput('');
+    setAppliedQ('');
+  };
+
+  const prevSessionRef = useRef(sessionId);
+
+  useEffect(() => {
+    if (!sessionId || !isApi || !DataStore.reloadApplicants) return;
+    DataStore.reloadApplicants(sessionId);
+  }, [sessionId, isApi]);
+
+  useEffect(() => {
+    if (prevSessionRef.current === sessionId) return;
+    prevSessionRef.current = sessionId;
+    setQInput('');
+    setAppliedQ('');
+  }, [sessionId]);
 
   // URL sync (북마크 가능)
   useEffect(() => {
@@ -67,7 +174,11 @@ function ApplicantsPanel() {
     if (params.has('s')) setStatusF(params.get('s'));
     if (params.has('v')) setVenueF(params.get('v'));
     if (params.has('l')) setLevelF(params.get('l'));
-    if (params.has('q')) setQ(params.get('q'));
+    if (params.has('q')) {
+      const fromUrl = normalizeApplicantSearchQuery(params.get('q') || '');
+      setQInput(fromUrl);
+      setAppliedQ(fromUrl);
+    }
   }, []);
 
   const filtered = useMemo(() => {
@@ -75,10 +186,7 @@ function ApplicantsPanel() {
     if (statusF !== 'all') r = r.filter(a => a.status === statusF);
     if (venueF !== 'all')  r = r.filter(a => a.venueId === venueF);
     if (levelF !== 'all')  r = r.filter(a => a.level === levelF);
-    if (q) {
-      const qq = q.trim().toLowerCase();
-      r = r.filter(a => a.nameKo.includes(qq) || a.nameEn.toLowerCase().includes(qq) || (a.email && a.email.toLowerCase().includes(qq)) || a.dob.includes(qq) || (a.exam && a.exam.includes(qq)));
-    }
+    if (appliedQ) r = r.filter(a => applicantMatchesSearch(a, appliedQ));
     // sort
     r = r.slice().sort((a, b) => {
       const va = a[sort.k], vb = b[sort.k];
@@ -86,9 +194,9 @@ function ApplicantsPanel() {
       return sort.dir === 'asc' ? cmp : -cmp;
     });
     return r;
-  }, [apps, statusF, venueF, levelF, q, sort]);
+  }, [apps, statusF, venueF, levelF, appliedQ, sort]);
 
-  useEffect(() => { setPage(1); setSelected(new Set()); }, [statusF, venueF, levelF, q, sessionId]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [statusF, venueF, levelF, appliedQ, sessionId]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -124,6 +232,7 @@ function ApplicantsPanel() {
   const [excelModal, setExcelModal] = useState(false);
   const [zipModal, setZipModal] = useState(false);
   const [photoLP, setPhotoLP] = useState(null);   // 사진 심사 인라인 패널 id (TPKM_BO_2_1_3)
+  const [confirmId, setConfirmId] = useState(null); // 접수 확인증 (TPKM_BO_2_1_11)
 
   // expose detail open to other panels (Dashboard 'Recent')
   useEffect(() => { window.openApplicantDetail = (id) => setDetailId(id); }, []);
@@ -421,7 +530,7 @@ function ApplicantsPanel() {
       </div>
 
       {/* Filter bar — TPKM_BO_2_1_1 */}
-      <div className="filterbar no-print">
+      <div className="filterbar filterbar-applicants no-print">
         <div className="chips">
           {STATUS_CHIPS.map(c => (
             <button key={c.id}
@@ -442,10 +551,13 @@ function ApplicantsPanel() {
             <option value="Ⅱ">TOPIK Ⅱ</option>
             <option value="동시">동시(Ⅰ+Ⅱ)</option>
           </select>
-          <input className="input search" type="text" placeholder="한글·영문 성명/이메일/생년월일/수험번호"
-            value={q} onChange={e => setQ(e.target.value)}/>
-          {(statusF !== 'all' || venueF !== 'all' || levelF !== 'all' || q) && (
-            <button className="ibtn ghost" onClick={() => { setStatusF('all'); setVenueF('all'); setLevelF('all'); setQ(''); }}>
+          <input className="input search" type="search" placeholder="한글·영문 성명/이메일/생년월일/접수번호/수험번호"
+            value={qInput}
+            onChange={e => setQInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } }}/>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={runSearch}>검색</button>
+          {(statusF !== 'all' || venueF !== 'all' || levelF !== 'all' || appliedQ || qInput) && (
+            <button className="ibtn ghost" onClick={resetFilters}>
               조건 초기화
             </button>
           )}
@@ -481,6 +593,7 @@ function ApplicantsPanel() {
                 <th className="sortable" onClick={() => sortBy('email')}>이메일</th>
                 <th>급수</th>
                 <th className="sortable" onClick={() => sortBy('appliedAt')}>접수일</th>
+                <th className="sortable" onClick={() => sortBy('applicationNo')}>접수번호</th>
                 <th>사진심사</th>
                 <th>수납</th>
                 <th>수험번호</th>
@@ -501,19 +614,23 @@ function ApplicantsPanel() {
                   <td className="muted">{a.email || '—'}</td>
                   <td><span className="code-id">{a.level}</span></td>
                   <td className="code muted">{a.appliedAt}</td>
+                  <td className="code"><b style={{ color: a.applicationNo ? 'var(--primary)' : 'var(--text-4)' }}>{a.applicationNo || '—'}</b></td>
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
                   <td>{a.paid ? <Pill kind="approved">수납완료</Pill> : <Pill kind="pay">미수납</Pill>}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
                   <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
                   <td className="no-print">
                     <div className="row-actions">
+                      <button className="ibtn" title="접수 확인증" onClick={() => setConfirmId(a.id)} disabled={!applicantConfirmAvailable(a)}>
+                        <I.FileText style={{ width: 14, height: 14 }}/> 접수증
+                      </button>
                       <button className="ibtn" title="상세 보기" onClick={() => setDetailId(a.id)}><I.Eye style={{ width: 14, height: 14 }}/> 상세보기</button>
                     </div>
                   </td>
                 </tr>
               ))}
               {!pageRows.length && (
-                <tr><td colSpan="13">
+                <tr><td colSpan="14">
                   <div className="empty">
                     <div className="icon"><I.Search/></div>
                     <div className="ttl">조건에 맞는 접수자가 없습니다</div>
@@ -535,6 +652,7 @@ function ApplicantsPanel() {
 
       {/* Detail LP (TPKM_BO_2_1_6) */}
       {detailId && <ApplicantDetailLP id={detailId} onClose={() => setDetailId(null)}
+        onViewConfirm={() => setConfirmId(detailId)}
         onApprove={() => { setApproveModal({ ids: [detailId] }); }}
         onReject={() => { setRejectModal({ ids: [detailId] }); }}
         onPay={() => { const a = state.applicants.find(x => x.id === detailId); setPayModal({ ids: [detailId], mode: a?.paid ? 'cancel' : 'pay' }); }}
@@ -552,6 +670,7 @@ function ApplicantsPanel() {
       {zipModal && <ZipExportModal onClose={() => setZipModal(false)} rows={filtered}
         venueId={venueF !== 'all' ? venueF : null}
         level={levelF === 'Ⅰ' ? 'I' : levelF === 'Ⅱ' ? 'II' : null}/>}
+      {confirmId && <ApplicationConfirmModal id={confirmId} onClose={() => setConfirmId(null)}/>}
 
       <style>{`
         @media print {
@@ -560,6 +679,21 @@ function ApplicantsPanel() {
           .app { display: block !important; }
           .mn { padding: 0 !important; }
           .dg-wrap { border: 0 !important; box-shadow: none !important; }
+          body.printing-app-confirm > *:not(.modal-backdrop.open) { display: none !important; }
+          body.printing-app-confirm .modal-backdrop.open {
+            position: static !important;
+            display: block !important;
+            background: transparent !important;
+            padding: 0 !important;
+          }
+          body.printing-app-confirm .modal-backdrop.open .modal {
+            box-shadow: none !important;
+            border: 0 !important;
+            max-width: 100% !important;
+          }
+          body.printing-app-confirm .modal-head .lp-close,
+          body.printing-app-confirm .modal-foot,
+          body.printing-app-confirm .app-confirm-hint { display: none !important; }
         }
       `}</style>
     </>
@@ -671,9 +805,13 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
   const hue = (a.id.charCodeAt(a.id.length - 1) * 17) % 360;
   const finalReason = reason === '기타' ? other : (other ? `${reason} — ${other}` : reason);
   const downloadOriginal = () => {
-    if (!a.photoFileId || !window.TopikBoApi || !TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg')) {
+    if (!a.photoFileId || !window.TopikBoApi) {
       toastErr('원본 사진을 받을 수 없습니다. (사진 미제출 또는 API 미연결)');
+      return;
     }
+    TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg').then(function (ok) {
+      if (!ok) toastErr('원본 사진을 받을 수 없습니다.');
+    });
   };
   const approve = () => { onApprove(id); onClose(); };
   const reject = () => {
@@ -751,7 +889,7 @@ function filterApplicantAudit(audit, appId) {
 }
 
 // ===== Detail LP =====
-function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject }) {
+function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject }) {
   const state = useStore();
   const appId = String(id);
   const a = state.applicants.find(x => x.id === appId);
@@ -788,9 +926,13 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
   if (!a) return null;
   const locked = isFoCancelled(a);
   const downloadOriginal = () => {
-    if (!a.photoFileId || !window.TopikBoApi || !TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg')) {
+    if (!a.photoFileId || !window.TopikBoApi) {
       toastErr('원본 사진을 받을 수 없습니다. (사진 미제출 또는 API 미연결)');
+      return;
     }
+    TopikBoApi.downloadFile(a.photoFileId, (a.exam || a.nameEn || a.id) + '.jpg').then(function (ok) {
+      if (!ok) toastErr('원본 사진을 받을 수 없습니다.');
+    });
   };
   const venue = state.venues.find(v => v.id === a.venueId);
   const photoRejectReason = photoReason === '기타' ? photoOther : (photoOther ? `${photoReason} — ${photoOther}` : photoReason);
@@ -816,8 +958,11 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
   return (
     <LP open={true} size="wide" onClose={onClose}
       title={`접수자 상세 — ${a.nameKo} (${a.nameEn})`}
-      sub={<span>회차 컨텍스트 · 접수ID <code className="code-id">{a.id}</code> · 상태 <Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></span>}
+      sub={<span>회차 컨텍스트 · 접수번호 <code className="code-id">{a.applicationNo || '—'}</code> · 접수ID <code className="code-id">{a.id}</code> · 상태 <Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></span>}
       footer={<>
+        <button className="btn btn-secondary" onClick={onViewConfirm} disabled={!applicantConfirmAvailable(a)} title={!applicantConfirmAvailable(a) ? '접수번호가 없거나 취소된 접수입니다' : '학생 마이페이지 접수 확인증과 동일'}>
+          <I.FileText style={{ width: 14, height: 14 }}/> 접수 확인증
+        </button>
         <button className="btn btn-secondary" onClick={onClose}>닫기</button>
         {!isReadonly && <>
           <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
@@ -866,7 +1011,8 @@ function ApplicantDetailLP({ id, onClose, onApprove, onReject, onPay, onPhotoApp
           </div>
           <div>
             <FieldSet legend="응시자 정보" cols={2}>
-              <KV k="접수 번호" v={a.no}/>
+              <KV k="번호" v={a.no}/>
+              <KV k="접수번호" v={a.applicationNo ? <code className="code-id" style={{ color: 'var(--primary)', fontWeight: 700 }}>{a.applicationNo}</code> : '—'}/>
               <KV k="접수 ID" v={<code className="code-id">{a.id}</code>}/>
               <KV k="한글 성명" v={a.nameKo}/>
               <KV k="영문 성명" v={a.nameEn}/>
@@ -944,6 +1090,63 @@ function KV({ k, v }) {
       <div className="label" style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 2 }}>{k}</div>
       <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{v}</div>
     </div>
+  );
+}
+
+// ===== 접수 확인증 (FO mypage 접수 확인증과 동일 — 환불 대조용) =====
+function ApplicationConfirmModal({ id, onClose }) {
+  const state = useStore();
+  const a = state.applicants.find(x => x.id === id);
+  const session = state.sessions.find(s => s.id === a?.sessionId);
+  const exam = applicantConfirmExamNumber(a, session);
+  const fee = applicantFeeAmount(a, session);
+
+  useEffect(() => {
+    var fn = function () { document.body.classList.remove('printing-app-confirm'); };
+    window.addEventListener('afterprint', fn);
+    return function () { window.removeEventListener('afterprint', fn); };
+  }, []);
+
+  if (!a) return null;
+
+  var handlePrint = function () {
+    document.body.classList.add('printing-app-confirm');
+    window.print();
+  };
+
+  return (
+    <Modal open onClose={onClose} title="접수 확인증"
+      footer={<>
+        <button type="button" className="btn btn-secondary" onClick={handlePrint}>
+          <I.Printer style={{ width: 14, height: 14 }}/> 인쇄
+        </button>
+        <button type="button" className="btn btn-primary" onClick={onClose}>닫기</button>
+      </>}>
+      <p className="app-confirm-hint" style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+        학생 마이페이지의 <b>접수 확인증</b>과 동일한 정보입니다. 환불·정정 처리 시 학생이 출력한 접수증과 대조해 주세요.
+      </p>
+      <div id="app-confirm-print">
+        <table className="dg" style={{ margin: 0, fontSize: 13.5 }}>
+          <tbody>
+            <tr><th style={{ width: 110, background: 'var(--bg-2)', color: 'var(--text-2)' }}>회차</th><td>{applicantRoundTitle(a, session)}</td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>접수번호</th><td><code className="code-id">{a.applicationNo}</code></td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>수험번호</th><td><code className="code-id" style={{ color: a.examNumberVisible && a.exam ? 'var(--st-number)' : undefined }}>{exam.text}</code></td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>응시 급수</th><td>{applicantLevelText(a)}</td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>응시료</th><td style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, color: 'var(--primary)' }}>{DataStore.fmtCurrency(fee)}</td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>접수일</th><td>{a.appliedAt || '—'}</td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>응시자</th><td>{a.nameKo} / {a.nameEn}</td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>생년월일</th><td><code className="code-id">{formatApplicantDob(a.dob)}</code></td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>수납 상태</th><td>{a.paid ? <Pill kind="approved">완료</Pill> : <Pill kind="pay">대기</Pill>}</td></tr>
+            {a.receipt ? <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>영수증 번호</th><td><code className="code-id">{a.receipt}</code></td></tr> : null}
+          </tbody>
+        </table>
+        {exam.adminNote && (
+          <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, fontSize: 12, color: 'var(--text-3)' }}>
+            {exam.adminNote} (학생 화면에는 공개 전까지 표시되지 않습니다)
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -1091,6 +1294,7 @@ function ApproveModal({ modal, onClose, onConfirm }) {
 }
 
 // ===== Reject modal (TPKM_BO_2_1_5) =====
+const GENERAL_REJECT_REASONS = ['정보 불일치', '중복 접수', '기타'];
 function RejectModal({ modal, onClose, onConfirm }) {
   const state = useStore();
   const [reason, setReason] = useState(GENERAL_REJECT_REASONS[0]);

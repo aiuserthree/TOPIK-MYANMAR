@@ -378,7 +378,7 @@ def _level_payload(app: Application, round_visible_at) -> dict:
         "id": app.id,
         "exam_level": app.exam_level,
         "level_text": _LEVEL_TEXT.get(app.exam_level, app.exam_level),
-        "application_no": app.application_no,
+        "application_no": app.application_no or f"APP-{app.submission_id}-{app.exam_level}",
         "status": app.status,
         "display_status": app.status,
         "photo_review_status": app.photo_review_status,

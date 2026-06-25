@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -55,18 +56,23 @@ async def _authorize_file(
     raise fo_api_error("FORBIDDEN", "file_forbidden", lang, 403)
 
 
+def _content_disposition(filename: str, disposition: str = "inline") -> str:
+    ascii_name = "".join(c if ord(c) < 128 else "_" for c in filename) or "file"
+    return f'{disposition}; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(filename)}'
+
+
 def _file_response(row, lang: str | None = None) -> FileResponse | StreamingResponse:
+    filename = row.original_filename or "file"
+    headers = {"Content-Disposition": _content_disposition(filename, "inline")}
+
     path = resolve_local_path(row.storage_key)
     if path:
-        return FileResponse(path, media_type=row.mime_type, filename=row.original_filename or "file")
+        return FileResponse(path, media_type=row.mime_type, headers=headers)
 
     data = read_file_bytes(row.storage_key)
     if not data:
         raise fo_api_error("FILE_UNAVAILABLE", "file_unavailable", lang, 404)
 
-    headers = {}
-    if row.original_filename:
-        headers["Content-Disposition"] = f'inline; filename="{row.original_filename}"'
     return StreamingResponse(io.BytesIO(data), media_type=row.mime_type, headers=headers)
 
 

@@ -383,6 +383,18 @@
         return;
       }
 
+      if (typeof opts.extraValidate === 'function') {
+        var extraErr = opts.extraValidate();
+        if (extraErr) {
+          alert(extraErr);
+          return;
+        }
+      }
+
+      if (typeof opts.buildBody === 'function') {
+        body = opts.buildBody(body) || body;
+      }
+
       // 비밀글 비밀번호 — 작성·수정 모두 필수 (수정 시에도 재입력)
       var secretPassword = '';
       var editingId = typeof opts.getEditingId === 'function' ? opts.getEditingId() : null;

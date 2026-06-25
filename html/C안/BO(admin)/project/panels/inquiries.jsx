@@ -169,6 +169,7 @@ function InquiryDetailLP({ id, onClose, canAnswer = true }) {
       <FieldSet legend="문의 내용" cols={1}>
         <KV k="카테고리" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{q.cat}</span>}/>
         <KV k="본문" v={<pre style={{ background: 'var(--bg-2)', padding: 10, borderRadius: 6, fontSize: 13, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: 'var(--text)' }}>{q.body}</pre>}/>
+        <KV k="첨부" v={<BoardAttachments attachments={q.attachments}/>}/>
       </FieldSet>
 
       <FieldSet legend={`답변 이력 (${replies.length})`} cols={1}>

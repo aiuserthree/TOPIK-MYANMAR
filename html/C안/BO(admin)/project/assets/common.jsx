@@ -241,7 +241,109 @@ function BulkBar({ count, children, onClear }) {
   );
 }
 
+function boardAttachmentName(a) {
+  if (typeof a === 'string') return a;
+  return (a && (a.filename || a.name)) || 'file';
+}
+
+function boardAttachmentFileId(a) {
+  if (!a || typeof a === 'string') return null;
+  return a.file_id != null ? a.file_id : (a.fileId != null ? a.fileId : null);
+}
+
+function boardAttachmentSizeLabel(a) {
+  if (!a || typeof a === 'string' || a.size == null) return '';
+  var bytes = Number(a.size) || 0;
+  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
+  return bytes + ' B';
+}
+
+function isBoardImageName(name) {
+  return /\.(jpe?g|png|gif|webp|bmp)$/i.test(name || '');
+}
+
+function isBoardPdfName(name) {
+  return /\.pdf$/i.test(name || '');
+}
+
+function isBoardBrowserViewName(name) {
+  return isBoardImageName(name) || isBoardPdfName(name);
+}
+
+/** 게시판(문의·환불) 첨부파일 — 관리자 열람/다운로드 */
+function BoardAttachments({ attachments }) {
+  const items = attachments || [];
+  if (!items.length) return <span className="muted">첨부 없음</span>;
+
+  const openAttachment = (fileId, filename) => {
+    if (!fileId) {
+      toastErr('데모 데이터입니다. API 연결 후 첨부파일을 열람할 수 있습니다.');
+      return;
+    }
+    if (!window.TopikBoApi) {
+      toastErr('API에 연결되지 않았습니다.');
+      return;
+    }
+    const name = filename || 'file';
+    if (isBoardBrowserViewName(name)) {
+      window.open(TopikBoApi.fileUrl(fileId), '_blank', 'noopener');
+      return;
+    }
+    TopikBoApi.downloadFile(fileId, name).then(function (ok) {
+      if (!ok) toastErr('첨부파일을 열 수 없습니다.');
+    });
+  };
+
+  const downloadAttachment = (fileId, filename) => {
+    if (!fileId) {
+      toastErr('데모 데이터입니다. API 연결 후 첨부파일을 받을 수 있습니다.');
+      return;
+    }
+    if (!window.TopikBoApi) {
+      toastErr('API에 연결되지 않았습니다.');
+      return;
+    }
+    TopikBoApi.downloadFile(fileId, filename || 'file').then(function (ok) {
+      if (!ok) toastErr('첨부파일 다운로드에 실패했습니다.');
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {items.map((a, idx) => {
+        const name = boardAttachmentName(a);
+        const fileId = boardAttachmentFileId(a);
+        const sizeLabel = boardAttachmentSizeLabel(a);
+        const key = fileId != null ? String(fileId) : ('demo-' + idx + '-' + name);
+        const previewUrl = fileId != null && window.TopikBoApi && isBoardImageName(name)
+          ? TopikBoApi.fileUrl(fileId)
+          : null;
+        const browserView = isBoardBrowserViewName(name);
+        return (
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
+            {previewUrl
+              ? <img src={previewUrl} alt="" role="presentation" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer', flexShrink: 0 }} onClick={() => openAttachment(fileId, name)} />
+              : browserView && fileId
+                ? <button type="button" className="ibtn" style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', flexShrink: 0, fontSize: 22, padding: 0 }} onClick={() => openAttachment(fileId, name)} title="브라우저에서 열기">📄</button>
+                : <span style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', flexShrink: 0, fontSize: 22 }}>📎</span>}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <button type="button" className="ibtn" style={{ padding: 0, border: 'none', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 13, textAlign: 'left', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} onClick={() => openAttachment(fileId, name)} title={name}>
+                {name}
+              </button>
+              {sizeLabel && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{sizeLabel}</div>}
+            </div>
+            <button type="button" className="ibtn" onClick={() => downloadAttachment(fileId, name)} title="다운로드" disabled={!fileId}>
+              <I.Download style={{ width: 14, height: 14 }}/>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Export to window
 Object.assign(window, { useStore, useState, useEffect, useMemo, useCallback, useRef, Fragment, h,
   LP, Modal, ConfirmModal, ToastHost, toast, toastOk, toastErr,
-  FormRow, FieldSet, Pager, Pill, BulkBar, I });
+  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, I });

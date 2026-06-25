@@ -368,6 +368,13 @@ body.admin {
 }
 .filterbar .controls .select { padding-right: 32px; background-position: right 10px center; }
 .filterbar .controls .input.search { flex: 1 1 180px; min-width: 180px; max-width: 280px; padding-left: 32px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B7588' stroke-width='2'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>") no-repeat 10px center #fff; }
+.filterbar-applicants .controls { width: 100%; }
+.filterbar-applicants .controls .input.search {
+  flex: 1 1 420px;
+  min-width: 280px;
+  max-width: none;
+  width: auto;
+}
 
 /* ============================================================
    DATA GRID / TABLE

@@ -197,7 +197,7 @@ function RefundDetailLP({ id, onClose, canAnswer = true }) {
       <FieldSet legend="신청 내용" cols={1}>
         <KV k="유형" v={<span className={`pill ${r.type === '환불' ? 'pill-pay' : 'pill-applied'}`}>{r.type}</span>}/>
         <KV k="본문" v={<pre style={{ background: 'var(--bg-2)', padding: 10, borderRadius: 6, fontSize: 13, whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: 'var(--text)' }}>{r.body}</pre>}/>
-        <KV k="첨부" v={r.attachments.map(a => <span key={a} className="tag" style={{ marginRight: 6 }}>📎 {a}</span>)}/>
+        <KV k="첨부" v={<BoardAttachments attachments={r.attachments || []}/>}/>
       </FieldSet>
 
       <FieldSet legend="처리" cols={2}>

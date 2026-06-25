@@ -163,6 +163,12 @@
       paidAt: fmtMmt(row.paid_at),
       receipt: row.payment_receipt_no || "",
       exam: row.exam_number || "",
+      examNumberVisible: !!row.exam_number_visible,
+      roundNo: row.round_no != null ? row.round_no : null,
+      roundTitle: row.round_title || "",
+      applicationNo: row.application_no || (row.submission_id != null
+        ? ("APP-" + row.submission_id + "-" + row.exam_level)
+        : ""),
       status: mapApplicantStatus(row),
       appliedAt: fmtMmt(row.created_at),
       rejectReason: row.reject_reason || "",
@@ -386,6 +392,43 @@
     return resolveAdminLabel(me.id) || "admin";
   }
 
+  function mapBoardAttachments(list) {
+    return (list || []).map(function (a) {
+      if (typeof a === "string") return a;
+      return {
+        file_id: a.file_id != null ? a.file_id : a.fileId,
+        filename: a.filename || a.name || "file",
+        size: a.size != null ? a.size : a.size_bytes,
+        url: a.url,
+      };
+    });
+  }
+
+  /** 목록 API는 첨부·댓글·상세 본문을 내려주지 않음 — 상세 조회 후 reload 시 유지 */
+  function mergeBoardListRow(prev, next) {
+    if (!prev) return next;
+    var merged = Object.assign({}, next);
+    if (!merged.attachments || !merged.attachments.length) {
+      merged.attachments = prev.attachments || [];
+    }
+    if (!merged.comments || !merged.comments.length) {
+      merged.comments = prev.comments || [];
+    }
+    if (!merged.replies || !merged.replies.length) {
+      merged.replies = prev.replies || [];
+    }
+    if (!merged.body && prev.body) merged.body = prev.body;
+    return merged;
+  }
+
+  function remapBoardList(items, mapFn, prevList) {
+    return (items || []).map(function (row, idx) {
+      var mapped = mapFn(row, idx);
+      var prev = (prevList || []).find(function (x) { return x.id === mapped.id; });
+      return mergeBoardListRow(prev, mapped);
+    });
+  }
+
   function mapRefund(row, idx) {
     return {
       id: String(row.id),
@@ -398,7 +441,7 @@
       hasAnswer: !!row.has_admin_reply || !!row.admin_reply,
       assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
-      attachments: [],
+      attachments: mapBoardAttachments(row.attachments),
       replies: mapOfficialReplies(row),
       comments: [],
     };
@@ -417,6 +460,7 @@
       status: done ? "done" : "wait",
       assignee: resolveAdminLabel(row.admin_replier_id),
       body: row.body || "",
+      attachments: mapBoardAttachments(row.attachments),
       replies: mapOfficialReplies(row),
       comments: [],
     };
@@ -836,10 +880,11 @@
     });
   };
 
-  DS.reloadApplicants = function (sessionId) {
+  DS.reloadApplicants = function (sessionId, opts) {
     if (!DS.isApiMode()) return Promise.resolve();
     var q = { page_size: 200 };
     if (sessionId) q.exam_round_id = sessionId;
+    if (opts && opts.q) q.q = opts.q;
     return Api.getApplications(q).then(function (res) {
       if (!res.ok) {
         DS.state.apiError = TopikBoApi.parseError(res);
@@ -917,7 +962,11 @@
         toastErr(TopikBoApi.parseError(res));
         return false;
       }
-      DS.state.refunds = ((res.body && res.body.items) || []).map(mapRefund);
+      DS.state.refunds = remapBoardList(
+        (res.body && res.body.items) || [],
+        mapRefund,
+        DS.state.refunds
+      );
       DS.notify();
       return true;
     });
@@ -930,7 +979,11 @@
         toastErr(TopikBoApi.parseError(res));
         return false;
       }
-      DS.state.inquiries = ((res.body && res.body.items) || []).map(mapInquiry);
+      DS.state.inquiries = remapBoardList(
+        (res.body && res.body.items) || [],
+        mapInquiry,
+        DS.state.inquiries
+      );
       DS.notify();
       return true;
     });
@@ -950,8 +1003,16 @@
         else if (!inqRes.ok) toastErr(TopikBoApi.parseError(inqRes));
         return false;
       }
-      DS.state.refunds = ((refRes.body && refRes.body.items) || []).map(mapRefund);
-      DS.state.inquiries = ((inqRes.body && inqRes.body.items) || []).map(mapInquiry);
+      DS.state.refunds = remapBoardList(
+        (refRes.body && refRes.body.items) || [],
+        mapRefund,
+        DS.state.refunds
+      );
+      DS.state.inquiries = remapBoardList(
+        (inqRes.body && inqRes.body.items) || [],
+        mapInquiry,
+        DS.state.inquiries
+      );
       DS.notify();
       return true;
     });
@@ -1308,6 +1369,9 @@
         row.comments = (post.comments || []).map(mapComment);
         row.hasAnswer = !!(row.replies && row.replies.length);
         if (post.body) row.body = post.body;
+        var atts = mapBoardAttachments(post.attachments);
+        if (atts.length) row.attachments = atts;
+        else if (!row.attachments || !row.attachments.length) row.attachments = atts;
       }
       DS.notify();
       return post;

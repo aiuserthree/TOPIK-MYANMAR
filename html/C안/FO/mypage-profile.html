@@ -140,7 +140,7 @@
         </div>
         <div class="form-row">
           <label class="label" data-i18n-content="su.name_en">영문 성명 (여권 표기)</label>
-          <input class="input" id="pf-name-en" value="">
+          <input class="input" id="pf-name-en" value="" style="text-transform:uppercase" autocomplete="name" autocapitalize="characters" spellcheck="false">
         </div>
       </div>
       <div class="row-2">
@@ -375,6 +375,7 @@
 })();
 
   if (window.TPKMValidate) {
+    TPKMValidate.bindUppercaseInput($('pf-name-en'));
     TPKMValidate.bindDigitsOnlyInput($('pf-birth'), 8);
     TPKMValidate.bindDigitsOnlyInput($('pf-phone'), 15);
   }
@@ -482,7 +483,7 @@
       if (!res.ok || !res.body || !res.body.user) return;
       var u = res.body.user;
       $('pf-name-ko').value = u.name_ko || '';
-      $('pf-name-en').value = u.name_en || '';
+      $('pf-name-en').value = (u.name_en || '').toUpperCase();
       $('pf-birth').value = u.birth_date || '';
       setSelectValue($('pf-gender'), u.gender);
       setSelectValue($('pf-nationality'), u.nationality);
@@ -520,7 +521,7 @@
     }
     var payload = {
       name_ko: $('pf-name-ko').value.trim(),
-      name_en: $('pf-name-en').value.trim(),
+      name_en: $('pf-name-en').value.trim().toUpperCase(),
       birth_date: birthNorm,
       gender: $('pf-gender').value,
       nationality: $('pf-nationality').value,

@@ -232,6 +232,17 @@
     font-size: 11.5px; color: var(--text-3);
   }
   .status-step .steps-row .cur { color: var(--primary); font-weight: 700; }
+
+  .rfd-refund-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .rfd-refund-row .form-row { margin-bottom: 0; }
+  @media (max-width: 767px) {
+    .rfd-refund-row { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body data-require-login>
@@ -301,6 +312,17 @@
         </div>
       </div>
 
+      <div id="rfdRefundExtra" class="rfd-refund-row">
+        <div class="form-row">
+          <label class="label" for="rfdAppNo"><span data-i18n-content="rfd.f_app_no">접수번호</span> <span class="req">*</span></label>
+          <input class="input" id="rfdAppNo" maxlength="50" placeholder="접수번호를 입력해 주세요." data-i18n-content="rfd.app_no_ph" data-i18n-content-placeholder>
+        </div>
+        <div class="form-row">
+          <label class="label" for="rfdExamRound"><span data-i18n-content="rfd.f_exam_round">회차</span> <span class="req">*</span></label>
+          <input class="input" id="rfdExamRound" maxlength="50" placeholder="예) 108회" data-i18n-content="rfd.exam_round_ph" data-i18n-content-placeholder>
+        </div>
+      </div>
+
       <div class="form-row">
         <label class="label"><span data-i18n-content="form.title">제목</span> <span class="req">*</span></label>
         <input class="input" id="rfdTitle" placeholder="제목 (100자 이내)" maxlength="100" data-i18n-content="qna.title_ph" data-i18n-content-placeholder>
@@ -308,7 +330,7 @@
 
       <div class="form-row">
         <label class="label"><span data-i18n-content="form.content">내용</span> <span class="req">*</span></label>
-        <textarea class="textarea" id="rfdBody" rows="8" placeholder="환불·정정 사유, 접수번호, 회차 등을 자세히 작성해 주세요." data-i18n-content="rfd.body_ph" data-i18n-content-placeholder></textarea>
+        <textarea class="textarea" id="rfdBody" rows="8" placeholder="환불·정정 사유를 자세히 작성해 주세요." data-i18n-content="rfd.body_ph" data-i18n-content-placeholder></textarea>
       </div>
 
       <div class="form-row">
@@ -402,7 +424,13 @@
     'rfd.type_correction': { ko: '정보정정', my: 'အချက်အလက်ပြင်ဆင်', en: 'Correction' },
     'rfd.col_type': { ko: '유형', my: 'အမျိုးအစား', en: 'Type' },
     'rfd.write_title': { ko: '새 글 작성', my: 'ပို့စ်အသစ် ရေးသားရန်', en: 'New request' },
-    'rfd.body_ph': { ko: '환불·정정 사유, 접수번호, 회차 등을 자세히 작성해 주세요.', my: 'ငွေပြန်အမ်း·ပြင်ဆင်ရသည့် အကြောင်းရင်း၊ လျှောက်လွှာနံပါတ်၊ အကြိမ်ရေ စသည်တို့ကို အသေးစိတ် ရေးပါ။', en: 'Describe the refund/correction reason, application number, session, etc.' },
+    'rfd.body_ph': { ko: '환불·정정 사유를 자세히 작성해 주세요.', my: 'ငွေပြန်အမ်း·ပြင်ဆင်ရသည့် အကြောင်းရင်းကို အသေးစိတ် ရေးပါ။', en: 'Describe the refund/correction reason in detail.' },
+    'rfd.f_app_no': { ko: '접수번호', my: 'လျှောက်လွှာနံပါတ်', en: 'Application no.' },
+    'rfd.f_exam_round': { ko: '회차', my: 'အကြိမ်ရေ', en: 'Exam session' },
+    'rfd.app_no_ph': { ko: '접수번호를 입력해 주세요.', my: 'လျှောက်လွှာနံပါတ် ထည့်ပါ။', en: 'Enter your application number.' },
+    'rfd.exam_round_ph': { ko: '예) 108회', my: 'ဥပမာ) 108', en: 'e.g. Session 108' },
+    'rfd.app_no_required': { ko: '접수번호를 입력해 주세요.', my: 'လျှောက်လွှာနံပါတ် ထည့်ပါ။', en: 'Please enter your application number.' },
+    'rfd.exam_round_required': { ko: '회차를 입력해 주세요.', my: 'အကြိမ်ရေ ထည့်ပါ။', en: 'Please enter the exam session.' },
     'rfd.f_secret_pw': { ko: '비밀글 비밀번호', my: 'လျှို့ဝှက်ပို့စ် စကားဝှက်', en: 'Secret-post password' },
     'rfd.attach_hint': { ko: '영수증·신분증 사본 등 (jpg, png, pdf · 5MB 이하 · 최대 5개)', my: 'ပြေစာ·မှတ်ပုံတင် မိတ္တူ စသည် (jpg, png, pdf · 5MB အောက် · အများဆုံး ၅ ခု)', en: 'Receipt / ID copy, etc. (jpg, png, pdf · ≤ 5MB · up to 5 files)' },
     'rfd.secret_notice': { ko: '🔒 환불·정보정정 신청 글은 모두 <strong>비밀글</strong>로 등록됩니다. 작성자 본인과 관리자만 내용·댓글을 열람할 수 있습니다.', my: '🔒 ငွေပြန်အမ်း·အချက်အလက်ပြင်ဆင် လျှောက်လွှာများအားလုံးကို <strong>လျှို့ဝှက်ပို့စ်</strong>အဖြစ် မှတ်တမ်းတင်သည်။ ရေးသားသူနှင့် စီမံခန့်ခွဲသူသာ ကြည့်ရှုနိုင်သည်။', en: '🔒 All refund/correction requests are saved as <strong>secret posts</strong>. Only the author and admin can view the content and comments.' },
@@ -434,19 +462,58 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function isRfdRefundType() {
+    var radios = document.getElementsByName('type');
+    return !!(radios[0] && radios[0].checked);
+  }
+
+  function syncRfdRefundFields() {
+    var extra = document.getElementById('rfdRefundExtra');
+    if (!extra) return;
+    extra.style.display = isRfdRefundType() ? '' : 'none';
+  }
+
+  function parseRfdRefundMeta(text) {
+    var raw = text || '';
+    var m = raw.match(/^접수번호:\s*(.+)\r?\n회차:\s*(.+)\r?\n\r?\n([\s\S]*)$/);
+    if (!m) return { appNo: '', examRound: '', body: raw };
+    return { appNo: m[1].trim(), examRound: m[2].trim(), body: m[3] };
+  }
+
+  function buildRfdRefundBody(body) {
+    if (!isRfdRefundType()) return body;
+    var appNo = (document.getElementById('rfdAppNo').value || '').trim();
+    var examRound = (document.getElementById('rfdExamRound').value || '').trim();
+    return '접수번호: ' + appNo + '\n회차: ' + examRound + '\n\n' + body;
+  }
+
+  function validateRfdRefundFields() {
+    if (!isRfdRefundType()) return '';
+    var appNo = (document.getElementById('rfdAppNo').value || '').trim();
+    var examRound = (document.getElementById('rfdExamRound').value || '').trim();
+    if (!appNo) return rfdBt('rfd.app_no_required', '접수번호를 입력해 주세요.');
+    if (!examRound) return rfdBt('rfd.exam_round_required', '회차를 입력해 주세요.');
+    return '';
+  }
+
   function resetRfdWriteForm() {
     editingPostId = null;
     var title = document.getElementById('rfdTitle');
     var body = document.getElementById('rfdBody');
+    var appNo = document.getElementById('rfdAppNo');
+    var examRound = document.getElementById('rfdExamRound');
     var secretPw = document.getElementById('rfdSecretPw');
     var agree = document.getElementById('rfdAgree');
     if (title) title.value = '';
     if (body) body.value = '';
+    if (appNo) appNo.value = '';
+    if (examRound) examRound.value = '';
     if (secretPw) secretPw.value = '';
     if (agree) agree.checked = false;
     var radios = document.getElementsByName('type');
     if (radios[0]) radios[0].checked = true;
     if (radios[1]) radios[1].checked = false;
+    syncRfdRefundFields();
     if (typeof rfdAttach !== 'undefined' && rfdAttach && rfdAttach.reset) rfdAttach.reset();
     var heading = document.querySelector('#writePane .h2');
     if (heading) {
@@ -495,12 +562,17 @@
     onEdit: function (p) {
       editingPostId = p.id;
       document.getElementById('rfdTitle').value = p.title || '';
-      document.getElementById('rfdBody').value = p.body || '';
       var radios = document.getElementsByName('type');
+      var isCorrection = (p.category || '') === '정보정정';
       if (radios[0] && radios[1]) {
-        radios[0].checked = (p.category || '') !== '정보정정';
-        radios[1].checked = (p.category || '') === '정보정정';
+        radios[0].checked = !isCorrection;
+        radios[1].checked = isCorrection;
       }
+      var parsed = parseRfdRefundMeta(p.body || '');
+      document.getElementById('rfdBody').value = parsed.body;
+      document.getElementById('rfdAppNo').value = parsed.appNo;
+      document.getElementById('rfdExamRound').value = parsed.examRound;
+      syncRfdRefundFields();
       document.getElementById('rfdSecretPw').value = '';
       var agree = document.getElementById('rfdAgree');
       if (agree) agree.checked = false;
@@ -533,6 +605,11 @@
   });
   document.querySelector('.board-tools .search input').addEventListener('input', applyFilters);
 
+  document.querySelectorAll('input[name="type"]').forEach(function (radio) {
+    radio.addEventListener('change', syncRfdRefundFields);
+  });
+  syncRfdRefundFields();
+
   // 첨부파일 (선택 즉시 업로드)
   var rfdAttach = TPKMBoard.bindAttachments({
     input: document.getElementById('rfdFileInput'),
@@ -560,9 +637,10 @@
     secretPwEl: document.getElementById('rfdSecretPw'),
     attachmentCtrl: rfdAttach,
     resolveCategory: function () {
-      var radios = document.getElementsByName('type');
-      return (radios[0] && radios[0].checked) ? '환불' : '정보정정';
+      return isRfdRefundType() ? '환불' : '정보정정';
     },
+    extraValidate: validateRfdRefundFields,
+    buildBody: buildRfdRefundBody,
     getEditingId: function () { return editingPostId; },
     clearEditing: function () {
       var agree = document.getElementById('rfdAgree');
@@ -572,6 +650,11 @@
         (window.TPKMLang && TPKMLang.t('rfd.write_title')) || '새 글 작성';
     },
     onSuccess: function () {
+      var appNo = document.getElementById('rfdAppNo');
+      var examRound = document.getElementById('rfdExamRound');
+      if (appNo) appNo.value = '';
+      if (examRound) examRound.value = '';
+      syncRfdRefundFields();
       show('listPane');
       board.load(1);
     },

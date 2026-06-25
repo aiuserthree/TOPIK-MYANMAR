@@ -523,19 +523,25 @@
     return fallback;
   }
 
-  /** 사진 원본 다운로드 (관리자 파일). 동일 오리진이면 download 속성, 아니면 새 탭. */
+  /** 사진·첨부 원본 다운로드 — fetch+blob으로 로컬 저장(CORS/교차 출처 대응) */
   function downloadFile(fileId, filename) {
-    var url = fileUrl(fileId);
-    if (!url) return false;
-    var a = document.createElement("a");
-    a.href = url;
-    if (filename) a.download = filename;
-    a.target = "_blank";
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return true;
+    if (fileId == null || fileId === "" || !canUseApi()) {
+      return Promise.resolve(false);
+    }
+    var url = apiUrl("/api/v1/admin/files/" + encodeURIComponent(fileId));
+    return authBlobFetch(url, { Accept: "*/*" })
+      .then(function (result) {
+        if (!result.ok || !result.res) return false;
+        var res = result.res;
+        var ct = (res.headers && res.headers.get && res.headers.get("Content-Type")) || "";
+        if (ct.indexOf("application/json") > -1) return false;
+        return res.blob().then(function (blob) {
+          var name = filenameFromDisposition(res, filename || "file");
+          triggerBlobDownload(blob, name);
+          return true;
+        });
+      })
+      .catch(function () { return false; });
   }
 
   /**
