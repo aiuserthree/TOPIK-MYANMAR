@@ -97,6 +97,38 @@ function formatApplicantDob(dob) {
   return s;
 }
 
+/** 회차 내 접수일 오름차순(동일 시 접수 ID) — 번호 1 = 가장 빠른 접수 */
+function sortApplicantsByAppliedAt(list) {
+  return list.slice().sort(function (a, b) {
+    var cmp = String(a.appliedAt || '').localeCompare(String(b.appliedAt || ''));
+    return cmp !== 0 ? cmp : Number(a.id) - Number(b.id);
+  });
+}
+
+function buildApplicantSeqMap(sessionApplicants) {
+  var map = {};
+  sortApplicantsByAppliedAt(sessionApplicants).forEach(function (a, i) {
+    map[a.id] = i + 1;
+  });
+  return map;
+}
+
+function applicantSeqNo(applicant, sessionApplicants) {
+  if (!applicant) return null;
+  var sorted = sortApplicantsByAppliedAt(sessionApplicants);
+  var idx = sorted.findIndex(function (x) { return x.id === applicant.id; });
+  return idx >= 0 ? idx + 1 : null;
+}
+
+function compareApplicantSort(a, b, key) {
+  if (key === 'no' || key === 'appliedAt') {
+    var cmp = String(a.appliedAt || '').localeCompare(String(b.appliedAt || ''));
+    return cmp !== 0 ? cmp : Number(a.id) - Number(b.id);
+  }
+  if (key === 'id') return Number(a.id) - Number(b.id);
+  return String(a[key] ?? '').localeCompare(String(b[key] ?? ''), 'ko');
+}
+
 function applicantRoundTitle(a, session) {
   var roundNo = a && a.roundNo != null ? a.roundNo : (session && session.no != null ? session.no : null);
   var title = ((a && a.roundTitle) || (session && session.name) || '').trim();
@@ -246,26 +278,22 @@ function ApplicantsPanel() {
     if (venueF !== 'all')  r = r.filter(a => a.venueId === venueF);
     if (levelF !== 'all')  r = r.filter(a => a.level === levelF);
     if (appliedQ) r = r.filter(a => applicantMatchesSearch(a, appliedQ));
-    // sort — id/appliedAt 은 최신순 기본, 번호(no) 클릭은 id 기준
+    // sort — 번호/접수일은 접수일·ID 기준, 그 외는 해당 열
     r = r.slice().sort((a, b) => {
-      const key = sort.k === 'no' ? 'id' : sort.k;
-      let cmp = 0;
-      if (key === 'id') {
-        cmp = Number(a.id) - Number(b.id);
-      } else if (key === 'appliedAt') {
-        cmp = String(a.appliedAt || '').localeCompare(String(b.appliedAt || ''));
-      } else {
-        cmp = String(a[key] ?? '').localeCompare(String(b[key] ?? ''), 'ko');
-      }
+      const cmp = compareApplicantSort(a, b, sort.k);
       return sort.dir === 'asc' ? cmp : -cmp;
     });
     return r;
   }, [apps, statusF, venueF, levelF, appliedQ, sort]);
 
+  const seqByAppliedAt = useMemo(
+    () => buildApplicantSeqMap(apps),
+    [apps]
+  );
+
   useEffect(() => { setPage(1); setSelected(new Set()); }, [statusF, venueF, levelF, appliedQ, sessionId]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const rowNo = (index) => filtered.length - (page - 1) * PER_PAGE - index;
 
   // status counts (for chip badges)
   const counts = useMemo(() => {
@@ -578,12 +606,14 @@ function ApplicantsPanel() {
   // bulk action helpers
   const bulkIds = Array.from(selected);
 
-  // sort helper — 번호 열 클릭 시 접수 ID(최신순) 정렬
+  // sort helper — 번호/접수일은 접수일(고정 번호) 기준
   const sortBy = (k) => {
-    const key = k === 'no' ? 'id' : k;
-    setSort(s => s.k === key
-      ? { k: key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
-      : { k: key, dir: (key === 'id' || key === 'appliedAt') ? 'desc' : 'asc' });
+    setSort(s => {
+      if (s.k === k) return { k, dir: s.dir === 'asc' ? 'desc' : 'asc' };
+      const defaultAsc = k === 'no';
+      const defaultDesc = k === 'id' || k === 'appliedAt';
+      return { k, dir: defaultAsc ? 'asc' : (defaultDesc ? 'desc' : 'asc') };
+    });
   };
 
   return (
@@ -688,7 +718,7 @@ function ApplicantsPanel() {
               {pageRows.map((a, i) => (
                 <tr key={a.id} className={selected.has(a.id) ? 'sel' : ''}>
                   <td className="cb"><input type="checkbox" checked={selected.has(a.id)} onChange={() => toggleOne(a.id)}/></td>
-                  <td className="num">{rowNo(i)}</td>
+                  <td className="num">{seqByAppliedAt[a.id] ?? '—'}</td>
                   <td>
                     <PhotoThumb status={a.photoStatus} name={a.nameKo} seed={a.id} photoUrl={a.photoUrl}/>
                   </td>
@@ -974,10 +1004,9 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
   const a = state.applicants.find(x => x.id === appId);
   const displayNo = useMemo(() => {
     if (!a) return '—';
-    const sessionApps = state.applicants.filter(x => x.sessionId === a.sessionId);
-    const sorted = sessionApps.slice().sort((x, y) => Number(y.id) - Number(x.id));
-    const idx = sorted.findIndex(x => x.id === a.id);
-    return idx >= 0 ? sessionApps.length - idx : '—';
+    var sessionApps = state.applicants.filter(function (x) { return x.sessionId === a.sessionId; });
+    var no = applicantSeqNo(a, sessionApps);
+    return no != null ? no : '—';
   }, [state.applicants, a]);
   const isReadonly = DataStore.isReadonly();
   const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
