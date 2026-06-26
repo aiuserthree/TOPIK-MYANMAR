@@ -656,6 +656,12 @@
     getApplication: function (id) {
       return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id));
     },
+    addApplicationMemo: function (id, payload) {
+      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/memos", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      });
+    },
     approveApplication: function (id, payload, opts) {
       return withRevFetch(
         "/api/v1/admin/applications/" + encodeURIComponent(id) + "/approve",

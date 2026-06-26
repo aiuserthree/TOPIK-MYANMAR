@@ -316,7 +316,7 @@
     user_update: "수정", user_reset_password: "비밀번호초기화",
     admin_create: "생성", admin_update: "수정", admin_reset_password: "비밀번호초기화",
     exam_round_create: "생성", exam_venue_update: "수정", exam_number_assign: "수험번호부여",
-    photo_review_approve: "승인", photo_review_reject: "반려",
+    photo_review_approve: "승인", photo_review_reject: "반려", memo: "수정",
     login: "로그인", logout: "로그아웃",
     permission_matrix_update: "수정", admin_change_password: "비밀번호초기화",
   };
@@ -600,6 +600,23 @@
       after: row.after_data || null,
       memo: row.memo || "",
     };
+  }
+
+  function formatApplicationMemos(memos) {
+    if (!memos || !memos.length) return "";
+    return memos.map(function (m) {
+      var ts = fmtMmt(m.created_at).replace("T", " ").slice(0, 16);
+      var who = m.admin_email || (m.admin_user_id != null ? String(m.admin_user_id) : "—");
+      return "[" + ts + "/" + who + "] " + (m.body || "");
+    }).join("\n") + "\n";
+  }
+
+  function syncApplicantMemos(appId, memos) {
+    var a = DS.state.applicants.find(function (x) { return x.id === String(appId); });
+    if (a) {
+      a.memo = formatApplicationMemos(memos || []);
+      DS.notify();
+    }
   }
 
   function mapAdminAccessLog(row) {
@@ -1633,17 +1650,37 @@
     });
   };
 
-  /** 접수자 상세 LP — 해당 접수 건(target_type=applications) 처리 이력만 조회 */
+  /** 접수자 상세 LP — 해당 접수 건(target_type=applications) 처리 이력·메모 조회 */
   DS.fetchApplicantAudit = function (appId) {
     if (!DS.isApiMode()) return Promise.resolve(null);
     var id = String(appId);
     return Api.getApplication(id).then(function (res) {
-      if (res.ok && res.body && res.body.audit_logs) {
-        return res.body.audit_logs.map(mapAudit);
+      if (res.ok && res.body) {
+        syncApplicantMemos(id, res.body.memos || []);
+        if (res.body.audit_logs) {
+          return res.body.audit_logs.map(mapAudit);
+        }
       }
       return Api.getAuditLogs({ target_type: "applications", target_id: id }).then(function (audRes) {
         if (!audRes.ok) return [];
         return ((audRes.body && audRes.body.items) || []).map(mapAudit);
+      });
+    });
+  };
+
+  DS.apiAddApplicantMemo = function (appId, text) {
+    var body = String(text || "").trim();
+    if (!body) return Promise.resolve(false);
+    return Api.addApplicationMemo(appId, { body: body }).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return false;
+      }
+      return Api.getApplication(String(appId)).then(function (det) {
+        if (det.ok && det.body) {
+          syncApplicantMemos(appId, det.body.memos || []);
+        }
+        return true;
       });
     });
   };

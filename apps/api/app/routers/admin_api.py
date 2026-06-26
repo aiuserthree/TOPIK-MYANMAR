@@ -152,6 +152,10 @@ class RevBody(BaseModel):
     rev: int | None = None
 
 
+class ApplicationMemoBody(BaseModel):
+    body: str = Field(..., min_length=1, max_length=5000)
+
+
 class ReplyBody(BaseModel):
     body: str
     mark_complete: bool = True
@@ -990,6 +994,25 @@ async def _serialize_audit_logs(db: AsyncSession, logs: list[AdminAuditLog]) -> 
     ]
 
 
+async def _serialize_application_memos(db: AsyncSession, memos: list[ApplicationMemo]) -> list[dict]:
+    admin_ids = {m.admin_user_id for m in memos if m.admin_user_id}
+    admins: dict[int, AdminUser] = {}
+    if admin_ids:
+        res = await db.execute(select(AdminUser).where(AdminUser.id.in_(admin_ids)))
+        admins = {a.id: a for a in res.scalars().all()}
+    ordered = sorted(memos, key=lambda m: m.created_at or datetime.min.replace(tzinfo=timezone.utc))
+    return [
+        {
+            "id": m.id,
+            "body": m.body,
+            "created_at": m.created_at.isoformat(),
+            "admin_user_id": m.admin_user_id,
+            "admin_email": admins[m.admin_user_id].email if m.admin_user_id in admins else None,
+        }
+        for m in ordered
+    ]
+
+
 @router.get("/applications/{app_id}")
 async def admin_get_application(
     app_id: int,
@@ -1032,9 +1055,40 @@ async def admin_get_application(
         }
         if user
         else None,
-        "memos": [{"id": m.id, "body": m.body, "created_at": m.created_at.isoformat()} for m in app.memos],
+        "memos": await _serialize_application_memos(db, list(app.memos)),
         "audit_logs": await _serialize_audit_logs(db, audit_logs),
     }
+
+
+@router.post("/applications/{app_id}/memos")
+async def add_application_memo(
+    app_id: int,
+    body: ApplicationMemoBody,
+    admin: AuthUser = Depends(require_admin),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    text = body.body.strip()
+    if not text:
+        raise api_error("VALIDATION_ERROR", "메모 내용을 입력해 주세요.", 400)
+    memo = ApplicationMemo(application_id=app_id, admin_user_id=admin.id, body=text)
+    db.add(memo)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="memo",
+        target_type="applications",
+        target_id=app_id,
+        memo=text[:500],
+        ip_address=ip,
+    )
+    await db.commit()
+    await db.refresh(memo)
+    rows = await _serialize_application_memos(db, [memo])
+    return rows[0] if rows else {"id": memo.id, "body": memo.body, "created_at": memo.created_at.isoformat()}
 
 
 @router.post("/applications/{app_id}/approve")

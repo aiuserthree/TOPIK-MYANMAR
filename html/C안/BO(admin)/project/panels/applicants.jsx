@@ -1052,8 +1052,17 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
   const venue = state.venues.find(v => v.id === a.venueId);
   const photoRejectReason = photoReason === '기타' ? photoOther : (photoOther ? `${photoReason} — ${photoOther}` : photoReason);
 
-  const addMemo = () => {
+  const addMemo = async () => {
     if (!memo.trim()) return;
+    if (isApi && DataStore.apiAddApplicantMemo) {
+      const ok = await DataStore.apiAddApplicantMemo(appId, memo);
+      if (ok) {
+        setMemo('');
+        await loadDetailLog();
+        toastOk('메모가 추가되었습니다.');
+      }
+      return;
+    }
     a.memo = (a.memo || '') + `[${new Date().toISOString().slice(0,16).replace('T',' ')}/${state.me?.id}] ${memo}\n`;
     DataStore.addAudit({ type: '접수자', targetId: appId, action: '수정', memo: '관리자 메모 추가' });
     DataStore.notify();
