@@ -335,11 +335,23 @@
       .replace(/"/g, '&quot;');
   }
 
+  function roundNoText(r) {
+    if (!r || r.round_no == null) return '';
+    return btf('fmt.round_no', '제' + r.round_no + '회', { n: r.round_no });
+  }
+
   function roundTitle(item) {
     var r = item.exam_round || {};
-    if (r.title) return esc(r.title);
-    if (r.round_no) return esc(btf('fmt.round_no', '제' + r.round_no + '회', { n: r.round_no }));
-    return 'TOPIK';
+    var noText = roundNoText(r);
+    var title = (r.title || '').trim();
+    var label;
+    if (noText && title) {
+      var n = String(r.round_no);
+      label = title.indexOf(n) >= 0 ? title : (noText + ' · ' + title);
+    } else {
+      label = title || noText || 'TOPIK';
+    }
+    return esc(label);
   }
 
   function primaryLevel(item) {
