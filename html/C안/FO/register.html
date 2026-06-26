@@ -510,9 +510,22 @@
     return s;
   }
 
+  function roundNoText(r) {
+    if (!r || r.round_no == null) return '';
+    return btf('fmt.round_no', '제' + r.round_no + '회', { n: r.round_no });
+  }
+
+  /** BO 회차관리 round_no + title — 카드·요약 등 공통 표시 */
   function roundLabel(r) {
     if (!r) return '—';
-    return r.title || btf('fmt.round_no', '제' + r.round_no + '회', { n: r.round_no });
+    var noText = roundNoText(r);
+    var title = (r.title || '').trim();
+    if (noText && title) {
+      var n = String(r.round_no);
+      if (title.indexOf(n) >= 0) return title;
+      return noText + ' · ' + title;
+    }
+    return title || noText || '—';
   }
 
   function venuePlaceholderText() {
