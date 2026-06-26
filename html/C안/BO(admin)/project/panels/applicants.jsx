@@ -98,11 +98,14 @@ function formatApplicantDob(dob) {
 }
 
 function applicantRoundTitle(a, session) {
-  if (a && a.roundTitle) return a.roundTitle;
-  if (session && session.name) return session.name;
-  if (session && session.no) return '제' + session.no + '회 TOPIK';
-  if (a && a.roundNo) return '제' + a.roundNo + '회 TOPIK';
-  return 'TOPIK';
+  var roundNo = a && a.roundNo != null ? a.roundNo : (session && session.no != null ? session.no : null);
+  var title = ((a && a.roundTitle) || (session && session.name) || '').trim();
+  var noText = roundNo != null ? ('제' + roundNo + '회') : '';
+  if (noText && title) {
+    var n = String(roundNo);
+    return title.indexOf(n) >= 0 ? title : (noText + ' · ' + title);
+  }
+  return title || noText || 'TOPIK';
 }
 
 function applicantLevelText(a) {
@@ -760,21 +763,17 @@ function ApplicantsPanel() {
           .app { display: block !important; }
           .mn { padding: 0 !important; }
           .dg-wrap { border: 0 !important; box-shadow: none !important; }
-          body.printing-app-confirm > *:not(.modal-backdrop.open) { display: none !important; }
-          body.printing-app-confirm .modal-backdrop.open {
-            position: static !important;
-            display: block !important;
-            background: transparent !important;
-            padding: 0 !important;
+          body.printing-app-confirm * { visibility: hidden !important; }
+          body.printing-app-confirm #app-confirm-print,
+          body.printing-app-confirm #app-confirm-print * { visibility: visible !important; }
+          body.printing-app-confirm #app-confirm-print {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 12mm !important;
+            background: #fff !important;
           }
-          body.printing-app-confirm .modal-backdrop.open .modal {
-            box-shadow: none !important;
-            border: 0 !important;
-            max-width: 100% !important;
-          }
-          body.printing-app-confirm .modal-head .lp-close,
-          body.printing-app-confirm .modal-foot,
-          body.printing-app-confirm .app-confirm-hint { display: none !important; }
         }
       `}</style>
     </>
