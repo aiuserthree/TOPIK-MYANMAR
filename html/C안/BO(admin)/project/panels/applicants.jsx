@@ -763,16 +763,15 @@ function ApplicantsPanel() {
           .app { display: block !important; }
           .mn { padding: 0 !important; }
           .dg-wrap { border: 0 !important; box-shadow: none !important; }
-          body.printing-app-confirm * { visibility: hidden !important; }
-          body.printing-app-confirm #app-confirm-print,
-          body.printing-app-confirm #app-confirm-print * { visibility: visible !important; }
-          body.printing-app-confirm #app-confirm-print {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+          body.printing-app-confirm #root { display: none !important; }
+          body.printing-app-confirm #app-confirm-print-clone {
+            display: block !important;
             padding: 12mm !important;
             background: #fff !important;
+          }
+          body.printing-app-confirm #app-confirm-print-clone h3 {
+            margin: 0 0 14px !important;
+            font-size: 18px !important;
           }
         }
       `}</style>
@@ -1188,7 +1187,11 @@ function ApplicationConfirmModal({ id, onClose }) {
   const fee = applicantFeeAmount(a, session);
 
   useEffect(() => {
-    var fn = function () { document.body.classList.remove('printing-app-confirm'); };
+    var fn = function () {
+      document.body.classList.remove('printing-app-confirm');
+      var clone = document.getElementById('app-confirm-print-clone');
+      if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
+    };
     window.addEventListener('afterprint', fn);
     return function () { window.removeEventListener('afterprint', fn); };
   }, []);
@@ -1196,6 +1199,17 @@ function ApplicationConfirmModal({ id, onClose }) {
   if (!a) return null;
 
   var handlePrint = function () {
+    var src = document.getElementById('app-confirm-print');
+    if (!src) return;
+    var prev = document.getElementById('app-confirm-print-clone');
+    if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+    var wrap = document.createElement('div');
+    wrap.id = 'app-confirm-print-clone';
+    var heading = document.createElement('h3');
+    heading.textContent = '접수 확인증';
+    wrap.appendChild(heading);
+    wrap.appendChild(src.cloneNode(true));
+    document.body.appendChild(wrap);
     document.body.classList.add('printing-app-confirm');
     window.print();
   };
