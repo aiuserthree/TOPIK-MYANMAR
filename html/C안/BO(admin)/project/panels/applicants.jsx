@@ -14,10 +14,19 @@
      TPKM_BO_2_1_11 학생 접수 확인증 열람(FO 접수 확인증 동일)
    ============================================================ */
 
+/** 필터 칩 — `photo`만 사진심사 상태(미심사) 기준, 나머지는 접수 처리 상태 */
+function matchesStatusChip(a, chipId) {
+  if (!a || chipId === 'all') return true;
+  if (chipId === 'photo') {
+    return a.photoStatus === 'pending' && a.status !== 'cancel' && a.status !== 'cancelled';
+  }
+  return a.status === chipId;
+}
+
 const STATUS_CHIPS = [
   { id: 'all',      label: '전체' },
   { id: 'applied',  label: '접수완료' },
-  { id: 'photo',    label: '사진심사중' },
+  { id: 'photo',    label: '미심사' },
   { id: 'pay',      label: '수납대기' },
   { id: 'approved', label: '승인완료' },
   { id: 'rejected', label: '반려' },
@@ -230,7 +239,7 @@ function ApplicantsPanel() {
 
   const filtered = useMemo(() => {
     let r = apps;
-    if (statusF !== 'all') r = r.filter(a => a.status === statusF);
+    if (statusF !== 'all') r = r.filter(a => matchesStatusChip(a, statusF));
     if (venueF !== 'all')  r = r.filter(a => a.venueId === venueF);
     if (levelF !== 'all')  r = r.filter(a => a.level === levelF);
     if (appliedQ) r = r.filter(a => applicantMatchesSearch(a, appliedQ));
@@ -259,7 +268,11 @@ function ApplicantsPanel() {
   const counts = useMemo(() => {
     const c = { all: apps.length };
     STATUS_CHIPS.forEach(x => { if (x.id !== 'all') c[x.id] = 0; });
-    apps.forEach(a => { c[a.status] = (c[a.status] || 0) + 1; });
+    apps.forEach(a => {
+      STATUS_CHIPS.forEach(x => {
+        if (x.id !== 'all' && matchesStatusChip(a, x.id)) c[x.id] = (c[x.id] || 0) + 1;
+      });
+    });
     return c;
   }, [apps]);
 
