@@ -62,15 +62,9 @@ body.admin {
 .sb-brand {
   height: var(--topbar-h);
   padding: 0 16px;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center;
   border-bottom: 1px solid #1a3050;
   flex: 0 0 auto;
-}
-.sb-brand .mark {
-  width: 30px; height: 30px; border-radius: 7px;
-  background: var(--primary); color: #fff;
-  font-weight: 800; font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
 }
 .sb-brand .name {
   font-size: 14px; font-weight: 700; color: #fff;

@@ -123,11 +123,7 @@
       <header class="gnb" role="banner">
         <div class="container gnb-inner">
           <a href="index.html" class="gnb-logo" aria-label="TOPIK Myanmar 홈">
-            <span class="mark">T</span>
-            <span class="name">
-              TOPIK Myanmar
-              <small>주미얀마 대한민국 대사관</small>
-            </span>
+            <img src="assets/topik-logo.png" alt="TOPIK — Test of Proficiency in Korean" class="gnb-logo-img" height="40">
           </a>
 
           <ul class="gnb-menu" role="navigation" aria-label="주 메뉴">
@@ -152,8 +148,7 @@
       <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="모바일 메뉴">
         <div class="drawer-head">
           <a href="index.html" class="gnb-logo">
-            <span class="mark">T</span>
-            <span class="name">TOPIK Myanmar</span>
+            <img src="assets/topik-logo.png" alt="TOPIK" class="gnb-logo-img gnb-logo-img--sm" height="36">
           </a>
           <button class="drawer-close" id="drawerClose" aria-label="메뉴 닫기">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>

@@ -366,7 +366,6 @@ function App() {
         {/* Sidebar */}
         <aside className={`sb ${sbOpen ? 'open' : ''}`}>
           <div className="sb-brand">
-            <div className="mark">T</div>
             <div className="name">TOPIK Myanmar<small>ADMIN CONSOLE</small></div>
           </div>
           <nav className="sb-nav">
@@ -453,3 +452,18 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+(function ensureFavicon() {
+  if (document.querySelector('link[rel="icon"]')) return;
+  var png = document.createElement('link');
+  png.rel = 'icon';
+  png.type = 'image/png';
+  png.href = 'assets/favicon-32.png';
+  png.sizes = '32x32';
+  document.head.appendChild(png);
+  var ico = document.createElement('link');
+  ico.rel = 'icon';
+  ico.href = 'favicon.ico';
+  ico.sizes = '32x32';
+  document.head.appendChild(ico);
+})();
