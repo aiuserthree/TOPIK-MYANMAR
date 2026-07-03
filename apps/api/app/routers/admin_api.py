@@ -351,6 +351,7 @@ class RoundBody(BaseModel):
     round_no: int
     title: str
     exam_date: date
+    result_date: date | None = None
     registration_start_at: datetime
     registration_end_at: datetime
     payment_start_at: datetime | None = None
@@ -365,6 +366,7 @@ class RoundPatchBody(BaseModel):
     round_no: int | None = None
     title: str | None = None
     exam_date: date | None = None
+    result_date: date | None = None
     registration_start_at: datetime | None = None
     registration_end_at: datetime | None = None
     payment_start_at: datetime | None = None
@@ -1508,6 +1510,7 @@ async def create_round(
         round_no=body.round_no,
         title=body.title,
         exam_date=body.exam_date,
+        result_date=body.result_date,
         registration_start_at=body.registration_start_at,
         registration_end_at=body.registration_end_at,
         payment_start_at=body.payment_start_at,
@@ -1551,6 +1554,7 @@ async def update_round(
         "round_no",
         "title",
         "exam_date",
+        "result_date",
         "registration_start_at",
         "registration_end_at",
         "payment_start_at",

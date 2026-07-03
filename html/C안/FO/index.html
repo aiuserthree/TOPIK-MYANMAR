@@ -391,7 +391,7 @@
         <a href="ticket.html" class="ql">
           <div>
             <div class="t" data-i18n-content="sub.apply_ticket">수험표 출력</div>
-            <div class="d" data-i18n-content="home.ql_ticket_d">TOPIK 본부에서 출력</div>
+            <div class="d" data-i18n-content="home.ql_ticket_d">TOPIK 본부 홈페이지에서 출력</div>
           </div>
           <div class="arrow"></div>
         </a>
@@ -445,7 +445,7 @@
     'home.notice_fail': { ko: '공지를 불러올 수 없습니다.', my: 'ကြေညာချက် ဖွင့်၍မရပါ။', en: 'Could not load notices.' },
     'home.ql_apply_d': { ko: '회차·급수를 선택해 접수', my: 'အကြိမ်·အဆင့် ရွေး၍ လျှောက်ရန်', en: 'Pick a session & level to apply' },
     'home.ql_confirm_d': { ko: '접수 상태 및 수험번호', my: 'လျှောက်ထားမှု အခြေအနေနှင့် ဖြေဆိုသူနံပါတ်', en: 'Status & exam number' },
-    'home.ql_ticket_d': { ko: 'TOPIK 본부에서 출력', my: 'topik.go.kr ဝက်ဘ်ဆိုက်တွင် ဒေါင်းလုဒ်ရယူရန်', en: 'Print at TOPIK HQ' },
+    'home.ql_ticket_d': { ko: 'TOPIK 본부 홈페이지에서 출력', my: 'topik.go.kr ဝက်ဘ်ဆိုက်တွင် ဒေါင်းလုဒ်ရယူရန်', en: 'Print at TOPIK HQ' },
     'home.ql_refund': { ko: '환불·정보정정', my: 'ငွေပြန်အမ်းခြင်း·အချက်အလက်ပြင်ဆင်ခြင်း', en: 'Refund/correction' },
     'home.ql_refund_d': { ko: '신청 및 진행 상태 확인', my: 'လျှောက်ထားခြင်းနှင့် အခြေအနေ စစ်ဆေးရန်', en: 'Request & track status' },
     'home.faq_loading': { ko: 'FAQ를 불러오는 중…', my: 'FAQ ဖွင့်နေသည်…', en: 'Loading FAQ…' },
@@ -662,6 +662,15 @@
         if (s3) s3.textContent = ymdDot(SCHED.examDate);
       }
       if (cards[3]) { // STEP 04 합격 발표
+        if (SCHED.resultDate) {
+          cards[3].setAttribute('data-tl-start', ymd(SCHED.resultDate));
+          cards[3].setAttribute('data-tl-end', ymd(SCHED.resultDate));
+          cards[3].removeAttribute('data-tl-tbd');
+        } else {
+          cards[3].removeAttribute('data-tl-start');
+          cards[3].removeAttribute('data-tl-end');
+          cards[3].setAttribute('data-tl-tbd', '');
+        }
         var s4 = cards[3].querySelector('.step-d');
         if (s4) s4.textContent = SCHED.resultDate ? ymdDot(SCHED.resultDate) : bt('home.tbd', '추후 공지');
       }

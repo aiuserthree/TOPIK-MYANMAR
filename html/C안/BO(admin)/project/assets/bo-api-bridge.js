@@ -1165,6 +1165,7 @@
       round_no: data.no,
       title: data.name,
       exam_date: data.examDate,
+      result_date: data.resultDate || null,
       registration_start_at: mmtDayStart(data.applyStart),
       registration_end_at: mmtDayEnd(data.applyEnd),
       payment_start_at: data.payStart ? mmtDayStart(data.payStart) : null,
