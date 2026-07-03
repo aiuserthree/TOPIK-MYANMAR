@@ -12,7 +12,7 @@
   var CODES = {
     job: [
       { code: 1, ko: "학생", en: "Student", my: "ကျောင်းသား" },
-      { code: 2, ko: "공무원(군인)", en: "Civil servant (military)", my: "နိုင်ငံ့ဝန်ထမ်း (စစ်သား)" },
+      { code: 2, ko: "공무원(군인)", en: "Civil servant (military)", my: "နိုင်ငံ့ဝန်ထမ်း" },
       { code: 3, ko: "회사원", en: "Office worker", my: "ကုမ္ပဏီဝန်ထမ်း" },
       { code: 4, ko: "자영업", en: "Self-employed", my: "ကိုယ်ပိုင်လုပ်ငန်း" },
       { code: 5, ko: "주부", en: "Homemaker", my: "အိမ်ရှင်မ" },

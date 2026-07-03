@@ -48,7 +48,7 @@
     'rules.id': { ko: '신분증 규정', my: 'သက်သေခံအထောက်အထားဆိုင်ရာ စည်းမျဉ်း', en: 'ID requirements' },
     'notice.title': { ko: '공지사항', my: 'ကြေညာချက်', en: 'Notices' },
     'faq.title': { ko: '자주 묻는 질문', my: 'မေးလေ့ရှိသော မေးခွန်းများ', en: 'FAQ' },
-    'board.refund_title': { ko: '환불·정보정정신청', my: 'ငွေပြန်အမ်း · အချက်အလက်ပြင်ဆင်ခြင်း', en: 'Refund & correction' },
+    'board.refund_title': { ko: '환불·정보정정신청', my: 'ငွေပြန်အမ်းခြင်းနှင့် အချက်အလက်ပြင်ဆင်ရန် လျှောက်ထားရေး', en: 'Refund & correction' },
     'board.qna_title': { ko: '문의게시판', my: 'စုံစမ်းမေးမြန်းရေး ဘုတ်', en: 'Q&A board' },
 
     /* ── 푸터 (TPKM_FO_0_2_0_0_0_C) ── */
@@ -74,7 +74,7 @@
     'foot.terms': { ko: '이용약관', my: 'အသုံးပြုမှု စည်းကမ်း', en: 'Terms of use' },
     'foot.contact': {
       ko: '<strong>문의</strong><br>support@topik-myanmar.com<br>업무시간 월–금 09:00–17:00 (UTC+6:30)',
-      my: '<strong>ဆက်သွယ်ရန်</strong><br>support@topik-myanmar.com<br>တနင်္လာ--သောကြာ 09:00–17:00 (UTC+6:30)',
+      my: '<strong>ဆက်သွယ်ရန်</strong><br>support@topik-myanmar.com<br>တနင်္လာ–သောကြာ 09:00–17:00 (UTC+6:30)',
       en: '<strong>Contact</strong><br>support@topik-myanmar.com<br>Mon–Fri 09:00–17:00 (UTC+6:30)'
     },
     'foot.copy': {
@@ -97,8 +97,8 @@
     'sub.apply_confirm': { ko: '접수 확인', my: 'အခြေအနေ', en: 'Status' },
     'sub.apply_ticket': { ko: '수험표 출력', my: 'စာမေးပွဲဖြေဆိုခွင့်လက်မှတ်', en: 'Admit card' },
     'sub.board_notice': { ko: '공지사항', my: 'ကြေညာချက်', en: 'Notices' },
-    'sub.board_refund': { ko: '환불·정보정정신청', my: 'ငွေပြန်အမ်း · ပြင်ဆင်', en: 'Refund/correction' },
-    'sub.board_qna': { ko: '문의게시판', my: 'စုံစမ်းရန်', en: 'Inquiry' },
+    'sub.board_refund': { ko: '환불·정보정정신청', my: 'ငွေပြန်အမ်းခြင်းနှင့် အချက်အလက်ပြင်ဆင်ရန် လျှောက်ထားရေး', en: 'Refund/correction' },
+    'sub.board_qna': { ko: '문의게시판', my: 'စုံစမ်းမေးမြန်းရေး ကဏ္ဍ', en: 'Inquiry' },
     'sub.board_faq': { ko: 'FAQ', my: 'FAQ', en: 'FAQ' },
 
     /* ── 본문: TOPIK 안내 (guide-*) ──
@@ -129,7 +129,7 @@
     'ra.h_tools': { ko: '사용 가능한 필기구', my: 'အသုံးပြုခွင့်ရှိသော ရေးကိရိယာ', en: 'Permitted writing tools' },
     'ra.h_omr': { ko: 'OMR 카드 마킹 방법', my: 'OMR အဖြေလွှာအမှတ်ခြစ်နည်း', en: 'How to mark the OMR card' },
     'ra.h_writing': { ko: '쓰기 답안지 작성 (TOPIK Ⅱ)', my: 'ရေးဖြေ အဖြေစာရွက်တွင် ဖြေဆိုခြင်း (TOPIK Ⅱ)', en: 'Writing answer sheet (TOPIK II)' },
-    'ra.h_code': { ko: '응시자 코드·수험번호 기재', my: 'စာမေးပွဲဖြေဆိုခွင့် ခုံနံပါတ် ဖြည့်သွင်းခြင်း', en: 'Candidate code & exam number entry' },
+    'ra.h_code': { ko: '수험번호 기재', my: 'စာမေးပွဲဖြေဆိုခွင့် ခုံနံပါတ် ဖြည့်သွင်းခြင်း', en: 'Exam number entry' },
     'rf.lead': { ko: '응시료 금액, 결제 방법, 환불 정책을 안내합니다. (2026 기준)', my: 'စာမေးပွဲကြေး ပမာဏ၊ ငွေပေးချေမှုပုံစံနှင့် စာမေးပွဲကြေး ပြန်အမ်းမှု မူဝါဒတို့ကို လမ်းညွှန်ဖော်ပြပေးထားပါသည်။ (၂၀၂၆ ခုနှစ် စည်းမျည်းအရ)', en: 'Fee amount, payment method, and refund policy (as of 2026).' },
     'rf.h_fee': { ko: '응시료', my: 'ဖြေဆိုကြေး', en: 'Test fee' },
     'rf.h_payment': { ko: '결제 방법', my: 'ငွေပေးချေနည်း', en: 'Payment method' },
@@ -145,7 +145,7 @@
     'brand.sub': { ko: '주미얀마 대한민국 대사관', my: 'မြန်မာနိုင်ငံရှိ ကိုရီးယားသံရုံး', en: 'Embassy of the Republic of Korea in Myanmar' },
     'menu.all': { ko: '전체 메뉴', my: 'မီနူးအားလုံး', en: 'All menu' },
     'tab.home': { ko: '홈', my: 'ပင်မ', en: 'Home' },
-    'tab.apply': { ko: '접수', my: 'လျှောက်ရန်', en: 'Apply' },
+    'tab.apply': { ko: '접수', my: 'စာမေးပွဲ လျှောက်ထားခြင်း', en: 'Apply' },
     'tab.board': { ko: '게시판', my: 'ဘုတ်', en: 'Board' },
     'tab.my': { ko: '마이', my: 'ကျွန်ုပ်', en: 'My' },
     'msg.logout_confirm': { ko: '로그아웃 하시겠습니까?', my: 'ထွက်ရန် သေချာပါသလား။', en: 'Do you want to sign out?' },
@@ -211,15 +211,15 @@
 
     /* ── 증명사진 규격 (photo-upload.js · signup/register) ── */
     'photo.spec_title': { ko: '증명사진 규격 안내', my: 'သက်သေခံ ဓာတ်ပုံ စံချိန်စံညွှန်း', en: 'ID photo requirements' },
-    'photo.spec_1': { ko: '여권용 정면 컬러 사진 (JPG) · 흰색·단색 배경', my: 'ပတ်စ်ပို့သုံး ရှေ့မျက်နှာ အရောင်ဓာတ်ပုံ (JPG) · အဖြူ/တစ်ရောင်တည်း နောက်ခံ', en: 'Passport-style frontal color photo (JPG) · white/plain background' },
+    'photo.spec_1': { ko: '여권용 정면 컬러 사진 (JPG) · 흰색·단색 배경', my: 'ပတ်စ်ပို့သုံး ရှေ့တည့်တည့်ရိုက်ထားသော အရောင်ပါသည့် ဓာတ်ပုံ(JPG)၊ နောက်ခံအရောင်သည် အဖြူရောင် သို့မဟုတ် တစ်ရောင်တည်းဖြစ်ရပါမည်။', en: 'Passport-style frontal color photo (JPG) · white/plain background' },
     'photo.spec_2': { ko: '최근 6개월 이내 촬영한 사진', my: 'လွန်ခဲ့သော ၆ လအတွင်း ရိုက်ထားသော ဓာတ်ပုံ', en: 'Taken within the last 6 months' },
-    'photo.spec_3': { ko: '모자·학사모·선글라스·이어폰 착용 금지', my: 'ဦးထုပ်·ဘွဲ့ဦးထုပ်·နေကာမျက်မှန်·နားကြပ် တပ်ဆင်ခြင်း မပြုရ', en: 'No hats/caps, sunglasses, or earphones' },
+    'photo.spec_3': { ko: '모자·학사모·선글라스·이어폰 착용 금지', my: 'ဦးထုပ်၊ ဘွဲ့ဦးထုပ်၊ နေကာမျက်မှန်၊ နားကြပ်များ တပ်ဆင်ထားခြင်း မရှိရပါ၊ ရှေ့ဆံပင်များဖြင့် မျက်နှာကို ဖုံးကွယ်မထားရပါ', en: 'No hats/caps, sunglasses, or earphones' },
     'photo.spec_4': { ko: '앞머리로 얼굴(눈썹·눈)을 가리지 않음', my: 'ရှေ့ဆံပင်ဖြင့် မျက်နှာ (မျက်ခုံး·မျက်လုံး) ကို မဖုံးအုပ်ရ', en: 'Bangs must not cover the face (eyebrows/eyes)' },
-    'photo.spec_5': { ko: '위·아래·좌·우가 아닌 정면 사진', my: 'အပေါ်·အောက်·ဘယ်·ညာ မဟုတ်ဘဲ ရှေ့မျက်နှာ တည့်တည့်', en: 'A frontal photo, not tilted up/down/left/right' },
-    'photo.spec_6': { ko: '흑백·흐릿·불분명한 사진 불가', my: 'အဖြူအမည်း·ဝါးဝါး·မရှင်းသော ဓာတ်ပုံ မရ', en: 'No black-and-white, blurry, or unclear photos' },
-    'photo.spec_7': { ko: '연예인·타인 등 본인이 아닌 사진 불가', my: 'အနုပညာရှင်·သူတစ်ပါး စသည့် မိမိမဟုတ်သော ဓာတ်ပုံ မရ', en: 'No photos of celebrities or other people' },
-    'photo.spec_filename': { ko: '파일명은 접수 후 시스템이 수험번호로 자동 관리합니다.', my: 'ဖိုင်အမည်ကို လျှောက်ထားပြီးနောက် စနစ်က ဖြေဆိုသူနံပါတ်ဖြင့် အလိုအလျောက် စီမံသည်။', en: 'The file name is managed automatically by the system using your exam number.' },
-    'photo.spec_note': { ko: '부적합 사진은 사진 심사에서 반려되어 응시·성적 처리가 불가할 수 있습니다. 접수 단계에서는 사진 변경이 불가하므로 가입·수정 시 신중히 등록해 주세요.', my: 'မသင့်လျော်သော ဓာတ်ပုံများကို ဓာတ်ပုံစိစစ်ရာတွင် ပယ်ချနိုင်ပြီး ဖြေဆိုခွင့်·ရမှတ်ဆောင်ရွက်မှု မရနိုင်ပါ။ လျှောက်ထားဆဲအဆင့်တွင် ဓာတ်ပုံ ပြောင်းလဲ၍မရသဖြင့် မှတ်ပုံတင်/ပြင်ဆင်စဉ် ဂရုတစိုက် တင်ပါ။', en: 'Unsuitable photos may be rejected in review, making the exam/score processing impossible. Photos cannot be changed during registration, so upload carefully at sign-up.' },
+    'photo.spec_5': { ko: '위·아래·좌·우가 아닌 정면 사진', my: 'အပေါ်၊ အောက်၊ ဘယ်၊ ညာ စောင်းနေခြင်းမရှိဘဲ မျက်နှာသည် ရှေ့တည့်တည့်သို့ မျက်နှာမူထားရမည်', en: 'A frontal photo, not tilted up/down/left/right' },
+    'photo.spec_6': { ko: '흑백·흐릿·불분명한 사진 불가', my: 'အဖြူအမည်းဓာတ်ပုံ၊ ဝါးနေသောဓာတ်ပုံ သို့မဟုတ် မှေးမှိန်နေသော ဓာတ်ပုံများ မဟုတ်ရပါ', en: 'No black-and-white, blurry, or unclear photos' },
+    'photo.spec_7': { ko: '연예인·타인 등 본인이 아닌 사진 불가', my: 'အနုပညာရှင်များ သို့မဟုတ် အခြားသူတစ်ပါး၏ ဓာတ်ပုံမဟုတ်ဘဲ မိမိကိုယ်ပိုင် ဓာတ်ပုံအစစ်အမှန် ဖြစ်ရပါမည်', en: 'No photos of celebrities or other people' },
+    'photo.spec_filename': { ko: '파일명은 접수 후 시스템이 수험번호로 자동 관리합니다.', my: 'ဓာတ်ပုံဖိုင်၏ အမည်အား စာမေးပွဲလျှောက်ထားပြီးစီးပါက ဖြေဆိုခွင့်ခုံနံပါတ်ဖြင့် အလိုအလျောက် ပြောင်းလဲစီမံပေးသွားမည် ဖြစ်သည်။', en: 'The file name is managed automatically by the system using your exam number.' },
+    'photo.spec_note': { ko: '부적합 사진은 사진 심사에서 반려되어 응시·성적 처리가 불가할 수 있습니다. 접수 단계에서는 사진 변경이 불가하므로 가입·수정 시 신중히 등록해 주세요.', my: 'သတ်မှတ်ချက်နှင့် မကိုက်ညီသော ဓာတ်ပုံများကို ဓာတ်ပုံစိစစ်ရေးအဆင့်တွင် ပယ်ချခံရနိုင်ပြီး၊ ထိုသို့ပယ်ချခံရပါက စာမေးပွဲဖြေဆိုခွင့်နှင့် ရမှတ်စာရင်းထုတ်ပြန်ပေးမှုကို ရရှိနိုင်မည်မဟုတ်သည့်အပြင် လျှောက်လွှာတင်သွင်းနေသည့်ကာလအတွင်း၌လည်း ဓာတ်ပုံကို ပြန်လည်ပြောင်းလဲ၍ ရတော့မည်မဟုတ်သောကြောင့် အကောင့်ဖွင့်ချိန် သို့မဟုတ် အချက်အလက်ပြင်ဆင်ချိန်တွင် သေချာစွာ ဂရုတစိုက် တင်သွင်းပေးပါရန်။', en: 'Unsuitable photos may be rejected in review, making the exam/score processing impossible. Photos cannot be changed during registration, so upload carefully at sign-up.' },
     'photo.err_select': { ko: '파일을 선택해 주세요.', my: 'ဖိုင် ရွေးချယ်ပါ။', en: 'Please select a file.' },
     'photo.err_type': { ko: 'JPG·PNG 형식만 업로드할 수 있습니다.', my: 'JPG·PNG ဖိုင်အမျိုးအစားသာ တင်နိုင်သည်။', en: 'Only JPG/PNG files can be uploaded.' },
     'photo.err_size': { ko: '파일 크기는 2MB 이하여야 합니다.', my: 'ဖိုင်အရွယ်အစား 2MB အောက် ဖြစ်ရမည်။', en: 'The file must be 2MB or smaller.' },
@@ -228,7 +228,7 @@
 
     /* ── 공지/FAQ (fo-notices.js 등 공용 동적 렌더 — ko/my/en) ── */
     /* ── 폼 검증 (val.*) ── */
-    'val.birth_format': { ko: '생년월일을 YYYYMMDD 8자리로 입력해 주세요.', my: 'မွေးနေ့ကို YYYYMMDD ၈ လုံးဖြင့် ထည့်ပါ။', en: 'Enter your date of birth as 8 digits (YYYYMMDD).' },
+    'val.birth_format': { ko: '생년월일을 YYYYMMDD 8자리로 입력해 주세요.', my: 'မွေးသက္ကရာဇ်ကို YYYYMMDD ၈ လုံးဖြင့် ထည့်ပါ။', en: 'Enter your date of birth as 8 digits (YYYYMMDD).' },
     'val.birth_age': { ko: '만 {age}세 미만은 회원가입할 수 없습니다.', my: 'အသက် {age} နှစ်အောက် မှတ်ပုံတင်၍ မရပါ။', en: 'You must be at least {age} years old to sign up.' },
     'val.roster_codes': { ko: '직업·응시동기·응시목적을 선택해 주세요.', my: 'အလုပ်အကိုင်·ဖြေဆိုရခြင်း အကြောင်းရင်း·ရည်ရွယ်ချက်ကို ရွေးပါ။', en: 'Please select occupation, reason, and purpose.' },
     'val.email': { ko: '유효한 이메일을 입력해 주세요.', my: 'မှန်ကန်သော အီးမေးလ် ထည့်ပါ။', en: 'Please enter a valid email address.' },
@@ -359,7 +359,7 @@
     'reg.js_submitting': { ko: '제출 중…', my: 'တင်သွင်းနေသည်…', en: 'Submitting…' },
     'reg.js_simul': { ko: '(동시 접수)', my: '(တစ်ပြိုင်တည်း လျှောက်ထား)', en: '(simultaneous)' },
     'reg.js_network': { ko: '네트워크 오류가 발생했습니다. API 서버 연결을 확인해 주세요.', my: 'ကွန်ရက် အမှားဖြစ်သည်။ API ဆာဗာ ချိတ်ဆက်မှု စစ်ပါ။', en: 'A network error occurred. Check the API server connection.' },
-    'fmt.round_no': { ko: '제{n}회', my: 'အကြိမ် {n}', en: 'Round {n}' },
+    'fmt.round_no': { ko: '제{n}회', my: '{n} ကြိမ်မြောက်', en: 'Round {n}' },
     'su.js_signing_up': { ko: '가입 처리 중…', my: 'မှတ်ပုံတင်နေသည်…', en: 'Creating account…' },
     'su.js_google_ok': { ko: 'Google 계정 인증이 완료되었습니다.', my: 'Google အကောင့် အတည်ပြုမှု ပြီးမြောက်ပါပြီ။', en: 'Google account verification complete.' },
     'rfd.badge_correction': { ko: '정보정정', my: 'အချက်အလက်ပြင်ဆင်', en: 'Correction' },
