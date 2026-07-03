@@ -198,6 +198,8 @@
       name: row.title,
       applyStart: isoDateMmt(row.registration_start_at),
       applyEnd: isoDateMmt(row.registration_end_at),
+      payStart: isoDateMmt(row.payment_start_at),
+      payEnd: isoDateMmt(row.payment_end_at),
       examDate: isoDate(row.exam_date),
       resultDate: isoDate(row.result_date), // null/empty → BO UI에서 '미정'
       cap: row.capacity,
@@ -1165,6 +1167,8 @@
       exam_date: data.examDate,
       registration_start_at: mmtDayStart(data.applyStart),
       registration_end_at: mmtDayEnd(data.applyEnd),
+      payment_start_at: data.payStart ? mmtDayStart(data.payStart) : null,
+      payment_end_at: data.payEnd ? mmtDayEnd(data.payEnd) : null,
       fee_level_i: data.feeI,
       fee_level_ii: data.feeII,
       capacity: data.cap,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
@@ -13,13 +14,18 @@ from app.models.exam import ExamRound, ExamVenue
 
 router = APIRouter(tags=["exam"])
 
+_MMT = ZoneInfo("Asia/Yangon")
+
 
 def _payment_window(r: ExamRound) -> tuple[str | None, str | None]:
-    """응시료 수납 기간 — 접수 마감 후 3~5일(제107회 정책 기준)."""
+    """응시료 수납 기간 — BO 설정값 우선, 없으면 접수 마감(MMT) +3~+5일."""
+    if r.payment_start_at and r.payment_end_at:
+        return r.payment_start_at.isoformat(), r.payment_end_at.isoformat()
     if not r.registration_end_at:
         return None, None
-    start = r.registration_end_at + timedelta(days=3)
-    end = r.registration_end_at + timedelta(days=5)
+    reg_date = r.registration_end_at.astimezone(_MMT).date()
+    start = datetime.combine(reg_date + timedelta(days=3), time.min, tzinfo=_MMT)
+    end = datetime.combine(reg_date + timedelta(days=5), time(23, 59, 59), tzinfo=_MMT)
     return start.isoformat(), end.isoformat()
 
 

@@ -30,6 +30,8 @@ ROUND_107 = {
     "exam_date": datetime(2026, 10, 18, tzinfo=MM_TZ).date(),
     "registration_start_at": datetime(2026, 7, 17, 0, 0, tzinfo=MM_TZ),
     "registration_end_at": datetime(2026, 7, 21, 23, 59, 59, tzinfo=MM_TZ),
+    "payment_start_at": datetime(2026, 7, 24, 0, 0, tzinfo=MM_TZ),
+    "payment_end_at": datetime(2026, 7, 26, 23, 59, 59, tzinfo=MM_TZ),
     "fee_level_i": 25,
     "fee_level_ii": 25,
     "capacity": 0,

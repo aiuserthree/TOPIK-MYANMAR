@@ -146,10 +146,25 @@ function SessionEditLP({ edit, onClose, onSave }) {
   const nextNo = state.sessions.length
     ? Math.max(...state.sessions.map(s => Number(s.no) || 0)) + 1
     : 1;
+
+  function addDaysYmd(ymd, days) {
+    if (!ymd) return '';
+    const parts = ymd.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    d.setDate(d.getDate() + days);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function suggestPayDates(applyEnd) {
+    return { payStart: addDaysYmd(applyEnd, 3), payEnd: addDaysYmd(applyEnd, 5) };
+  }
+
   const [f, setF] = useState(() => existing ? {
     ...existing,
     venues: (existing.venues || []).map(String),
     resultDate: existing.resultDate || '',
+    payStart: existing.payStart || '',
+    payEnd: existing.payEnd || '',
     cap: existing.cap != null ? Number(existing.cap) : 0,
     feeI: existing.feeI != null ? Number(existing.feeI) : 0,
     feeII: existing.feeII != null ? Number(existing.feeII) : 0,
@@ -157,7 +172,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
   } : {
     no: nextNo,
     name: '',
-    applyStart: '', applyEnd: '', examDate: '', resultDate: '',
+    applyStart: '', applyEnd: '', payStart: '', payEnd: '', examDate: '', resultDate: '',
     cap: 1000, feeI: 25, feeII: 25, venues: [], status: 'planned'
   });
 
@@ -188,8 +203,11 @@ function SessionEditLP({ edit, onClose, onSave }) {
     return true;
   };
 
-  const scheduleOk = f.applyStart && f.applyEnd && f.examDate
-    && f.applyStart <= f.applyEnd && f.applyEnd <= f.examDate
+  const scheduleOk = f.applyStart && f.applyEnd && f.payStart && f.payEnd && f.examDate
+    && f.applyStart <= f.applyEnd
+    && f.applyEnd <= f.payStart
+    && f.payStart <= f.payEnd
+    && f.payEnd <= f.examDate
     && (!f.resultDate || f.examDate <= f.resultDate);
   const valid = f.name.trim()
     && scheduleOk
@@ -254,7 +272,43 @@ function SessionEditLP({ edit, onClose, onSave }) {
               toastErr('접수 마감일은 접수 시작일 이후여야 합니다.');
               return;
             }
-            set('applyEnd', v);
+            setF(s => {
+              const next = { ...s, applyEnd: v };
+              if (!existing && v) {
+                const suggested = suggestPayDates(v);
+                if (!s.payStart) next.payStart = suggested.payStart;
+                if (!s.payEnd) next.payEnd = suggested.payEnd;
+              }
+              return next;
+            });
+          }}/>
+        </FormRow>
+        <FormRow label="응시료 납부 시작일 (오프라인)" required>
+          <input type="date" className="input" value={f.payStart} onChange={e => {
+            const v = e.target.value;
+            if (f.applyEnd && v && v < f.applyEnd) {
+              toastErr('응시료 납부 시작일은 접수 마감일 이후여야 합니다.');
+              return;
+            }
+            if (f.payEnd && v && f.payEnd < v) {
+              toastErr('응시료 납부 마감일은 납부 시작일 이후여야 합니다.');
+              return;
+            }
+            set('payStart', v);
+          }}/>
+        </FormRow>
+        <FormRow label="응시료 납부 마감일 (오프라인)" required>
+          <input type="date" className="input" value={f.payEnd} onChange={e => {
+            const v = e.target.value;
+            if (f.payStart && v && v < f.payStart) {
+              toastErr('응시료 납부 마감일은 납부 시작일 이후여야 합니다.');
+              return;
+            }
+            if (f.examDate && v && f.examDate < v) {
+              toastErr('응시료 납부 마감일은 시험일 이전이어야 합니다.');
+              return;
+            }
+            set('payEnd', v);
           }}/>
         </FormRow>
         <FormRow label="시험일" required><input type="date" className="input" value={f.examDate} onChange={e => set('examDate', e.target.value)}/></FormRow>
@@ -283,7 +337,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
 
       {!valid && (
         <div style={{ padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
-          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 ≤ 접수마감 ≤ 시험일) + 시험장 1개 이상 선택이 필요합니다. 정원 0은 미정을 의미합니다. 합격발표일은 미정 시 비워두세요.
+          ※ 모든 필수 항목 입력 + 일정 순서(접수시작 ≤ 접수마감 ≤ 응시료납부 ≤ 시험일) + 시험장 1개 이상 선택이 필요합니다. 정원 0은 미정을 의미합니다. 합격발표일은 미정 시 비워두세요.
           {!venues.length && state.venues.filter(v => v.active).length === 0 && (
             <><br/>활성 시험장이 없습니다. 시험장 관리에서 먼저 등록·활성화해 주세요.</>
           )}

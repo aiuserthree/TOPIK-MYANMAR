@@ -353,6 +353,8 @@ class RoundBody(BaseModel):
     exam_date: date
     registration_start_at: datetime
     registration_end_at: datetime
+    payment_start_at: datetime | None = None
+    payment_end_at: datetime | None = None
     fee_level_i: int
     fee_level_ii: int
     capacity: int
@@ -365,6 +367,8 @@ class RoundPatchBody(BaseModel):
     exam_date: date | None = None
     registration_start_at: datetime | None = None
     registration_end_at: datetime | None = None
+    payment_start_at: datetime | None = None
+    payment_end_at: datetime | None = None
     fee_level_i: int | None = None
     fee_level_ii: int | None = None
     capacity: int | None = None
@@ -1506,6 +1510,8 @@ async def create_round(
         exam_date=body.exam_date,
         registration_start_at=body.registration_start_at,
         registration_end_at=body.registration_end_at,
+        payment_start_at=body.payment_start_at,
+        payment_end_at=body.payment_end_at,
         fee_level_i=body.fee_level_i,
         fee_level_ii=body.fee_level_ii,
         capacity=body.capacity,
@@ -1547,6 +1553,8 @@ async def update_round(
         "exam_date",
         "registration_start_at",
         "registration_end_at",
+        "payment_start_at",
+        "payment_end_at",
         "fee_level_i",
         "fee_level_ii",
         "capacity",

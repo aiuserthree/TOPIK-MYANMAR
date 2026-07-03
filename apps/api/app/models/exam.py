@@ -69,6 +69,8 @@ class ExamRound(TimestampMixin, Base):
     result_date: Mapped[Optional[date]] = mapped_column(Date)
     registration_start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registration_end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    payment_start_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    payment_end_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     fee_level_i: Mapped[int] = mapped_column(Integer, nullable=False)
     fee_level_ii: Mapped[int] = mapped_column(Integer, nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False)
