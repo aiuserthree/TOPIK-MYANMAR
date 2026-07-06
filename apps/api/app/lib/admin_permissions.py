@@ -37,7 +37,7 @@ PERM_MENUS: dict[str, list[str]] = {
 DEFAULT_MATRIX: dict[str, dict[str, list[str]]] = {
     "admin": {
         "dashboard": ["view"],
-        "applicants": ["view", "photo", "pay", "approve", "reject"],
+        "applicants": ["view", "photo", "pay", "approve", "reject", "delete"],
         "sessions": ["view"],
         "venues": ["view"],
         "notices": ["view", "create", "edit", "delete"],

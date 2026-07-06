@@ -426,7 +426,7 @@
         // 운영 액션
         const map = {
           dashboard: ['view'],
-          applicants: ['view','photo','pay','approve','reject'],   // 수험번호 일괄부여·내보내기 제외(슈퍼 전용)
+          applicants: ['view','photo','pay','approve','reject','delete'],   // 수험번호 일괄부여·내보내기 제외(슈퍼 전용)
           sessions: ['view'], venues: ['view'],
           notices: ['view','create','edit','delete'],
           faq: ['view','create','edit','delete'],
