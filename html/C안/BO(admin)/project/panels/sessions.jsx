@@ -51,18 +51,19 @@ function SessionsPanel() {
       const ok = await DataStore.apiRevokeSession(delId);
       if (ok) {
         setDelId(null);
-        toastOk('회차가 폐지되었습니다.');
+        toastOk('회차가 폐지되었습니다. 동일 회차 번호로 재등록할 수 있습니다.');
       }
       return;
     }
     const s = state.sessions.find(x => x.id === delId);
     if (!s) return;
     const before = { ...s };
-    s.status = 'revoked';
-    DataStore.addAudit({ type: '회차', targetId: s.id, action: '폐지', before, after: { ...s }, memo: '회차 폐지' });
+    state.sessions.splice(state.sessions.indexOf(s), 1);
+    state.applicants = state.applicants.filter(a => a.sessionId !== s.id);
+    DataStore.addAudit({ type: '회차', targetId: s.id, action: '폐지', before, memo: '회차 폐지·초기화' });
     DataStore.notify();
     setDelId(null);
-    toastOk('회차가 폐지되었습니다.');
+    toastOk('회차가 폐지되었습니다. 동일 회차 번호로 재등록할 수 있습니다.');
   };
 
   return (
@@ -131,7 +132,7 @@ function SessionsPanel() {
           <div>
             <b>{revokeTarget.name}</b> ({revokeTarget.no}회) 회차를 폐지하시겠습니까?
             <br/><br/>
-            <span className="muted">접수자 정보는 유지되며 회차는 비공개로 전환됩니다.</span>
+            <span className="muted">해당 회차의 <b>접수자·접수 데이터가 모두 삭제</b>되며, 회차 번호({revokeTarget.no}회)를 다시 등록할 수 있습니다.</span>
           </div>
         </Modal>
       )}

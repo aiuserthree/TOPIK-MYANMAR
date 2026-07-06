@@ -17,7 +17,7 @@ from app.models.admin import AdminPermissionMatrix
 # Menu ids align with BO DataStore.permSections (panels/permissions.jsx).
 PERM_MENUS: dict[str, list[str]] = {
     "dashboard": ["view"],
-    "applicants": ["view", "photo", "pay", "approve", "reject", "exam", "export"],
+    "applicants": ["view", "photo", "pay", "approve", "reject", "exam", "export", "delete"],
     "sessions": ["view", "create", "edit", "delete"],
     "venues": ["view", "create", "edit", "delete"],
     "notices": ["view", "create", "edit", "delete"],

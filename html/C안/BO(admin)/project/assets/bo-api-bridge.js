@@ -120,7 +120,7 @@
 
   // 연명부 양식 권위 코드표(「연명부 양식.xlsx」 / 계약서 3절) — 표시용 라벨
   var JOB_LABELS = {
-    1: "학생", 2: "공무원(군인)", 3: "회사원", 4: "자영업",
+    1: "학생", 2: "공무원", 3: "회사원", 4: "자영업",
     5: "주부", 6: "교사", 7: "무직", 8: "기타",
   };
   var MOTIVE_LABELS = {
@@ -181,6 +181,7 @@
       applicationNo: formatApplicationNo(row.application_no, row.submission_id, row.exam_level),
       status: mapApplicantStatus(row),
       appliedAt: fmtMmt(row.created_at),
+      deletedAt: fmtMmt(row.deleted_at),
       rejectReason: row.reject_reason || "",
       memo: "",
       email: row.email || "",
@@ -679,6 +680,7 @@
     DS.state.venues = [];
     DS.state.notices = [];
     DS.state.noticeTrash = [];
+    DS.state.applicantTrash = [];
     DS.state.faqs = [];
     DS.state.refunds = [];
     DS.state.inquiries = [];
@@ -699,6 +701,7 @@
     DS.state.venues = [];
     DS.state.notices = [];
     DS.state.noticeTrash = [];
+    DS.state.applicantTrash = [];
     DS.state.faqs = [];
     DS.state.refunds = [];
     DS.state.inquiries = [];
@@ -786,6 +789,7 @@
       Api.getAdminUsers(),
       Api.getAuditLogs(),
       Api.getPermissionMatrix(),
+      Api.getApplications({ page_size: 200, trash: "true" }),
     ]).then(function (results) {
       var regRes = results[0];
       var venRes = results[1];
@@ -800,6 +804,7 @@
       var admRes = results[10];
       var audRes = results[11];
       var permRes = results[12];
+      var trashAppRes = results[13];
 
       var critical = [regRes, venRes, rndRes, appRes, notRes, faqRes, refRes, inqRes, memRes, termRes, admRes];
       var badIdx = critical.findIndex(function (r) { return !r.ok; });
@@ -839,6 +844,9 @@
       });
 
       DS.state.applicants = apps.map(mapApplicant);
+      DS.state.applicantTrash = (trashAppRes && trashAppRes.ok && trashAppRes.body && trashAppRes.body.items)
+        ? trashAppRes.body.items.map(mapApplicant)
+        : [];
       DS.state.notices = ((notRes.body && notRes.body.items) || []).map(function (n, i) {
         return mapNotice(n, i, DS.state.me && DS.state.me.id);
       });
@@ -911,10 +919,43 @@
 
   DS.reloadApplicants = function (sessionId, opts) {
     if (!DS.isApiMode()) return Promise.resolve();
+    opts = opts || {};
+
+    function applyTrashItems(items) {
+      if (sessionId) {
+        var sid = String(sessionId);
+        var restTrash = DS.state.applicantTrash.filter(function (a) { return a.sessionId !== sid; });
+        DS.state.applicantTrash = restTrash.concat(items);
+      } else {
+        DS.state.applicantTrash = items;
+      }
+    }
+
+    if (opts.trash) {
+      var tq = { page_size: 200, trash: "true" };
+      if (sessionId) tq.exam_round_id = sessionId;
+      return Api.getApplications(tq).then(function (res) {
+        if (res.ok) {
+          applyTrashItems(((res.body && res.body.items) || []).map(mapApplicant));
+        }
+        DS.notify();
+      });
+    }
+
     var q = { page_size: 200 };
     if (sessionId) q.exam_round_id = sessionId;
-    if (opts && opts.q) q.q = opts.q;
-    return Api.getApplications(q).then(function (res) {
+    if (opts.q) q.q = opts.q;
+
+    var tq = { page_size: 200, trash: "true" };
+    if (sessionId) tq.exam_round_id = sessionId;
+
+    return Promise.all([
+      Api.getApplications(q),
+      Api.getApplications(tq),
+    ]).then(function (results) {
+      var res = results[0];
+      var trashRes = results[1];
+
       if (!res.ok) {
         DS.state.apiError = TopikBoApi.parseError(res);
         if (!sessionId) DS.state.applicants = [];
@@ -938,7 +979,51 @@
         }
         DS.state.apiError = null;
       }
+
+      if (trashRes.ok) {
+        applyTrashItems(((trashRes.body && trashRes.body.items) || []).map(mapApplicant));
+      }
+
       DS.notify();
+    });
+  };
+
+  DS.apiDeleteApplicant = function (id) {
+    return Api.deleteApplication(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      return DS.reloadApplicants(DS.state.activeSessionId).then(function () { return true; });
+    });
+  };
+
+  DS.apiBulkDeleteApplicants = function (ids) {
+    return Api.bulkDeleteApplications({ ids: ids.map(function (x) { return parseInt(x, 10); }).filter(Boolean) }).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return 0; }
+      return DS.reloadApplicants(DS.state.activeSessionId).then(function () {
+        return (res.body && res.body.count) || ids.length;
+      });
+    });
+  };
+
+  DS.apiRestoreApplicant = function (id) {
+    return Api.restoreApplication(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      return DS.reloadApplicants(DS.state.activeSessionId).then(function () { return true; });
+    });
+  };
+
+  DS.apiPurgeApplicant = function (id) {
+    return Api.purgeApplication(id).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
+      return DS.reloadApplicants(DS.state.activeSessionId).then(function () { return true; });
+    });
+  };
+
+  DS.apiBulkPurgeApplicants = function (ids) {
+    return Api.bulkPurgeApplications({ ids: ids.map(function (x) { return parseInt(x, 10); }).filter(Boolean) }).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return 0; }
+      return DS.reloadApplicants(DS.state.activeSessionId).then(function () {
+        return (res.body && res.body.count) || ids.length;
+      });
     });
   };
 

@@ -662,6 +662,32 @@
         body: JSON.stringify(payload || {}),
       });
     },
+    deleteApplication: function (id) {
+      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id), { method: "DELETE" });
+    },
+    bulkDeleteApplications: function (payload) {
+      return apiFetch("/api/v1/admin/applications/bulk-delete", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      });
+    },
+    restoreApplication: function (id) {
+      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/restore", {
+        method: "POST",
+        body: "{}",
+      });
+    },
+    purgeApplication: function (id) {
+      return apiFetch("/api/v1/admin/applications/" + encodeURIComponent(id) + "/purge", {
+        method: "DELETE",
+      });
+    },
+    bulkPurgeApplications: function (payload) {
+      return apiFetch("/api/v1/admin/applications/bulk-purge", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      });
+    },
     approveApplication: function (id, payload, opts) {
       return withRevFetch(
         "/api/v1/admin/applications/" + encodeURIComponent(id) + "/approve",

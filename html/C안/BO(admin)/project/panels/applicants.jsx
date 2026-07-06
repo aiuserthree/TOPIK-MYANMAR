@@ -219,7 +219,9 @@ function applicantConfirmAvailable(a) {
 function ApplicantsPanel() {
   const state = useStore();
   const sessionId = state.activeSessionId;
-  const apps = useMemo(() => state.applicants.filter(a => a.sessionId === sessionId), [state.applicants, sessionId]);
+  const [viewTab, setViewTab] = useState('list'); // list | trash
+  const sourceApps = viewTab === 'trash' ? (state.applicantTrash || []) : state.applicants;
+  const apps = useMemo(() => sourceApps.filter(a => a.sessionId === sessionId), [sourceApps, sessionId]);
 
   const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
 
@@ -251,6 +253,12 @@ function ApplicantsPanel() {
     if (!sessionId || !isApi || !DataStore.reloadApplicants) return;
     DataStore.reloadApplicants(sessionId);
   }, [sessionId, isApi]);
+
+  useEffect(() => {
+    if (viewTab === 'trash' && isApi && DataStore.reloadApplicants) {
+      DataStore.reloadApplicants(sessionId, { trash: true });
+    }
+  }, [viewTab, sessionId, isApi]);
 
   useEffect(() => {
     if (prevSessionRef.current === sessionId) return;
@@ -327,6 +335,9 @@ function ApplicantsPanel() {
   const [payModal, setPayModal] = useState(null);          // { ids:[], mode:'pay'|'cancel' }
   const [approveModal, setApproveModal] = useState(null);  // { ids:[] }
   const [rejectModal, setRejectModal] = useState(null);    // { ids:[] }
+  const [delModal, setDelModal] = useState(null);          // { ids:[] }
+  const [purgeModal, setPurgeModal] = useState(null);      // { ids:[] }
+  const [restoreId, setRestoreId] = useState(null);
   const [examModal, setExamModal] = useState(false);
   const [excelModal, setExcelModal] = useState(false);
   const [paymentExcelModal, setPaymentExcelModal] = useState(false);
@@ -601,7 +612,102 @@ function ApplicantsPanel() {
   const canPay = DataStore.can('applicants', 'pay');
   const canApprove = DataStore.can('applicants', 'approve');
   const canReject = DataStore.can('applicants', 'reject');
+  const canDelete = DataStore.can('applicants', 'delete');
   const isReadonly = DataStore.isReadonly();
+  const isTrashView = viewTab === 'trash';
+
+  const doDeleteApplicants = async (ids) => {
+    if (!ids.length) return;
+    if (isApi && DataStore.apiBulkDeleteApplicants) {
+      const n = await DataStore.apiBulkDeleteApplicants(ids);
+      if (n) {
+        setDelModal(null);
+        setSelected(new Set());
+        toastOk(n + '건이 휴지통으로 이동되었습니다.');
+      }
+      return;
+    }
+    ids.forEach(id => {
+      const idx = state.applicants.findIndex(x => x.id === id);
+      if (idx >= 0) {
+        const a = state.applicants[idx];
+        if (!state.applicantTrash) state.applicantTrash = [];
+        state.applicantTrash.push({ ...a, deletedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') });
+        state.applicants.splice(idx, 1);
+        DataStore.addAudit({ type: '접수자', targetId: id, action: '삭제', before: { ...a }, memo: 'soft-delete' });
+      }
+    });
+    DataStore.notify();
+    setDelModal(null);
+    setSelected(new Set());
+    toastOk(ids.length + '건이 휴지통으로 이동되었습니다.');
+  };
+
+  const doRestoreApplicant = async (id) => {
+    if (isApi && DataStore.apiRestoreApplicant) {
+      const ok = await DataStore.apiRestoreApplicant(id);
+      if (ok) { setRestoreId(null); toastOk('접수가 복구되었습니다.'); }
+      return;
+    }
+    const t = (state.applicantTrash || []).find(x => x.id === id);
+    if (t) {
+      state.applicantTrash = state.applicantTrash.filter(x => x.id !== id);
+      state.applicants.push(t);
+      DataStore.addAudit({ type: '접수자', targetId: id, action: '복구', after: { ...t }, memo: '휴지통 복구' });
+      DataStore.notify();
+    }
+    setRestoreId(null);
+    toastOk('접수가 복구되었습니다.');
+  };
+
+  const doPurgeApplicants = async (ids) => {
+    if (!ids.length) return;
+    if (isApi && DataStore.apiBulkPurgeApplicants) {
+      const n = await DataStore.apiBulkPurgeApplicants(ids);
+      if (n) {
+        setPurgeModal(null);
+        setSelected(new Set());
+        toastOk(n + '건이 영구 삭제되었습니다.');
+      }
+      return;
+    }
+    ids.forEach(id => {
+      const idx = (state.applicantTrash || []).findIndex(x => x.id === id);
+      if (idx >= 0) {
+        const a = state.applicantTrash[idx];
+        state.applicantTrash.splice(idx, 1);
+        DataStore.addAudit({ type: '접수자', targetId: id, action: '영구삭제', before: { ...a }, memo: '휴지통 영구 삭제' });
+      }
+    });
+    DataStore.notify();
+    setPurgeModal(null);
+    setSelected(new Set());
+    toastOk(ids.length + '건이 영구 삭제되었습니다.');
+  };
+
+  const doBulkRestoreApplicants = async (ids) => {
+    if (!ids.length) return;
+    if (isApi && DataStore.apiRestoreApplicant) {
+      for (const id of ids) {
+        const ok = await DataStore.apiRestoreApplicant(id);
+        if (!ok) return;
+      }
+      setSelected(new Set());
+      toastOk(ids.length + '건이 복구되었습니다.');
+      return;
+    }
+    ids.forEach(id => {
+      const t = (state.applicantTrash || []).find(x => x.id === id);
+      if (t) {
+        state.applicantTrash = state.applicantTrash.filter(x => x.id !== id);
+        state.applicants.push(t);
+        DataStore.addAudit({ type: '접수자', targetId: id, action: '복구', after: { ...t }, memo: '휴지통 복구' });
+      }
+    });
+    DataStore.notify();
+    setSelected(new Set());
+    toastOk(ids.length + '건이 복구되었습니다.');
+  };
 
   // bulk action helpers
   const bulkIds = Array.from(selected);
@@ -645,6 +751,13 @@ function ApplicantsPanel() {
       {/* Filter bar — TPKM_BO_2_1_1 */}
       <div className="filterbar filterbar-applicants no-print">
         <div className="chips">
+          <button className={`chip ${viewTab === 'list' ? 'active' : ''}`} onClick={() => setViewTab('list')}>접수 목록</button>
+          <button className={`chip ${viewTab === 'trash' ? 'active' : ''}`} onClick={() => setViewTab('trash')}>
+            휴지통<span className="cnt">{(state.applicantTrash || []).filter(a => a.sessionId === sessionId).length}</span>
+          </button>
+        </div>
+        {!isTrashView && (
+        <div className="chips">
           {STATUS_CHIPS.map(c => (
             <button key={c.id}
               className={`chip ${statusF === c.id ? 'active' : ''}`}
@@ -653,6 +766,8 @@ function ApplicantsPanel() {
             </button>
           ))}
         </div>
+        )}
+        {!isTrashView && (
         <div className="controls">
           <select className="select" value={venueF} onChange={e => setVenueF(e.target.value)}>
             <option value="all">전체 시험장</option>
@@ -675,6 +790,7 @@ function ApplicantsPanel() {
             </button>
           )}
         </div>
+        )}
       </div>
 
       {isReadonly && (
@@ -684,13 +800,26 @@ function ApplicantsPanel() {
       )}
 
       {/* Bulk action bar */}
+      {!isTrashView && (
       <BulkBar count={bulkIds.length} onClear={() => setSelected(new Set())}>
         <button className="ibtn" disabled={!canPhoto} onClick={() => doBulkPhotoApprove(bulkIds)}>사진 일괄 승인</button>
         <button className="ibtn" disabled={!canPay} onClick={() => setPayModal({ ids: bulkIds, mode: 'pay' })}>오프라인 수납</button>
         <button className="ibtn" disabled={!canApprove} onClick={() => setApproveModal({ ids: bulkIds })}>승인</button>
         <button className="ibtn danger" disabled={!canReject} onClick={() => setRejectModal({ ids: bulkIds })}>반려</button>
         <button className="ibtn" disabled={!canPay} onClick={() => setPayModal({ ids: bulkIds.filter(id => state.applicants.find(a => a.id === id)?.paid), mode: 'cancel' })}>수납 취소(환불)</button>
+        <button className="ibtn danger" disabled={!canDelete || !bulkIds.length} onClick={() => setDelModal({ ids: bulkIds })}>삭제</button>
       </BulkBar>
+      )}
+
+      {isTrashView && (
+      <BulkBar count={bulkIds.length} onClear={() => setSelected(new Set())}>
+        <button className="ibtn" disabled={!canDelete || !bulkIds.length} onClick={() => {
+          if (bulkIds.length === 1) setRestoreId(bulkIds[0]);
+          else doBulkRestoreApplicants(bulkIds);
+        }}>복구</button>
+        <button className="ibtn danger" disabled={!canDelete || !bulkIds.length} onClick={() => setPurgeModal({ ids: bulkIds })}>영구 삭제</button>
+      </BulkBar>
+      )}
 
       {/* Data grid — TPKM_BO_2_1_2 연명부 컬럼 정합 */}
       <div className="dg-wrap">
@@ -711,6 +840,7 @@ function ApplicantsPanel() {
                 <th>수납</th>
                 <th>수험번호</th>
                 <th>상태</th>
+                {isTrashView && <th>삭제일</th>}
                 <th className="no-print">관리</th>
               </tr>
             </thead>
@@ -732,22 +862,35 @@ function ApplicantsPanel() {
                   <td>{applicantPaymentPill(a)}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
                   <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
+                  {isTrashView && <td className="code muted">{a.deletedAt || '—'}</td>}
                   <td className="no-print">
                     <div className="row-actions">
+                      {isTrashView ? (
+                        <>
+                          <button className="ibtn" disabled={!canDelete} onClick={() => setRestoreId(a.id)}>복구</button>
+                          <button className="ibtn danger" disabled={!canDelete} onClick={() => setPurgeModal({ ids: [a.id] })}><I.Trash style={{ width: 14, height: 14 }}/> 영구 삭제</button>
+                        </>
+                      ) : (
+                        <>
                       <button className="ibtn" title="접수 확인증" onClick={() => setConfirmId(a.id)} disabled={!applicantConfirmAvailable(a)}>
                         <I.FileText style={{ width: 14, height: 14 }}/> 접수증
                       </button>
                       <button className="ibtn" title="상세 보기" onClick={() => setDetailId(a.id)}><I.Eye style={{ width: 14, height: 14 }}/> 상세보기</button>
+                      <button className="ibtn danger" disabled={!canDelete} title="휴지통으로 이동" onClick={() => setDelModal({ ids: [a.id] })}>
+                        <I.Trash style={{ width: 14, height: 14 }}/> 삭제
+                      </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
               {!pageRows.length && (
-                <tr><td colSpan="14">
+                <tr><td colSpan={isTrashView ? 15 : 14}>
                   <div className="empty">
                     <div className="icon"><I.Search/></div>
-                    <div className="ttl">조건에 맞는 접수자가 없습니다</div>
-                    <div className="sub">필터/검색 조건을 변경해 보세요.</div>
+                    <div className="ttl">{isTrashView ? '휴지통이 비어 있습니다' : '조건에 맞는 접수자가 없습니다'}</div>
+                    <div className="sub">{isTrashView ? '삭제된 접수는 30일간 보관 후 자동 영구 삭제됩니다. 즉시 삭제하려면 「영구 삭제」를 사용하세요.' : '필터/검색 조건을 변경해 보세요.'}</div>
                   </div>
                 </td></tr>
               )}
@@ -778,6 +921,37 @@ function ApplicantsPanel() {
       {payModal && <PayModal modal={payModal} onClose={() => setPayModal(null)} onPay={doPay} onCancel={doCancelPay} onPhotoApprove={doPhotoApprove}/>}
       {approveModal && <ApproveModal modal={approveModal} onClose={() => setApproveModal(null)} onConfirm={() => doApprove(approveModal.ids)}/>}
       {rejectModal && <RejectModal modal={rejectModal} onClose={() => setRejectModal(null)} onConfirm={(reason) => doReject(rejectModal.ids, reason)}/>}
+      {delModal && (
+        <Modal open onClose={() => setDelModal(null)} title="접수 삭제" danger
+          footer={<>
+            <button className="btn btn-secondary" onClick={() => setDelModal(null)}>취소</button>
+            <button className="btn btn-danger" onClick={() => doDeleteApplicants(delModal.ids)}>삭제</button>
+          </>}>
+          <div>선택한 <b>{delModal.ids.length}</b>건을 휴지통으로 이동하시겠습니까?<br/><span className="muted">30일간 보관 후 영구 삭제됩니다. 관리자 권한 매트릭스에서 「삭제」 권한이 필요합니다.</span></div>
+        </Modal>
+      )}
+      {restoreId && (
+        <Modal open onClose={() => setRestoreId(null)} title="접수 복구"
+          footer={<>
+            <button className="btn btn-secondary" onClick={() => setRestoreId(null)}>취소</button>
+            <button className="btn btn-primary" onClick={() => doRestoreApplicant(restoreId)}>복구</button>
+          </>}>
+          <div>휴지통에서 접수를 복구하시겠습니까?</div>
+        </Modal>
+      )}
+      {purgeModal && (
+        <Modal open onClose={() => setPurgeModal(null)} title="접수 영구 삭제" danger
+          footer={<>
+            <button className="btn btn-secondary" onClick={() => setPurgeModal(null)}>취소</button>
+            <button className="btn btn-danger" onClick={() => doPurgeApplicants(purgeModal.ids)}>영구 삭제</button>
+          </>}>
+          <div>
+            선택한 <b>{purgeModal.ids.length}</b>건을 <b>영구 삭제</b>하시겠습니까?
+            <br/><br/>
+            <span className="muted">복구할 수 없습니다. 접수 데이터·메모가 DB에서 완전히 제거됩니다.</span>
+          </div>
+        </Modal>
+      )}
       {examModal && <ExamAssignModal onClose={() => setExamModal(false)} doAssign={doAssignExam}/>}
       {excelModal && <ExcelExportModal onClose={() => setExcelModal(false)} rows={filtered}/>}
       {paymentExcelModal && <PaymentExcelModal onClose={() => setPaymentExcelModal(false)} sessionId={sessionId}/>}

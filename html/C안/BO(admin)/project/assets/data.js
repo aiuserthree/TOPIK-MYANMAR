@@ -42,7 +42,7 @@
   const LAST_EN_MM = ['Htun','Maung','Win','Oo','Kyi','Mon','Hlaing','Aung','Lin','Soe','Tun','Wai','Naing','Phyo'];
   const NATIONS = ['미얀마','미얀마','미얀마','미얀마','한국','중국','베트남'];
   const L1 = ['미얀마어','버마어','샨어','카렌어','한국어','중국어'];
-  const JOBS = ['학생','회사원','공무원','자영업','전문직','주부','무직','교사','군인','농업·어업','기타','미상'];
+  const JOBS = ['학생','회사원','공무원','자영업','전문직','주부','무직','교사','농업·어업','기타','미상'];
   const MOTIVES = ['유학 및 진학','취업 및 이민','자격 취득','개인적 관심','학업 요건','장학금 신청','비자 발급','기업 요구','한국 문화 관심','기타','미상'];
   const PURPOSES = ['대학 입학','대학원 입학','취업','비자 발급','장학금','자격증','개인 학습','기업 요구','유학','이민','한국어 교육','연구','교환학생','기타','미상'];
   const STATUSES = ['applied','photo','pay','approved','rejected','cancel','refund'];
@@ -391,7 +391,7 @@
       { id: 'dashboard', label: '대시보드', actions: ['view'] },
     ]},
     { id: 'apply', title: '접수 관리', menus: [
-      { id: 'applicants', label: '접수자 목록', actions: ['view','photo','pay','approve','reject','exam','export'] },
+      { id: 'applicants', label: '접수자 목록', actions: ['view','photo','pay','approve','reject','exam','export','delete'] },
     ]},
     { id: 'exam', title: '시험 관리', menus: [
       { id: 'sessions', label: '회차 관리', actions: ['view','create','edit','delete'] },
@@ -460,6 +460,7 @@
     members: MEMBERS,
     notices: NOTICES,
     noticeTrash: [],
+    applicantTrash: [],
     faqs: FAQS,
     refunds: REFUNDS,
     inquiries: INQUIRIES,

@@ -75,6 +75,7 @@ from app.models.content import FaqItem, Notice, Term, TermConsent
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue
 from app.models.system import FileAttachment
 from app.models.user import User
+from app.lib.exam_round_purge import purge_exam_round
 from app.lib.exam_round_status import sync_exam_round_status, sync_exam_rounds_status
 from app.routers.exam import serialize_round, serialize_venue
 
@@ -202,6 +203,7 @@ class NoticeBody(BaseModel):
 
 
 _NOTICE_TRASH_RETENTION_DAYS = 30
+_APPLICATION_TRASH_RETENTION_DAYS = 30
 
 
 def _notice_row_dict(n: Notice, attachments: list[dict] | None = None) -> dict:
@@ -534,7 +536,57 @@ def _app_row_dict(
         "paid_at": app.paid_at.isoformat() if app.paid_at else None,
         "created_at": app.created_at.isoformat() if app.created_at else None,
         "rev": app.rev,
+        "is_deleted": app.is_deleted,
+        "deleted_at": app.deleted_at.isoformat() if app.deleted_at else None,
     }
+
+
+async def _hard_delete_applications(db: AsyncSession, app_ids: list[int]) -> int:
+    """접수 행·메모 영구 삭제. 제출(submission)에 남은 접수가 없으면 submission도 삭제."""
+    ids = [i for i in app_ids if isinstance(i, int) and i > 0]
+    if not ids:
+        return 0
+    rows = (
+        await db.execute(
+            select(Application.id, Application.submission_id).where(Application.id.in_(ids))
+        )
+    ).all()
+    if not rows:
+        return 0
+    found_ids = [r[0] for r in rows]
+    submission_ids = list({r[1] for r in rows})
+
+    await db.execute(
+        update(Application).where(Application.id.in_(found_ids)).values(photo_file_id=None)
+    )
+    await db.execute(delete(ApplicationMemo).where(ApplicationMemo.application_id.in_(found_ids)))
+    await db.execute(delete(Application).where(Application.id.in_(found_ids)))
+
+    for sid in submission_ids:
+        rem = (
+            await db.execute(select(Application.id).where(Application.submission_id == sid).limit(1))
+        ).first()
+        if not rem:
+            await db.execute(delete(ApplicationSubmission).where(ApplicationSubmission.id == sid))
+
+    return len(found_ids)
+
+
+async def _purge_expired_application_trash(db: AsyncSession) -> int:
+    """휴지통 30일 경과 접수 영구 삭제."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=_APPLICATION_TRASH_RETENTION_DAYS)
+    expired = (
+        await db.execute(
+            select(Application.id).where(
+                Application.is_deleted.is_(True),
+                Application.deleted_at.isnot(None),
+                Application.deleted_at < cutoff,
+            )
+        )
+    ).scalars().all()
+    if not expired:
+        return 0
+    return await _hard_delete_applications(db, list(expired))
 
 
 async def _load_app_refs(
@@ -565,12 +617,15 @@ async def admin_list_applications(
     exam_level: str | None = Query(None),
     status: str | None = Query(None),
     q: str | None = Query(None, description="이름·이메일·생년월일·접수번호·수험번호 검색"),
+    trash: bool = Query(False),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     _: AuthUser = Depends(require_any_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    stmt = select(Application)
+    if trash:
+        await _purge_expired_application_trash(db)
+    stmt = select(Application).where(Application.is_deleted.is_(trash))
     if exam_round_id:
         stmt = stmt.where(Application.exam_round_id == exam_round_id)
     if exam_venue_id:
@@ -595,7 +650,9 @@ async def admin_list_applications(
                 User.birth_date.ilike(term),
             )
         )
-    stmt = stmt.order_by(Application.id.desc()).offset((page - 1) * page_size).limit(page_size)
+    stmt = stmt.order_by(
+        Application.deleted_at.desc().nullslast() if trash else Application.id.desc()
+    ).offset((page - 1) * page_size).limit(page_size)
     apps = (await db.execute(stmt)).scalars().all()
     users, venues, rounds = await _load_app_refs(db, apps)
     return {
@@ -630,7 +687,7 @@ async def export_photos_zip(
 
     수험번호 미부여/사진 없음은 _누락리포트.txt 에 기록.
     """
-    stmt = select(Application).where(Application.status != "cancelled")
+    stmt = select(Application).where(Application.status != "cancelled", Application.is_deleted.is_(False))
     if round_id:
         stmt = stmt.where(Application.exam_round_id == round_id)
     if venue_id:
@@ -731,6 +788,7 @@ async def export_roster_xlsx(
             select(Application).where(
                 Application.exam_round_id == round_id,
                 Application.status != "cancelled",
+                Application.is_deleted.is_(False),
             )
         )
     ).scalars().all()
@@ -782,6 +840,7 @@ async def export_payment_roster_xlsx(
                 Application.exam_round_id == round_id,
                 Application.status != "cancelled",
                 Application.payment_status == "unpaid",
+                Application.is_deleted.is_(False),
             )
         )
     ).scalars().all()
@@ -840,6 +899,7 @@ async def import_payment_roster_xlsx(
             select(Application).where(
                 Application.exam_round_id == round_id,
                 Application.status != "cancelled",
+                Application.is_deleted.is_(False),
             )
         )
     ).scalars().all()
@@ -1097,6 +1157,153 @@ async def add_application_memo(
     return rows[0] if rows else {"id": memo.id, "body": memo.body, "created_at": memo.created_at.isoformat()}
 
 
+@router.delete("/applications/{app_id}")
+async def delete_application(
+    app_id: int,
+    admin: AuthUser = Depends(matrix_perm("applicants", "delete")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """접수 soft-delete — 휴지통 30일 보관."""
+    app = (
+        await db.execute(
+            select(Application).where(Application.id == app_id, Application.is_deleted.is_(False))
+        )
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    before = {"status": app.status, "exam_level": app.exam_level}
+    app.is_deleted = True
+    app.deleted_at = datetime.now(timezone.utc)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="application_delete",
+        target_type="applications", target_id=app_id, before_data=before, ip_address=ip,
+    )
+    await db.commit()
+    return {"deleted": True, "id": app_id}
+
+
+class ApplicationBulkDeleteBody(BaseModel):
+    ids: list[int] = Field(default_factory=list)
+
+
+@router.post("/applications/bulk-delete")
+async def bulk_delete_applications(
+    body: ApplicationBulkDeleteBody,
+    admin: AuthUser = Depends(matrix_perm("applicants", "delete")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """접수 일괄 soft-delete."""
+    ids = [i for i in body.ids if isinstance(i, int) and i > 0]
+    if not ids:
+        raise api_error("VALIDATION_ERROR", "삭제할 접수를 선택해 주세요.", 400)
+    apps = (
+        await db.execute(
+            select(Application).where(Application.id.in_(ids), Application.is_deleted.is_(False))
+        )
+    ).scalars().all()
+    if not apps:
+        raise api_error("NOT_FOUND", "삭제할 접수를 찾을 수 없습니다.", 404)
+    now = datetime.now(timezone.utc)
+    deleted_ids: list[int] = []
+    for app in apps:
+        app.is_deleted = True
+        app.deleted_at = now
+        deleted_ids.append(app.id)
+        await write_audit(
+            db, admin_user_id=admin.id, action_type="application_delete",
+            target_type="applications", target_id=app.id,
+            before_data={"status": app.status, "exam_level": app.exam_level},
+            ip_address=ip,
+        )
+    await db.commit()
+    return {"deleted": True, "count": len(deleted_ids), "ids": deleted_ids}
+
+
+@router.post("/applications/{app_id}/restore")
+async def restore_application(
+    app_id: int,
+    admin: AuthUser = Depends(matrix_perm("applicants", "delete")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    app = (
+        await db.execute(
+            select(Application).where(Application.id == app_id, Application.is_deleted.is_(True))
+        )
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "휴지통에 접수가 없습니다.", 404)
+    app.is_deleted = False
+    app.deleted_at = None
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="application_restore",
+        target_type="applications", target_id=app_id,
+        after_data={"status": app.status, "exam_level": app.exam_level}, ip_address=ip,
+    )
+    await db.commit()
+    return {"restored": True, "id": app_id}
+
+
+@router.delete("/applications/{app_id}/purge")
+async def purge_application(
+    app_id: int,
+    admin: AuthUser = Depends(matrix_perm("applicants", "delete")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """휴지통 접수 영구 삭제."""
+    app = (
+        await db.execute(
+            select(Application).where(Application.id == app_id, Application.is_deleted.is_(True))
+        )
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "휴지통에 접수가 없습니다.", 404)
+    before = {"status": app.status, "exam_level": app.exam_level, "submission_id": app.submission_id}
+    count = await _hard_delete_applications(db, [app_id])
+    if not count:
+        raise api_error("NOT_FOUND", "휴지통에 접수가 없습니다.", 404)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="application_purge",
+        target_type="applications", target_id=app_id, before_data=before, ip_address=ip,
+    )
+    await db.commit()
+    return {"purged": True, "id": app_id}
+
+
+@router.post("/applications/bulk-purge")
+async def bulk_purge_applications(
+    body: ApplicationBulkDeleteBody,
+    admin: AuthUser = Depends(matrix_perm("applicants", "delete")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """휴지통 접수 일괄 영구 삭제."""
+    ids = [i for i in body.ids if isinstance(i, int) and i > 0]
+    if not ids:
+        raise api_error("VALIDATION_ERROR", "영구 삭제할 접수를 선택해 주세요.", 400)
+    apps = (
+        await db.execute(
+            select(Application).where(Application.id.in_(ids), Application.is_deleted.is_(True))
+        )
+    ).scalars().all()
+    if not apps:
+        raise api_error("NOT_FOUND", "휴지통에 접수가 없습니다.", 404)
+    purged_ids = [a.id for a in apps]
+    for app in apps:
+        await write_audit(
+            db, admin_user_id=admin.id, action_type="application_purge",
+            target_type="applications", target_id=app.id,
+            before_data={"status": app.status, "exam_level": app.exam_level, "submission_id": app.submission_id},
+            ip_address=ip,
+        )
+    count = await _hard_delete_applications(db, purged_ids)
+    await db.commit()
+    return {"purged": True, "count": count, "ids": purged_ids}
+
+
 @router.post("/applications/{app_id}/approve")
 async def approve_application(
     app_id: int,
@@ -1333,6 +1540,7 @@ async def assign_exam_numbers(
             Application.payment_status == "paid",
             Application.photo_review_status == "approved",
             Application.exam_number.is_(None),
+            Application.is_deleted.is_(False),
         )
     )
     rows = result.all()
@@ -1370,6 +1578,7 @@ async def assign_exam_numbers(
             select(Application.exam_number).where(
                 Application.exam_round_id == round_id,
                 Application.exam_venue_id == venue_id,
+                Application.is_deleted.is_(False),
                 Application.exam_level == level,
                 Application.exam_number.isnot(None),
             )
@@ -1506,6 +1715,18 @@ async def create_round(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)  # RBAC: 회차 생성/수정 = 최고관리자(계약서 7절)
+    conflict = (
+        await db.execute(select(ExamRound).where(ExamRound.round_no == body.round_no))
+    ).scalar_one_or_none()
+    if conflict:
+        if conflict.registration_status == "revoked":
+            await purge_exam_round(db, conflict.id)
+        else:
+            raise api_error(
+                "DUPLICATE",
+                f"제{body.round_no}회 회차가 이미 등록되어 있습니다.",
+                409,
+            )
     rnd = ExamRound(
         round_no=body.round_no,
         title=body.title,
@@ -1617,17 +1838,19 @@ async def revoke_round(
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == round_id))).scalar_one_or_none()
     if not rnd:
         raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
-    if rnd.registration_status == "revoked":
-        raise api_error("VALIDATION_ERROR", "이미 폐지된 회차입니다.", 400)
-    before = {"registration_status": rnd.registration_status}
-    rnd.registration_status = "revoked"
+    before = {
+        "round_no": rnd.round_no,
+        "title": rnd.title,
+        "registration_status": rnd.registration_status,
+    }
+    stats = await purge_exam_round(db, round_id)
     await write_audit(
         db, admin_user_id=admin.id, action_type="exam_round_revoke",
         target_type="exam_rounds", target_id=round_id,
-        before_data=before, after_data={"registration_status": "revoked"}, ip_address=ip,
+        before_data=before, after_data={"purged": stats}, ip_address=ip,
     )
     await db.commit()
-    return {"revoked": True, "registration_status": "revoked"}
+    return {"revoked": True, "purged": stats}
 
 
 @router.post("/exam-rounds/{round_id}/restore")

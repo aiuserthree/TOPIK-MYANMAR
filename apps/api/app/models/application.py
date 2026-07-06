@@ -95,6 +95,8 @@ class Application(TimestampMixin, Base):
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     rev: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     submission: Mapped["ApplicationSubmission"] = relationship(
         "ApplicationSubmission", back_populates="applications"

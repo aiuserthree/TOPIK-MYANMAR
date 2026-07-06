@@ -49,20 +49,28 @@ class SubmitBody(BaseModel):
     terms_agreed: list[dict] = Field(default_factory=list)
 
 
+def _is_app_deleted(app: Application) -> bool:
+    return bool(getattr(app, "is_deleted", False))
+
+
+def _active_apps(sub: ApplicationSubmission) -> list[Application]:
+    return [a for a in sub.applications if not _is_app_deleted(a)]
+
+
 def _is_app_cancelled(app: Application) -> bool:
     return app.status == "cancelled" or bool(app.cancelled_at)
 
 
 def _is_app_rejected(sub: ApplicationSubmission) -> bool:
     """접수 반려(app_rejected) — 사진 반려(photo_rejected)는 제외."""
-    active = [a for a in sub.applications if not _is_app_cancelled(a)]
+    active = [a for a in _active_apps(sub) if not _is_app_cancelled(a)]
     return any(a.status == "rejected" for a in active)
 
 
 def _apps_by_level(sub: ApplicationSubmission) -> dict[str, Application]:
     """급수별 대표 application — 취소된 행보다 진행 중 행을 우선."""
     by_level: dict[str, Application] = {}
-    for app in sub.applications:
+    for app in _active_apps(sub):
         lv = app.exam_level
         prev = by_level.get(lv)
         if prev is None or (_is_app_cancelled(prev) and not _is_app_cancelled(app)):
@@ -207,6 +215,8 @@ async def submit_application(
         .options(selectinload(ApplicationSubmission.applications))
     )
     existing = existing_res.scalar_one_or_none()
+    if existing and not _active_apps(existing):
+        existing = None
 
     is_reapply = bool(existing and existing.cancelled_at is None and body.reapply)
     venue_locked = bool(
