@@ -7,6 +7,10 @@ function SessionsPanel() {
   const canCreate = DataStore.can('sessions', 'create');
   const canEdit = DataStore.can('sessions', 'edit');
   const canDelete = DataStore.can('sessions', 'delete');
+  const isSuperAdmin = state.me?.role === 'super';
+  const canCreateRound = isSuperAdmin && canCreate;
+  const canEditRound = isSuperAdmin && canEdit;
+  const canRevokeRound = isSuperAdmin && canDelete;
   const revokeTarget = delId ? state.sessions.find(x => x.id === delId) : null;
 
   const sessions = state.sessions.slice().sort((a,b) => (b.examDate || '').localeCompare(a.examDate || ''));
@@ -74,7 +78,7 @@ function SessionsPanel() {
           <div className="sub">시험 회차를 등록·수정·복제합니다. 모든 변경은 처리 이력에 자동 기록됩니다.</div>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" disabled={!canCreate} onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 회차 등록</button>
+          <button className="btn btn-primary" disabled={!canCreateRound} title={!isSuperAdmin ? '회차 등록·폐지는 최고관리자(super)만 가능합니다.' : ''} onClick={() => setEdit({ new: true })}><I.Plus style={{ width: 14, height: 14 }}/> 회차 등록</button>
         </div>
       </div>
 
@@ -108,9 +112,9 @@ function SessionsPanel() {
                     <td>
                       <div className="row-actions">
                         {!isRevoked && <>
-                          <button className="ibtn" disabled={!canEdit} onClick={() => setEdit({ id: s.id })}><I.Edit style={{ width: 12, height: 12 }}/> 수정</button>
-                          <button className="ibtn" disabled={!canCreate} onClick={() => duplicate(s)}><I.Copy style={{ width: 12, height: 12 }}/> 복제</button>
-                          <button className="ibtn danger" disabled={!canDelete} onClick={() => setDelId(s.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
+                          <button className="ibtn" disabled={!canEditRound} title={!isSuperAdmin ? '최고관리자(super) 전용' : ''} onClick={() => setEdit({ id: s.id })}><I.Edit style={{ width: 12, height: 12 }}/> 수정</button>
+                          <button className="ibtn" disabled={!canCreateRound} title={!isSuperAdmin ? '최고관리자(super) 전용' : ''} onClick={() => duplicate(s)}><I.Copy style={{ width: 12, height: 12 }}/> 복제</button>
+                          <button className="ibtn danger" disabled={!canRevokeRound} title={!isSuperAdmin ? '회차 폐지는 최고관리자(super)만 가능합니다.' : ''} onClick={() => setDelId(s.id)}><I.Trash style={{ width: 12, height: 12 }}/></button>
                         </>}
                       </div>
                     </td>
