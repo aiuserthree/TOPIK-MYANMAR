@@ -251,16 +251,16 @@
 <script src="shared/api-client.js"></script>
 <script src="assets/common.js"></script>
 <script>
-/* 연간 시험 일정 — BO 회차 API 반영 (실패 시 정적 폴백 유지) */
+/* 연간 시험 일정 — BO 회차관리(/api/v1/exam-rounds) 데이터 연동 (실패 시 HTML 정적 폴백 유지) */
 (function () {
   'use strict';
   var tbody = document.getElementById('scheduleTbody');
   if (!tbody) return;
 
   var scheduleItems = null;
+  var SCHEDULE_YEAR = 2026;
   var CAL_TZ = 'Asia/Yangon';
 
-  function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
   function calParts(v) {
     if (!v) return null;
     var raw = String(v);
@@ -295,11 +295,10 @@
     if (!start || !end) return '—';
     return ymdDot(start) + ' — ' + mdDot(end);
   }
-
-  var STATIC_ROWS = [
-    { round_no: 106, registration_status: null, _static: { reg: '2026.02.19 — 02.25', pay: '2026.02.27 — 03.02', exam: '2026.05.17' } },
-    { round_no: 107, registration_status: 'open', _static: { reg: '2026.07.17 — 07.21', pay: '2026.07.24 — 07.26', exam: '2026.10.18' } }
-  ];
+  function examYear(v) {
+    var p = calParts(v);
+    return p ? parseInt(p.y, 10) : null;
+  }
 
   function bt(key, fallback) {
     try {
@@ -313,53 +312,35 @@
   function btf(key, fallback, n) { return bt(key, fallback).replace('{n}', n); }
   function roundLabel(n) { return btf('go.round_tag', '제{n}회', n); }
 
-  function mergeWithStatic(apiItems) {
-    /* 안내 페이지: 정적 마케팅 일정(106·107) 유지. API에만 있는 추가 회차만 append */
-    var rows = STATIC_ROWS.map(function (r) { return Object.assign({}, r); });
-    var known = {};
-    rows.forEach(function (r) { known[r.round_no] = true; });
-    (apiItems || []).forEach(function (api) {
-      if (!known[api.round_no]) rows.push(api);
-    });
-    return rows.sort(function (a, b) { return (a.round_no || 0) - (b.round_no || 0); });
+  function prepareItems(apiItems) {
+    return (apiItems || [])
+      .filter(function (r) { return examYear(r.exam_date) === SCHEDULE_YEAR; })
+      .sort(function (a, b) { return (a.round_no || 0) - (b.round_no || 0); });
   }
 
   function rowHtml(r) {
     var active = r.registration_status === 'open' ? ' class="row-active"' : '';
-    var reg, pay, exam;
-    if (r._static) {
-      reg = r._static.reg;
-      pay = r._static.pay;
-      exam = r._static.exam;
-    } else {
-      reg = period(r.registration_start_at, r.registration_end_at);
-      pay = payPeriod(r.payment_start_at, r.payment_end_at);
-      exam = ymdDot(r.exam_date);
-    }
     return '<tr' + active + '>' +
       '<td class="col-num">' + roundLabel(r.round_no != null ? r.round_no : '?') + '</td>' +
-      '<td>' + reg + '</td>' +
-      '<td>' + pay + '</td>' +
-      '<td>' + exam + '</td>' +
+      '<td>' + period(r.registration_start_at, r.registration_end_at) + '</td>' +
+      '<td>' + payPeriod(r.payment_start_at, r.payment_end_at) + '</td>' +
+      '<td>' + ymdDot(r.exam_date) + '</td>' +
       '</tr>';
   }
 
   function paint() {
-    var items = scheduleItems || STATIC_ROWS;
-    if (!items.length) return;
-    tbody.innerHTML = items.map(rowHtml).join('');
+    if (!scheduleItems || !scheduleItems.length) return;
+    tbody.innerHTML = scheduleItems.map(rowHtml).join('');
   }
-
-  paint();
 
   document.addEventListener('tpkm:langchange', paint);
 
   if (!window.TopikApi || !TopikApi.canUseApi()) return;
   TopikApi.getExamRounds().then(function (res) {
-    if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) return;
-    scheduleItems = mergeWithStatic(res.body.items);
-    paint();
-  }).catch(function () { /* 정적 폴백 유지 */ });
+    if (!res.ok || !res.body || !Array.isArray(res.body.items)) return;
+    scheduleItems = prepareItems(res.body.items);
+    if (scheduleItems.length) paint();
+  }).catch(function () { /* HTML 정적 폴백 유지 */ });
 })();
 </script>
 </body>
