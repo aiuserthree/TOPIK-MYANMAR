@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Production seed: regions + 제107회 + 약관/FAQ/공지 (NO demo FO/BO accounts).
+"""Production seed: regions + 제107회 (+ notice/FAQ if missing; NO stub terms, NO demo accounts).
 
 Usage:
   CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py
@@ -58,7 +58,7 @@ async def main() -> None:
         await db.commit()
 
     await engine.dispose()
-    print("Production seed complete (regions + 제107회; no demo accounts).")
+    print("Production seed complete (regions + 제107회; no stub terms; no demo accounts).")
 
 
 if __name__ == "__main__":

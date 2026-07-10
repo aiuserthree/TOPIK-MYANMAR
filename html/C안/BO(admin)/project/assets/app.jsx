@@ -278,7 +278,7 @@ function App() {
     if (!apiReady || !['dashboard', 'applicants'].includes(route)) return;
     if (!DataStore.reloadApplicants) return;
     var sid = state.activeSessionId;
-    if (!sid) return;
+    if (!sid || !/^\d+$/.test(String(sid))) return;
     var reload = function () { DataStore.reloadApplicants(sid); };
     reload();
     var onFocus = function () { reload(); };

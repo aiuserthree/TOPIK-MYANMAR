@@ -73,9 +73,9 @@
     'foot.privacy': { ko: '개인정보처리방침', my: 'ကိုယ်ရေးအချက်အလက် မူဝါဒ', en: 'Privacy policy' },
     'foot.terms': { ko: '이용약관', my: 'အသုံးပြုမှု စည်းကမ်း', en: 'Terms of use' },
     'foot.contact': {
-      ko: '<strong>문의</strong><br>support@topik-myanmar.com<br>업무시간 월–금 09:00–17:00 (UTC+6:30)',
-      my: '<strong>ဆက်သွယ်ရန်</strong><br>support@topik-myanmar.com<br>တနင်္လာ–သောကြာ 09:00–17:00 (UTC+6:30)',
-      en: '<strong>Contact</strong><br>support@topik-myanmar.com<br>Mon–Fri 09:00–17:00 (UTC+6:30)'
+      ko: '<strong>문의</strong><br>support@topik-myanmar.com<br>myanmartopikofficial@gmail.com<br>업무시간 월–금 09:00–17:00 (UTC+6:30)',
+      my: '<strong>ဆက်သွယ်ရန်</strong><br>support@topik-myanmar.com<br>myanmartopikofficial@gmail.com<br>တနင်္လာ–သောကြာ 09:00–17:00 (UTC+6:30)',
+      en: '<strong>Contact</strong><br>support@topik-myanmar.com<br>myanmartopikofficial@gmail.com<br>Mon–Fri 09:00–17:00 (UTC+6:30)'
     },
     'foot.copy': {
       ko: '© 2025–2026 Embassy of the Republic of Korea in Myanmar. All rights reserved.',

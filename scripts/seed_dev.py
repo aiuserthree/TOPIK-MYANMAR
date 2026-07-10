@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 from app.models.admin import AdminUser  # noqa: E402
-from app.models.content import FaqItem, Notice, Term  # noqa: E402
+from app.models.content import FaqItem, Notice  # noqa: E402
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue  # noqa: E402
 from app.models.user import User  # noqa: E402
 
@@ -71,23 +71,10 @@ async def _ensure_round_107(db: AsyncSession) -> None:
     )
     db.add(notice)
 
-    for ttype, title, body in (
-        ("service", "이용약관 v1.0 (임시)", "<p>이용약관 임시 본문입니다. 고객사 최종 문구 확정 후 교체 예정.</p>"),
-        ("privacy", "개인정보처리방침 v1.0 (임시)", "<p>개인정보처리방침 임시 본문입니다.</p>"),
-        ("marketing", "마케팅 수신 동의 v1.0 (임시)", "<p>마케팅 정보 수신 동의 안내 임시 본문입니다.</p>"),
-    ):
-        term_exists = await db.execute(select(Term).where(Term.term_type == ttype, Term.version == "1.0"))
-        if not term_exists.scalar_one_or_none():
-            db.add(
-                Term(
-                    term_type=ttype,
-                    version="1.0",
-                    title=title,
-                    body_ko=body,
-                    status="published",
-                    published_at=datetime.now(timezone.utc),
-                )
-            )
+    # Do NOT auto-insert stub terms here.
+    # seed_prod reuses this helper; publishing KO-only temporary terms
+    # overwrites FO "latest published" and hides real v1.0 MY/EN content.
+    # Register proper terms via BO → 약관 관리 (or a dedicated terms seed).
 
     faq_exists = await db.execute(select(FaqItem).limit(1))
     if not faq_exists.scalar_one_or_none():

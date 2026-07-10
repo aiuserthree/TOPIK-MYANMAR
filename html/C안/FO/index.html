@@ -111,18 +111,40 @@
     padding-top: 14px;
     border-top: 1px dashed var(--border);
     font-size: 12.5px; color: var(--text-3);
-    display: flex; justify-content: space-between;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    align-items: start;
   }
   .dday-foot-item {
     display: flex;
     flex-direction: column;
     gap: 2px;
     line-height: 1.35;
+    min-width: 0;
+    text-align: left;
   }
-  .dday-foot-item strong { color: var(--text-2); font-weight: 600; }
+  .dday-foot-item strong {
+    color: var(--text-2);
+    font-weight: 600;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   @media (max-width: 767px) {
-    .dday-foot { display: none; }
+    .dday-foot {
+      gap: 8px 10px;
+      font-size: 12px;
+    }
+    .dday-foot-item strong {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   @media (min-width: 768px) {
@@ -272,7 +294,7 @@
     <div class="container">
       <div class="hero-inner">
         <div>
-          <div class="round-badge is-upcoming" id="heroRoundBadge"><strong>제107회</strong> 한국어능력시험 (2026.10.18)</div>
+          <div class="round-badge is-upcoming" id="heroRoundBadge" hidden>—</div>
           <h1 style="margin-top:18px;" data-i18n-content="home.hero_h1" data-i18n-content-html>
             미얀마 <span class="accent">한국어능력시험</span><br>
             공식 접수 시스템
@@ -284,10 +306,10 @@
           </div>
         </div>
 
-        <!-- D-Day card -->
-        <div class="dday" aria-live="polite">
+        <!-- D-Day card (API 회차 로드 후 표시; 회차 없으면 안내 상태) -->
+        <div class="dday" id="heroDday" aria-live="polite" hidden>
           <div class="dday-head">
-            <div class="ttl"><strong>제107회</strong> 접수 마감까지</div>
+            <div class="ttl">—</div>
             <span class="live">LIVE</span>
           </div>
           <div class="dday-grid" id="ddayGrid">
@@ -296,44 +318,40 @@
             <div class="dday-cell"><div class="n" id="dd-m">--</div><div class="u">MIN</div></div>
             <div class="dday-cell"><div class="n" id="dd-s">--</div><div class="u">SEC</div></div>
           </div>
-          <div class="dday-foot">
-            <span class="dday-foot-item">접수기간<br><strong>2026.07.17 ~ 07.21</strong></span>
-            <span class="dday-foot-item">응시료 납부<br><strong>2026.07.24 ~ 07.26</strong></span>
-            <span class="dday-foot-item">시험일<br><strong>2026.10.18</strong></span>
-          </div>
+          <div class="dday-foot"></div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ============ Schedule timeline ============ -->
-  <section class="section">
+  <section class="section" id="homeScheduleSection" hidden>
     <div class="container">
       <div class="sec-head">
         <div>
           <div class="eyebrow">Schedule</div>
-          <h2 id="schedTitle" style="margin-top:6px;">제107회 시험 일정</h2>
+          <h2 id="schedTitle" style="margin-top:6px;">시험 일정</h2>
         </div>
         <a href="guide-overview.html" class="more" data-i18n-content="home.full_schedule">시험 개요</a>
       </div>
       <div class="timeline" id="examTimeline">
-        <div class="tl-card" data-tl-start="2026-07-17" data-tl-end="2026-07-21">
+        <div class="tl-card">
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 01</div>
           <div class="step-t" data-i18n-content="home.step_apply">원서 접수</div>
-          <div class="step-d">2026.07.17 — 07.21</div>
+          <div class="step-d">—</div>
         </div>
-        <div class="tl-card" data-tl-start="2026-07-24" data-tl-end="2026-07-26">
+        <div class="tl-card">
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 02</div>
           <div class="step-t" data-i18n-content="home.step_pay">응시료 납부 (오프라인)</div>
-          <div class="step-d">2026.07.24 — 07.26</div>
+          <div class="step-d">—</div>
         </div>
-        <div class="tl-card" data-tl-start="2026-10-18" data-tl-end="2026-10-18">
+        <div class="tl-card">
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 03</div>
           <div class="step-t" data-i18n-content="home.step_exam">시험 시행</div>
-          <div class="step-d">2026.10.18</div>
+          <div class="step-d">—</div>
         </div>
         <div class="tl-card" data-tl-tbd>
           <span class="tl-badge" aria-hidden="true" hidden></span>
@@ -457,6 +475,8 @@
     'home.reg_period': { ko: '접수기간', my: 'လျှောက်ထားရန် ကာလ', en: 'Registration' },
     'home.pay': { ko: '응시료 납부', my: 'စာမေးပွဲကြေး ပေးသွင်းရန် ကာလ', en: 'Fee payment' },
     'home.exam_date': { ko: '시험일', my: 'စာမေးပွဲ ကျင်းပမည့်နေ့', en: 'Exam date' },
+    'home.venue': { ko: '시험장', my: 'စာစစ်ဌာန', en: 'Venue' },
+    'home.venue_more': { ko: '외 {n}곳', my: 'အခြား {n} နေရာ', en: '+{n} more' },
     'home.schedule': { ko: '시험 일정', my: 'စာမေးပွဲ အချိန်ဇယား', en: 'exam schedule' },
     'home.ongoing': { ko: '진행중', my: 'ဆောင်ရွက်ဆဲ', en: 'Ongoing' },
     'home.ended': { ko: '종료', my: 'ပြီးဆုံး', en: 'Ended' },
@@ -465,7 +485,10 @@
     'home.closed': { ko: '접수 마감', my: 'လျှောက်ထားမှု ပိတ်', en: 'Registration closed' },
     'home.closed_title': { ko: '접수가 마감되었습니다', my: 'လျှောက်ထားမှု ပိတ်သွားပါပြီ', en: 'Registration is closed' },
     'home.closed_desc': { ko: '다음 회차 일정은 <strong>공지사항</strong>에서 안내드립니다.', my: 'နောက်အကြိမ် အချိန်ဇယားကို <strong>ကြေညာချက်</strong>တွင် အသိပေးပါမည်။', en: 'The next session schedule will be announced in <strong>Notices</strong>.' },
-    'home.next_schedule': { ko: '다음 회차 일정 보기', my: 'နောက်အကြိမ် အချိန်ဇယား ကြည့်ရန်', en: 'View next session' }
+    'home.next_schedule': { ko: '다음 회차 일정 보기', my: 'နောက်အကြိမ် အချိန်ဇယား ကြည့်ရန်', en: 'View next session' },
+    'home.no_round_badge': { ko: '다음 회차 일정 준비 중', my: 'နောက်အကြိမ် အချိန်ဇယား ပြင်ဆင်နေဆဲ', en: 'Next session schedule coming soon' },
+    'home.no_round_title': { ko: '현재 접수 중인 회차가 없습니다', my: 'လက်ရှိ လျှောက်ထားနိုင်သော အကြိမ် မရှိပါ', en: 'No open exam session right now' },
+    'home.no_round_desc': { ko: '다음 회차 일정은 <strong>공지사항</strong>에서 안내드립니다.', my: 'နောက်အကြိမ် အချိန်ဇယားကို <strong>ကြေညာချက်</strong>တွင် အသိပေးပါမည်။', en: 'The next session schedule will be announced in <strong>Notices</strong>.' }
   };
 </script>
 <script src="shared/api-client.js"></script>
@@ -558,21 +581,23 @@
     document.addEventListener('tpkm:langchange', loadHomeNotices);
   })();
 
-  // 회차 일정 — BO 회차관리 API 데이터 반영 (달력·D-Day는 미얀마 현지 MMT 기준).
-  // API 미가용/실패 시에는 아래 정적 폴백값으로 기존 화면을 그대로 유지한다.
+  // 회차 일정 — BO 회차관리 API만 사용 (달력·D-Day는 미얀마 현지 MMT 기준).
+  // 회차가 없으면 가짜 107회 일정을 보여주지 않고 빈/안내 상태로 둔다.
   (function () {
     var CAL_TZ = 'Asia/Yangon';
     var DAY_TZ = '+06:30';
-    // 정적 폴백값. 접수시작/마감은 MMT(UTC+6:30) 절대 시각.
     var SCHED = {
-      roundNo: 107,
-      examDate: '2026-10-18',
-      regStart: '2026-07-17T00:00:00+06:30',
-      regEnd: '2026-07-21T23:59:59+06:30',
-      payStart: '2026-07-24T00:00:00+06:30',
-      payEnd: '2026-07-26T23:59:59+06:30',
+      roundNo: null,
+      examDate: null,
+      regStart: null,
+      regEnd: null,
+      payStart: null,
+      payEnd: null,
       resultDate: null,
+      venueIds: [],
+      venues: [],
     };
+    var VENUE_BY_ID = {};
 
     function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
     function calParts(v) {
@@ -602,13 +627,18 @@
     function roundTag() { return btf('home.round_tag', '제{n}회', SCHED.roundNo); }
     function examDot() { return ymdDot(SCHED.examDate); }
     function regPeriod() { return periodDot(SCHED.regStart, SCHED.regEnd); }
+    function hasRound() {
+      return SCHED.roundNo != null && SCHED.regStart && SCHED.regEnd && SCHED.examDate;
+    }
 
-    var dday = document.querySelector('.dday');
+    var dday = document.getElementById('heroDday') || document.querySelector('.dday');
     var head = dday ? dday.querySelector('.dday-head') : null;
     var foot = dday ? dday.querySelector('.dday-foot') : null;
     var grid = document.getElementById('ddayGrid');
     var badge = document.getElementById('heroRoundBadge');
     var schedTitle = document.getElementById('schedTitle');
+    var schedSection = document.getElementById('homeScheduleSection');
+    var timeline = document.getElementById('examTimeline');
     var el = {
       d: document.getElementById('dd-d'),
       h: document.getElementById('dd-h'),
@@ -617,24 +647,126 @@
     };
     var timer = null;
     var closed = false;
+    var empty = false;
+    var countdownHtml = grid ? grid.innerHTML : '';
 
-    function footItem(label, date) {
-      return '<span class="dday-foot-item">' + label + '<br><strong>' + date + '</strong></span>';
+    function ensureLiveBadge() {
+      if (!head || head.querySelector('.live')) return;
+      var live = document.createElement('span');
+      live.className = 'live';
+      live.textContent = 'LIVE';
+      head.appendChild(live);
+    }
+
+    function restoreCountdownGrid() {
+      if (!grid || !countdownHtml) return;
+      grid.style.display = '';
+      grid.innerHTML = countdownHtml;
+      el.d = document.getElementById('dd-d');
+      el.h = document.getElementById('dd-h');
+      el.m = document.getElementById('dd-m');
+      el.s = document.getElementById('dd-s');
+    }
+
+    function footItem(label, date, extraClass) {
+      var cls = 'dday-foot-item' + (extraClass ? ' ' + extraClass : '');
+      return '<span class="' + cls + '">' + label + '<br><strong>' + date + '</strong></span>';
+    }
+
+    function currentFoLang() {
+      var l = (window.TPKMLang && TPKMLang.get && TPKMLang.get()) || 'KO';
+      l = String(l).toLowerCase();
+      return l === 'my' || l === 'en' ? l : 'ko';
+    }
+
+    function formatVenueName(v) {
+      if (!v) return '';
+      var lang = currentFoLang();
+      if (lang === 'my') return v.name_my || v.name_en || v.name_ko || '';
+      if (lang === 'en') return v.name_en || v.name_ko || '';
+      return v.name_ko || v.name_en || '';
+    }
+
+    function venueText() {
+      var names = (SCHED.venues || []).map(formatVenueName).filter(Boolean);
+      if (!names.length) return '';
+      if (names.length === 1) return names[0];
+      if (names.length === 2) return names[0] + ', ' + names[1];
+      return names[0] + ' ' + btf('home.venue_more', '외 {n}곳', names.length - 1);
     }
 
     function footHtml(isClosed) {
       var exam = bt('home.exam_date', '시험일');
       var pay = bt('home.pay', '응시료 납부');
-      if (isClosed) {
-        return footItem(exam, examDot()) + footItem(pay, payPeriod());
+      var venueLabel = bt('home.venue', '시험장');
+      var venue = venueText();
+      // 2×2 equal quarters: 접수기간 | 응시료 납부 / 시험일 | 시험장
+      return footItem(
+               bt('home.reg_period', '접수기간'),
+               isClosed ? (SCHED.regStart && SCHED.regEnd ? regPeriod() : '—') : regPeriod()
+             ) +
+             footItem(pay, payPeriod() || '—') +
+             footItem(exam, examDot()) +
+             footItem(venueLabel, venue || '—');
+    }
+
+    function showEmpty() {
+      empty = true;
+      closed = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      SCHED.roundNo = null;
+      SCHED.examDate = null;
+      SCHED.regStart = null;
+      SCHED.regEnd = null;
+      SCHED.payStart = null;
+      SCHED.payEnd = null;
+      SCHED.resultDate = null;
+      SCHED.venueIds = [];
+      SCHED.venues = [];
+
+      if (badge) {
+        badge.hidden = false;
+        badge.classList.add('is-closed', 'is-upcoming');
+        badge.textContent = bt('home.no_round_badge', '다음 회차 일정 준비 중');
       }
-      return footItem(bt('home.reg_period', '접수기간'), regPeriod()) +
-             footItem(pay, payPeriod()) +
-             footItem(exam, examDot());
+      if (dday) dday.hidden = false;
+      if (head) {
+        var live = head.querySelector('.live');
+        if (live) live.remove();
+        var ttl = head.querySelector('.ttl');
+        if (ttl) ttl.textContent = bt('home.no_round_badge', '다음 회차 일정 준비 중');
+      }
+      if (grid) {
+        grid.style.display = 'block';
+        grid.innerHTML =
+          '<div style="text-align:center; padding:14px 8px;">' +
+            '<div style="font-size:16px; font-weight:700; color:var(--text);">' +
+              bt('home.no_round_title', '현재 접수 중인 회차가 없습니다') +
+            '</div>' +
+            '<div style="font-size:13px; color:var(--text-3); margin-top:6px; line-height:1.55;">' +
+              bt('home.no_round_desc', '다음 회차 일정은 <strong>공지사항</strong>에서 안내드립니다.') +
+            '</div>' +
+            '<a href="notice.html" class="btn btn-secondary btn-sm" style="margin-top:14px;">' +
+              bt('home.more', '더보기') +
+            '</a>' +
+          '</div>';
+      }
+      if (foot) foot.innerHTML = '';
+      if (schedSection) schedSection.hidden = true;
     }
 
     // 접수기간·시험일·회차번호 등 정적 텍스트를 SCHED 기준으로 다시 그린다.
     function paintStatic() {
+      if (badge) {
+        badge.hidden = false;
+        badge.classList.remove('is-closed');
+      }
+      if (dday) dday.hidden = false;
+      if (schedSection) schedSection.hidden = false;
+      if (timeline) timeline.hidden = false;
+      ensureLiveBadge();
+      restoreCountdownGrid();
+
       if (head) {
         var ttl = head.querySelector('.ttl');
         if (ttl) ttl.innerHTML = '<strong>' + roundTag() + '</strong> ' + bt('home.until_close', '접수 마감까지');
@@ -733,6 +865,7 @@
     }
 
     function tick() {
+      if (!hasRound()) return;
       var now = Date.now();
       var regStartMs = new Date(SCHED.regStart).getTime();
       var target = new Date(SCHED.regEnd).getTime();
@@ -759,6 +892,11 @@
     }
 
     function render() {
+      if (!hasRound()) {
+        showEmpty();
+        return;
+      }
+      empty = false;
       closed = false; // 회차 갱신 시 마감 상태 재평가
       paintStatic();
       paintTimelineBadges();
@@ -766,8 +904,6 @@
       tick();
       timer = setInterval(tick, 1000);
     }
-
-    render(); // 정적 폴백으로 즉시 렌더
 
     // 언어 전환 시 동적 일정 문자열도 다시 렌더
     document.addEventListener('tpkm:langchange', function () { render(); });
@@ -786,27 +922,65 @@
       return upcoming.length ? upcoming[0] : items[0];
     }
 
+    function resolveVenues(venueIds) {
+      var ids = Array.isArray(venueIds) ? venueIds : [];
+      SCHED.venueIds = ids.slice();
+      SCHED.venues = ids.map(function (id) {
+        return VENUE_BY_ID[Number(id)] || VENUE_BY_ID[String(id)] || null;
+      }).filter(Boolean);
+    }
+
     function applyRoundFromApi(r) {
-      if (!r || !r.registration_start_at || !r.registration_end_at) return;
+      if (!r || !r.registration_start_at || !r.registration_end_at) {
+        showEmpty();
+        return;
+      }
       if (r.round_no != null) SCHED.roundNo = r.round_no;
-      SCHED.examDate = r.exam_date || SCHED.examDate;
+      else SCHED.roundNo = '?';
+      SCHED.examDate = r.exam_date || null;
       SCHED.regStart = r.registration_start_at;
       SCHED.regEnd = r.registration_end_at;
       SCHED.resultDate = r.result_announcement_date || r.result_date || null;
       if (r.payment_start_at && r.payment_end_at) {
         SCHED.payStart = r.payment_start_at;
         SCHED.payEnd = r.payment_end_at;
+      } else {
+        SCHED.payStart = null;
+        SCHED.payEnd = null;
       }
+      resolveVenues(r.venue_ids);
       render();
     }
 
-    // BO가 설정한 실제 회차로 덮어쓰기
-    if (window.TopikApi && TopikApi.canUseApi && TopikApi.canUseApi()) {
-      TopikApi.getExamRounds().then(function (res) {
-        if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) return;
+    function loadRounds() {
+      if (!(window.TopikApi && TopikApi.canUseApi && TopikApi.canUseApi())) {
+        showEmpty();
+        return;
+      }
+      var roundsP = TopikApi.getExamRounds();
+      var venuesP = TopikApi.getExamVenues
+        ? TopikApi.getExamVenues().catch(function () { return { ok: false }; })
+        : Promise.resolve({ ok: false });
+      Promise.all([roundsP, venuesP]).then(function (pair) {
+        var res = pair[0];
+        var venRes = pair[1];
+        VENUE_BY_ID = {};
+        if (venRes && venRes.ok && venRes.body && Array.isArray(venRes.body.items)) {
+          venRes.body.items.forEach(function (v) {
+            if (v && v.id != null) VENUE_BY_ID[Number(v.id)] = v;
+          });
+        }
+        if (!res.ok || !res.body || !Array.isArray(res.body.items) || !res.body.items.length) {
+          showEmpty();
+          return;
+        }
         applyRoundFromApi(pickRound(res.body.items));
-      }).catch(function () { /* 정적 폴백 유지 */ });
+      }).catch(function () {
+        showEmpty();
+      });
     }
+
+    loadRounds();
   })();
 </script>
 </body>

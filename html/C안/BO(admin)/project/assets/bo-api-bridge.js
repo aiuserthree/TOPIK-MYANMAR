@@ -905,6 +905,9 @@
         if (DS.state.sessions.length) {
           var open = DS.state.sessions.find(function (s) { return s.status === "open"; });
           DS.state.activeSessionId = (open || DS.state.sessions[0]).id;
+        } else {
+          // 회차 전부 삭제(리셋) 후 mock 기본값(s107)이 API에 전달되면 FastAPI 422 발생
+          DS.state.activeSessionId = null;
         }
         DS.apiLoading = false;
         DS.state.apiError = null;
@@ -916,6 +919,14 @@
       return fail("API 연결에 실패했습니다.");
     });
   };
+
+  function apiExamRoundId(sessionId) {
+    if (sessionId == null || sessionId === "") return null;
+    var s = String(sessionId).trim();
+    // mock ids like s107, or any non-numeric value → omit (avoids FastAPI 422)
+    if (!/^\d+$/.test(s)) return null;
+    return s;
+  }
 
   DS.reloadApplicants = function (sessionId, opts) {
     if (!DS.isApiMode()) return Promise.resolve();
@@ -933,7 +944,8 @@
 
     if (opts.trash) {
       var tq = { page_size: 200, trash: "true" };
-      if (sessionId) tq.exam_round_id = sessionId;
+      var trashRoundId = apiExamRoundId(sessionId);
+      if (trashRoundId) tq.exam_round_id = trashRoundId;
       return Api.getApplications(tq).then(function (res) {
         if (res.ok) {
           applyTrashItems(((res.body && res.body.items) || []).map(mapApplicant));
@@ -943,11 +955,12 @@
     }
 
     var q = { page_size: 200 };
-    if (sessionId) q.exam_round_id = sessionId;
+    var roundId = apiExamRoundId(sessionId);
+    if (roundId) q.exam_round_id = roundId;
     if (opts.q) q.q = opts.q;
 
     var tq = { page_size: 200, trash: "true" };
-    if (sessionId) tq.exam_round_id = sessionId;
+    if (roundId) tq.exam_round_id = roundId;
 
     return Promise.all([
       Api.getApplications(q),
@@ -1060,7 +1073,9 @@
       DS.state.sessions = ((rndRes.body && rndRes.body.items) || []).map(function (s) {
         return mapSession(s, counts);
       });
-      if (DS.state.sessions.length && !DS.state.sessions.some(function (s) { return s.id === DS.state.activeSessionId; })) {
+      if (!DS.state.sessions.length) {
+        DS.state.activeSessionId = null;
+      } else if (!DS.state.sessions.some(function (s) { return s.id === DS.state.activeSessionId; })) {
         var open = DS.state.sessions.find(function (s) { return s.status === "open"; });
         DS.state.activeSessionId = (open || DS.state.sessions[0]).id;
       }
