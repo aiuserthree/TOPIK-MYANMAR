@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
+from app.lib.capacity import ensure_round_capacity, ensure_venue_capacity
 from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user
 from app.lib.errors import api_error, fo_api_error
@@ -199,7 +200,11 @@ async def submit_application(
         ip=ip,
     )
 
-    round_res = await db.execute(select(ExamRound).where(ExamRound.id == body.exam_round_id))
+    # Lock round row for the whole submit transaction so concurrent FO posts
+    # cannot overbook capacity (SELECT FOR UPDATE + count + insert).
+    round_res = await db.execute(
+        select(ExamRound).where(ExamRound.id == body.exam_round_id).with_for_update()
+    )
     exam_round = round_res.scalar_one_or_none()
     if exam_round:
         await sync_exam_round_status(db, exam_round)
@@ -222,13 +227,18 @@ async def submit_application(
     venue_locked = bool(
         existing and existing.cancelled_at is None and _has_in_progress_level(existing)
     )
+    # Lock venue after round (consistent lock order) before capacity checks.
     if venue_locked:
         if body.exam_venue_id != existing.exam_venue_id:
             raise fo_api_error("VALIDATION_ERROR", "venue_locked", lang, 400)
-        venue_res = await db.execute(select(ExamVenue).where(ExamVenue.id == existing.exam_venue_id))
+        venue_res = await db.execute(
+            select(ExamVenue).where(ExamVenue.id == existing.exam_venue_id).with_for_update()
+        )
     else:
         venue_res = await db.execute(
-            select(ExamVenue).where(ExamVenue.id == body.exam_venue_id, ExamVenue.is_active)
+            select(ExamVenue)
+            .where(ExamVenue.id == body.exam_venue_id, ExamVenue.is_active)
+            .with_for_update()
         )
     venue = venue_res.scalar_one_or_none()
     if not venue:
@@ -337,6 +347,20 @@ async def submit_application(
             "submission_id": existing.id,
             "applications": [{"id": a.id, "exam_level": a.exam_level, "status": a.status} for a in added_apps],
         }
+
+    # New seat only: fresh submit or re-activate a fully cancelled submission.
+    # Reapply / add-level paths above already hold a seat and skip this check.
+    if not await ensure_round_capacity(
+        db, exam_round_id=exam_round.id, capacity=int(exam_round.capacity or 0)
+    ):
+        raise fo_api_error("ROUND_FULL", "round_full", lang, 409)
+    if not await ensure_venue_capacity(
+        db,
+        exam_round_id=exam_round.id,
+        exam_venue_id=venue.id,
+        capacity=int(venue.capacity or 0),
+    ):
+        raise fo_api_error("VENUE_FULL", "venue_full", lang, 409)
 
     if existing:
         # UNIQUE(user_id, exam_round_id) keeps cancelled rows — re-activate instead of INSERT.

@@ -275,6 +275,8 @@
     'err.NOT_FOUND': { ko: '요청한 정보를 찾을 수 없습니다.', my: 'တောင်းဆိုထားသော အချက်အလက် မတွေ့ပါ။', en: 'Requested information not found.' },
     'err.AGE_RESTRICTED': { ko: '만 14세 미만은 회원가입할 수 없습니다.', my: 'အသက် ၁၄ နှစ်အောက် မှတ်ပုံတင်၍ မရပါ။', en: 'You must be at least 14 years old to sign up.' },
     'err.ROUND_NOT_OPEN': { ko: '접수 가능한 회차가 아닙니다.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေ မဟုတ်ပါ။', en: 'This session is not open for registration.' },
+    'err.ROUND_FULL': { ko: '해당 회차 정원이 마감되어 접수할 수 없습니다.', my: 'ဤအကြိမ်ရေအတွက် လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။', en: 'This exam session is full and no longer accepting registrations.' },
+    'err.VENUE_FULL': { ko: '선택한 시험장 정원이 마감되어 접수할 수 없습니다. 다른 시험장을 선택해 주세요.', my: 'ရွေးချယ်ထားသော စာစစ်ဌာန လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။ အခြားစာစစ်ဌာနကို ရွေးပါ။', en: 'The selected venue is full. Please choose another venue.' },
     'err.INVALID_VENUE': { ko: '유효하지 않은 시험장입니다.', my: 'မမှန်သော စာစစ်ဌာန ဖြစ်သည်။', en: 'Invalid exam venue.' },
     'err.ALREADY_SUBMITTED': { ko: '이미 접수 진행 중인 내역이 있습니다.', my: 'လျှောက်ထားမှု ဆောင်ရွက်ဆဲ ရှိပြီးသားဖြစ်သည်။', en: 'You already have a registration in progress.' },
     'err.ALREADY_CANCELLED': { ko: '이미 취소된 접수입니다.', my: 'ပယ်ဖျက်ပြီးသား လျှောက်လွှာဖြစ်သည်။', en: 'This registration is already cancelled.' },

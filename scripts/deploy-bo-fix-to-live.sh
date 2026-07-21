@@ -13,9 +13,11 @@ scp "${ROOT}/apps/api/app/routers/admin_api.py" \
 scp "${ROOT}/html/C안/BO(admin)/project/assets/data.js" \
   "${ROOT}/html/C안/BO(admin)/project/assets/app.jsx" \
   "${ROOT}/html/C안/BO(admin)/project/assets/bo-api-bridge.js" \
+  "${ROOT}/html/C안/BO(admin)/project/assets/bo-export-bridge.js" \
   "${SERVER}:${REMOTE}/html/C안/BO(admin)/project/assets/"
 scp "${ROOT}/html/C안/BO(admin)/project/panels/applicants.jsx" \
-  "${SERVER}:${REMOTE}/html/C안/BO(admin)/project/panels/applicants.jsx"
+  "${ROOT}/html/C안/BO(admin)/project/panels/dashboard.jsx" \
+  "${SERVER}:${REMOTE}/html/C안/BO(admin)/project/panels/"
 scp "${ROOT}/html/C안/BO(admin)/project/shared/bo-api-client.js" \
   "${SERVER}:${REMOTE}/html/C안/BO(admin)/project/shared/bo-api-client.js"
 scp "${ROOT}/html/shared/bo-api-client.js" \
