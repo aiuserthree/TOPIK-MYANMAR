@@ -307,7 +307,7 @@
           </h1>
 
           <div class="hero-ctas" style="margin-top:24px;">
-            <a href="register.html" class="btn btn-primary btn-lg" data-i18n-content="home.cta_apply">시험 접수하기</a>
+            <a href="register.html" class="btn btn-primary btn-lg" data-home-apply-cta data-i18n-content="home.cta_apply">시험 접수하기</a>
             <a href="guide-overview.html" class="btn btn-secondary btn-lg" data-i18n-content="home.cta_guide">시험 안내 보기</a>
           </div>
         </div>
@@ -398,7 +398,7 @@
         </div>
       </div>
       <div class="quicklinks">
-        <a href="register.html" class="ql">
+        <a href="register.html" class="ql" data-home-apply-ql>
           <div>
             <div class="t" data-i18n-content="sub.apply_reg">시험 접수</div>
             <div class="d" data-i18n-content="home.ql_apply_d">회차·급수를 선택해 접수</div>
@@ -457,7 +457,10 @@
     'home.hero_h1': { ko: '미얀마 <span class="accent">한국어능력시험</span><br>공식 접수 시스템', my: 'မြန်မာ <span class="accent">ကိုရီးယားဘာသာ အရည်အချင်းစစ်စာမေးပွဲ</span><br>တရားဝင် လျှောက်လွှာ စနစ်', en: 'Myanmar <span class="accent">TOPIK</span><br>Official Registration System' },
     'home.cta_apply': { ko: '시험 접수하기', my: 'စာမေးပွဲ လျှောက်ရန်', en: 'Register for exam' },
     'home.cta_closed': { ko: '접수 마감', my: 'လျှောက်ထားမှု ပိတ်', en: 'Registration closed' },
+    'home.cta_full': { ko: '정원 마감', my: 'လူဦးရေ ပြည့်', en: 'Capacity full' },
     'home.cta_guide': { ko: '시험 안내 보기', my: 'စာမေးပွဲ လမ်းညွှန် ကြည့်ရန်', en: 'View exam guide' },
+    'home.full_badge': { ko: '한국어능력시험 정원 마감', my: 'ကိုရီးယားဘာသာ အရည်အချင်းစစ်စာမေးပွဲ လူဦးရေ ပြည့်', en: 'TOPIK capacity full' },
+    'home.full': { ko: '정원 마감', my: 'လူဦးရေ ပြည့်', en: 'Capacity full' },
     'home.full_schedule': { ko: '시험 개요', my: 'စာမေးပွဲ အကျဉ်းချုပ်', en: 'Exam overview' },
     'home.more': { ko: '더보기', my: 'ပိုမိုကြည့်ရန်', en: 'More' },
     'home.view_all': { ko: '전체 보기', my: 'အားလုံး ကြည့်ရန်', en: 'View all' },
@@ -728,7 +731,7 @@
       SCHED.regStart = null;
       SCHED.capacityFull = false;
       SCHED.canApply = false;
-      setApplyCtaEnabled(false);
+      // 회차 미로드/없음 — CTA를 「접수 마감」으로 바꾸지 않음 (로드 전 langchange 레이스 방지)
       SCHED.regEnd = null;
       SCHED.payStart = null;
       SCHED.payEnd = null;
@@ -847,12 +850,12 @@
       });
     }
 
-    // 접수 마감 시각 도달 시(또는 정원 마감) '접수 마감 / 다음 회차 안내' 상태로 자동 전환
+    // 접수 기간 종료 시에만 '접수 마감 / 다음 회차 안내'로 전환 (정원 마감은 별도 처리)
     function showClosed() {
       if (closed) return;
       closed = true;
       SCHED.canApply = false;
-      setApplyCtaEnabled(false);
+      setApplyCtaEnabled(false, 'closed');
       if (timer) clearInterval(timer);
       if (badge) {
         badge.classList.add('is-closed');
@@ -878,6 +881,19 @@
       if (foot) foot.innerHTML = footHtml(true);
     }
 
+    // 정원 마감: 기간은 open이어도 접수 CTA만 「정원 마감」— 기간 마감 UI와 혼동 금지
+    function paintCapacityFullChrome() {
+      if (badge) {
+        badge.classList.add('is-closed');
+        badge.classList.remove('is-upcoming');
+        badge.innerHTML = '<strong>' + roundTag() + '</strong> ' + bt('home.full_badge', '한국어능력시험 정원 마감');
+      }
+      if (head) {
+        var ttl = head.querySelector('.ttl');
+        if (ttl) ttl.innerHTML = '<strong>' + roundTag() + '</strong> ' + bt('home.full', '정원 마감');
+      }
+    }
+
     function tick() {
       if (!hasRound()) return;
       var now = Date.now();
@@ -888,9 +904,11 @@
         if (!badge.classList.contains('is-closed')) {
           badge.innerHTML = '<strong>' + roundTag() + '</strong> ' + bt('home.exam_name', '한국어능력시험') + ' (' + examDot() + ')';
         }
-      } else if (badge && now >= regStartMs && now <= target && !closed) {
+      } else if (badge && now >= regStartMs && now <= target && !closed && !SCHED.capacityFull) {
         badge.classList.remove('is-upcoming');
         badge.innerHTML = '<strong>' + roundTag() + '</strong> ' + bt('home.exam_name', '한국어능력시험') + ' (' + examDot() + ') ' + bt('home.reg_ongoing', '접수 진행 중');
+      } else if (badge && SCHED.capacityFull && !closed && now <= target) {
+        paintCapacityFullChrome();
       }
       var diff = target - now;
       if (diff <= 0) { showClosed(); return; }
@@ -914,10 +932,14 @@
       closed = false; // 회차 갱신 시 마감 상태 재평가
       paintStatic();
       paintTimelineBadges();
-      setApplyCtaEnabled(!!SCHED.canApply);
-      if (SCHED.capacityFull && !SCHED.canApply) {
-        showClosed();
-        return;
+      if (SCHED.canApply) {
+        setApplyCtaEnabled(true, 'open');
+      } else if (SCHED.capacityFull) {
+        // 정원만 찬 경우 — 기간 마감(showClosed)과 절대 동일 처리하지 않음
+        setApplyCtaEnabled(false, 'full');
+        paintCapacityFullChrome();
+      } else {
+        setApplyCtaEnabled(false, 'closed');
       }
       if (timer) clearInterval(timer);
       tick();
@@ -933,19 +955,26 @@
 
     function isRoundFull(r) {
       if (!r) return false;
-      if (r.is_full === true) return true;
-      var cap = Number(r.capacity);
+      // API is_full만 신뢰. capacity<=0(무제한)이거나 remaining/registered 누락 시 만석으로 보지 않음.
+      if (r.is_full === true) {
+        var cap = Number(r.capacity);
+        if (!(cap > 0)) return false;
+        return true;
+      }
+      if (r.is_full === false) return false;
+      var cap2 = Number(r.capacity);
       var registered = Number(r.registered_count);
-      return cap > 0 && !isNaN(registered) && registered >= cap;
+      return cap2 > 0 && !isNaN(registered) && registered >= cap2;
     }
 
     function isApplyOpen(r) {
       return !!(r && r.registration_status === 'open' && !isRoundFull(r));
     }
 
-    function setApplyCtaEnabled(enabled) {
-      var heroBtn = document.querySelector('.hero-ctas a[data-i18n-content="home.cta_apply"]');
-      var ql = document.querySelector('a.ql[href="register.html"]');
+    function setApplyCtaEnabled(enabled, mode) {
+      // data-i18n-content를 바꾸므로 고정 속성으로 재조회 (closed 키로 바꾸면 재활성 불가하던 버그 수정)
+      var heroBtn = document.querySelector('[data-home-apply-cta]');
+      var ql = document.querySelector('[data-home-apply-ql]');
       if (heroBtn) {
         if (enabled) {
           heroBtn.classList.remove('is-disabled');
@@ -954,11 +983,14 @@
           heroBtn.setAttribute('data-i18n-content', 'home.cta_apply');
           heroBtn.textContent = bt('home.cta_apply', '시험 접수하기');
         } else {
+          var full = mode === 'full';
           heroBtn.classList.add('is-disabled');
           heroBtn.setAttribute('aria-disabled', 'true');
           heroBtn.setAttribute('href', 'javascript:void(0)');
-          heroBtn.setAttribute('data-i18n-content', 'home.cta_closed');
-          heroBtn.textContent = bt('home.cta_closed', '접수 마감');
+          heroBtn.setAttribute('data-i18n-content', full ? 'home.cta_full' : 'home.cta_closed');
+          heroBtn.textContent = full
+            ? bt('home.cta_full', '정원 마감')
+            : bt('home.cta_closed', '접수 마감');
         }
       }
       if (ql) {
@@ -1000,7 +1032,6 @@
     function applyRoundFromApi(r) {
       if (!r || !r.registration_start_at || !r.registration_end_at) {
         showEmpty();
-        setApplyCtaEnabled(false);
         return;
       }
       if (r.round_no != null) SCHED.roundNo = r.round_no;
