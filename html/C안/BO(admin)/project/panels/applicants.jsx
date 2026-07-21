@@ -129,6 +129,17 @@ function compareApplicantSort(a, b, key) {
   return String(a[key] ?? '').localeCompare(String(b[key] ?? ''), 'ko');
 }
 
+/** 순접수자: 동시(Ⅰ+Ⅱ)는 submission 단위 1명 (원서 행 수와 별개) */
+function countUniqueApplicants(list) {
+  var seen = new Set();
+  (list || []).forEach(function (a) {
+    if (!a) return;
+    var key = a.submissionId ? String(a.submissionId) : String(a.id);
+    seen.add(key);
+  });
+  return seen.size;
+}
+
 function applicantRoundTitle(a, session) {
   var roundNo = a && a.roundNo != null ? a.roundNo : (session && session.no != null ? session.no : null);
   var title = ((a && a.roundTitle) || (session && session.name) || '').trim();
@@ -314,6 +325,10 @@ function ApplicantsPanel() {
   useEffect(() => { setPage(1); setSelected(new Set()); }, [statusF, venueF, levelF, appliedQ, sessionId]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const uniqueApplicantCount = useMemo(
+    () => countUniqueApplicants(filtered),
+    [filtered]
+  );
 
   // status counts (for chip badges)
   const counts = useMemo(() => {
@@ -912,7 +927,7 @@ function ApplicantsPanel() {
           </table>
         </div>
         <div className="dg-foot no-print">
-          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(filtered.length)}</b>건 · 페이지 {page} / {totalPages}</div>
+          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(filtered.length)}</b>건 · 순접수자 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(uniqueApplicantCount)}</b>명 · 페이지 {page} / {totalPages}</div>
           <Pager page={page} total={totalPages} onPage={setPage}/>
         </div>
       </div>
