@@ -70,7 +70,7 @@
       var venue = (state.venues || []).find(function (v) { return v.id === a.venueId; });
       var region = venue ? (venue.region || '미얀마') : '미지정';
       var vname = venue ? venue.nameKo : '미지정';
-      var lp = levelPrefix(a.level);
+      var lp = levelPrefix(a.levelBase || a.level);
       var key = lp + '|' + region + '|' + vname;
       if (!groups[key]) groups[key] = { level: lp, region: region, venue: vname, list: [] };
       groups[key].list.push(a);

@@ -33,10 +33,20 @@ function DashboardPanel() {
       .sort((a, b) => b.n - a.n);
   }, [apps, state.venues]);
 
-  // 급수별
+  // 급수별 — 동시(Ⅰ+Ⅱ)는 submission 단위로 1건 (API는 I/II 두 행)
   const byLevel = useMemo(() => {
     const m = { 'Ⅰ': 0, 'Ⅱ': 0, '동시': 0 };
-    apps.filter(a => a.status !== 'cancel').forEach(a => { m[a.level] = (m[a.level] || 0) + 1; });
+    const seenConcurrent = new Set();
+    apps.filter(a => a.status !== 'cancel').forEach(a => {
+      if (a.level === '동시' || a.isConcurrent) {
+        const key = a.submissionId || a.id;
+        if (seenConcurrent.has(key)) return;
+        seenConcurrent.add(key);
+        m['동시'] += 1;
+        return;
+      }
+      m[a.level] = (m[a.level] || 0) + 1;
+    });
     return m;
   }, [apps]);
 

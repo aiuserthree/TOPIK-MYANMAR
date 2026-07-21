@@ -650,6 +650,7 @@ async def admin_list_applications(
                 User.birth_date.ilike(term),
             )
         )
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
     stmt = stmt.order_by(
         Application.deleted_at.desc().nullslast() if trash else Application.id.desc()
     ).offset((page - 1) * page_size).limit(page_size)
@@ -662,6 +663,7 @@ async def admin_list_applications(
         ],
         "page": page,
         "page_size": page_size,
+        "total_items": total,
     }
 
 

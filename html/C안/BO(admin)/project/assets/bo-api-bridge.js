@@ -99,6 +99,80 @@
     return String(lv || "I").toUpperCase();
   }
 
+  /** API max page_size for /admin/applications */
+  var APP_PAGE_SIZE = 500;
+
+  /** Fetch every page until exhausted (or total_items reached). */
+  function fetchAllApplications(baseQuery) {
+    var page = 1;
+    var all = [];
+    var totalItems = null;
+
+    function next() {
+      var q = Object.assign({}, baseQuery || {}, { page: page, page_size: APP_PAGE_SIZE });
+      return Api.getApplications(q).then(function (res) {
+        if (!res.ok) return res;
+        var items = (res.body && res.body.items) || [];
+        if (totalItems == null && res.body && res.body.total_items != null) {
+          totalItems = Number(res.body.total_items) || 0;
+        }
+        all = all.concat(items);
+        var gotAll =
+          items.length < APP_PAGE_SIZE ||
+          (totalItems != null && all.length >= totalItems);
+        if (gotAll || page >= 200) {
+          return {
+            ok: true,
+            body: {
+              items: all,
+              page: 1,
+              page_size: all.length,
+              total_items: totalItems != null ? totalItems : all.length,
+            },
+          };
+        }
+        page += 1;
+        return next();
+      });
+    }
+    return next();
+  }
+
+  /**
+   * Live API stores concurrent TOPIK I+II as two application rows under one submission_id.
+   * Mark those rows as level "동시" (keep levelBase for fee / export / exam level).
+   */
+  function markConcurrentApplicants(list) {
+    var bySub = {};
+    (list || []).forEach(function (a) {
+      if (!a || !a.submissionId) return;
+      if (!bySub[a.submissionId]) bySub[a.submissionId] = [];
+      bySub[a.submissionId].push(a);
+    });
+    Object.keys(bySub).forEach(function (sid) {
+      var rows = bySub[sid];
+      var hasI = false;
+      var hasII = false;
+      rows.forEach(function (r) {
+        var lv = r.levelBase || r.level;
+        if (lv === "Ⅰ") hasI = true;
+        if (lv === "Ⅱ") hasII = true;
+      });
+      if (hasI && hasII) {
+        rows.forEach(function (r) {
+          if (!r.levelBase) r.levelBase = r.level;
+          r.level = "동시";
+          r.isConcurrent = true;
+        });
+      }
+    });
+    return list || [];
+  }
+
+  function mapApplicants(rows) {
+    return markConcurrentApplicants((rows || []).map(mapApplicant));
+  }
+
   function mapApplicantStatus(row) {
     if (row.status === "cancelled") return "cancel";
     if (row.payment_status === "refunded") return "refund";
@@ -165,6 +239,9 @@
       motive: codeLabel(MOTIVE_LABELS, row.motivation_code != null ? row.motivation_code : row.motive_code) || "미상",
       purpose: codeLabel(PURPOSE_LABELS, row.purpose_code) || "미상",
       level: levelUi(row.exam_level),
+      levelBase: levelUi(row.exam_level),
+      submissionId: row.submission_id != null ? String(row.submission_id) : "",
+      isConcurrent: false,
       venueId: String(row.exam_venue_id),
       photoFileId: photoFileId,
       photoUrl: photoFileId != null ? Api.fileUrl(photoFileId) : "",
@@ -779,7 +856,7 @@
       Api.getRegionCodes(),
       Api.getExamVenues(),
       Api.getExamRounds(),
-      Api.getApplications({ page_size: 200 }),
+      fetchAllApplications({}),
       Api.getNotices(),
       Api.getFaq(),
       Api.getBoardPosts("refund_correction", { page_size: 200 }),
@@ -789,7 +866,7 @@
       Api.getAdminUsers(),
       Api.getAuditLogs(),
       Api.getPermissionMatrix(),
-      Api.getApplications({ page_size: 200, trash: "true" }),
+      fetchAllApplications({ trash: "true" }),
     ]).then(function (results) {
       var regRes = results[0];
       var venRes = results[1];
@@ -843,9 +920,9 @@
         return mapSession(s, counts);
       });
 
-      DS.state.applicants = apps.map(mapApplicant);
+      DS.state.applicants = mapApplicants(apps);
       DS.state.applicantTrash = (trashAppRes && trashAppRes.ok && trashAppRes.body && trashAppRes.body.items)
-        ? trashAppRes.body.items.map(mapApplicant)
+        ? mapApplicants(trashAppRes.body.items)
         : [];
       DS.state.notices = ((notRes.body && notRes.body.items) || []).map(function (n, i) {
         return mapNotice(n, i, DS.state.me && DS.state.me.id);
@@ -943,28 +1020,28 @@
     }
 
     if (opts.trash) {
-      var tq = { page_size: 200, trash: "true" };
+      var tq = { trash: "true" };
       var trashRoundId = apiExamRoundId(sessionId);
       if (trashRoundId) tq.exam_round_id = trashRoundId;
-      return Api.getApplications(tq).then(function (res) {
+      return fetchAllApplications(tq).then(function (res) {
         if (res.ok) {
-          applyTrashItems(((res.body && res.body.items) || []).map(mapApplicant));
+          applyTrashItems(mapApplicants((res.body && res.body.items) || []));
         }
         DS.notify();
       });
     }
 
-    var q = { page_size: 200 };
+    var q = {};
     var roundId = apiExamRoundId(sessionId);
     if (roundId) q.exam_round_id = roundId;
     if (opts.q) q.q = opts.q;
 
-    var tq = { page_size: 200, trash: "true" };
+    var tq = { trash: "true" };
     if (roundId) tq.exam_round_id = roundId;
 
     return Promise.all([
-      Api.getApplications(q),
-      Api.getApplications(tq),
+      fetchAllApplications(q),
+      fetchAllApplications(tq),
     ]).then(function (results) {
       var res = results[0];
       var trashRes = results[1];
@@ -973,13 +1050,16 @@
         DS.state.apiError = TopikBoApi.parseError(res);
         if (!sessionId) DS.state.applicants = [];
       } else {
-        var items = ((res.body && res.body.items) || []).map(mapApplicant);
+        var items = mapApplicants((res.body && res.body.items) || []);
+        var totalItems = res.body && res.body.total_items != null
+          ? Number(res.body.total_items)
+          : items.length;
         if (sessionId) {
           var sid = String(sessionId);
           var rest = DS.state.applicants.filter(function (a) { return a.sessionId !== sid; });
           DS.state.applicants = rest.concat(items);
           var sess = DS.state.sessions.find(function (x) { return x.id === sid; });
-          if (sess) sess.applicants = items.length;
+          if (sess) sess.applicants = totalItems;
         } else {
           DS.state.applicants = items;
           var counts = {};
@@ -994,7 +1074,7 @@
       }
 
       if (trashRes.ok) {
-        applyTrashItems(((trashRes.body && trashRes.body.items) || []).map(mapApplicant));
+        applyTrashItems(mapApplicants((trashRes.body && trashRes.body.items) || []));
       }
 
       DS.notify();

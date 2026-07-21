@@ -142,16 +142,28 @@ function applicantRoundTitle(a, session) {
 
 function applicantLevelText(a) {
   if (!a) return '—';
+  if (a.level === '동시' || a.isConcurrent) {
+    if (a.levelBase === 'Ⅰ') return 'TOPIK Ⅰ + Ⅱ (Ⅰ)';
+    if (a.levelBase === 'Ⅱ') return 'TOPIK Ⅰ + Ⅱ (Ⅱ)';
+    return 'TOPIK Ⅰ + Ⅱ';
+  }
   if (a.level === 'Ⅰ') return 'TOPIK Ⅰ';
   if (a.level === 'Ⅱ') return 'TOPIK Ⅱ';
-  if (a.level === '동시') return 'TOPIK Ⅰ + Ⅱ';
   return 'TOPIK ' + a.level;
+}
+
+function applicantLevelLabel(a) {
+  if (!a) return '—';
+  if ((a.level === '동시' || a.isConcurrent) && a.levelBase) return '동시(' + a.levelBase + ')';
+  return a.level || '—';
 }
 
 function applicantFeeAmount(a, session) {
   if (!session || !a) return 25;
-  if (a.level === 'Ⅰ') return session.feeI;
-  if (a.level === 'Ⅱ') return session.feeII;
+  // API concurrent rows keep levelBase as Ⅰ/Ⅱ (level display is "동시")
+  var lv = a.levelBase || a.level;
+  if (lv === 'Ⅰ') return session.feeI;
+  if (lv === 'Ⅱ') return session.feeII;
   if (a.level === '동시') return session.feeI + session.feeII;
   return session.feeI;
 }
@@ -581,7 +593,9 @@ function ApplicantsPanel() {
       const v = state.venues.find(x => x.id === a.venueId);
       const venueCode = v ? v.code : '01';
       const regionCode = v ? v.regionCode : '001';
-      const lvlCodes = a.level === '동시' ? ['7', '8'] : [a.level === 'Ⅰ' ? '7' : '8'];
+      // mock 단일행 동시 → 7+8; API 동시( levelBase Ⅰ/Ⅱ ) → 해당 수준만
+      const lv = a.levelBase || a.level;
+      const lvlCodes = (!a.levelBase && a.level === '동시') ? ['7', '8'] : [lv === 'Ⅰ' ? '7' : '8'];
       const assigned = [];
       for (const lc of lvlCodes) {
         const key = venueCode + '|' + lc;
@@ -855,7 +869,7 @@ function ApplicantsPanel() {
                   <td><a style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }} onClick={() => setDetailId(a.id)}>{a.nameKo}</a></td>
                   <td>{a.nameEn}</td>
                   <td className="muted">{a.email || '—'}</td>
-                  <td><span className="code-id">{a.level}</span></td>
+                  <td><span className="code-id">{applicantLevelLabel(a)}</span></td>
                   <td className="code muted">{a.appliedAt}</td>
                   <td className="code"><b style={{ color: a.applicationNo ? 'var(--primary)' : 'var(--text-4)' }}>{a.applicationNo || '—'}</b></td>
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
@@ -1130,7 +1144,7 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
             <dt>생년월일</dt><dd><code>{a.dob}</code></dd>
             <dt>성별</dt><dd>{a.sx === 1 ? '남(1)' : '여(2)'}</dd>
             <dt>국적</dt><dd>{a.nation}</dd>
-            <dt>급수</dt><dd>TOPIK {a.level}</dd>
+            <dt>급수</dt><dd>{applicantLevelText(a)}</dd>
             <dt>시험장</dt><dd>{venue?.nameKo}</dd>
           </dl>
         </div>
@@ -1327,7 +1341,7 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
             <FieldSet legend="시험 정보" cols={2}>
               <KV k="회차 ID" v={<code className="code-id">{a.sessionId}</code>}/>
               <KV k="처리 상태" v={<Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill>}/>
-              <KV k="급수" v={`TOPIK ${a.level}`}/>
+              <KV k="급수" v={applicantLevelText(a)}/>
               <KV k="시험장" v={venue?.nameKo}/>
               <KV k="시험장 ID" v={<code className="code-id">{a.venueId}</code>}/>
               <KV k="사진 심사" v={<PhotoStatusPill status={a.photoStatus}/>}/>
@@ -1487,11 +1501,7 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
     </Modal>
   );
   const session = state.sessions.find(s => s.id === rows[0].sessionId);
-  const totalFee = rows.reduce((sum, a) => {
-    if (a.level === 'Ⅰ') return sum + session.feeI;
-    if (a.level === 'Ⅱ') return sum + session.feeII;
-    return sum + session.feeI + session.feeII;
-  }, 0);
+  const totalFee = rows.reduce((sum, a) => sum + applicantFeeAmount(a, session), 0);
   const cancelMode = modal.mode === 'cancel';
   const finalReason = reason === '기타' ? reasonOther : reason;
 
@@ -1525,7 +1535,7 @@ function PayModal({ modal, onClose, onPay, onCancel, onPhotoApprove }) {
                 <td>{a.nameKo}</td>
                 <td>{a.nameEn}</td>
                 <td className="code">{a.dob}</td>
-                <td>{a.level}</td>
+                <td>{applicantLevelLabel(a)}</td>
                 <td>{DataStore.venueName(a.venueId)}</td>
                 <td>
                   {a.photoStatus === 'pending'
@@ -1708,8 +1718,11 @@ function ExcelExportModal({ onClose, rows }) {
   const [mode, setMode] = useState('current'); // current | full
   const session = state.sessions.find(s => s.id === state.activeSessionId);
 
-  const levelPfx = (lv) => String(lv || '').indexOf('동시') >= 0 ? 'TOPIK Ⅰ·Ⅱ'
-    : (String(lv).indexOf('Ⅱ') >= 0 ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ');
+  const levelPfx = (a) => {
+    const lv = (a && a.levelBase) || (a && a.level) || '';
+    if (!a?.levelBase && String(lv).indexOf('동시') >= 0) return 'TOPIK Ⅰ·Ⅱ';
+    return String(lv).indexOf('Ⅱ') >= 0 ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
+  };
 
   // 시험장·수준별 개별 파일 — 파일명: 제{회차}회 TOPIK 지원자 연명부(미얀마_{시험장})[_{급수}].xlsx
   const groups = useMemo(() => {
@@ -1720,14 +1733,14 @@ function ExcelExportModal({ onClose, rows }) {
     src.forEach(a => {
       const venue = state.venues.find(v => v.id === a.venueId);
       const vname = venue ? venue.nameKo : '미지정';
-      const lp = levelPfx(a.level);
+      const lp = levelPfx(a);
       if (!levelsByVenue.has(vname)) levelsByVenue.set(vname, new Set());
       levelsByVenue.get(vname).add(lp);
     });
     src.forEach(a => {
       const venue = state.venues.find(v => v.id === a.venueId);
       const vname = venue ? venue.nameKo : '미지정';
-      const lp = levelPfx(a.level);
+      const lp = levelPfx(a);
       const multiLevel = (levelsByVenue.get(vname)?.size || 0) > 1;
       const fname = window.TOPIKBoBridge?.rosterExportFilename
         ? TOPIKBoBridge.rosterExportFilename(roundNo, vname, lp, multiLevel)
