@@ -419,6 +419,7 @@
     'reg.meta_reg_period': { ko: '접수 기간', my: 'လျှောက်လွှာတင်ရမည့် ကာလ', en: 'Registration period' },
     'reg.status_open': { ko: '접수 중', my: 'လျှောက်ထားဆဲ', en: 'Open' },
     'reg.status_closed': { ko: '접수 마감', my: 'လျှောက်ထားမှု ပိတ်သွားပြီ', en: 'Closed' },
+    'reg.status_full': { ko: '정원 마감', my: 'လူဦးရေ ပြည့်', en: 'Full' },
     'reg.status_scheduled': { ko: '예정', my: 'စီစဉ်ထား', en: 'Scheduled' },
     'reg.status_upcoming': { ko: '접수 예정', my: 'လျှောက်ထားရန် စီစဉ်ထား', en: 'Upcoming' },
     'reg.no_rounds': { ko: '접수 가능한 회차가 없습니다.', my: 'လျှောက်ထားနိုင်သော အကြိမ်ရေ မရှိပါ။', en: 'No sessions are open for registration.' },
@@ -426,6 +427,9 @@
     'reg.venue_title': { ko: '시험장 선택', my: 'စာစစ်ဌာန ရွေးချယ်ရန်', en: 'Select venue' },
     'reg.venue_desc': { ko: '접수 회차에 배정 가능한 시험장입니다.', my: 'ယခု စာမေးပွဲအကြိမ်ရေအတွက် သတ်မှတ်ထားသော စာစစ်ဌာနများ', en: 'Venues available for this session.' },
     'reg.venue_ph': { ko: '시험장을 선택해 주세요', my: 'စာစစ်ဌာန ရွေးချယ်ပါ', en: 'Please select a venue' },
+    'reg.venue_full_suffix': { ko: ' (정원 마감)', my: ' (လူဦးရေ ပြည့်)', en: ' (Full)' },
+    'reg.err_round_full': { ko: '해당 회차 정원이 마감되어 접수할 수 없습니다.', my: 'ဤအကြိမ်ရေအတွက် လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။', en: 'This exam session is full and no longer accepting registrations.' },
+    'reg.err_venue_full': { ko: '선택한 시험장 정원이 마감되어 접수할 수 없습니다. 다른 시험장을 선택해 주세요.', my: 'ရွေးချယ်ထားသော စာစစ်ဌာန လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။ အခြားစာစစ်ဌာနကို ရွေးပါ။', en: 'The selected venue is full. Please choose another venue.' },
     'reg.venue_reapply_lock': { ko: '재접수 시 기존 시험장으로 접수됩니다.', my: 'ပြန်လျှောက်ရာတွင် ယခင်စာစစ်ဌာနဖြင့် လျှောက်ထားမည်။', en: 'Re-application uses your original exam venue.' },
     'reg.venue_inprogress_lock': { ko: '진행 중인 급수와 동일한 시험장으로 접수됩니다.', my: 'လျောက်ထားဆဲ စာမေးပွဲနှင့် တူညီသော စာစစ်ဌာနတွင် လျှောက်ထားမည်။', en: 'Registration uses the same venue as your in-progress level.' },
     'reg.level_title': { ko: '응시 급수 선택', my: 'ဖြေဆိုမည့် စာမေးပွဲကို ရွေးချယ်ရန်', en: 'Select level' },
@@ -554,15 +558,20 @@
     var sel = document.getElementById('venueSelect');
     if (!sel) return;
     updateVenuePlaceholder();
+    var round = getSelectedRound();
     (REG_STATE.venues || []).forEach(function (v) {
       var opt = sel.querySelector('option[value="' + v.id + '"]');
-      if (opt) opt.textContent = formatVenueLabel(v);
+      if (!opt) return;
+      opt.textContent = formatVenueLabel(v, round);
+      if (!REG_STATE.reapplyLockedVenueId) {
+        opt.disabled = isVenueFull(v, round);
+      }
     });
     if (REG_STATE.reapplyLockedVenueId) {
       var locked = (REG_STATE.venues || []).find(function (x) {
         return Number(x.id) === Number(REG_STATE.reapplyLockedVenueId);
       });
-      if (locked) REG_STATE.reapplyLockedVenueName = formatVenueLabel(locked);
+      if (locked) REG_STATE.reapplyLockedVenueName = formatVenueLabel(locked, round);
     }
   }
 
@@ -570,11 +579,47 @@
   var REG_STATE = {
     rounds: [],
     venues: [],
+    allVenues: [],
     profile: null,
     selectedRoundId: null,
     reapplyLockedVenueId: null,
     reapplyLockedVenueName: null,
   };
+
+  function isRoundFull(r) {
+    if (!r) return false;
+    if (r.is_full === true) return true;
+    var cap = Number(r.capacity);
+    var registered = Number(r.registered_count);
+    return cap > 0 && !isNaN(registered) && registered >= cap;
+  }
+
+  function isRoundSelectable(r) {
+    return !!(r && r.registration_status === 'open' && !isRoundFull(r));
+  }
+
+  function venueStatMapForRound(round) {
+    var map = {};
+    (round && round.venue_stats ? round.venue_stats : []).forEach(function (st) {
+      if (st && st.exam_venue_id != null) map[Number(st.exam_venue_id)] = st;
+    });
+    return map;
+  }
+
+  function isVenueFull(v, round) {
+    if (!v) return false;
+    if (v.is_full === true) return true;
+    var st = venueStatMapForRound(round)[Number(v.id)];
+    if (st) {
+      if (st.is_full === true) return true;
+      var cap = Number(st.capacity != null ? st.capacity : v.capacity);
+      var registered = Number(st.registered_count);
+      return cap > 0 && !isNaN(registered) && registered >= cap;
+    }
+    var vCap = Number(v.capacity);
+    var vReg = Number(v.registered_count);
+    return vCap > 0 && !isNaN(vReg) && vReg >= vCap;
+  }
 
   var REAPPLY_KEY = 'tpkm_reg_reapply';
 
@@ -695,7 +740,11 @@
     return short(start) + ' — ' + short(end);
   }
 
-  function roundStatusLabel(status) {
+  function roundStatusLabel(r) {
+    var status = r && typeof r === 'object' ? r.registration_status : r;
+    if (status === 'open' && isRoundFull(r)) {
+      return { text: bt('reg.status_full', '정원 마감'), cls: 'closed' };
+    }
     if (status === 'open') return { text: bt('reg.status_open', '접수 중'), cls: '' };
     if (status === 'closed') return { text: bt('reg.status_closed', '접수 마감'), cls: 'closed' };
     if (status === 'scheduled') return { text: bt('reg.status_scheduled', '예정'), cls: 'upcoming' };
@@ -725,12 +774,16 @@
     if (errEl) errEl.style.display = 'none';
     var selectedId = REG_STATE.selectedRoundId;
     var hasSelected = selectedId && rounds.some(function (r) {
-      return r.id === selectedId && r.registration_status === 'open';
+      return r.id === selectedId && isRoundSelectable(r);
+    });
+    var firstSelectableIdx = -1;
+    rounds.forEach(function (r, idx) {
+      if (firstSelectableIdx < 0 && isRoundSelectable(r)) firstSelectableIdx = idx;
     });
     rounds.forEach(function (r, idx) {
-      var st = roundStatusLabel(r.registration_status);
-      var disabled = r.registration_status !== 'open';
-      var isSelected = !disabled && (hasSelected ? r.id === selectedId : idx === 0);
+      var st = roundStatusLabel(r);
+      var disabled = !isRoundSelectable(r);
+      var isSelected = !disabled && (hasSelected ? r.id === selectedId : idx === firstSelectableIdx);
       var card = document.createElement('label');
       card.className = 'round-card' + (disabled ? ' disabled ' + st.cls : (isSelected ? ' selected' : ' ' + st.cls));
       card.dataset.roundId = String(r.id);
@@ -747,6 +800,7 @@
     bindRoundCards();
     applyReapplyRoundPreselect();
     updateFeeDisplay(getSelectedRound());
+    refreshVenuesForSelectedRound();
     applyLevelLocks();
   }
 
@@ -875,15 +929,22 @@
     REG_STATE.reapplySelectableLevels = null;
   }
 
-  function formatVenueLabel(v) {
+  function formatVenueLabel(v, round) {
     if (!v) return '';
     if (typeof v === 'string') return v;
     var lang = currentFoLang();
-    if (lang === 'my') return v.name_my || v.name_en || v.name_ko || v.name || '';
-    if (lang === 'en') return v.name_en || v.name_ko || v.name || '';
-    var ko = v.name_ko || v.name || '';
-    var en = v.name_en ? ' (' + v.name_en + ')' : '';
-    return ko + en;
+    var base;
+    if (lang === 'my') base = v.name_my || v.name_en || v.name_ko || v.name || '';
+    else if (lang === 'en') base = v.name_en || v.name_ko || v.name || '';
+    else {
+      var ko = v.name_ko || v.name || '';
+      var en = v.name_en ? ' (' + v.name_en + ')' : '';
+      base = ko + en;
+    }
+    if (isVenueFull(v, round || getSelectedRound())) {
+      return base + bt('reg.venue_full_suffix', ' (정원 마감)');
+    }
+    return base;
   }
 
   function resetVenueLock() {
@@ -1104,20 +1165,50 @@
     return levels;
   }
 
+  function venuesForRound(round, allVenues) {
+    var list = allVenues || REG_STATE.allVenues || [];
+    if (!round) return list.slice();
+    var ids = Array.isArray(round.venue_ids) ? round.venue_ids.map(Number) : [];
+    if (!ids.length) return list.slice();
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    return list.filter(function (v) { return idSet[Number(v.id)]; });
+  }
+
+  function mergeVenueOccupancy(venues, round) {
+    var stats = venueStatMapForRound(round);
+    return (venues || []).map(function (v) {
+      var st = stats[Number(v.id)];
+      if (!st) return v;
+      return Object.assign({}, v, {
+        capacity: st.capacity != null ? st.capacity : v.capacity,
+        registered_count: st.registered_count,
+        remaining: st.remaining,
+        is_full: st.is_full
+      });
+    });
+  }
+
   function renderVenueSelect(venues) {
     var sel = document.getElementById('venueSelect');
-    REG_STATE.venues = venues || [];
+    var round = getSelectedRound();
+    var merged = mergeVenueOccupancy(venues || [], round);
+    REG_STATE.venues = merged;
     sel.innerHTML = '';
     var phOpt = document.createElement('option');
     phOpt.value = '';
     phOpt.setAttribute('data-i18n-content', 'reg.venue_ph');
     phOpt.textContent = venuePlaceholderText();
     sel.appendChild(phOpt);
-    venues.forEach(function (v) {
+    var available = [];
+    merged.forEach(function (v) {
+      var full = isVenueFull(v, round);
       var opt = document.createElement('option');
       opt.value = String(v.id);
-      opt.textContent = formatVenueLabel(v);
+      opt.textContent = formatVenueLabel(v, round);
+      if (full) opt.disabled = true;
       sel.appendChild(opt);
+      if (!full) available.push(v);
     });
     var mode = getReapplyMode();
     if (REG_STATE.reapplyLockedVenueId) {
@@ -1125,7 +1216,23 @@
       applyVenueLock(REG_STATE.reapplyLockedVenueId, REG_STATE.reapplyLockedVenueName, lockReason);
       return;
     }
-    if (venues.length === 1) sel.value = String(venues[0].id);
+    if (available.length === 1) sel.value = String(available[0].id);
+    else if (sel.value && isVenueFull(
+      merged.find(function (x) { return String(x.id) === String(sel.value); }),
+      round
+    )) {
+      sel.value = '';
+    }
+  }
+
+  function refreshVenuesForSelectedRound() {
+    var round = getSelectedRound();
+    if (!round) {
+      renderVenueSelect([]);
+      return;
+    }
+    var scoped = venuesForRound(round, REG_STATE.allVenues);
+    renderVenueSelect(scoped);
   }
 
   function applyProfileToDom(u) {
@@ -1179,13 +1286,21 @@
     if (!window.TopikApi || !TopikApi.useApi) return;
     var loading = document.getElementById('roundListLoading');
     if (loading) loading.style.display = 'block';
-    TopikApi.getExamRounds().then(function (res) {
+    var roundsP = TopikApi.getExamRounds();
+    var venuesP = TopikApi.getExamVenues().catch(function () { return { ok: false }; });
+    Promise.all([roundsP, venuesP]).then(function (pair) {
+      var res = pair[0];
+      var venRes = pair[1];
+      if (venRes && venRes.ok && venRes.body && Array.isArray(venRes.body.items)) {
+        REG_STATE.allVenues = venRes.body.items;
+      } else {
+        REG_STATE.allVenues = [];
+      }
       if (res.ok && res.body && Array.isArray(res.body.items)) {
         renderRoundList(visibleRegisterRounds(res.body.items));
+      } else if (loading) {
+        loading.style.display = 'none';
       }
-    });
-    TopikApi.getExamVenues().then(function (res) {
-      if (res.ok && res.body.items) renderVenueSelect(res.body.items);
     });
     if (TopikApi.isLoggedIn()) {
       TopikApi.getMe().then(function (res) {
@@ -1210,6 +1325,7 @@
         c.classList.add('selected');
         REG_STATE.selectedRoundId = Number(c.dataset.roundId);
         updateFeeDisplay(getSelectedRound());
+        refreshVenuesForSelectedRound();
         applyLevelLocks();
       });
     });
@@ -1293,10 +1409,22 @@
       if (!document.querySelector('.round-card.selected')) {
         alert(bt('reg.err_round', '응시 회차를 선택해 주세요.')); return;
       }
+      var selectedRound = getSelectedRound();
+      if (!isRoundSelectable(selectedRound)) {
+        alert(bt('reg.err_round_full', '해당 회차 정원이 마감되어 접수할 수 없습니다.'));
+        return;
+      }
       const venue = REG_STATE.reapplyLockedVenueId
         ? String(REG_STATE.reapplyLockedVenueId)
         : document.getElementById('venueSelect').value;
       if (!venue) { alert(bt('reg.err_venue', '시험장을 선택해 주세요.')); return; }
+      var venueObj = (REG_STATE.venues || []).find(function (v) {
+        return String(v.id) === String(venue);
+      });
+      if (venueObj && isVenueFull(venueObj, selectedRound) && !REG_STATE.reapplyLockedVenueId) {
+        alert(bt('reg.err_venue_full', '선택한 시험장 정원이 마감되어 접수할 수 없습니다. 다른 시험장을 선택해 주세요.'));
+        return;
+      }
     }
     if (cur === 4) return;
     // Update STEP4 summary on STEP3 → 4
@@ -1538,8 +1666,12 @@
       cards[d.round].classList.add('selected');
       if (cards[d.round].dataset.roundId) REG_STATE.selectedRoundId = Number(cards[d.round].dataset.roundId);
     }
+    updateFeeDisplay(getSelectedRound());
+    refreshVenuesForSelectedRound();
     if (d.venueId && !(getReapplyMode() && getReapplyMode().reapply)) {
-      document.getElementById('venueSelect').value = String(d.venueId);
+      var venueSel = document.getElementById('venueSelect');
+      var opt = venueSel ? venueSel.querySelector('option[value="' + d.venueId + '"]') : null;
+      if (opt && !opt.disabled) venueSel.value = String(d.venueId);
     }
     document.getElementById('lvl1').checked = !!d.lvl1;
     document.getElementById('lvl2').checked = !!d.lvl2;
@@ -1551,7 +1683,14 @@
     document.getElementById('agreeTerms').checked = !!d.agree;
     updateSummary();
     applyLevelLocks();
-    if (d.step) go(d.step);
+    if (d.step) {
+      var selectedRound = getSelectedRound();
+      if (Number(d.step) > 1 && !isRoundSelectable(selectedRound)) {
+        go(1);
+      } else {
+        go(d.step);
+      }
+    }
   }
 
   function collectDraft() {

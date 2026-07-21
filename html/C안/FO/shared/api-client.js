@@ -491,8 +491,13 @@
     return apiFetch("/api/v1/exam-rounds" + qs, { auth: false });
   }
 
-  function getExamVenues() {
-    return apiFetch("/api/v1/exam-venues", { auth: false });
+  function getExamVenues(query) {
+    var q = query || {};
+    var qs = "";
+    if (q.exam_round_id != null && q.exam_round_id !== "") {
+      qs = "?exam_round_id=" + encodeURIComponent(q.exam_round_id);
+    }
+    return apiFetch("/api/v1/exam-venues" + qs, { auth: false });
   }
 
   function submitApplication(payload) {

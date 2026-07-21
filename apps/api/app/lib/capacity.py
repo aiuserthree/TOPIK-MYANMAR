@@ -94,3 +94,23 @@ async def ensure_venue_capacity(
         db, exam_round_id=exam_round_id, exam_venue_id=exam_venue_id
     )
     return active < capacity
+
+
+def occupancy_snapshot(capacity: int, registered_count: int) -> dict:
+    """Public FO fields: registered_count / remaining / is_full.
+
+    ``capacity <= 0`` means unlimited → remaining is null, is_full is False.
+    """
+    cap = int(capacity or 0)
+    registered = int(registered_count or 0)
+    if cap <= 0:
+        return {
+            "registered_count": registered,
+            "remaining": None,
+            "is_full": False,
+        }
+    return {
+        "registered_count": registered,
+        "remaining": max(0, cap - registered),
+        "is_full": registered >= cap,
+    }

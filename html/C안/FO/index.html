@@ -61,6 +61,12 @@
   }
   .hero-ctas { display: flex; flex-direction: column; gap: 8px; }
   .hero-ctas .btn { width: 100%; }
+  .hero-ctas .btn.is-disabled,
+  a.btn.is-disabled {
+    opacity: 0.55;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
 
   /* D-Day card */
   .dday {
@@ -450,6 +456,7 @@
   window.TPKM_PAGE_I18N = {
     'home.hero_h1': { ko: '미얀마 <span class="accent">한국어능력시험</span><br>공식 접수 시스템', my: 'မြန်မာ <span class="accent">ကိုရီးယားဘာသာ အရည်အချင်းစစ်စာမေးပွဲ</span><br>တရားဝင် လျှောက်လွှာ စနစ်', en: 'Myanmar <span class="accent">TOPIK</span><br>Official Registration System' },
     'home.cta_apply': { ko: '시험 접수하기', my: 'စာမေးပွဲ လျှောက်ရန်', en: 'Register for exam' },
+    'home.cta_closed': { ko: '접수 마감', my: 'လျှောက်ထားမှု ပိတ်', en: 'Registration closed' },
     'home.cta_guide': { ko: '시험 안내 보기', my: 'စာမေးပွဲ လမ်းညွှန် ကြည့်ရန်', en: 'View exam guide' },
     'home.full_schedule': { ko: '시험 개요', my: 'စာမေးပွဲ အကျဉ်းချုပ်', en: 'Exam overview' },
     'home.more': { ko: '더보기', my: 'ပိုမိုကြည့်ရန်', en: 'More' },
@@ -596,6 +603,8 @@
       resultDate: null,
       venueIds: [],
       venues: [],
+      capacityFull: false,
+      canApply: false,
     };
     var VENUE_BY_ID = {};
 
@@ -717,6 +726,9 @@
       SCHED.roundNo = null;
       SCHED.examDate = null;
       SCHED.regStart = null;
+      SCHED.capacityFull = false;
+      SCHED.canApply = false;
+      setApplyCtaEnabled(false);
       SCHED.regEnd = null;
       SCHED.payStart = null;
       SCHED.payEnd = null;
@@ -835,10 +847,12 @@
       });
     }
 
-    // 접수 마감 시각 도달 시 '접수 마감 / 다음 회차 안내' 상태로 자동 전환 (기능정의서 FO 메인)
+    // 접수 마감 시각 도달 시(또는 정원 마감) '접수 마감 / 다음 회차 안내' 상태로 자동 전환
     function showClosed() {
       if (closed) return;
       closed = true;
+      SCHED.canApply = false;
+      setApplyCtaEnabled(false);
       if (timer) clearInterval(timer);
       if (badge) {
         badge.classList.add('is-closed');
@@ -900,6 +914,11 @@
       closed = false; // 회차 갱신 시 마감 상태 재평가
       paintStatic();
       paintTimelineBadges();
+      setApplyCtaEnabled(!!SCHED.canApply);
+      if (SCHED.capacityFull && !SCHED.canApply) {
+        showClosed();
+        return;
+      }
       if (timer) clearInterval(timer);
       tick();
       timer = setInterval(tick, 1000);
@@ -912,9 +931,57 @@
       return st === 'scheduled' || st === 'planned';
     }
 
+    function isRoundFull(r) {
+      if (!r) return false;
+      if (r.is_full === true) return true;
+      var cap = Number(r.capacity);
+      var registered = Number(r.registered_count);
+      return cap > 0 && !isNaN(registered) && registered >= cap;
+    }
+
+    function isApplyOpen(r) {
+      return !!(r && r.registration_status === 'open' && !isRoundFull(r));
+    }
+
+    function setApplyCtaEnabled(enabled) {
+      var heroBtn = document.querySelector('.hero-ctas a[data-i18n-content="home.cta_apply"]');
+      var ql = document.querySelector('a.ql[href="register.html"]');
+      if (heroBtn) {
+        if (enabled) {
+          heroBtn.classList.remove('is-disabled');
+          heroBtn.removeAttribute('aria-disabled');
+          heroBtn.setAttribute('href', 'register.html');
+          heroBtn.setAttribute('data-i18n-content', 'home.cta_apply');
+          heroBtn.textContent = bt('home.cta_apply', '시험 접수하기');
+        } else {
+          heroBtn.classList.add('is-disabled');
+          heroBtn.setAttribute('aria-disabled', 'true');
+          heroBtn.setAttribute('href', 'javascript:void(0)');
+          heroBtn.setAttribute('data-i18n-content', 'home.cta_closed');
+          heroBtn.textContent = bt('home.cta_closed', '접수 마감');
+        }
+      }
+      if (ql) {
+        if (enabled) {
+          ql.classList.remove('is-disabled');
+          ql.removeAttribute('aria-disabled');
+          ql.setAttribute('href', 'register.html');
+        } else {
+          ql.classList.add('is-disabled');
+          ql.setAttribute('aria-disabled', 'true');
+          ql.setAttribute('href', 'javascript:void(0)');
+        }
+      }
+    }
+
     function pickRound(items) {
-      var open = items.filter(function (r) { return r.registration_status === 'open'; });
+      var open = items.filter(isApplyOpen);
       if (open.length) return open[0];
+      // 기간상 open이지만 정원 마감 → 홈에서도 마감으로 보여 주기 위해 우선 노출
+      var openFull = items.filter(function (r) {
+        return r.registration_status === 'open' && isRoundFull(r);
+      });
+      if (openFull.length) return openFull[0];
       var scheduled = items.filter(function (r) { return isScheduledStatus(r.registration_status); })
         .sort(function (a, b) { return new Date(a.registration_start_at) - new Date(b.registration_start_at); });
       if (scheduled.length) return scheduled[0];
@@ -933,6 +1000,7 @@
     function applyRoundFromApi(r) {
       if (!r || !r.registration_start_at || !r.registration_end_at) {
         showEmpty();
+        setApplyCtaEnabled(false);
         return;
       }
       if (r.round_no != null) SCHED.roundNo = r.round_no;
@@ -941,6 +1009,8 @@
       SCHED.regStart = r.registration_start_at;
       SCHED.regEnd = r.registration_end_at;
       SCHED.resultDate = r.result_announcement_date || r.result_date || null;
+      SCHED.capacityFull = isRoundFull(r);
+      SCHED.canApply = isApplyOpen(r);
       if (r.payment_start_at && r.payment_end_at) {
         SCHED.payStart = r.payment_start_at;
         SCHED.payEnd = r.payment_end_at;

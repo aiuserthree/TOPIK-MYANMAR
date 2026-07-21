@@ -9,8 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
+from app.lib.capacity import (
+    count_active_round_submissions,
+    count_active_venue_submissions,
+    occupancy_snapshot,
+)
 from app.lib.exam_round_status import sync_exam_rounds_status
-from app.models.exam import ExamRound, ExamVenue
+from app.models.exam import ExamRound, ExamRoundVenue, ExamVenue
 
 router = APIRouter(tags=["exam"])
 
@@ -69,6 +74,47 @@ def serialize_venue(v: ExamVenue) -> dict:
     }
 
 
+async def serialize_round_public(db: AsyncSession, r: ExamRound) -> dict:
+    """FO exam-rounds payload with live capacity occupancy (round + linked venues)."""
+    data = serialize_round(r)
+    registered = await count_active_round_submissions(db, r.id)
+    data.update(occupancy_snapshot(int(r.capacity or 0), registered))
+
+    venue_stats: list[dict] = []
+    for link in r.venue_links:
+        venue = getattr(link, "exam_venue", None)
+        if venue is None:
+            continue
+        v_registered = await count_active_venue_submissions(
+            db, exam_round_id=r.id, exam_venue_id=venue.id
+        )
+        stat = {
+            "exam_venue_id": venue.id,
+            "capacity": int(venue.capacity or 0),
+        }
+        stat.update(occupancy_snapshot(int(venue.capacity or 0), v_registered))
+        venue_stats.append(stat)
+    data["venue_stats"] = venue_stats
+    return data
+
+
+async def serialize_venue_public(
+    db: AsyncSession,
+    v: ExamVenue,
+    *,
+    exam_round_id: int | None = None,
+) -> dict:
+    """FO exam-venues payload; occupancy when exam_round_id is provided."""
+    data = serialize_venue(v)
+    if exam_round_id is None:
+        return data
+    registered = await count_active_venue_submissions(
+        db, exam_round_id=exam_round_id, exam_venue_id=v.id
+    )
+    data.update(occupancy_snapshot(int(v.capacity or 0), registered))
+    return data
+
+
 @router.get("/exam-rounds")
 async def list_exam_rounds(
     registration_status: str | None = Query(None),
@@ -76,7 +122,9 @@ async def list_exam_rounds(
 ) -> dict:
     stmt = (
         select(ExamRound)
-        .options(selectinload(ExamRound.venue_links))
+        .options(
+            selectinload(ExamRound.venue_links).selectinload(ExamRoundVenue.exam_venue)
+        )
         .where(ExamRound.registration_status != "revoked")
         .order_by(ExamRound.round_no.desc())
     )
@@ -87,13 +135,20 @@ async def list_exam_rounds(
     await sync_exam_rounds_status(db, rounds)
     if registration_status:
         rounds = [r for r in rounds if r.registration_status == registration_status]
-    return {"items": [serialize_round(r) for r in rounds]}
+    items = [await serialize_round_public(db, r) for r in rounds]
+    return {"items": items}
 
 
 @router.get("/exam-venues")
-async def list_exam_venues(db: AsyncSession = Depends(get_db_session)) -> dict:
+async def list_exam_venues(
+    exam_round_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
     result = await db.execute(
         select(ExamVenue).where(ExamVenue.is_active.is_(True)).order_by(ExamVenue.venue_code)
     )
-    venues = result.scalars().all()
-    return {"items": [serialize_venue(v) for v in venues]}
+    venues = list(result.scalars().all())
+    items = [
+        await serialize_venue_public(db, v, exam_round_id=exam_round_id) for v in venues
+    ]
+    return {"items": items}
