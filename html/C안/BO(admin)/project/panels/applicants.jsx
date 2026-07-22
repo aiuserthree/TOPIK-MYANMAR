@@ -244,9 +244,21 @@ function ApplicantsPanel() {
   const sessionId = state.activeSessionId;
   const [viewTab, setViewTab] = useState('list'); // list | trash
   const sourceApps = viewTab === 'trash' ? (state.applicantTrash || []) : state.applicants;
-  const apps = useMemo(() => sourceApps.filter(a => a.sessionId === sessionId), [sourceApps, sessionId]);
+  // 회차 필터 + id 중복 제거(새로고침 레이스로 동일 접수가 2번 들어오면 번호가 2×N대로 튀는 문제 방지)
+  const apps = useMemo(() => {
+    var seen = Object.create(null);
+    return sourceApps.filter(function (a) {
+      if (!a || a.sessionId !== sessionId) return false;
+      var k = String(a.id);
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+  }, [sourceApps, sessionId]);
 
   const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
+  // initFromApi 완료 + API 회차 id(숫자)일 때만 reload — mock s107로 전체 fetch/merge 하면 안 됨
+  const apiSessionReady = isApi && !state.apiLoading && !!sessionId && /^\d+$/.test(String(sessionId));
 
   // ---- Filter / search ----
   const [statusF, setStatusF] = useState('all');
@@ -273,15 +285,15 @@ function ApplicantsPanel() {
   const prevSessionRef = useRef(sessionId);
 
   useEffect(() => {
-    if (!sessionId || !isApi || !DataStore.reloadApplicants) return;
+    if (!apiSessionReady || !DataStore.reloadApplicants) return;
     DataStore.reloadApplicants(sessionId);
-  }, [sessionId, isApi]);
+  }, [sessionId, apiSessionReady]);
 
   useEffect(() => {
-    if (viewTab === 'trash' && isApi && DataStore.reloadApplicants) {
+    if (viewTab === 'trash' && apiSessionReady && DataStore.reloadApplicants) {
       DataStore.reloadApplicants(sessionId, { trash: true });
     }
-  }, [viewTab, sessionId, isApi]);
+  }, [viewTab, sessionId, apiSessionReady]);
 
   useEffect(() => {
     if (prevSessionRef.current === sessionId) return;

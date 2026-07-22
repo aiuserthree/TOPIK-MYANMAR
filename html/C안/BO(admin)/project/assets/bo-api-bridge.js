@@ -834,6 +834,11 @@
   DS.useApi = false;
   DS.apiLoading = false;
 
+  function setApiLoading(on) {
+    DS.apiLoading = !!on;
+    DS.state.apiLoading = !!on;
+  }
+
   DS.isApiMode = function () {
     return DS.useApi && Api.canUseApi() && !!Api.getAccessToken();
   };
@@ -844,7 +849,7 @@
       return Promise.resolve(false);
     }
     DS.useApi = true;
-    DS.apiLoading = true;
+    setApiLoading(true);
     DS.state.apiError = null;
     DS.notify();
 
@@ -886,7 +891,7 @@
       var critical = [regRes, venRes, rndRes, appRes, notRes, faqRes, refRes, inqRes, memRes, termRes, admRes];
       var badIdx = critical.findIndex(function (r) { return !r.ok; });
       if (badIdx >= 0) {
-        DS.apiLoading = false;
+        setApiLoading(false);
         var label = CRITICAL_NAMES[badIdx] || ("#" + badIdx);
         var msg = TopikBoApi.parseError(critical[badIdx]) || "API 데이터를 불러오지 못했습니다.";
         return fail("[" + label + "] " + msg);
@@ -986,13 +991,13 @@
           // 회차 전부 삭제(리셋) 후 mock 기본값(s107)이 API에 전달되면 FastAPI 422 발생
           DS.state.activeSessionId = null;
         }
-        DS.apiLoading = false;
+        setApiLoading(false);
         DS.state.apiError = null;
         DS.notify();
         return true;
       }
     }).catch(function () {
-      DS.apiLoading = false;
+      setApiLoading(false);
       return fail("API 연결에 실패했습니다.");
     });
   };
@@ -1005,17 +1010,39 @@
     return s;
   }
 
+  /** Keep first occurrence per application id (guards against stale reload races). */
+  function dedupeApplicantsById(list) {
+    var seen = Object.create(null);
+    var out = [];
+    (list || []).forEach(function (a) {
+      if (!a || a.id == null) return;
+      var k = String(a.id);
+      if (seen[k]) return;
+      seen[k] = true;
+      out.push(a);
+    });
+    return out;
+  }
+
   DS.reloadApplicants = function (sessionId, opts) {
     if (!DS.isApiMode()) return Promise.resolve();
     opts = opts || {};
 
+    // sessionId given but still mock/non-API (e.g. s107 before initFromApi finishes):
+    // must NOT fetch unfiltered "all rounds" and merge — that duplicates every row and
+    // inflates seq numbers into the 2×N / 3000s range after refresh on #applicants.
+    if (sessionId != null && sessionId !== "" && !apiExamRoundId(sessionId)) {
+      return Promise.resolve();
+    }
+
     function applyTrashItems(items) {
+      var mapped = dedupeApplicantsById(items);
       if (sessionId) {
         var sid = String(sessionId);
         var restTrash = DS.state.applicantTrash.filter(function (a) { return a.sessionId !== sid; });
-        DS.state.applicantTrash = restTrash.concat(items);
+        DS.state.applicantTrash = dedupeApplicantsById(restTrash.concat(mapped));
       } else {
-        DS.state.applicantTrash = items;
+        DS.state.applicantTrash = mapped;
       }
     }
 
@@ -1050,14 +1077,14 @@
         DS.state.apiError = TopikBoApi.parseError(res);
         if (!sessionId) DS.state.applicants = [];
       } else {
-        var items = mapApplicants((res.body && res.body.items) || []);
+        var items = dedupeApplicantsById(mapApplicants((res.body && res.body.items) || []));
         var totalItems = res.body && res.body.total_items != null
           ? Number(res.body.total_items)
           : items.length;
         if (sessionId) {
           var sid = String(sessionId);
           var rest = DS.state.applicants.filter(function (a) { return a.sessionId !== sid; });
-          DS.state.applicants = rest.concat(items);
+          DS.state.applicants = dedupeApplicantsById(rest.concat(items));
           var sess = DS.state.sessions.find(function (x) { return x.id === sid; });
           if (sess) sess.applicants = totalItems;
         } else {
