@@ -1,5 +1,6 @@
 /* panels/members.jsx — 회원 관리 (TPKM_BO_5_1_*)
    - 필터/검색, 그리드, 상세 LP, 정보 수정 LP, 정지/탈퇴 모달, 비밀번호 초기화, CSV
+   - API 모드: 서버 페이지네이션·검색·상태/국적 필터 (정지/탈퇴 포함)
    - 고객사 수정 0526: 탈퇴 시 진행 중 접수 자동 취소 안내
 */
 
@@ -15,10 +16,13 @@ function MembersPanel() {
   const canEdit = DataStore.can('members', 'edit');
   const canSuspend = DataStore.can('members', 'suspend');
   const canReset = DataStore.can('members', 'reset');
+  const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
   const [stF, setStF] = useState('all');
   const [natF, setNatF] = useState('all');
   const [q, setQ] = useState('');
+  const [qDebounced, setQDebounced] = useState('');
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
   const PER = 12;
 
   const [detailId, setDetailId] = useState(null);
@@ -27,9 +31,31 @@ function MembersPanel() {
   const [withdrawId, setWithdrawId] = useState(null);
   const [resetId, setResetId] = useState(null);
 
-  const nationalities = useMemo(() => Array.from(new Set(state.members.map(m => m.nation))), [state.members]);
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(q.trim()), 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
+    if (!isApi || !DataStore.reloadMembers) return;
+    DataStore.reloadMembers({
+      page,
+      page_size: PER,
+      status: stF,
+      nationality: natF,
+      q: qDebounced,
+    });
+  }, [isApi, page, stF, natF, qDebounced]);
+
+  const nationalities = useMemo(() => {
+    if (isApi && state.membersMeta && state.membersMeta.nationalities) {
+      return state.membersMeta.nationalities.slice();
+    }
+    return Array.from(new Set(state.members.map(m => m.nation)));
+  }, [isApi, state.members, state.membersMeta]);
 
   const filtered = useMemo(() => {
+    if (isApi) return state.members.slice();
     let r = state.members.slice();
     if (stF !== 'all')  r = r.filter(m => m.status === stF);
     if (natF !== 'all') r = r.filter(m => m.nation === natF);
@@ -38,30 +64,64 @@ function MembersPanel() {
       r = r.filter(m => m.nameKo.includes(q) || m.nameEn.toLowerCase().includes(qq) || m.email.toLowerCase().includes(qq) || m.tel.includes(q));
     }
     return r.sort((a,b) => b.joinedAt.localeCompare(a.joinedAt));
-  }, [state.members, stF, natF, q]);
+  }, [isApi, state.members, stF, natF, q]);
 
-  useEffect(() => setPage(1), [stF, natF, q]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER));
-  const pageRows = filtered.slice((page-1)*PER, page*PER);
+  useEffect(() => setPage(1), [stF, natF, qDebounced]);
 
-  const counts = useMemo(() => ({
-    all: state.members.length,
-    active: state.members.filter(m => m.status === 'active').length,
-    inactive: state.members.filter(m => m.status === 'inactive').length,
-    withdrawn: state.members.filter(m => m.status === 'withdrawn').length,
-  }), [state.members]);
+  const totalItems = isApi
+    ? (state.membersMeta && state.membersMeta.total_items != null ? state.membersMeta.total_items : filtered.length)
+    : filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PER));
+  const pageRows = isApi ? filtered : filtered.slice((page - 1) * PER, page * PER);
+
+  const counts = useMemo(() => {
+    if (isApi && state.membersMeta && state.membersMeta.status_counts) {
+      const sc = state.membersMeta.status_counts;
+      return {
+        all: sc.all || 0,
+        active: sc.active || 0,
+        inactive: sc.suspended || 0,
+        withdrawn: sc.withdrawn || 0,
+      };
+    }
+    return {
+      all: state.members.length,
+      active: state.members.filter(m => m.status === 'active').length,
+      inactive: state.members.filter(m => m.status === 'inactive').length,
+      withdrawn: state.members.filter(m => m.status === 'withdrawn').length,
+    };
+  }, [isApi, state.members, state.membersMeta]);
 
   const statusKo = (s) => s === 'active' ? '활성' : s === 'inactive' ? '정지' : '탈퇴';
-  const exportCSV = () => {
-    const headers = ['번호', '한글성명', '영문성명', '이메일', '연락처', '국적', '가입유형', '가입일', '마지막 로그인', '상태', '마케팅수신'];
-    const rows = filtered.map(m => [m.no, m.nameKo, m.nameEn, m.email, m.tel, m.nation, signupLabel(m.signupProvider), m.joinedAt, m.lastLogin, statusKo(m.status), m.marketing ? '동의' : '미동의']);
-    const fn = '회원목록_' + new Date().toISOString().slice(0, 10) + '.csv';
-    const after = () => {
-      DataStore.addAudit({ type: '회원', targetId: '—', action: '게시', memo: `회원 CSV 내보내기(${filtered.length}건)` });
-      toastOk(`${filtered.length}건의 회원 CSV가 생성되었습니다.`);
-    };
-    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, rows).then(after); }
-    else after();
+  const exportCSV = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      let rowsSrc = filtered;
+      if (isApi && DataStore.fetchMembersForExport) {
+        rowsSrc = await DataStore.fetchMembersForExport({
+          status: stF,
+          nationality: natF,
+          q: qDebounced,
+        });
+      }
+      const headers = ['번호', '한글성명', '영문성명', '이메일', '연락처', '국적', '가입유형', '가입일', '마지막 로그인', '상태', '마케팅수신'];
+      const rows = rowsSrc.map((m, i) => [
+        m.no != null ? m.no : i + 1,
+        m.nameKo, m.nameEn, m.email, m.tel, m.nation,
+        signupLabel(m.signupProvider), m.joinedAt, m.lastLogin,
+        statusKo(m.status), m.marketing ? '동의' : '미동의',
+      ]);
+      const fn = '회원목록_' + new Date().toISOString().slice(0, 10) + '.csv';
+      const after = () => {
+        DataStore.addAudit({ type: '회원', targetId: '—', action: '게시', memo: `회원 CSV 내보내기(${rowsSrc.length}건)` });
+        toastOk(`${rowsSrc.length}건의 회원 CSV가 생성되었습니다.`);
+      };
+      if (window.TOPIKExport && TOPIKExport.downloadCsv) { await TOPIKExport.downloadCsv(fn, headers, rows); after(); }
+      else after();
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -72,7 +132,9 @@ function MembersPanel() {
           <div className="sub">FO 회원가입(STEP1~3) 회원 데이터 · 정보정정 신청은 본 패널에서 직접 반영</div>
         </div>
         <div className="actions">
-          <button className="btn btn-secondary" onClick={exportCSV}><I.Download style={{ width: 14, height: 14 }}/> CSV 다운로드</button>
+          <button className="btn btn-secondary" onClick={exportCSV} disabled={exporting}>
+            <I.Download style={{ width: 14, height: 14 }}/> {exporting ? 'CSV 준비 중…' : 'CSV 다운로드'}
+          </button>
         </div>
       </div>
 
@@ -86,7 +148,7 @@ function MembersPanel() {
         <div className="controls">
           <select className="select" value={natF} onChange={e => setNatF(e.target.value)}>
             <option value="all">전체 국적</option>
-            {nationalities.map(n => <option key={n}>{n}</option>)}
+            {nationalities.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
           <input className="input search" placeholder="이름·이메일·연락처 검색" value={q} onChange={e => setQ(e.target.value)}/>
         </div>
@@ -100,7 +162,9 @@ function MembersPanel() {
               <th>연락처</th><th>국적</th><th>가입유형</th><th>가입일</th><th>마지막 로그인</th><th>상태</th><th>관리</th>
             </tr></thead>
             <tbody>
-              {pageRows.map(m => (
+              {pageRows.length === 0 ? (
+                <tr><td colSpan={11} className="empty" style={{ padding: '28px 0', textAlign: 'center' }}>조건에 맞는 회원이 없습니다.</td></tr>
+              ) : pageRows.map(m => (
                 <tr key={m.id}>
                   <td className="num">{m.no}</td>
                   <td><a style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }} onClick={() => setDetailId(m.id)}>{m.nameKo}</a></td>
@@ -149,7 +213,7 @@ function MembersPanel() {
           </table>
         </div>
         <div className="dg-foot">
-          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(filtered.length)}</b>건</div>
+          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(totalItems)}</b>건</div>
           <Pager page={page} total={totalPages} onPage={setPage}/>
         </div>
       </div>
@@ -163,9 +227,16 @@ function MembersPanel() {
   );
 }
 
+function findMember(state, id) {
+  const key = String(id);
+  return (state.members || []).find(x => x.id === key)
+    || (state.membersCatalog || []).find(x => x.id === key)
+    || null;
+}
+
 function MemberDetailLP({ id, onClose, onEdit }) {
   const state = useStore();
-  const m = state.members.find(x => x.id === id);
+  const m = findMember(state, id);
   if (!m) return null;
   const myApplies = state.applicants.filter(a => a.email === m.email);
   const log = state.audit.filter(l => l.targetId === id);
@@ -230,10 +301,11 @@ function MemberDetailLP({ id, onClose, onEdit }) {
 
 function MemberEditLP({ id, onClose }) {
   const state = useStore();
-  const m = state.members.find(x => x.id === id);
+  const m = findMember(state, id);
   const [f, setF] = useState({ ...m });
   const [reason, setReason] = useState('');
   const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+  if (!m) return null;
   const save = async () => {
     if (!reason.trim()) { toastErr('수정 사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
@@ -280,10 +352,11 @@ function MemberEditLP({ id, onClose }) {
 
 function SuspendModal({ id, onClose }) {
   const state = useStore();
-  const m = state.members.find(x => x.id === id);
+  const m = findMember(state, id);
   const [reason, setReason] = useState('이용 약관 위반');
   const [other, setOther] = useState('');
   const final = reason === '기타' ? other : reason;
+  if (!m) return null;
   const submit = async () => {
     if (!final.trim()) { toastErr('사유를 입력해주세요.'); return; }
     if (DataStore.isApiMode && DataStore.isApiMode()) {
@@ -321,8 +394,9 @@ function SuspendModal({ id, onClose }) {
 
 function WithdrawModal({ id, onClose }) {
   const state = useStore();
-  const m = state.members.find(x => x.id === id);
+  const m = findMember(state, id);
   const [reason, setReason] = useState('본인 요청');
+  if (!m) return null;
   const myApplies = state.applicants.filter(a => a.email === m.email && !['cancel','rejected'].includes(a.status));
   const submit = async () => {
     if (!reason.trim()) { toastErr('사유를 입력해주세요.'); return; }
@@ -378,10 +452,11 @@ function WithdrawModal({ id, onClose }) {
 
 function PwResetLP({ id, onClose }) {
   const state = useStore();
-  const m = state.members.find(x => x.id === id);
+  const m = findMember(state, id);
   const [issued, setIssued] = useState(false);
   const [issuedPw, setIssuedPw] = useState('');
   const tempPw = useMemo(() => 'tpkm' + Math.random().toString(36).slice(2, 8), [id]);
+  if (!m) return null;
   if (isGoogleMember(m)) {
     return (
       <LP open size="sm" title={`비밀번호 초기화 — ${m.nameKo}`} sub={m.email} onClose={onClose}

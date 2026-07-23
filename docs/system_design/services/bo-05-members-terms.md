@@ -43,9 +43,9 @@
 | 개요 | 회원 그리드. 컬럼: 번호/한글성명/영문성명/이메일/연락처/국적/가입일/마지막 로그인/상태/관리 |
 | 처리 | `users` 최신순 조회 |
 | 권한 | `require_any_admin` |
-| 연동 API | `GET /api/v1/admin/users` (현재 **최근 200건, 필터/검색 파라미터 없음**) |
+| 연동 API | `GET /api/v1/admin/users` — `page`/`page_size`(기본 50, 최대 200)/`q`/`status`(all\|active\|suspended\|withdrawn)/`nationality`. 응답: `items`+`total_items`+`status_counts`+`nationalities`. 기본 목록은 활성 정식 회원 + 정지/탈퇴(미완료·pending 제외) |
 | 연동 DB | `users`(id, email, name_ko/en, phone, nationality, status, marketing_opt_in, created_at, last_login_at) |
-| 정합/합의 | 기능정의서 필터(상태/가입일/국적/검색)·페이지네이션 **미구현** → 서버 필터·검색·페이징 추가 필요 |
+| 정합/합의 | 서버 필터·검색·페이징 구현. 가입일 범위 필터는 미구현(후속) |
 
 ### 2.2 회원 상세 보기 — `TPKM_BO_5_1_3`
 

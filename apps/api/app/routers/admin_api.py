@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -44,7 +44,8 @@ from app.lib.email_notify import (
     notify_temp_password,
     count_active_applications,
 )
-from app.lib.profile import is_full_member
+from app.lib.profile import PROFILE_INCOMPLETE_BIRTH
+from app.lib.validation import JOB_CODES, MOTIVE_CODES, PURPOSE_CODES
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.payment_roster import (
     build_payment_xlsx,
@@ -2751,28 +2752,153 @@ async def reply_post(
     return {"replied": True}
 
 
-@router.get("/users")
-async def admin_users(_: AuthUser = Depends(require_any_admin), db: AsyncSession = Depends(get_db_session)) -> dict:
-    result = await db.execute(select(User).order_by(User.id.desc()).limit(500))
+def _user_profile_complete_sql():
+    """정식 회원(프로필 완료) SQL 조건 — is_full_member의 active 제외 부분과 동일."""
+    phone_ok = and_(User.phone.isnot(None), func.trim(User.phone) != "")
+    return and_(
+        User.photo_file_id.isnot(None),
+        User.birth_date != PROFILE_INCOMPLETE_BIRTH,
+        phone_ok,
+        User.job_code.in_(JOB_CODES),
+        User.motive_code.in_(MOTIVE_CODES),
+        User.purpose_code.in_(PURPOSE_CODES),
+    )
+
+
+def _admin_users_listable_sql():
+    """목록 기본 대상: 활성 정식 회원 + 정지/탈퇴(미완료 가입·pending 제외)."""
+    return or_(
+        and_(User.status == "active", _user_profile_complete_sql()),
+        User.status.in_(("suspended", "withdrawn")),
+    )
+
+
+def _admin_users_status_sql(status: str | None):
+    """status 쿼리 → SQL. inactive는 BO UI 별칭(suspended)."""
+    raw = (status or "all").strip().lower()
+    if raw in ("", "all"):
+        return _admin_users_listable_sql()
+    if raw == "inactive":
+        raw = "suspended"
+    if raw == "active":
+        return and_(User.status == "active", _user_profile_complete_sql())
+    if raw in ("suspended", "withdrawn"):
+        return User.status == raw
+    raise api_error(
+        "VALIDATION_ERROR",
+        "status는 all|active|suspended|withdrawn 중 하나여야 합니다.",
+        400,
+    )
+
+
+def _user_list_item(u: User) -> dict:
     return {
-        "items": [
-            {
-                "id": u.id,
-                "email": u.email,
-                "name_ko": u.name_ko,
-                "name_en": u.name_en,
-                "phone": u.phone,
-                "nationality": u.nationality,
-                "status": u.status,
-                "marketing_opt_in": u.marketing_opt_in,
-                "signup_provider": u.signup_provider or "email",
-                "created_at": u.created_at.isoformat() if u.created_at else None,
-                "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
-                "rev": u.rev,
-            }
-            for u in result.scalars().all()
-            if is_full_member(u)
-        ]
+        "id": u.id,
+        "email": u.email,
+        "name_ko": u.name_ko,
+        "name_en": u.name_en,
+        "phone": u.phone,
+        "nationality": u.nationality,
+        "status": u.status,
+        "marketing_opt_in": u.marketing_opt_in,
+        "signup_provider": u.signup_provider or "email",
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+        "rev": u.rev,
+    }
+
+
+@router.get("/users")
+async def admin_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    status: str | None = Query(
+        None,
+        description="all|active|suspended|withdrawn (inactive=suspended 별칭)",
+    ),
+    q: str | None = Query(None, description="이름·이메일·연락처 검색"),
+    nationality: str | None = Query(None, description="국적 정확 일치"),
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    stmt = select(User).where(_admin_users_status_sql(status))
+    if nationality and nationality.strip() and nationality.strip().lower() != "all":
+        stmt = stmt.where(User.nationality == nationality.strip())
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.where(
+            or_(
+                User.name_ko.ilike(term),
+                User.name_en.ilike(term),
+                User.email.ilike(term),
+                User.phone.ilike(term),
+            )
+        )
+
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    rows = (
+        await db.execute(
+            stmt.order_by(User.id.desc()).offset((page - 1) * page_size).limit(page_size)
+        )
+    ).scalars().all()
+
+    # 칩 카운트·국적 옵션: 검색어·국적은 반영, status 칩은 전체 기준
+    count_base = select(User).where(_admin_users_listable_sql())
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        count_base = count_base.where(
+            or_(
+                User.name_ko.ilike(term),
+                User.name_en.ilike(term),
+                User.email.ilike(term),
+                User.phone.ilike(term),
+            )
+        )
+    if nationality and nationality.strip() and nationality.strip().lower() != "all":
+        count_base = count_base.where(User.nationality == nationality.strip())
+
+    count_sub = count_base.subquery()
+    status_rows = (
+        await db.execute(
+            select(count_sub.c.status, func.count())
+            .select_from(count_sub)
+            .group_by(count_sub.c.status)
+        )
+    ).all()
+    by_status = {str(s): int(c) for s, c in status_rows}
+    active_n = by_status.get("active", 0)
+    suspended_n = by_status.get("suspended", 0)
+    withdrawn_n = by_status.get("withdrawn", 0)
+
+    nat_base = select(User.nationality).where(_admin_users_listable_sql()).distinct()
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        nat_base = nat_base.where(
+            or_(
+                User.name_ko.ilike(term),
+                User.name_en.ilike(term),
+                User.email.ilike(term),
+                User.phone.ilike(term),
+            )
+        )
+    nationalities = [
+        n
+        for (n,) in (await db.execute(nat_base.order_by(User.nationality))).all()
+        if n
+    ]
+
+    return {
+        "items": [_user_list_item(u) for u in rows],
+        "page": page,
+        "page_size": page_size,
+        "total_items": total,
+        "status_counts": {
+            "all": active_n + suspended_n + withdrawn_n,
+            "active": active_n,
+            "suspended": suspended_n,
+            "withdrawn": withdrawn_n,
+        },
+        "nationalities": nationalities,
     }
 
 

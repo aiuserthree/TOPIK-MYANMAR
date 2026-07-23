@@ -87,7 +87,7 @@ function MemberAccessLogPanel() {
         <div className="controls">
           <select className="select" value={memberF} onChange={e => setMemberF(e.target.value)}>
             <option value="all">전체 회원</option>
-            {state.members.filter(m => m.status === 'active').slice(0, 20).map(m => (
+            {(state.membersCatalog || state.members).filter(m => m.status === 'active').slice(0, 20).map(m => (
               <option key={m.id} value={m.email}>{m.nameKo || m.name} · {m.email}</option>
             ))}
           </select>

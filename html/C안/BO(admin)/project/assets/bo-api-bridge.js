@@ -101,26 +101,32 @@
 
   /** API max page_size for /admin/applications */
   var APP_PAGE_SIZE = 500;
+  /** API max page_size for /admin/users */
+  var USER_PAGE_SIZE = 200;
 
   /** Fetch every page until exhausted (or total_items reached). */
-  function fetchAllApplications(baseQuery) {
+  function fetchAllPaged(getPage, baseQuery, pageSize, maxPages) {
     var page = 1;
     var all = [];
     var totalItems = null;
+    var lastMeta = null;
+    var size = pageSize || 200;
+    var cap = maxPages || 200;
 
     function next() {
-      var q = Object.assign({}, baseQuery || {}, { page: page, page_size: APP_PAGE_SIZE });
-      return Api.getApplications(q).then(function (res) {
+      var q = Object.assign({}, baseQuery || {}, { page: page, page_size: size });
+      return getPage(q).then(function (res) {
         if (!res.ok) return res;
         var items = (res.body && res.body.items) || [];
+        lastMeta = res.body || {};
         if (totalItems == null && res.body && res.body.total_items != null) {
           totalItems = Number(res.body.total_items) || 0;
         }
         all = all.concat(items);
         var gotAll =
-          items.length < APP_PAGE_SIZE ||
+          items.length < size ||
           (totalItems != null && all.length >= totalItems);
-        if (gotAll || page >= 200) {
+        if (gotAll || page >= cap) {
           return {
             ok: true,
             body: {
@@ -128,6 +134,8 @@
               page: 1,
               page_size: all.length,
               total_items: totalItems != null ? totalItems : all.length,
+              status_counts: lastMeta.status_counts,
+              nationalities: lastMeta.nationalities,
             },
           };
         }
@@ -136,6 +144,54 @@
       });
     }
     return next();
+  }
+
+  function fetchAllApplications(baseQuery) {
+    return fetchAllPaged(Api.getApplications, baseQuery, APP_PAGE_SIZE, 200);
+  }
+
+  function fetchAllUsers(baseQuery) {
+    return fetchAllPaged(Api.getUsers, baseQuery, USER_PAGE_SIZE, 200);
+  }
+
+  function buildUsersQuery(opts) {
+    opts = opts || {};
+    var q = {};
+    if (opts.page != null) q.page = opts.page;
+    if (opts.page_size != null) q.page_size = opts.page_size;
+    if (opts.q) q.q = opts.q;
+    if (opts.status && opts.status !== "all") {
+      q.status = memberStatusApi(opts.status);
+    }
+    if (opts.nationality && opts.nationality !== "all") {
+      q.nationality = opts.nationality;
+    }
+    return q;
+  }
+
+  function applyMembersMeta(body, pageItems) {
+    var sc = (body && body.status_counts) || {};
+    DS.state.membersMeta = {
+      page: body && body.page != null ? Number(body.page) : 1,
+      page_size: body && body.page_size != null ? Number(body.page_size) : (pageItems || []).length,
+      total_items: body && body.total_items != null ? Number(body.total_items) : (pageItems || []).length,
+      status_counts: {
+        all: sc.all != null ? Number(sc.all) : 0,
+        active: sc.active != null ? Number(sc.active) : 0,
+        suspended: sc.suspended != null ? Number(sc.suspended) : 0,
+        withdrawn: sc.withdrawn != null ? Number(sc.withdrawn) : 0,
+      },
+      nationalities: (body && body.nationalities) || [],
+    };
+  }
+
+  function mapMembersPage(items, page, pageSize) {
+    var offset = Math.max(0, ((page || 1) - 1) * (pageSize || 0));
+    return (items || []).map(function (row, idx) {
+      var m = mapMember(row, idx);
+      m.no = offset + idx + 1;
+      return m;
+    });
   }
 
   /**
@@ -762,6 +818,8 @@
     DS.state.refunds = [];
     DS.state.inquiries = [];
     DS.state.members = [];
+    DS.state.membersCatalog = [];
+    DS.state.membersMeta = null;
     DS.state.terms = [];
     DS.state.admins = [];
     DS.state.audit = [];
@@ -783,6 +841,8 @@
     DS.state.refunds = [];
     DS.state.inquiries = [];
     DS.state.members = [];
+    DS.state.membersCatalog = [];
+    DS.state.membersMeta = null;
     DS.state.terms = [];
     DS.state.admins = [];
     DS.state.audit = [];
@@ -798,7 +858,11 @@
   }
 
   function memberRev(id) {
-    var m = DS.state.members.find(function (x) { return x.id === String(id); });
+    var key = String(id);
+    var m = DS.state.members.find(function (x) { return x.id === key; });
+    if (!m && DS.state.membersCatalog) {
+      m = DS.state.membersCatalog.find(function (x) { return x.id === key; });
+    }
     return m && m.rev != null ? m.rev : undefined;
   }
 
@@ -866,7 +930,7 @@
       Api.getFaq(),
       Api.getBoardPosts("refund_correction", { page_size: 200 }),
       Api.getBoardPosts("inquiry", { page_size: 200 }),
-      Api.getUsers(),
+      fetchAllUsers({}),
       Api.getTerms(),
       Api.getAdminUsers(),
       Api.getAuditLogs(),
@@ -935,7 +999,9 @@
       DS.state.faqs = ((faqRes.body && faqRes.body.items) || [])
         .filter(function (f) { return f.is_active !== false; })
         .map(mapFaq);
-      DS.state.members = ((memRes.body && memRes.body.items) || []).map(mapMember);
+      DS.state.membersCatalog = ((memRes.body && memRes.body.items) || []).map(mapMember);
+      DS.state.members = DS.state.membersCatalog.slice();
+      applyMembersMeta(memRes.body, DS.state.members);
       DS.state.terms = ((termRes.body && termRes.body.items) || []).map(mapTerm);
       DS.state.admins = ((admRes.body && admRes.body.items) || []).map(mapAdmin);
       DS.state.refunds = ((refRes.body && refRes.body.items) || []).map(mapRefund);
@@ -1691,16 +1757,67 @@
     });
   };
 
-  DS.reloadMembers = function () {
+  DS._membersQuery = { page: 1, page_size: 12, status: "all", q: "", nationality: "all" };
+
+  DS.reloadMembers = function (opts) {
     if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getUsers().then(function (res) {
-      if (!res.ok) {
-        DS.state.apiError = TopikBoApi.parseError(res);
+    opts = opts || {};
+    var query = Object.assign({}, DS._membersQuery || {}, opts);
+    DS._membersQuery = {
+      page: query.page != null ? query.page : 1,
+      page_size: query.page_size != null ? query.page_size : 12,
+      status: query.status || "all",
+      q: query.q || "",
+      nationality: query.nationality || "all",
+    };
+
+    var pageQ = buildUsersQuery(DS._membersQuery);
+    pageQ.page = DS._membersQuery.page;
+    pageQ.page_size = DS._membersQuery.page_size;
+
+    var catalogQ = buildUsersQuery({
+      status: "all",
+      q: "",
+      nationality: "all",
+    });
+
+    var catalogPromise = opts.refreshCatalog
+      ? fetchAllUsers(catalogQ)
+      : Promise.resolve({ ok: true, body: null });
+
+    return Promise.all([Api.getUsers(pageQ), catalogPromise]).then(function (results) {
+      var pageRes = results[0];
+      var catalogRes = results[1];
+      if (!pageRes.ok) {
+        DS.state.apiError = TopikBoApi.parseError(pageRes);
         return false;
       }
-      DS.state.members = ((res.body && res.body.items) || []).map(mapMember);
+      var items = (pageRes.body && pageRes.body.items) || [];
+      DS.state.members = mapMembersPage(items, pageQ.page, pageQ.page_size);
+      applyMembersMeta(pageRes.body, DS.state.members);
+      if (catalogRes && catalogRes.ok && catalogRes.body) {
+        DS.state.membersCatalog = ((catalogRes.body && catalogRes.body.items) || []).map(mapMember);
+      }
+      DS.state.apiError = null;
       DS.notify();
       return true;
+    });
+  };
+
+  /** CSV 등: 현재 필터(상태·검색·국적)로 전체 페이지 수집 */
+  DS.fetchMembersForExport = function (opts) {
+    if (!DS.isApiMode()) {
+      return Promise.resolve((DS.state.members || []).slice());
+    }
+    var q = buildUsersQuery(opts || DS._membersQuery || {});
+    delete q.page;
+    delete q.page_size;
+    return fetchAllUsers(q).then(function (res) {
+      if (!res.ok) {
+        toastErr(TopikBoApi.parseError(res));
+        return [];
+      }
+      return ((res.body && res.body.items) || []).map(mapMember);
     });
   };
 
@@ -1713,9 +1830,9 @@
       marketing_opt_in: data.marketing,
       memo: (memo || "").trim() || undefined,
     }, { rev: memberRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadMembers(); }).then(function (ok) {
+      return handleMutation(res, function () { return DS.reloadMembers({ refreshCatalog: true }); }).then(function (ok) {
         if (!ok) return false;
-        return DS.initFromApi();
+        return true;
       });
     });
   };
@@ -1725,11 +1842,19 @@
       status: memberStatusApi(status),
       memo: (reason || "").trim() || undefined,
     }, { rev: memberRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadMembers(); }).then(function (ok) {
+      return handleMutation(res, function () { return DS.reloadMembers({ refreshCatalog: true }); }).then(function (ok) {
         if (!ok) return false;
-        var m = DS.state.members.find(function (x) { return x.id === String(id); });
-        if (m) { m.status = status; m.reason = reason || m.reason; }
-        if (res.body && res.body.rev != null && m) m.rev = res.body.rev;
+        var key = String(id);
+        var patch = function (list) {
+          var m = (list || []).find(function (x) { return x.id === key; });
+          if (m) {
+            m.status = status;
+            m.reason = reason || m.reason;
+            if (res.body && res.body.rev != null) m.rev = res.body.rev;
+          }
+        };
+        patch(DS.state.members);
+        patch(DS.state.membersCatalog);
         DS.notify();
         return true;
       });

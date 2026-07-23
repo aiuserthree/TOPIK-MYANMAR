@@ -400,7 +400,7 @@ function ConsentLogLP({ onClose }) {
         <div className="controls">
           <select className="select" value={memberF} onChange={e => setMemberF(e.target.value)} style={{ minWidth: 180 }}>
             <option value="all">전체 회원</option>
-            {state.members.slice(0, 20).map(m => <option key={m.id} value={m.id}>{m.id} · {m.nameKo}</option>)}
+            {(state.membersCatalog || state.members).slice(0, 20).map(m => <option key={m.id} value={m.id}>{m.id} · {m.nameKo}</option>)}
           </select>
           <select className="select" value={kindF} onChange={e => setKindF(e.target.value)}>
             <option value="all">전체 약관</option>

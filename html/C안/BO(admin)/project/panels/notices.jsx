@@ -55,7 +55,8 @@ function NoticesPanel() {
       DataStore.addAudit({ type: '공지', targetId: id, action: '생성', after: { ...nw }, memo: '신규 게시' });
       // 고객사 수정 0527 — 마케팅 동의자에 이메일 일괄 발송
       if (nw.public) {
-        const targets = state.members.filter(m => m.marketing && m.status === 'active').length;
+        const memberSrc = state.membersCatalog || state.members;
+        const targets = memberSrc.filter(m => m.marketing && m.status === 'active').length;
         DataStore.addAudit({ type: '공지', targetId: id, action: '게시', memo: `마케팅수신동의자 ${targets}명 이메일 일괄 발송` });
         toastOk(`공지 등록 완료 · 마케팅 동의 회원 ${targets}명에게 알림 이메일을 발송했습니다.`);
       } else {
@@ -199,7 +200,8 @@ function NoticeEditLP({ edit, onClose, onSave, canSave = true }) {
   const titleKey = lang === 'KO' ? 'title' : lang === 'MY' ? 'titleMy' : 'titleEn';
   const bodyKey  = lang === 'KO' ? 'body'  : lang === 'MY' ? 'bodyMy'  : 'bodyEn';
   const titlePh  = lang === 'KO' ? '예) 제107회 TOPIK 접수 안내' : lang === 'MY' ? 'ဥပမာ - ၁၀၇ ကြိမ်မြောက် TOPIK လျှောက်ထားရန်' : 'e.g. 107th TOPIK Application Guide';
-  const marketingTargets = state.members.filter(m => m.marketing && m.status === 'active').length;
+  const memberSrc = state.membersCatalog || state.members;
+  const marketingTargets = memberSrc.filter(m => m.marketing && m.status === 'active').length;
 
   const editorHostRef = useRef(null);
   const editorRef = useRef(null);

@@ -458,6 +458,8 @@
     regions: REGIONS,
     applicants: APPLICANTS,
     members: MEMBERS,
+    membersCatalog: MEMBERS,
+    membersMeta: null,
     notices: NOTICES,
     noticeTrash: [],
     applicantTrash: [],

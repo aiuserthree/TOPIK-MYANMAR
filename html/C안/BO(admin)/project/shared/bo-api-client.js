@@ -972,7 +972,14 @@
         body: JSON.stringify({ workflow_status: workflowStatus }),
       });
     },
-    getUsers: function () { return apiFetch("/api/v1/admin/users"); },
+    getUsers: function (q) {
+      var parts = [];
+      Object.keys(q || {}).forEach(function (k) {
+        if (q[k] != null && q[k] !== "") parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(q[k]));
+      });
+      var qs = parts.length ? "?" + parts.join("&") : "";
+      return apiFetch("/api/v1/admin/users" + qs);
+    },
     updateUser: function (id, payload, opts) {
       return withRevFetch(
         "/api/v1/admin/users/" + encodeURIComponent(id),
