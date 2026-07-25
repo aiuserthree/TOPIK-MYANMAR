@@ -1,7 +1,7 @@
 /* ============================================================
    panels/applicants.jsx — 접수자 관리
    IDs from docs/02_apply.md:
-     TPKM_BO_2_1_1  필터+검색 (상태칩7/시험장/급수/검색)
+     TPKM_BO_2_1_1  필터+검색 (상태칩/시험장/급수/검색)
      TPKM_BO_2_1_2  데이터 그리드 (연명부 컬럼 정합)
      TPKM_BO_2_1_3  오프라인 수납(+사진/기본정보 동시 확인, 다중 처리, 수납취소→환불자)
      TPKM_BO_2_1_4  승인 처리 (사진 미심사 가드)
@@ -24,14 +24,15 @@ function matchesStatusChip(a, chipId) {
 }
 
 const STATUS_CHIPS = [
-  { id: 'all',      label: '전체' },
-  { id: 'applied',  label: '접수완료' },
-  { id: 'photo',    label: '미심사' },
-  { id: 'pay',      label: '수납대기' },
-  { id: 'approved', label: '승인완료' },
-  { id: 'rejected', label: '반려' },
-  { id: 'cancel',   label: '취소' },
-  { id: 'refund',   label: '환불자' },
+  { id: 'all',            label: '전체' },
+  { id: 'applied',        label: '접수완료' },
+  { id: 'photo',          label: '미심사' },
+  { id: 'pay',            label: '수납대기' },
+  { id: 'approved',       label: '승인완료' },
+  { id: 'photo_rejected', label: '사진 반려' },
+  { id: 'rejected',       label: '반려' },
+  { id: 'cancel',         label: '취소' },
+  { id: 'refund',         label: '환불자' },
 ];
 
 /** FO 다국어 저장값 → BO 상세보기 한글 표시 */
@@ -398,8 +399,8 @@ function ApplicantsPanel() {
     const before = { photoStatus: a.photoStatus, status: a.status };
     a.photoStatus = 'approved';
     a.photoOk = true;
-    // 사진 승인으로 후속 상태 진행
-    if (a.status === 'photo') a.status = a.paid ? 'applied' : 'pay';
+    // 사진 승인으로 후속 상태 진행 (미심사·사진 반려 → 수납/접수완료)
+    if (a.status === 'photo' || a.status === 'photo_rejected') a.status = a.paid ? 'applied' : 'pay';
     DataStore.addAudit({ type: '사진', targetId: id, action: '승인', before, after: { photoStatus: 'approved', status: a.status }, memo: '' });
     DataStore.notify();
     toastOk('사진이 승인되었습니다.', { title: '사진 심사', type: 'success' });
@@ -415,9 +416,9 @@ function ApplicantsPanel() {
     const before = { photoStatus: a.photoStatus, status: a.status, rejectReason: a.rejectReason };
     a.photoStatus = 'rejected';
     a.photoOk = false;
-    a.status = 'rejected';
+    a.status = 'photo_rejected'; // 접수 반려(rejected)와 구분 — API도 status는 photo_review 유지
     a.rejectReason = reason;
-    DataStore.addAudit({ type: '사진', targetId: id, action: '반려', before, after: { photoStatus: 'rejected', status: 'rejected', rejectReason: reason }, memo: reason });
+    DataStore.addAudit({ type: '사진', targetId: id, action: '반려', before, after: { photoStatus: 'rejected', status: 'photo_rejected', rejectReason: reason }, memo: reason });
     DataStore.notify();
     toastOk('사진이 반려되었습니다. 반려 사유는 FO 마이페이지에 안내됩니다.', { title: '사진 심사', type: 'success' });
   };
@@ -439,7 +440,7 @@ function ApplicantsPanel() {
       const before = { photoStatus: a.photoStatus, status: a.status };
       a.photoStatus = 'approved';
       a.photoOk = true;
-      if (a.status === 'photo') a.status = a.paid ? 'applied' : 'pay';
+      if (a.status === 'photo' || a.status === 'photo_rejected') a.status = a.paid ? 'applied' : 'pay';
       n++;
       DataStore.addAudit({ type: '사진', targetId: id, action: '승인', before, after: { photoStatus: 'approved', status: a.status }, memo: '일괄 사진 승인' });
     });

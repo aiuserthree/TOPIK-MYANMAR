@@ -232,7 +232,9 @@
   function mapApplicantStatus(row) {
     if (row.status === "cancelled") return "cancel";
     if (row.payment_status === "refunded") return "refund";
-    if (row.status === "rejected" || row.photo_review_status === "rejected") return "rejected";
+    // 접수 반려 vs 사진 반려 구분 (API status는 photo_review 유지, photo_review_status만 rejected)
+    if (row.status === "rejected") return "rejected";
+    if (row.photo_review_status === "rejected") return "photo_rejected";
     if (row.status === "exam_number_assigned") return "approved";
     if (row.status === "approved" && row.approved_at) return "approved";
     if (row.status === "approved" && !row.approved_at) return "applied";

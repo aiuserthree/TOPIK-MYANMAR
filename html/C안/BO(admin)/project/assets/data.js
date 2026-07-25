@@ -45,7 +45,7 @@
   const JOBS = ['학생','회사원','공무원','자영업','전문직','주부','무직','교사','농업·어업','기타','미상'];
   const MOTIVES = ['유학 및 진학','취업 및 이민','자격 취득','개인적 관심','학업 요건','장학금 신청','비자 발급','기업 요구','한국 문화 관심','기타','미상'];
   const PURPOSES = ['대학 입학','대학원 입학','취업','비자 발급','장학금','자격증','개인 학습','기업 요구','유학','이민','한국어 교육','연구','교환학생','기타','미상'];
-  const STATUSES = ['applied','photo','pay','approved','rejected','cancel','refund'];
+  const STATUSES = ['applied','photo','pay','approved','rejected','photo_rejected','cancel','refund'];
 
   const APPLICANTS = [];
   let seq107 = 1, seq105 = 1;
@@ -63,9 +63,10 @@
     const photoOk = rand() > 0.18;
     const paid = rand() > 0.35;
     let st;
-    if (rand() < 0.04) st = 'cancel';
+    if (rand() < 0.03) st = 'cancel';
+    else if (rand() < 0.03) st = 'rejected'; // 접수 반려
     else if (!photoOk && rand() < 0.5) st = 'photo';
-    else if (!photoOk) st = 'rejected';
+    else if (!photoOk) st = 'photo_rejected'; // 사진 반려 (접수 status와 별개)
     else if (!paid) st = 'pay';
     else if (rand() < 0.86) st = 'approved';
     else st = 'applied';
@@ -91,15 +92,17 @@
       purpose: pick(PURPOSES),
       level: lvl,
       venueId: ven.id,
-      photoOk,
-      photoStatus: photoOk ? 'approved' : (st === 'rejected' ? 'rejected' : 'pending'),
+      photoOk: st === 'photo_rejected' ? false : photoOk,
+      photoStatus: st === 'photo_rejected' ? 'rejected' : (photoOk ? 'approved' : (st === 'photo' ? 'pending' : 'approved')),
       paid,
       paidAt: paid ? `2026-07-${pad(rint(24, 26), 2)} ${pad(rint(9,17),2)}:${pad(rint(0,59),2)}` : '',
       exam,
       applicationNo: 'APP-' + i + '-' + (lvl === 'Ⅱ' ? '2' : '1'),
       status: st,
       appliedAt: `2026-07-${pad(rint(17, 21), 2)} ${pad(rint(9,18), 2)}:${pad(rint(0,59),2)}`,
-      rejectReason: st === 'rejected' ? pick(['사진 부적합','정보 불일치','중복 접수','기타']) : '',
+      rejectReason: (st === 'rejected' || st === 'photo_rejected')
+        ? pick(st === 'photo_rejected' ? ['사진 부적합','정면 아님','모자·선글라스'] : ['정보 불일치','중복 접수','기타'])
+        : '',
       memo: '',
       email: `applicant${i}@example.com`,
       tel: `+95 9 ${rint(700,999)} ${pad(rint(0,9999), 4)}`,
@@ -526,7 +529,7 @@
       unpaid: apps.filter(a => {
         if (a.status === 'cancel' || a.status === 'cancelled') return false;
         if (a.paymentStatus) return a.paymentStatus === 'unpaid';
-        return !a.paid && a.status !== 'refund' && a.status !== 'rejected';
+        return !a.paid && a.status !== 'refund' && a.status !== 'rejected' && a.status !== 'photo_rejected';
       }).length,
       photoWait: apps.filter(a => a.photoStatus === 'pending' && a.status !== 'cancel').length,
       refundNew: state.refunds.filter(r => r.status === '접수' || r.status === '검토중').length,
@@ -541,8 +544,8 @@
   function statusLabel(s) {
     return ({
       applied: '접수완료', photo: '사진심사중', pay: '수납대기',
-      approved: '승인완료', rejected: '반려', cancel: '취소',
-      refund: '환불자',
+      approved: '승인완료', rejected: '반려', photo_rejected: '사진 반려',
+      cancel: '취소', refund: '환불자',
     })[s] || s;
   }
   function levelLabel(l) { return l; }
