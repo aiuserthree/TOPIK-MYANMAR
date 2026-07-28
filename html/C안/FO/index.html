@@ -637,6 +637,7 @@
   // 회차가 없으면 가짜 107회 일정을 보여주지 않고 빈/안내 상태로 둔다.
   (function () {
     var CAL_TZ = 'Asia/Yangon';
+    var DAY_TZ = '+06:30'; // MMT — STEP 카드 배지(진행중/종료) 일자 경계
     var SCHED = {
       roundNo: null,
       examDate: null,
@@ -1197,7 +1198,14 @@
         }
         // 메인 스케줄 표: API의 모든 회차(폐지 제외는 서버 필터). D-Day만 대표 회차 사용.
         ALL_ROUNDS = res.body.items.slice();
-        applyRoundFromApi(pickRound(res.body.items));
+        try {
+          applyRoundFromApi(pickRound(res.body.items));
+        } catch (err) {
+          // 카드 배지 등 부가 렌더 실패 시 전체 일정을 비우지 않음
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn('[home] applyRoundFromApi failed', err);
+          }
+        }
       }).catch(function () {
         showEmpty();
       });
