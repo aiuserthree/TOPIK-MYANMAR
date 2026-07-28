@@ -208,6 +208,52 @@ TRANSACTIONAL_I18N: dict[str, dict[str, object]] = {
             ctas=[{"label": "Re-upload photo", "href": "{editProfileUrl}", "kind": "primary"}],
         ),
     },
+    "info_rejected": {
+        "my": _layout(
+            subject="[TOPIK Myanmar] အခြေခံ အချက်အလက် စိစစ်မှု ပယ်ချ အသိပေးချက်",
+            preheader="အခြေခံ အချက်အလက်ကို ပယ်ချထားပါသည်။ My Page တွင် အမည် စသည်ကို ပြင်ဆင်ပါ။",
+            eyebrow_ko="အခြေခံ အချက်အလက် စိစစ်မှု",
+            eyebrow_en="INFO REVIEW",
+            index_no="05b",
+            h1="အခြေခံ အချက်အလက်ကို ပြင်ဆင်ပါ",
+            intro="မင်္ဂလာပါ {userName} ရှင့်၊ တင်ထားသော အခြေခံ အချက်အလက် (ကိုရီးယား/အင်္ဂလိပ် အမည် စသည်) သည် စိစစ်မှု စံနှုန်းနှင့် မကိုက်ညီသောကြောင့် ပယ်ချထားပါသည်။ လျှောက်လွှာကို ဆက်လက်ထားရှိပြီး အချက်အလက်ကိုသာ ပြင်ဆင်ပါ။",
+            blocks=[
+                {
+                    "type": "reasonBox",
+                    "tone": "warn",
+                    "title": "ပယ်ချ အကြောင်းရင်း — {infoRejectCode}",
+                    "reason": "{infoRejectReason}",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "ပတ်စ်ပို့/မှတ်ပုံတင်နှင့် တူညီသော အမည်·နေရာခြားမှု စသည်ဖြင့် ပြင်ဆင်သိမ်းဆည်းပါက ပြန်လည် စိစစ်ပါမည်။",
+                },
+            ],
+            ctas=[{"label": "အချက်အလက် ပြင်ဆင်ရန်", "href": "{editProfileUrl}", "kind": "primary"}],
+        ),
+        "en": _layout(
+            subject="[TOPIK Myanmar] Basic info review rejected",
+            preheader="Your basic information was rejected. Please correct your name and details on My Page.",
+            eyebrow_ko="기본정보 심사",
+            eyebrow_en="INFO REVIEW",
+            index_no="05b",
+            h1="Please correct your basic information",
+            intro="Dear {userName}, your submitted basic information (Korean/English name, etc.) did not meet the review criteria and was rejected. Your application remains active; you only need to correct the information.",
+            blocks=[
+                {
+                    "type": "reasonBox",
+                    "tone": "warn",
+                    "title": "Rejection reason — {infoRejectCode}",
+                    "reason": "{infoRejectReason}",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "Update your name and spacing to match your passport/ID, then save to proceed with re-review.",
+                },
+            ],
+            ctas=[{"label": "Edit information", "href": "{editProfileUrl}", "kind": "primary"}],
+        ),
+    },
     "temp_password": {
         "my": _layout(
             subject="[TOPIK Myanmar] ယာယီ စကားဝှက် အသိပေးချက်",

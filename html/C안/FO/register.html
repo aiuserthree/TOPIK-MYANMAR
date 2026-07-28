@@ -853,6 +853,7 @@
     var fo = item.fo_card_status || 'applied';
     if (st === 'cancelled') fo = 'cancelled';
     else if (lvRow.photo_review_status === 'rejected') fo = 'photo_rejected';
+    else if (lvRow.info_review_status === 'rejected') fo = 'info_rejected';
     else if (st === 'rejected') fo = 'app_rejected';
     return {
       exam_round_id: item.exam_round_id,

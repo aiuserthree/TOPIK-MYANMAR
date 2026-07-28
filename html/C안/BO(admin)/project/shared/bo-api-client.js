@@ -720,6 +720,14 @@
         opts
       );
     },
+    infoReview: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/info-review",
+        "POST",
+        payload || {},
+        opts
+      );
+    },
     assignExamNumbers: function (roundId, payload) {
       return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/assign-exam-numbers", {
         method: "POST",

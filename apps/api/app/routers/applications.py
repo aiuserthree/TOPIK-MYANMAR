@@ -102,6 +102,9 @@ def _reactivate_application(
     app.photo_review_status = "pending"
     app.photo_reject_code = None
     app.photo_reject_note = None
+    app.info_review_status = "approved"
+    app.info_reject_code = None
+    app.info_reject_note = None
     app.reject_reason = None
     app.cancelled_at = None
     app.cancel_reason = None
@@ -420,6 +423,9 @@ def _level_payload(app: Application, round_visible_at) -> dict:
         "photo_review_status": app.photo_review_status,
         "photo_reject_code": app.photo_reject_code,
         "photo_reject_note": app.photo_reject_note,
+        "info_review_status": app.info_review_status,
+        "info_reject_code": app.info_reject_code,
+        "info_reject_note": app.info_reject_note,
         "reject_reason": app.reject_reason,
         "cancelled_at": app.cancelled_at.isoformat() if app.cancelled_at else None,
         "payment_status": app.payment_status,
@@ -462,6 +468,9 @@ def _serialize_level_item(
         "photo_review_status": app.photo_review_status,
         "photo_reject_code": app.photo_reject_code,
         "photo_reject_note": app.photo_reject_note,
+        "info_review_status": app.info_review_status,
+        "info_reject_code": app.info_reject_code,
+        "info_reject_note": app.info_reject_note,
         "reject_reason": app.reject_reason,
         "exam_number": level["exam_number"],
         "exam_number_visible": level["exam_number_visible"],

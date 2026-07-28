@@ -82,6 +82,11 @@ class Application(TimestampMixin, Base):
     )
     photo_reject_code: Mapped[Optional[str]] = mapped_column(String(30))
     photo_reject_note: Mapped[Optional[str]] = mapped_column(Text)
+    info_review_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="approved"
+    )
+    info_reject_code: Mapped[Optional[str]] = mapped_column(String(30))
+    info_reject_note: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), nullable=False, server_default="submitted")
     payment_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="unpaid")
     payment_receipt_no: Mapped[Optional[str]] = mapped_column(String(50))

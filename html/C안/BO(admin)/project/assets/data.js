@@ -1,6 +1,12 @@
 // ============================================================
 // TOPIK Myanmar — BO mock data store
 // Pure plain JS — exposes window.DataStore (no React deps here)
+//
+// Local UI 더미 사용법:
+//   http://localhost:8081/admin.html?mock=1#applicants
+//   (API 로그인 세션은 유지, 접수자 목록은 이 파일 데이터 사용)
+//   API 모드 복귀: ?mock=0 또는 localStorage/sessionStorage 에서 tpkm_bo_force_mock 제거
+// 검색어: "테스트" → 정보/사진 심사 시나리오 10건
 // ============================================================
 
 (function () {
@@ -45,69 +51,213 @@
   const JOBS = ['학생','회사원','공무원','자영업','전문직','주부','무직','교사','농업·어업','기타','미상'];
   const MOTIVES = ['유학 및 진학','취업 및 이민','자격 취득','개인적 관심','학업 요건','장학금 신청','비자 발급','기업 요구','한국 문화 관심','기타','미상'];
   const PURPOSES = ['대학 입학','대학원 입학','취업','비자 발급','장학금','자격증','개인 학습','기업 요구','유학','이민','한국어 교육','연구','교환학생','기타','미상'];
-  const STATUSES = ['applied','photo','pay','approved','rejected','photo_rejected','cancel','refund'];
+  const STATUSES = ['applied','photo','pay','approved','rejected','photo_rejected','info_rejected','cancel','refund'];
+  const INFO_REJECT_REASONS = ['이름 불일치', '생년월일 오류', '국적·여권 정보 불일치', '필수 항목 누락'];
+  const PHOTO_REJECT_REASONS = ['사진 부적합', '정면 아님', '모자·선글라스'];
 
   const APPLICANTS = [];
   let seq107 = 1, seq105 = 1;
-  // current open session (107) applicants
+
+  function buildApplicant(overrides) {
+    const lvl = overrides.level || pick(['Ⅰ', 'Ⅱ', '동시']);
+    const venId = overrides.venueId || pick(['v01', 'v02', 'v03', 'v04']);
+    const ven = VENUES.find(v => v.id === venId) || VENUES[0];
+    const paid = overrides.paid != null ? !!overrides.paid : true;
+    const photoStatus = overrides.photoStatus || 'approved';
+    const infoStatus = overrides.infoStatus || 'approved';
+    const st = overrides.status || 'applied';
+    let exam = overrides.exam != null ? overrides.exam : '';
+    if (exam === '' && (st === 'approved' || st === 'refund') && paid) {
+      const lvlCode = (lvl === 'Ⅱ' ? '8' : '7');
+      exam = `025001${lvlCode}${ven.code}${pad(seq107++, 4)}`;
+    }
+    const i = overrides.no || 0;
+    return {
+      id: overrides.id || ('a' + pad(i, 4)),
+      sessionId: overrides.sessionId || 's107',
+      no: i,
+      nameKo: overrides.nameKo || (pick(LAST_KO) + pick(FIRST_KO)),
+      nameEn: overrides.nameEn || (pick(FIRST_EN_MM) + ' ' + pick(LAST_EN_MM)),
+      dob: overrides.dob || `${rint(1990, 2006)}${pad(rint(1, 12), 2)}${pad(rint(1, 28), 2)}`,
+      sx: overrides.sx != null ? overrides.sx : pick([1, 2]),
+      nation: overrides.nation || pick(NATIONS),
+      l1: overrides.l1 || pick(L1),
+      job: overrides.job || pick(JOBS),
+      motive: overrides.motive || pick(MOTIVES),
+      purpose: overrides.purpose || pick(PURPOSES),
+      level: lvl,
+      venueId: ven.id,
+      photoOk: photoStatus === 'approved',
+      photoStatus,
+      infoOk: infoStatus === 'approved',
+      infoStatus,
+      infoRejectReason: overrides.infoRejectReason || (infoStatus === 'rejected' ? pick(INFO_REJECT_REASONS) : ''),
+      paid,
+      paymentStatus: overrides.paymentStatus || (paid ? 'paid' : 'unpaid'),
+      paidAt: paid ? (overrides.paidAt || `2026-07-${pad(rint(24, 26), 2)} ${pad(rint(9, 17), 2)}:${pad(rint(0, 59), 2)}`) : '',
+      exam,
+      applicationNo: overrides.applicationNo || ('APP-' + i + '-' + (lvl === 'Ⅱ' ? '2' : '1')),
+      status: st,
+      appliedAt: overrides.appliedAt || `2026-07-${pad(rint(17, 21), 2)} ${pad(rint(9, 18), 2)}:${pad(rint(0, 59), 2)}`,
+      rejectReason: overrides.rejectReason || ((st === 'rejected' || st === 'photo_rejected' || photoStatus === 'rejected')
+        ? pick(st === 'rejected' ? ['정보 불일치', '중복 접수', '기타'] : PHOTO_REJECT_REASONS)
+        : ''),
+      memo: overrides.memo || '',
+      email: overrides.email || `applicant${i}@example.com`,
+      tel: overrides.tel || `+95 9 ${rint(700, 999)} ${pad(rint(0, 9999), 4)}`,
+      accommodation: overrides.accommodation != null ? !!overrides.accommodation : rand() < 0.05,
+    };
+  }
+
+  // ---- Fixed scenarios for local UI testing (search: "테스트") ----
+  // Visible with mock data (admin.html?mock=1). API mode ignores these.
+  const TEST_SCENARIOS = [
+    {
+      id: 'a9001', no: 9001, nameKo: '[테스트] 사진미심사', nameEn: 'TEST Photo Pending',
+      level: 'Ⅰ', venueId: 'v01', paid: false, status: 'photo',
+      photoStatus: 'pending', infoStatus: 'approved',
+      appliedAt: '2026-07-28 18:01',
+      applicationNo: 'APP-9001-1', email: 'test-photo-pending@example.com',
+      memo: '시나리오: 사진 미심사 · 정보 승인 · 미수납',
+    },
+    {
+      id: 'a9002', no: 9002, nameKo: '[테스트] 사진반려', nameEn: 'TEST Photo Rejected',
+      level: 'Ⅱ', venueId: 'v02', paid: true, status: 'photo_rejected',
+      photoStatus: 'rejected', infoStatus: 'approved',
+      rejectReason: '정면 아님', appliedAt: '2026-07-28 18:02',
+      applicationNo: 'APP-9002-2', email: 'test-photo-reject@example.com',
+      memo: '시나리오: 사진 반려 → 사진 재승인 테스트',
+    },
+    {
+      id: 'a9003', no: 9003, nameKo: '[테스트] 정보반려', nameEn: 'TEST Info Rejected',
+      level: 'Ⅰ', venueId: 'v01', paid: true, status: 'info_rejected',
+      photoStatus: 'approved', infoStatus: 'rejected',
+      infoRejectReason: '이름 불일치', appliedAt: '2026-07-28 18:03',
+      applicationNo: 'APP-9003-1', email: 'test-info-reject@example.com',
+      memo: '시나리오: 정보 반려 → 정보 재승인 테스트',
+    },
+    {
+      id: 'a9004', no: 9004, nameKo: '[테스트] 사진·정보반려', nameEn: 'TEST Both Rejected',
+      level: '동시', venueId: 'v03', paid: false, status: 'info_rejected',
+      photoStatus: 'rejected', infoStatus: 'rejected',
+      rejectReason: '모자·선글라스', infoRejectReason: '생년월일 오류',
+      appliedAt: '2026-07-28 18:04',
+      applicationNo: 'APP-9004-1', email: 'test-both-reject@example.com',
+      memo: '시나리오: 사진+정보 모두 반려',
+    },
+    {
+      id: 'a9005', no: 9005, nameKo: '[테스트] 정보미심사', nameEn: 'TEST Info Pending',
+      level: 'Ⅱ', venueId: 'v02', paid: true, status: 'applied',
+      photoStatus: 'approved', infoStatus: 'pending',
+      appliedAt: '2026-07-28 18:05',
+      applicationNo: 'APP-9005-2', email: 'test-info-pending@example.com',
+      memo: '시나리오: 사진 승인 · 정보 미심사(승인 버튼 활성)',
+    },
+    {
+      id: 'a9006', no: 9006, nameKo: '[테스트] 수납대기', nameEn: 'TEST Pay Wait',
+      level: 'Ⅰ', venueId: 'v01', paid: false, status: 'pay',
+      photoStatus: 'approved', infoStatus: 'approved',
+      appliedAt: '2026-07-28 18:06',
+      applicationNo: 'APP-9006-1', email: 'test-pay-wait@example.com',
+      memo: '시나리오: 사진·정보 승인 · 미수납',
+    },
+    {
+      id: 'a9007', no: 9007, nameKo: '[테스트] 승인준비', nameEn: 'TEST Ready Approve',
+      level: 'Ⅱ', venueId: 'v04', paid: true, status: 'applied',
+      photoStatus: 'approved', infoStatus: 'approved',
+      appliedAt: '2026-07-28 18:07',
+      applicationNo: 'APP-9007-2', email: 'test-ready@example.com',
+      memo: '시나리오: 사진·정보·수납 완료 → 최종 승인 가능',
+    },
+    {
+      id: 'a9008', no: 9008, nameKo: '[테스트] 승인완료', nameEn: 'TEST Approved',
+      level: 'Ⅰ', venueId: 'v01', paid: true, status: 'approved',
+      photoStatus: 'approved', infoStatus: 'approved',
+      appliedAt: '2026-07-28 18:08',
+      applicationNo: 'APP-9008-1', email: 'test-approved@example.com',
+      memo: '시나리오: 최종 승인 완료(수험번호 부여됨)',
+    },
+    {
+      id: 'a9009', no: 9009, nameKo: '[테스트] 접수반려', nameEn: 'TEST App Rejected',
+      level: 'Ⅰ', venueId: 'v02', paid: false, status: 'rejected',
+      photoStatus: 'approved', infoStatus: 'approved',
+      rejectReason: '중복 접수', appliedAt: '2026-07-28 18:09',
+      applicationNo: 'APP-9009-1', email: 'test-app-reject@example.com',
+      memo: '시나리오: 접수 자체 반려',
+    },
+    {
+      id: 'a9010', no: 9010, nameKo: '[테스트] 환불자', nameEn: 'TEST Refund',
+      level: 'Ⅱ', venueId: 'v03', paid: false, status: 'refund',
+      photoStatus: 'approved', infoStatus: 'approved',
+      paymentStatus: 'refunded', appliedAt: '2026-07-28 18:10',
+      applicationNo: 'APP-9010-2', email: 'test-refund@example.com',
+      memo: '시나리오: 수납 취소(환불자)',
+    },
+  ];
+  TEST_SCENARIOS.forEach(sc => APPLICANTS.push(buildApplicant(sc)));
+
+  // current open session (107) random applicants
   for (let i = 1; i <= 78; i++) {
     const lvl = pick(['Ⅰ','Ⅱ','동시']);
-    const dual = lvl === '동시';
     const ven = pick(VENUES.filter(v => v.active && ['v01','v02','v03','v04'].includes(v.id)));
-    const sx = pick([1,2]);
-    const yob = rint(1990, 2006);
-    const mob = pad(rint(1, 12), 2);
-    const dob = `${yob}${mob}${pad(rint(1,28), 2)}`;
-    const nameKo = pick(LAST_KO) + pick(FIRST_KO);
-    const nameEn = (pick(FIRST_EN_MM) + ' ' + pick(LAST_EN_MM));
     const photoOk = rand() > 0.18;
     const paid = rand() > 0.35;
     let st;
-    if (rand() < 0.03) st = 'cancel';
-    else if (rand() < 0.03) st = 'rejected'; // 접수 반려
-    else if (!photoOk && rand() < 0.5) st = 'photo';
-    else if (!photoOk) st = 'photo_rejected'; // 사진 반려 (접수 status와 별개)
-    else if (!paid) st = 'pay';
-    else if (rand() < 0.86) st = 'approved';
-    else st = 'applied';
+    let photoStatus;
+    let infoStatus = 'approved';
+    let infoRejectReason = '';
+    let rejectReason = '';
 
-    // exam number only if approved && paid && (status not in rejected/cancel)
-    let exam = '';
-    if ((st === 'approved' || st === 'refund') && paid) {
-      const lvlCode = (lvl === 'Ⅱ' ? '8' : '7'); // 동시면 두 번호 부여(여기선 Ⅰ만 표기)
-      exam = `025001${lvlCode}${ven.code}${pad(seq107++, 4)}`;
+    if (rand() < 0.03) {
+      st = 'cancel';
+      photoStatus = photoOk ? 'approved' : 'pending';
+    } else if (rand() < 0.03) {
+      st = 'rejected'; // 접수 반려
+      photoStatus = 'approved';
+      rejectReason = pick(['정보 불일치', '중복 접수', '기타']);
+    } else if (rand() < 0.08) {
+      // 정보 반려 (신규 심사 플로우) — 사진은 승인/반려 혼합
+      infoStatus = 'rejected';
+      infoRejectReason = pick(INFO_REJECT_REASONS);
+      st = 'info_rejected';
+      if (!photoOk && rand() < 0.4) {
+        photoStatus = 'rejected';
+        rejectReason = pick(PHOTO_REJECT_REASONS);
+      } else {
+        photoStatus = photoOk ? 'approved' : 'pending';
+      }
+    } else if (!photoOk && rand() < 0.5) {
+      st = 'photo';
+      photoStatus = 'pending';
+    } else if (!photoOk) {
+      st = 'photo_rejected';
+      photoStatus = 'rejected';
+      rejectReason = pick(PHOTO_REJECT_REASONS);
+    } else if (!paid) {
+      st = 'pay';
+      photoStatus = 'approved';
+    } else if (rand() < 0.86) {
+      st = 'approved';
+      photoStatus = 'approved';
+    } else {
+      st = 'applied';
+      photoStatus = 'approved';
     }
 
-    APPLICANTS.push({
+    APPLICANTS.push(buildApplicant({
       id: 'a' + pad(i, 4),
-      sessionId: 's107',
       no: i,
-      nameKo, nameEn,
-      dob,
-      sx,
-      nation: pick(NATIONS),
-      l1: pick(L1),
-      job: pick(JOBS),
-      motive: pick(MOTIVES),
-      purpose: pick(PURPOSES),
       level: lvl,
       venueId: ven.id,
-      photoOk: st === 'photo_rejected' ? false : photoOk,
-      photoStatus: st === 'photo_rejected' ? 'rejected' : (photoOk ? 'approved' : (st === 'photo' ? 'pending' : 'approved')),
+      photoStatus,
+      infoStatus,
+      infoRejectReason,
       paid,
-      paidAt: paid ? `2026-07-${pad(rint(24, 26), 2)} ${pad(rint(9,17),2)}:${pad(rint(0,59),2)}` : '',
-      exam,
-      applicationNo: 'APP-' + i + '-' + (lvl === 'Ⅱ' ? '2' : '1'),
       status: st,
-      appliedAt: `2026-07-${pad(rint(17, 21), 2)} ${pad(rint(9,18), 2)}:${pad(rint(0,59),2)}`,
-      rejectReason: (st === 'rejected' || st === 'photo_rejected')
-        ? pick(st === 'photo_rejected' ? ['사진 부적합','정면 아님','모자·선글라스'] : ['정보 불일치','중복 접수','기타'])
-        : '',
-      memo: '',
+      rejectReason,
+      exam: (st === 'approved' || st === 'refund') && paid ? undefined : '',
       email: `applicant${i}@example.com`,
-      tel: `+95 9 ${rint(700,999)} ${pad(rint(0,9999), 4)}`,
-      accommodation: rand() < 0.05, // 편의지원
-    });
+    }));
   }
   // session 105 (closed): a few historical
   for (let i = 1; i <= 18; i++) {
@@ -126,7 +276,9 @@
       purpose: pick(PURPOSES),
       level: pick(['Ⅰ','Ⅱ']),
       venueId: pick(['v01','v02','v03']),
-      photoOk: true, photoStatus: 'approved', paid: true,
+      photoOk: true, photoStatus: 'approved',
+      infoOk: true, infoStatus: 'approved', infoRejectReason: '',
+      paid: true,
       paidAt: `2026-03-${pad(rint(1,15),2)} 11:30`,
       exam: `025001${pick(['7','8'])}${pad(rint(1,3),2)}${pad(seq105++, 4)}`,
       applicationNo: 'APP-5' + pad(i, 4) + '-' + pick(['1', '2']),
@@ -529,7 +681,7 @@
       unpaid: apps.filter(a => {
         if (a.status === 'cancel' || a.status === 'cancelled') return false;
         if (a.paymentStatus) return a.paymentStatus === 'unpaid';
-        return !a.paid && a.status !== 'refund' && a.status !== 'rejected' && a.status !== 'photo_rejected';
+        return !a.paid && a.status !== 'refund' && a.status !== 'rejected' && a.status !== 'photo_rejected' && a.status !== 'info_rejected';
       }).length,
       photoWait: apps.filter(a => a.photoStatus === 'pending' && a.status !== 'cancel').length,
       refundNew: state.refunds.filter(r => r.status === '접수' || r.status === '검토중').length,
@@ -545,6 +697,7 @@
     return ({
       applied: '접수완료', photo: '사진심사중', pay: '수납대기',
       approved: '승인완료', rejected: '반려', photo_rejected: '사진 반려',
+      info_rejected: '정보 반려',
       cancel: '취소', refund: '환불자',
     })[s] || s;
   }

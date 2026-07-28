@@ -40,6 +40,7 @@ from app.lib.email_notify import (
     notify_board_workflow_changed,
     notify_member_info_changed,
     notify_notice_marketing,
+    notify_info_rejected,
     notify_photo_rejected,
     notify_temp_password,
     count_active_applications,
@@ -147,6 +148,13 @@ class PhotoReviewBody(BaseModel):
     action: str
     photo_reject_code: str | None = None
     photo_reject_note: str | None = None
+    rev: int | None = None
+
+
+class InfoReviewBody(BaseModel):
+    action: str
+    info_reject_code: str | None = None
+    info_reject_note: str | None = None
     rev: int | None = None
 
 
@@ -506,6 +514,9 @@ def _app_row_dict(
         "photo_review_status": app.photo_review_status,
         "photo_reject_code": app.photo_reject_code,
         "photo_reject_note": app.photo_reject_note,
+        "info_review_status": app.info_review_status,
+        "info_reject_code": app.info_reject_code,
+        "info_reject_note": app.info_reject_note,
         "photo_file_id": app.photo_file_id,
         "exam_number": app.exam_number,
         "exam_number_visible": app.exam_number_visible,
@@ -943,7 +954,7 @@ async def import_payment_roster_xlsx(
             if current == "paid":
                 skipped_unchanged += 1
                 continue
-            if app.photo_review_status != "approved":
+            if app.photo_review_status != "approved" or app.info_review_status != "approved":
                 user = users.get(app.user_id)
                 skipped_photo_not_approved.append(
                     {
@@ -954,6 +965,7 @@ async def import_payment_roster_xlsx(
                         "name_ko": user.name_ko if user else item.get("name_ko"),
                         "name_en": user.name_en if user else item.get("name_en"),
                         "photo_review_status": app.photo_review_status,
+                        "info_review_status": app.info_review_status,
                     }
                 )
                 continue
@@ -1323,6 +1335,8 @@ async def approve_application(
     check_rev(app, expected_rev_from_request(request, body.rev if body else None, if_match), label="접수")
     if app.photo_review_status != "approved":
         raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 승인 처리할 수 있습니다.", 400)
+    if app.info_review_status != "approved":
+        raise api_error("INFO_NOT_APPROVED", "정보 심사 승인 후 승인 처리할 수 있습니다.", 400)
     if app.payment_status != "paid":
         raise api_error("PAYMENT_REQUIRED", "수납 완료 후 승인 처리할 수 있습니다.", 400)
     before = app.status
@@ -1381,6 +1395,8 @@ async def payment_application(
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
     if app.photo_review_status != "approved":
         raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 수납할 수 있습니다.", 400)
+    if app.info_review_status != "approved":
+        raise api_error("INFO_NOT_APPROVED", "정보 심사 승인 후 수납할 수 있습니다.", 400)
     app.payment_status = "paid"
     # 수납 완료 ≠ 승인처리 완료 — 승인은 별도 /approve 엔드포인트에서만 반영
     if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
@@ -1478,6 +1494,61 @@ async def photo_review(
     )
     await db.commit()
     return {"photo_review_status": app.photo_review_status, "rev": app.rev}
+
+
+@router.post("/applications/{app_id}/info-review")
+async def info_review(
+    app_id: int,
+    body: InfoReviewBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
+    admin: AuthUser = Depends(matrix_perm("applicants", "photo")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """정보(성명 등) 심사 — 사진 심사와 독립. 반려 시 접수 유지·정보만 수정 후 재승인."""
+    app = (await db.execute(select(Application).where(Application.id == app_id))).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    if body.action == "approve":
+        app.info_review_status = "approved"
+        app.info_reject_code = None
+        app.info_reject_note = None
+        # 사진도 승인된 미수납 건이면 수납대기 단계로 맞춤 (사진 승인 시와 동일)
+        if app.photo_review_status == "approved" and app.payment_status != "paid":
+            if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
+                app.status = "payment_pending"
+    elif body.action == "reject":
+        note = (body.info_reject_note or "").strip()
+        if not note and not (body.info_reject_code or "").strip():
+            raise api_error("VALIDATION_ERROR", "정보 반려 사유를 입력해 주세요.", 400)
+        app.info_review_status = "rejected"
+        app.info_reject_code = body.info_reject_code
+        app.info_reject_note = body.info_reject_note
+        user = (await db.execute(select(User).where(User.id == app.user_id))).scalar_one_or_none()
+        if user:
+            await notify_info_rejected(
+                db,
+                app,
+                user,
+                info_reject_code=body.info_reject_code,
+                info_reject_note=body.info_reject_note,
+            )
+    else:
+        raise api_error("VALIDATION_ERROR", "action은 approve 또는 reject여야 합니다.")
+    bump_rev(app)
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type=f"info_review_{body.action}",
+        target_type="applications",
+        target_id=app_id,
+        memo=body.info_reject_note or body.info_reject_code,
+        ip_address=ip,
+    )
+    await db.commit()
+    return {"info_review_status": app.info_review_status, "rev": app.rev}
 
 
 def _assign_group_serials(apps_sorted: list[Application], accommodation_ids: set[int]) -> dict[int, int]:

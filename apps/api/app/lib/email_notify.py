@@ -189,6 +189,30 @@ async def notify_photo_rejected(
     )
 
 
+async def notify_info_rejected(
+    db: AsyncSession,
+    app: Application,
+    user: User,
+    *,
+    info_reject_code: str | None,
+    info_reject_note: str | None,
+) -> None:
+    base = _fo_base()
+    await enqueue_email(
+        db,
+        template_key="info_rejected",
+        to_email=user.email,
+        locale=user.preferred_lang,
+        user_id=user.id,
+        variables={
+            "userName": user.name_ko,
+            "infoRejectCode": info_reject_code or "정보 반려",
+            "infoRejectReason": info_reject_note or "입력하신 기본정보(성명 등)를 확인해 주세요.",
+            "editProfileUrl": f"{base}/mypage-profile.html",
+        },
+    )
+
+
 async def notify_board_post_created(
     db: AsyncSession, post: BoardPost, user: User
 ) -> None:

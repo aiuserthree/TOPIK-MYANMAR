@@ -30,6 +30,7 @@ const STATUS_CHIPS = [
   { id: 'pay',            label: '수납대기' },
   { id: 'approved',       label: '승인완료' },
   { id: 'photo_rejected', label: '사진 반려' },
+  { id: 'info_rejected',  label: '정보 반려' },
   { id: 'rejected',       label: '반려' },
   { id: 'cancel',         label: '취소' },
   { id: 'refund',         label: '환불자' },
@@ -48,9 +49,10 @@ function isFoCancelled(a) {
   return !!(a && a.status === 'cancel');
 }
 
-/** 승인 가능: 사진 심사 승인 + 수납 완료 */
+/** 승인 가능: 사진·정보 심사 승인 + 수납 완료 */
 function applicantReadyForApprove(a) {
-  return !!a && a.photoStatus === 'approved' && !!a.paid;
+  var infoOk = !a || a.infoStatus == null || a.infoStatus === 'approved';
+  return !!a && a.photoStatus === 'approved' && infoOk && !!a.paid;
 }
 
 function normalizeApplicantSearchQuery(raw) {
@@ -449,6 +451,39 @@ function ApplicantsPanel() {
     else toastErr('이미 모두 승인된 상태입니다.');
     setSelected(new Set());
   };
+  const doInfoApprove = async (id) => {
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      if (await DataStore.apiInfoApprove(id)) toastOk('정보가 승인되었습니다.', { title: '정보 심사', type: 'success' });
+      return;
+    }
+    const a = state.applicants.find(x => x.id === id);
+    if (!a) return;
+    const before = { infoStatus: a.infoStatus, status: a.status };
+    a.infoStatus = 'approved';
+    a.infoOk = true;
+    a.infoRejectReason = '';
+    if (a.status === 'info_rejected') a.status = a.photoStatus === 'approved' ? (a.paid ? 'applied' : 'pay') : 'photo';
+    DataStore.addAudit({ type: '정보', targetId: id, action: '승인', before, after: { infoStatus: 'approved', status: a.status }, memo: '' });
+    DataStore.notify();
+    toastOk('정보가 승인되었습니다.', { title: '정보 심사', type: 'success' });
+  };
+  const doInfoReject = async (id, reason) => {
+    if (!reason || !reason.trim()) { toastErr('반려 사유를 입력해주세요.'); return; }
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      if (await DataStore.apiInfoReject(id, reason)) toastOk('정보가 반려되었습니다. 반려 사유는 FO 마이페이지에 안내됩니다.', { title: '정보 심사', type: 'success' });
+      return;
+    }
+    const a = state.applicants.find(x => x.id === id);
+    if (!a) return;
+    const before = { infoStatus: a.infoStatus, status: a.status, infoRejectReason: a.infoRejectReason };
+    a.infoStatus = 'rejected';
+    a.infoOk = false;
+    a.status = 'info_rejected';
+    a.infoRejectReason = reason;
+    DataStore.addAudit({ type: '정보', targetId: id, action: '반려', before, after: { infoStatus: 'rejected', status: 'info_rejected', infoRejectReason: reason }, memo: reason });
+    DataStore.notify();
+    toastOk('정보가 반려되었습니다. 반려 사유는 FO 마이페이지에 안내됩니다.', { title: '정보 심사', type: 'success' });
+  };
   const doApprove = async (ids) => {
     const blockedPhoto = ids.filter(id => {
       const a = state.applicants.find(x => x.id === id);
@@ -456,6 +491,14 @@ function ApplicantsPanel() {
     });
     if (blockedPhoto.length) {
       toastErr(`사진 미심사 ${blockedPhoto.length}건이 포함되어 있습니다. 상세보기에서 먼저 심사해주세요.`, { title: '승인 불가' });
+      return;
+    }
+    const blockedInfo = ids.filter(id => {
+      const a = state.applicants.find(x => x.id === id);
+      return a && a.infoStatus && a.infoStatus !== 'approved';
+    });
+    if (blockedInfo.length) {
+      toastErr(`정보 미승인 ${blockedInfo.length}건이 포함되어 있습니다. 상세보기에서 정보 승인 후 처리해주세요.`, { title: '승인 불가' });
       return;
     }
     const blockedPay = ids.filter(id => {
@@ -879,6 +922,7 @@ function ApplicantsPanel() {
                 <th className="sortable" onClick={() => sortBy('appliedAt')}>접수일</th>
                 <th className="sortable" onClick={() => sortBy('applicationNo')}>접수번호</th>
                 <th>사진심사</th>
+                <th>정보심사</th>
                 <th>수납</th>
                 <th>수험번호</th>
                 <th>상태</th>
@@ -901,6 +945,7 @@ function ApplicantsPanel() {
                   <td className="code muted">{a.appliedAt}</td>
                   <td className="code"><b style={{ color: a.applicationNo ? 'var(--primary)' : 'var(--text-4)' }}>{a.applicationNo || '—'}</b></td>
                   <td><PhotoStatusPill status={a.photoStatus}/></td>
+                  <td><PhotoStatusPill status={a.infoStatus || 'approved'}/></td>
                   <td>{applicantPaymentPill(a)}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
                   <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
@@ -928,7 +973,7 @@ function ApplicantsPanel() {
                 </tr>
               ))}
               {!pageRows.length && (
-                <tr><td colSpan={isTrashView ? 15 : 14}>
+                <tr><td colSpan={isTrashView ? 16 : 15}>
                   <div className="empty">
                     <div className="icon"><I.Search/></div>
                     <div className="ttl">{isTrashView ? '휴지통이 비어 있습니다' : '조건에 맞는 접수자가 없습니다'}</div>
@@ -956,6 +1001,8 @@ function ApplicantsPanel() {
         onPay={() => { const a = state.applicants.find(x => x.id === detailId); setPayModal({ ids: [detailId], mode: a?.paid ? 'cancel' : 'pay' }); }}
         onPhotoApprove={() => doPhotoApprove(detailId)}
         onPhotoReject={(reason) => doPhotoReject(detailId, reason)}
+        onInfoApprove={() => doInfoApprove(detailId)}
+        onInfoReject={(reason) => doInfoReject(detailId, reason)}
       />}
 
       {/* Modals */}
@@ -1206,15 +1253,17 @@ function PhotoReviewLP({ id, onClose, onApprove, onReject }) {
   );
 }
 
-// 접수자 상세 처리 이력 — 접수 건(접수자·사진)만. targetId 숫자만 맞추면 회원 이력이 섞이지 않도록 유형도 필터.
-const APPLICANT_AUDIT_TYPES = new Set(['접수자', '사진']);
+// 접수자 상세 처리 이력 — 접수 건(접수자·사진·정보)만. targetId 숫자만 맞추면 회원 이력이 섞이지 않도록 유형도 필터.
+const APPLICANT_AUDIT_TYPES = new Set(['접수자', '사진', '정보']);
 function filterApplicantAudit(audit, appId) {
   const sid = String(appId);
   return audit.filter(l => APPLICANT_AUDIT_TYPES.has(l.type) && String(l.targetId) === sid);
 }
 
+const INFO_REJECT_REASONS = ['영문 성명 오류', '한글 성명 오류', '띄어쓰기·표기 오류', '정보 불일치', '기타'];
+
 // ===== Detail LP =====
-function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject }) {
+function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject, onInfoApprove, onInfoReject }) {
   const state = useStore();
   const appId = String(id);
   const a = state.applicants.find(x => x.id === appId);
@@ -1231,6 +1280,9 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
   const [photoMode, setPhotoMode] = useState(null);
   const [photoReason, setPhotoReason] = useState(PHOTO_REJECT_REASONS[0]);
   const [photoOther, setPhotoOther] = useState('');
+  const [infoMode, setInfoMode] = useState(null);
+  const [infoReason, setInfoReason] = useState(INFO_REJECT_REASONS[0]);
+  const [infoOther, setInfoOther] = useState('');
   const [rotate, setRotate] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [detailLog, setDetailLog] = useState(null);
@@ -1247,7 +1299,7 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
   useEffect(() => {
     setDetailLog(null);
     loadDetailLog();
-  }, [appId, loadDetailLog, a && a.rev, a && a.status, a && a.paid, a && a.photoStatus]);
+  }, [appId, loadDetailLog, a && a.rev, a && a.status, a && a.paid, a && a.photoStatus, a && a.infoStatus]);
 
   const log = useMemo(() => {
     if (isApi) return detailLog !== null ? detailLog : [];
@@ -1267,6 +1319,7 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
   };
   const venue = state.venues.find(v => v.id === a.venueId);
   const photoRejectReason = photoReason === '기타' ? photoOther : (photoOther ? `${photoReason} — ${photoOther}` : photoReason);
+  const infoRejectReasonText = infoReason === '기타' ? infoOther : (infoOther ? `${infoReason} — ${infoOther}` : infoReason);
 
   const addMemo = async () => {
     if (!memo.trim()) return;
@@ -1294,6 +1347,15 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
     onPhotoReject(photoRejectReason);
     setPhotoMode(null);
   };
+  const approveInfo = () => {
+    if (onInfoApprove) onInfoApprove();
+    setInfoMode(null);
+  };
+  const rejectInfo = () => {
+    if (infoReason === '기타' && !infoOther.trim()) { toastErr('상세 사유를 입력해주세요.'); return; }
+    if (onInfoReject) onInfoReject(infoRejectReasonText);
+    setInfoMode(null);
+  };
 
   return (
     <LP open={true} size="wide" onClose={onClose}
@@ -1307,7 +1369,7 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
         {!isReadonly && <>
           <button className="btn btn-secondary" onClick={onReject} disabled={locked}>반려</button>
           <button className="btn btn-secondary" onClick={onPay} disabled={locked}>{a.paid ? '수납 취소' : '수납'}</button>
-          <button className="btn btn-primary" onClick={onApprove} disabled={locked || !applicantReadyForApprove(a)} title={!applicantReadyForApprove(a) ? '사진 승인·수납 완료 후 승인할 수 있습니다' : ''}>승인</button>
+          <button className="btn btn-primary" onClick={onApprove} disabled={locked || !applicantReadyForApprove(a)} title={!applicantReadyForApprove(a) ? '사진·정보 승인·수납 완료 후 승인할 수 있습니다' : ''}>승인</button>
         </>}
       </>}
       tabs={
@@ -1348,6 +1410,33 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
                 </div>
               )}
             </div>
+            <div id="info-review-box" style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>정보 심사</div>
+                <PhotoStatusPill status={a.infoStatus || 'approved'}/>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>성명·띄어쓰기 등 기본정보 오류 시 사진과 별도로 반려/승인합니다.</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="ibtn" style={{ flex: 1 }} onClick={() => setInfoMode(infoMode === 'reject' ? null : 'reject')} disabled={isReadonly || locked}>정보 반려</button>
+                <button className="ibtn" style={{ flex: 1 }} onClick={approveInfo} disabled={isReadonly || locked || (a.infoStatus || 'approved') === 'approved'}>정보 승인</button>
+              </div>
+              {infoMode === 'reject' && (
+                <div style={{ marginTop: 10 }}>
+                  <FormRow label="정보 반려 사유" required>
+                    <select className="select" value={infoReason} onChange={e => setInfoReason(e.target.value)} disabled={isReadonly || locked}>
+                      {INFO_REJECT_REASONS.map(r => <option key={r}>{r}</option>)}
+                    </select>
+                  </FormRow>
+                  <FormRow label={infoReason === '기타' ? '상세 사유' : '추가 안내(선택)'} required={infoReason === '기타'}>
+                    <textarea className="textarea" rows="2" value={infoOther} onChange={e => setInfoOther(e.target.value)} placeholder="예) 영문 성명 띄어쓰기를 여권과 동일하게 수정해주세요." disabled={isReadonly || locked}></textarea>
+                  </FormRow>
+                  <button className="btn btn-secondary btn-block" onClick={rejectInfo} disabled={isReadonly || locked || (infoReason === '기타' && !infoOther.trim())}>정보 반려 처리</button>
+                </div>
+              )}
+              {(a.infoStatus === 'rejected' || a.infoStatus === 'pending') && a.infoRejectReason ? (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--st-rejected)' }}>사유: {a.infoRejectReason}</div>
+              ) : null}
+            </div>
           </div>
           <div>
             <FieldSet legend="응시자 정보" cols={2}>
@@ -1374,13 +1463,15 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
               <KV k="시험장 ID" v={<code className="code-id">{a.venueId}</code>}/>
               <KV k="사진 심사" v={<PhotoStatusPill status={a.photoStatus}/>}/>
               <KV k="사진 승인 여부" v={a.photoOk ? '승인' : '미승인'}/>
+              <KV k="정보 심사" v={<PhotoStatusPill status={a.infoStatus || 'approved'}/>}/>
+              <KV k="정보 승인 여부" v={(a.infoStatus || 'approved') === 'approved' ? '승인' : '미승인'}/>
               <KV k="응시동기" v={a.motive}/>
               <KV k="응시목적" v={a.purpose}/>
               <KV k="수납 상태" v={applicantPaymentStatusView(a)}/>
               <KV k="수납 일시" v={a.paidAt || '—'}/>
               <KV k="수험번호" v={a.exam ? <code className="code-id" style={{ color: 'var(--st-number)', fontWeight: 700 }}>{a.exam}</code> : '미부여'}/>
               <KV k="접수일시" v={a.appliedAt}/>
-              <KV k="반려 사유" v={a.rejectReason || '—'}/>
+              <KV k="반려 사유" v={a.rejectReason || a.infoRejectReason || '—'}/>
             </FieldSet>
           </div>
         </div>
@@ -1616,7 +1707,7 @@ function ApproveModal({ modal, onClose, onConfirm }) {
         <button className="btn btn-primary" onClick={onConfirm} disabled={blocked}>승인 완료</button>
       </>}>
       <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-        대상 <b>{rows.length}</b>건을 승인합니다. <b>사진 승인·수납 완료</b>된 건만 승인할 수 있습니다.
+        대상 <b>{rows.length}</b>건을 승인합니다. <b>사진·정보 승인·수납 완료</b>된 건만 승인할 수 있습니다.
       </div>
       {blockedPhoto.length > 0 && (
         <div style={{ marginTop: 12, padding: 10, background: 'var(--danger-50)', color: 'var(--danger)', borderRadius: 6, fontSize: 12.5 }}>

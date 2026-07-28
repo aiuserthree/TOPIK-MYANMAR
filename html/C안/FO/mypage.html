@@ -238,10 +238,12 @@
     'mp.btn_confirm': { ko: '접수 확인증', my: 'လျှောက်ထားမှု လက်မှတ်', en: 'Confirmation' },
     'mp.btn_ticket': { ko: '수험표 출력', my: 'စာမေးပွဲဖြေဆိုခွင့်လက်မှတ် ထုတ်ရန်', en: 'Admit card' },
     'mp.btn_rephoto': { ko: '사진 재등록', my: 'ဓာတ်ပုံ ပြန်တင်ရန်', en: 'Re-upload photo' },
+    'mp.btn_reinfo': { ko: '정보 수정', my: 'အချက်အလက် ပြင်ဆင်ရန်', en: 'Edit information' },
     'mp.btn_reapply': { ko: '재접수', my: 'ပြန်လျှောက်ရန်', en: 'Re-apply' },
     'mp.btn_reason': { ko: '사유보기', my: 'အကြောင်းရင်း ကြည့်ရန်', en: 'View reason' },
     'mp.reason_title': { ko: '반려 사유', my: 'ပယ်ချ အကြောင်းရင်း', en: 'Rejection reason' },
     'mp.status_photo_rejected': { ko: '사진 반려', my: 'ဓာတ်ပုံ ပယ်ချ', en: 'Photo rejected' },
+    'mp.status_info_rejected': { ko: '정보 반려', my: 'အချက်အလက် ပယ်ချ', en: 'Info rejected' },
     'mp.status_app_rejected': { ko: '반려', my: 'ပယ်ချ', en: 'Rejected' },
     'mp.exam_num_pending': { ko: '부여 전', my: 'မသတ်မှတ်ရသေး', en: 'Not yet assigned' },
     'mp.exam_num_awaiting': { ko: '공개 예정', my: 'ထုတ်ပြန်ရက် စောင့်ဆိုင်း', en: 'Awaiting release' },
@@ -470,7 +472,8 @@
     var beforePay = ['applied', 'photo', 'pay'].indexOf(st) >= 0;
     var ticketOk = st === 'number';
     var confirmOk = ['applied', 'photo', 'pay', 'number', 'approved'].indexOf(st) >= 0;
-    var photoRejected = st === 'photo_rejected';
+    var photoRejected = st === 'photo_rejected' || (pl.photo_review_status === 'rejected');
+    var infoRejected = st === 'info_rejected' || (pl.info_review_status === 'rejected') || (item.info_review_status === 'rejected');
     var appRejected = st === 'app_rejected';
     var hasReason = !!(item.rejection_reason || rejectionReasonText(item, pl));
 
@@ -482,7 +485,7 @@
       actions += '<a href="ticket.html?submission=' + encodeURIComponent(item.submission_id) +
         '" class="btn btn-primary btn-sm" data-act="ticket">' + esc(bt('mp.btn_ticket', '수험표 출력')) + '</a>';
     }
-    if (beforePay && !photoRejected && !appRejected && item.application_id) {
+    if (beforePay && !photoRejected && !infoRejected && !appRejected && item.application_id) {
       actions +=
         '<button type="button" class="btn btn-ghost btn-sm" data-act="cancel" data-app="' +
         esc(item.application_id) +
@@ -490,6 +493,9 @@
     }
     if (photoRejected) {
       actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="rephoto">' + esc(bt('mp.btn_rephoto', '사진 재등록')) + '</a>';
+    }
+    if (infoRejected) {
+      actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="reinfo">' + esc(bt('mp.btn_reinfo', '정보 수정')) + '</a>';
     }
     if (appRejected) {
       var reLv = pl.exam_level || item.exam_level || '';
@@ -499,7 +505,7 @@
         (reAppId ? '&amp;application_id=' + encodeURIComponent(reAppId) : '') +
         '" class="btn btn-primary btn-sm" data-act="reapply">' + esc(bt('mp.btn_reapply', '재접수')) + '</a>';
     }
-    if ((photoRejected || appRejected) && hasReason) {
+    if ((photoRejected || infoRejected || appRejected) && hasReason) {
       actions += '<button type="button" class="btn btn-ghost btn-sm" data-act="reason" data-key="' +
         esc(itemKey) + '">' + esc(bt('mp.btn_reason', '사유보기')) + '</button>';
     }
@@ -507,6 +513,7 @@
     var statusClass = 'status status-' + st;
     var statusLabel = esc(item.card_status_label || (
       st === 'photo_rejected' ? bt('mp.status_photo_rejected', '사진 반려') :
+      st === 'info_rejected' ? bt('mp.status_info_rejected', '정보 반려') :
       st === 'app_rejected' ? bt('mp.status_app_rejected', '반려') : ''
     ));
 
@@ -740,7 +747,7 @@
       var beforePay = ['applied', 'photo', 'pay'].indexOf(st) >= 0;
       var ticketOk = st === 'number';
       var confirmOk = ['applied', 'photo', 'pay', 'number', 'approved'].indexOf(st) >= 0;
-      var rejected = st === 'photo_rejected' || st === 'app_rejected';
+      var rejected = st === 'photo_rejected' || st === 'info_rejected' || st === 'app_rejected';
       card.querySelectorAll('[data-act="cancel"]').forEach(function (b) {
         b.style.display = (beforePay && !rejected) ? '' : 'none';
       });
@@ -750,8 +757,9 @@
       card.querySelectorAll('[data-act="confirm"]').forEach(function (b) {
         b.style.display = confirmOk ? '' : 'none';
       });
-      card.querySelectorAll('[data-act="rephoto"]').forEach(function (b) {
-        b.style.display = st === 'photo_rejected' ? '' : 'none';
+      // rephoto / reinfo 는 buildCard에서 조건부 렌더 — 표시 유지
+      card.querySelectorAll('[data-act="rephoto"], [data-act="reinfo"]').forEach(function (b) {
+        b.style.display = '';
       });
       card.querySelectorAll('[data-act="reapply"]').forEach(function (b) {
         b.style.display = st === 'app_rejected' ? '' : 'none';

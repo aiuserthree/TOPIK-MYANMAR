@@ -255,7 +255,7 @@ def board_status_label(workflow_status: str | None, lang: str | None = None) -> 
 
 # ---------------------------------------------------------------------------
 # 마이페이지 카드 상태(fo_card_status) — mypage.html buildCard / gateActions 기준
-#   허용 값: applied, photo, pay, number, approved, photo_rejected, app_rejected, cancelled
+#   허용 값: applied, photo, pay, number, approved, photo_rejected, info_rejected, app_rejected, cancelled
 # ---------------------------------------------------------------------------
 _CARD_STATUS_LABELS = {
     "applied": "접수 완료",
@@ -264,6 +264,7 @@ _CARD_STATUS_LABELS = {
     "approved": "수납 완료",
     "number": "수험번호 부여",
     "photo_rejected": "사진 반려",
+    "info_rejected": "정보 반려",
     "app_rejected": "반려",
     "cancelled": "접수 취소",
 }
@@ -275,6 +276,7 @@ _CARD_STATUS_LABELS_MY = {
     "approved": "ကြေးသွင်း ပြီး",
     "number": "ဖြေဆိုသူနံပါတ် ပေးအပ်",
     "photo_rejected": "ဓာတ်ပုံ ပယ်ချ",
+    "info_rejected": "အချက်အလက် ပယ်ချ",
     "app_rejected": "ပယ်ချ",
     "cancelled": "လျှောက်ထား ပယ်ဖျက်",
 }
@@ -286,6 +288,7 @@ _CARD_STATUS_LABELS_EN = {
     "approved": "Payment complete",
     "number": "Exam number assigned",
     "photo_rejected": "Photo rejected",
+    "info_rejected": "Info rejected",
     "app_rejected": "Rejected",
     "cancelled": "Cancelled",
 }
@@ -322,12 +325,23 @@ def _app_stage(app_status: str, payment_status: str, exam_number: str | None) ->
     return "applied"
 
 
+def _info_reject_parts(app) -> list[str]:
+    parts: list[str] = []
+    if getattr(app, "info_reject_code", None):
+        parts.append(app.info_reject_code)
+    if getattr(app, "info_reject_note", None):
+        parts.append(app.info_reject_note)
+    return parts
+
+
 def derive_card_status_for_app(app, submission_cancelled: bool = False) -> str:
     """단일 application(급수) → 마이페이지 카드 상태."""
     if submission_cancelled or app.status == "cancelled" or app.cancelled_at:
         return "cancelled"
     if app.photo_review_status == "rejected":
         return "photo_rejected"
+    if getattr(app, "info_review_status", None) == "rejected":
+        return "info_rejected"
     if app.status == "rejected":
         return "app_rejected"
     return _app_stage(app.status, app.payment_status, app.exam_number)
@@ -343,7 +357,15 @@ def derive_rejection_info_for_app(app) -> dict | None:
             parts.append(app.photo_reject_code)
         if app.photo_reject_note:
             parts.append(app.photo_reject_note)
-        return {"type": "photo", "reason": " — ".join(parts) if parts else "사유 미기재"}
+        reason = " — ".join(parts) if parts else "사유 미기재"
+        # 사진·정보 동시 반려 시 사유를 함께 안내
+        info_parts = _info_reject_parts(app) if getattr(app, "info_review_status", None) == "rejected" else []
+        if info_parts:
+            reason = f"[사진] {reason} / [정보] {' — '.join(info_parts)}"
+        return {"type": "photo", "reason": reason}
+    if getattr(app, "info_review_status", None) == "rejected":
+        parts = _info_reject_parts(app)
+        return {"type": "info", "reason": " — ".join(parts) if parts else "사유 미기재"}
     if app.status == "rejected" and app.reject_reason:
         return {"type": "application", "reason": app.reject_reason}
     if app.status == "rejected":
@@ -359,6 +381,9 @@ def derive_card_status(apps: list) -> str:
     # BO 사진심사 반려(photo_review_status) → 사진 반려 배지
     if any(a.photo_review_status == "rejected" for a in active):
         return "photo_rejected"
+    # BO 정보 심사 반려 → 정보 반려 배지
+    if any(getattr(a, "info_review_status", None) == "rejected" for a in active):
+        return "info_rejected"
     # BO 접수자 상세/일괄 반려(application.status) → 반려 배지
     if any(a.status == "rejected" for a in active):
         return "app_rejected"
@@ -373,7 +398,7 @@ def derive_card_status(apps: list) -> str:
 
 
 def derive_rejection_info(apps: list) -> dict | None:
-    """FO 사유보기용 — 사진심사 반려 우선, 없으면 접수 반려."""
+    """FO 사유보기용 — 사진심사 반려 우선, 정보 반려, 없으면 접수 반려."""
     active = [a for a in apps if a.status != "cancelled"]
     for a in active:
         if a.photo_review_status == "rejected":
@@ -382,7 +407,15 @@ def derive_rejection_info(apps: list) -> dict | None:
                 parts.append(a.photo_reject_code)
             if a.photo_reject_note:
                 parts.append(a.photo_reject_note)
-            return {"type": "photo", "reason": " — ".join(parts) if parts else "사유 미기재"}
+            reason = " — ".join(parts) if parts else "사유 미기재"
+            info_parts = _info_reject_parts(a) if getattr(a, "info_review_status", None) == "rejected" else []
+            if info_parts:
+                reason = f"[사진] {reason} / [정보] {' — '.join(info_parts)}"
+            return {"type": "photo", "reason": reason}
+    for a in active:
+        if getattr(a, "info_review_status", None) == "rejected":
+            parts = _info_reject_parts(a)
+            return {"type": "info", "reason": " — ".join(parts) if parts else "사유 미기재"}
     for a in active:
         if a.status == "rejected" and a.reject_reason:
             return {"type": "application", "reason": a.reject_reason}

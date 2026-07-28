@@ -125,6 +125,30 @@ TRANSACTIONAL_LAYOUTS: dict[str, dict[str, EmailLayout]] = {
             ctas=[{"label": "사진 재등록하기", "href": "{editProfileUrl}", "kind": "primary"}],
         ),
     },
+    "info_rejected": {
+        "ko": _layout(
+            subject="[TOPIK Myanmar] 기본정보 심사 반려 안내",
+            preheader="기본정보가 반려되었습니다. 마이페이지에서 성명 등을 수정해 주세요.",
+            eyebrow_ko="기본정보 심사",
+            eyebrow_en="INFO REVIEW",
+            index_no="05b",
+            h1="기본정보를 수정해 주세요",
+            intro="{userName} 님, 접수하신 기본정보(한글·영문 성명 등)가 심사 기준에 맞지 않아 반려되었습니다. 접수 자체는 유지되며, 정보만 수정하시면 됩니다.",
+            blocks=[
+                {
+                    "type": "reasonBox",
+                    "tone": "warn",
+                    "title": "반려 사유 — {infoRejectCode}",
+                    "reason": "{infoRejectReason}",
+                },
+                {
+                    "type": "paragraph",
+                    "text": "여권·신분증과 동일한 성명·띄어쓰기 등으로 수정하신 뒤 저장하면 재심사가 진행됩니다.",
+                },
+            ],
+            ctas=[{"label": "정보 수정하기", "href": "{editProfileUrl}", "kind": "primary"}],
+        ),
+    },
     "temp_password": {
         "ko": _layout(
             subject="[TOPIK Myanmar] 임시 비밀번호 안내",

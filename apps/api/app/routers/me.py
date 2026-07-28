@@ -222,6 +222,20 @@ async def update_me(
             if str(exc) == "file_too_large":
                 raise fo_api_error("VALIDATION_ERROR", "photo_too_large", lang) from exc
             raise api_error("VALIDATION_ERROR", str(exc)) from exc
+    # 정보 반려 건: 성명 등 기본정보 수정 시 재심사(pending)로 전환
+    info_trigger = {
+        "name_ko", "name_en", "birth_date", "gender", "nationality", "first_language", "phone",
+    }
+    if set(data.keys()) & info_trigger:
+        await db.execute(
+            update(Application)
+            .where(
+                Application.user_id == user.id,
+                Application.status.notin_(["cancelled", "rejected"]),
+                Application.info_review_status == "rejected",
+            )
+            .values(info_review_status="pending")
+        )
     if terms_agreed is not None:
         await persist_term_consents(
             db,

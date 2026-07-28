@@ -256,6 +256,7 @@ p { margin: 0; }
 .status-number   { background: var(--st-number-bg);   color: var(--st-number); }
 .status-rejected,
 .status-photo_rejected,
+.status-info_rejected,
 .status-app_rejected { background: var(--st-rejected-bg); color: var(--st-rejected); }
 .status-cancel   { background: var(--st-cancel-bg);   color: var(--st-cancel); }
 

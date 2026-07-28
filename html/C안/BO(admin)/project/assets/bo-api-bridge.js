@@ -232,9 +232,10 @@
   function mapApplicantStatus(row) {
     if (row.status === "cancelled") return "cancel";
     if (row.payment_status === "refunded") return "refund";
-    // 접수 반려 vs 사진 반려 구분 (API status는 photo_review 유지, photo_review_status만 rejected)
+    // 접수 반려 vs 사진/정보 반려 구분 (API status는 유지, review_status만 rejected)
     if (row.status === "rejected") return "rejected";
     if (row.photo_review_status === "rejected") return "photo_rejected";
+    if (row.info_review_status === "rejected") return "info_rejected";
     if (row.status === "exam_number_assigned") return "approved";
     if (row.status === "approved" && row.approved_at) return "approved";
     if (row.status === "approved" && !row.approved_at) return "applied";
@@ -305,6 +306,9 @@
       photoUrl: photoFileId != null ? Api.fileUrl(photoFileId) : "",
       photoOk: photoOk,
       photoStatus: row.photo_review_status || "pending",
+      infoOk: row.info_review_status === "approved" || row.info_review_status == null,
+      infoStatus: row.info_review_status || "approved",
+      infoRejectReason: [row.info_reject_code, row.info_reject_note].filter(Boolean).join(" — ") || "",
       paid: paid,
       paymentStatus: row.payment_status || (paid ? "paid" : "unpaid"),
       paidAt: fmtMmt(row.paid_at),
@@ -454,7 +458,8 @@
     user_update: "수정", user_reset_password: "비밀번호초기화",
     admin_create: "생성", admin_update: "수정", admin_reset_password: "비밀번호초기화",
     exam_round_create: "생성", exam_venue_update: "수정", exam_number_assign: "수험번호부여",
-    photo_review_approve: "승인", photo_review_reject: "반려", memo: "수정",
+    photo_review_approve: "승인", photo_review_reject: "반려",
+    info_review_approve: "정보승인", info_review_reject: "정보반려", memo: "수정",
     login: "로그인", logout: "로그아웃",
     permission_matrix_update: "수정", admin_change_password: "비밀번호초기화",
   };
@@ -900,6 +905,26 @@
   DS.useApi = false;
   DS.apiLoading = false;
 
+  /** Local UI mock: ?mock=1 (or localStorage tpkm_bo_force_mock=1). Keeps data.js applicants; skips API load. */
+  function wantsForceMock() {
+    try {
+      var q = new URLSearchParams(global.location && global.location.search || "");
+      if (q.get("mock") === "1") {
+        global.sessionStorage.setItem("tpkm_bo_force_mock", "1");
+        return true;
+      }
+      if (q.get("mock") === "0") {
+        global.sessionStorage.removeItem("tpkm_bo_force_mock");
+        global.localStorage.removeItem("tpkm_bo_force_mock");
+        return false;
+      }
+      return global.sessionStorage.getItem("tpkm_bo_force_mock") === "1"
+        || global.localStorage.getItem("tpkm_bo_force_mock") === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
   function setApiLoading(on) {
     DS.apiLoading = !!on;
     DS.state.apiLoading = !!on;
@@ -910,6 +935,16 @@
   };
 
   DS.initFromApi = function () {
+    if (wantsForceMock()) {
+      DS.useApi = false;
+      setApiLoading(false);
+      DS.state.apiError = null;
+      try {
+        console.info("[BO mock] data.js 더미 접수자 사용 중 (?mock=0 또는 localStorage.removeItem('tpkm_bo_force_mock') 로 API 모드 복귀)");
+      } catch (e) { /* ignore */ }
+      DS.notify();
+      return Promise.resolve(false);
+    }
     if (!Api.canUseApi() || !Api.getAccessToken()) {
       DS.useApi = false;
       return Promise.resolve(false);
@@ -1342,6 +1377,28 @@
   DS.apiPhotoReject = function (id, reason) {
     var sessionId = DS.state.activeSessionId;
     return Api.photoReview(id, { action: "reject", photo_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
+      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
+        if (!ok) return false;
+        applyRevFromResponse(id, res);
+        return true;
+      });
+    });
+  };
+
+  DS.apiInfoApprove = function (id) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.infoReview(id, { action: "approve" }, { rev: applicantRev(id) }).then(function (res) {
+      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
+        if (!ok) return false;
+        applyRevFromResponse(id, res);
+        return true;
+      });
+    });
+  };
+
+  DS.apiInfoReject = function (id, reason) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.infoReview(id, { action: "reject", info_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
       return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
         if (!ok) return false;
         applyRevFromResponse(id, res);
