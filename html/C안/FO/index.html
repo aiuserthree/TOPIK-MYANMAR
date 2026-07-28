@@ -134,22 +134,16 @@
     color: var(--text-2);
     font-weight: 600;
     display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* PC: show full venue list (wrap as needed, no ellipsis) */
+    white-space: normal;
+    overflow: visible;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   @media (max-width: 767px) {
     .dday-foot {
       gap: 8px 10px;
       font-size: 12px;
-    }
-    .dday-foot-item strong {
-      white-space: normal;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
   }
 
@@ -879,9 +873,8 @@
     function venueText() {
       var names = (SCHED.venues || []).map(formatVenueName).filter(Boolean);
       if (!names.length) return '';
-      if (names.length === 1) return names[0];
-      if (names.length === 2) return names[0] + ', ' + names[1];
-      return names[0] + ' ' + btf('home.venue_more', '외 {n}곳', names.length - 1);
+      // Show every venue name (PC wraps fully; mobile CSS may still clamp to 2 lines)
+      return names.join(', ');
     }
 
     function footHtml(isClosed) {
