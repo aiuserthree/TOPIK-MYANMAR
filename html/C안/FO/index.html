@@ -194,11 +194,35 @@
     .notice-row .date { grid-column: 2; font-size: 11.5px; margin-top: 2px; }
   }
 
-  /* ============ Schedule timeline ============ */
+  /* ============ Schedule (table when 2+, STEP cards when 1) ============ */
+  .home-schedule-card {
+    padding: 0;
+    overflow: hidden;
+  }
+  .home-schedule-table th,
+  .home-schedule-table td {
+    white-space: nowrap;
+    text-align: center;
+  }
+  .home-schedule-table .row-active { background: var(--primary-50); }
+  .home-schedule-table .row-active td { font-weight: 600; color: var(--primary-700); }
+  .home-schedule-table .col-num {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .home-schedule-table tbody tr:hover { cursor: default; }
+  @media (max-width: 767px) {
+    .home-schedule-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  }
   .timeline {
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+  .timeline[hidden],
+  .home-schedule-card[hidden] {
+    display: none !important;
   }
   .tl-card {
     position: relative;
@@ -330,17 +354,33 @@
     </div>
   </section>
 
-  <!-- ============ Schedule timeline ============ -->
+  <!-- ============ Schedule (1 round: STEP cards / 2+: table) ============ -->
   <section class="section" id="homeScheduleSection" hidden>
     <div class="container">
       <div class="sec-head">
         <div>
           <div class="eyebrow">Schedule</div>
-          <h2 id="schedTitle" style="margin-top:6px;">시험 일정</h2>
+          <h2 id="schedTitle" style="margin-top:6px;" data-i18n-content="home.schedule_title">시험 일정</h2>
         </div>
         <a href="guide-overview.html" class="more" data-i18n-content="home.full_schedule">시험 개요</a>
       </div>
-      <div class="timeline" id="examTimeline">
+      <div class="card home-schedule-card" id="homeScheduleCard" hidden>
+        <div class="home-schedule-scroll">
+          <table class="table home-schedule-table">
+            <thead>
+              <tr>
+                <th data-i18n-content="home.th_round">회차</th>
+                <th data-i18n-content="home.th_reg">접수 기간</th>
+                <th data-i18n-content="home.th_pay">응시료 납부</th>
+                <th data-i18n-content="home.th_exam">시험일</th>
+                <th data-i18n-content="home.th_result">합격자 발표</th>
+              </tr>
+            </thead>
+            <tbody id="homeScheduleTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="timeline" id="examTimeline" hidden>
         <div class="tl-card">
           <span class="tl-badge" aria-hidden="true" hidden></span>
           <div class="step-n">STEP 01</div>
@@ -462,12 +502,14 @@
     'home.full_badge': { ko: '한국어능력시험 정원 마감', my: 'ကိုရီးယားဘာသာ အရည်အချင်းစစ်စာမေးပွဲ လူဦးရေ ပြည့်', en: 'TOPIK capacity full' },
     'home.full': { ko: '정원 마감', my: 'လူဦးရေ ပြည့်', en: 'Capacity full' },
     'home.full_schedule': { ko: '시험 개요', my: 'စာမေးပွဲ အကျဉ်းချုပ်', en: 'Exam overview' },
+    'home.schedule_title': { ko: '시험 일정', my: 'စာမေးပွဲ အချိန်ဇယား', en: 'Exam schedule' },
+    'home.th_round': { ko: '회차', my: 'အကြိမ်မြောက်', en: 'Session' },
+    'home.th_reg': { ko: '접수 기간', my: 'လျှောက်ထားရန် ကာလ', en: 'Registration' },
+    'home.th_pay': { ko: '응시료 납부', my: 'စာမေးပွဲကြေး ပေးသွင်းရန် ကာလ', en: 'Fee payment' },
+    'home.th_exam': { ko: '시험일', my: 'စာမေးပွဲနေ့', en: 'Exam date' },
+    'home.th_result': { ko: '합격자 발표', my: 'အောင်စာရင်း ကြေညာခြင်း', en: 'Results announcement' },
     'home.more': { ko: '더보기', my: 'ပိုမိုကြည့်ရန်', en: 'More' },
     'home.view_all': { ko: '전체 보기', my: 'အားလုံး ကြည့်ရန်', en: 'View all' },
-    'home.step_apply': { ko: '원서 접수', my: 'လျှောက်လွှာ တင်ခြင်း', en: 'Application' },
-    'home.step_pay': { ko: '응시료 납부 (오프라인)', my: 'စာမေးပွဲကြေး (ကိုယ်တိုင်လာရောက် ပေးသွင်းရန်)', en: 'Fee payment (offline)' },
-    'home.step_exam': { ko: '시험 시행', my: 'စာမေးပွဲ ကျင်းပခြင်း', en: 'Exam day' },
-    'home.step_result': { ko: '합격 발표', my: 'အောင်စာရင်း ကြေညာခြင်း', en: 'Results' },
     'home.tbd': { ko: '추후 공지', my: 'နောက်မှ ကြေညာမည်', en: 'To be announced' },
     'home.notice_loading': { ko: '공지를 불러오는 중…', my: 'ကြေညာချက် ဖွင့်နေသည်…', en: 'Loading notices…' },
     'home.notice_fail': { ko: '공지를 불러올 수 없습니다.', my: 'ကြေညာချက် ဖွင့်၍မရပါ။', en: 'Could not load notices.' },
@@ -595,7 +637,6 @@
   // 회차가 없으면 가짜 107회 일정을 보여주지 않고 빈/안내 상태로 둔다.
   (function () {
     var CAL_TZ = 'Asia/Yangon';
-    var DAY_TZ = '+06:30';
     var SCHED = {
       roundNo: null,
       examDate: null,
@@ -610,6 +651,7 @@
       canApply: false,
     };
     var VENUE_BY_ID = {};
+    var ALL_ROUNDS = [];
 
     function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
     function calParts(v) {
@@ -650,6 +692,8 @@
     var badge = document.getElementById('heroRoundBadge');
     var schedTitle = document.getElementById('schedTitle');
     var schedSection = document.getElementById('homeScheduleSection');
+    var schedCard = document.getElementById('homeScheduleCard');
+    var schedTbody = document.getElementById('homeScheduleTbody');
     var timeline = document.getElementById('examTimeline');
     var el = {
       d: document.getElementById('dd-d'),
@@ -661,6 +705,138 @@
     var closed = false;
     var empty = false;
     var countdownHtml = grid ? grid.innerHTML : '';
+
+    function schedulePeriod(start, end) {
+      if (!start || !end) return '—';
+      return ymdDot(start) + ' — ' + mdDot(end);
+    }
+
+    function resultDateText(r) {
+      var d = (r && (r.result_announcement_date || r.result_date)) || null;
+      return d ? ymdDot(d) : bt('home.tbd', '추후 공지');
+    }
+
+    function sortedRounds() {
+      return (ALL_ROUNDS || []).slice().sort(function (a, b) {
+        return (a.round_no || 0) - (b.round_no || 0);
+      });
+    }
+
+    function paintAllRoundsTable() {
+      if (!schedTbody || !schedCard) return;
+      var items = sortedRounds();
+      if (items.length < 2) {
+        schedTbody.innerHTML = '';
+        schedCard.hidden = true;
+        return;
+      }
+      var featuredId = SCHED.roundNo;
+      schedTbody.innerHTML = items.map(function (r) {
+        var active = (featuredId != null && r.round_no === featuredId)
+          || r.registration_status === 'open';
+        var label = btf('home.round_tag', '제{n}회', r.round_no != null ? r.round_no : '?');
+        return '<tr' + (active ? ' class="row-active"' : '') + '>' +
+          '<td class="col-num">' + label + '</td>' +
+          '<td>' + schedulePeriod(r.registration_start_at, r.registration_end_at) + '</td>' +
+          '<td>' + schedulePeriod(r.payment_start_at, r.payment_end_at) + '</td>' +
+          '<td>' + ymdDot(r.exam_date) + '</td>' +
+          '<td>' + resultDateText(r) + '</td>' +
+          '</tr>';
+      }).join('');
+      schedCard.hidden = false;
+    }
+
+    function paintStepCards() {
+      if (!timeline) return;
+      var cards = timeline.querySelectorAll('.tl-card');
+      if (cards[0]) { // STEP 01 원서 접수
+        cards[0].setAttribute('data-tl-start', ymd(SCHED.regStart));
+        cards[0].setAttribute('data-tl-end', ymd(SCHED.regEnd));
+        var s1 = cards[0].querySelector('.step-d');
+        if (s1) s1.textContent = regPeriod();
+      }
+      if (cards[1]) { // STEP 02 응시료 납부
+        if (SCHED.payStart && SCHED.payEnd) {
+          cards[1].setAttribute('data-tl-start', ymd(SCHED.payStart));
+          cards[1].setAttribute('data-tl-end', ymd(SCHED.payEnd));
+          var s2 = cards[1].querySelector('.step-d');
+          if (s2) s2.textContent = payPeriod();
+        } else {
+          cards[1].removeAttribute('data-tl-start');
+          cards[1].removeAttribute('data-tl-end');
+          var s2Empty = cards[1].querySelector('.step-d');
+          if (s2Empty) s2Empty.textContent = '—';
+        }
+      }
+      if (cards[2]) { // STEP 03 시험 시행
+        cards[2].setAttribute('data-tl-start', ymd(SCHED.examDate));
+        cards[2].setAttribute('data-tl-end', ymd(SCHED.examDate));
+        var s3 = cards[2].querySelector('.step-d');
+        if (s3) s3.textContent = ymdDot(SCHED.examDate);
+      }
+      if (cards[3]) { // STEP 04 합격 발표
+        if (SCHED.resultDate) {
+          cards[3].setAttribute('data-tl-start', ymd(SCHED.resultDate));
+          cards[3].setAttribute('data-tl-end', ymd(SCHED.resultDate));
+          cards[3].removeAttribute('data-tl-tbd');
+        } else {
+          cards[3].removeAttribute('data-tl-start');
+          cards[3].removeAttribute('data-tl-end');
+          cards[3].setAttribute('data-tl-tbd', '');
+        }
+        var s4 = cards[3].querySelector('.step-d');
+        if (s4) s4.textContent = SCHED.resultDate ? ymdDot(SCHED.resultDate) : bt('home.tbd', '추후 공지');
+      }
+    }
+
+    function paintTimelineBadges() {
+      if (!timeline || timeline.hidden) return;
+      var now = Date.now();
+      timeline.querySelectorAll('.tl-card').forEach(function (card) {
+        var b = card.querySelector('.tl-badge');
+        if (!b) return;
+        card.classList.remove('active', 'done');
+        var startYmd = card.getAttribute('data-tl-start');
+        var endYmd = card.getAttribute('data-tl-end');
+        if (!startYmd || !endYmd) {
+          b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
+          b.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        var start = new Date(startYmd + 'T00:00:00' + DAY_TZ).getTime();
+        var end = new Date(endYmd + 'T23:59:59' + DAY_TZ).getTime();
+        if (now < start) {
+          b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
+          b.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        b.hidden = false;
+        if (now <= end) { b.textContent = bt('home.ongoing', '진행중'); b.className = 'tl-badge tl-badge--active'; card.classList.add('active'); }
+        else { b.textContent = bt('home.ended', '종료'); b.className = 'tl-badge tl-badge--ended'; card.classList.add('done'); }
+        b.setAttribute('aria-hidden', 'true');
+      });
+    }
+
+    function paintScheduleView() {
+      var count = (ALL_ROUNDS || []).length;
+      var useTable = count >= 2;
+      if (useTable) {
+        if (timeline) timeline.hidden = true;
+        paintAllRoundsTable();
+        if (schedTitle) schedTitle.textContent = bt('home.schedule_title', '시험 일정');
+      } else {
+        if (schedCard) schedCard.hidden = true;
+        if (schedTbody) schedTbody.innerHTML = '';
+        if (timeline) timeline.hidden = false;
+        paintStepCards();
+        paintTimelineBadges();
+        if (schedTitle) {
+          schedTitle.textContent = hasRound()
+            ? (roundTag() + ' ' + bt('home.schedule', '시험 일정'))
+            : bt('home.schedule_title', '시험 일정');
+        }
+      }
+    }
 
     function ensureLiveBadge() {
       if (!head || head.querySelector('.live')) return;
@@ -768,6 +944,10 @@
       }
       if (foot) foot.innerHTML = '';
       if (schedSection) schedSection.hidden = true;
+      if (schedCard) schedCard.hidden = true;
+      if (schedTbody) schedTbody.innerHTML = '';
+      if (timeline) timeline.hidden = true;
+      ALL_ROUNDS = [];
     }
 
     // 접수기간·시험일·회차번호 등 정적 텍스트를 SCHED 기준으로 다시 그린다.
@@ -778,7 +958,6 @@
       }
       if (dday) dday.hidden = false;
       if (schedSection) schedSection.hidden = false;
-      if (timeline) timeline.hidden = false;
       ensureLiveBadge();
       restoreCountdownGrid();
 
@@ -787,67 +966,8 @@
         if (ttl) ttl.innerHTML = '<strong>' + roundTag() + '</strong> ' + bt('home.until_close', '접수 마감까지');
       }
       if (foot) foot.innerHTML = footHtml(false);
-      if (schedTitle) schedTitle.textContent = roundTag() + ' ' + bt('home.schedule', '시험 일정');
-
-      var cards = document.querySelectorAll('#examTimeline .tl-card');
-      if (cards[0]) { // STEP 01 원서 접수
-        cards[0].setAttribute('data-tl-start', ymd(SCHED.regStart));
-        cards[0].setAttribute('data-tl-end', ymd(SCHED.regEnd));
-        var s1 = cards[0].querySelector('.step-d');
-        if (s1) s1.textContent = regPeriod();
-      }
-      if (cards[1] && SCHED.payStart && SCHED.payEnd) { // STEP 02 응시료 납부
-        cards[1].setAttribute('data-tl-start', ymd(SCHED.payStart));
-        cards[1].setAttribute('data-tl-end', ymd(SCHED.payEnd));
-        var s2 = cards[1].querySelector('.step-d');
-        if (s2) s2.textContent = payPeriod();
-      }
-      if (cards[2]) { // STEP 03 시험 시행
-        cards[2].setAttribute('data-tl-start', ymd(SCHED.examDate));
-        cards[2].setAttribute('data-tl-end', ymd(SCHED.examDate));
-        var s3 = cards[2].querySelector('.step-d');
-        if (s3) s3.textContent = ymdDot(SCHED.examDate);
-      }
-      if (cards[3]) { // STEP 04 합격 발표
-        if (SCHED.resultDate) {
-          cards[3].setAttribute('data-tl-start', ymd(SCHED.resultDate));
-          cards[3].setAttribute('data-tl-end', ymd(SCHED.resultDate));
-          cards[3].removeAttribute('data-tl-tbd');
-        } else {
-          cards[3].removeAttribute('data-tl-start');
-          cards[3].removeAttribute('data-tl-end');
-          cards[3].setAttribute('data-tl-tbd', '');
-        }
-        var s4 = cards[3].querySelector('.step-d');
-        if (s4) s4.textContent = SCHED.resultDate ? ymdDot(SCHED.resultDate) : bt('home.tbd', '추후 공지');
-      }
-    }
-
-    function paintTimelineBadges() {
-      var now = Date.now();
-      document.querySelectorAll('#examTimeline .tl-card').forEach(function (card) {
-        var b = card.querySelector('.tl-badge');
-        if (!b) return;
-        card.classList.remove('active', 'done');
-        var startYmd = card.getAttribute('data-tl-start');
-        var endYmd = card.getAttribute('data-tl-end');
-        if (!startYmd || !endYmd) {
-          b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
-          b.setAttribute('aria-hidden', 'true');
-          return;
-        }
-        var start = new Date(startYmd + 'T00:00:00' + DAY_TZ).getTime();
-        var end = new Date(endYmd + 'T23:59:59' + DAY_TZ).getTime();
-        if (now < start) {
-          b.hidden = true; b.textContent = ''; b.className = 'tl-badge';
-          b.setAttribute('aria-hidden', 'true');
-          return;
-        }
-        b.hidden = false;
-        if (now <= end) { b.textContent = bt('home.ongoing', '진행중'); b.className = 'tl-badge tl-badge--active'; card.classList.add('active'); }
-        else { b.textContent = bt('home.ended', '종료'); b.className = 'tl-badge tl-badge--ended'; card.classList.add('done'); }
-        b.setAttribute('aria-hidden', 'true');
-      });
+      // 회차 1개 → STEP 카드, 2개 이상 → 전체 회차 표
+      paintScheduleView();
     }
 
     // 접수 기간 종료 시에만 '접수 마감 / 다음 회차 안내'로 전환 (정원 마감은 별도 처리)
@@ -1075,6 +1195,8 @@
           showEmpty();
           return;
         }
+        // 메인 스케줄 표: API의 모든 회차(폐지 제외는 서버 필터). D-Day만 대표 회차 사용.
+        ALL_ROUNDS = res.body.items.slice();
         applyRoundFromApi(pickRound(res.body.items));
       }).catch(function () {
         showEmpty();

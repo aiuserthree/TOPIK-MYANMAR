@@ -15,11 +15,21 @@ function SessionsPanel() {
 
   const sessions = state.sessions.slice().sort((a,b) => (b.examDate || '').localeCompare(a.examDate || ''));
 
+  const isApiRoundId = (id) => id != null && id !== '' && /^\d+$/.test(String(id));
+  const nextMockSessionId = () => {
+    const nums = state.sessions.map((s) => {
+      const m = String(s.id || '').match(/(\d+)$/);
+      return m ? parseInt(m[1], 10) : 0;
+    });
+    return 's' + ((nums.length ? Math.max(...nums) : 0) + 1);
+  };
+
   const save = async (data) => {
     if (DataStore.isApiMode && DataStore.isApiMode()) {
-      const ok = await DataStore.apiSaveSession({ ...data, _isNew: !data.id });
+      const editing = isApiRoundId(data.id);
+      const ok = await DataStore.apiSaveSession({ ...data, _isNew: !editing });
       if (ok) {
-        toastOk(data.id ? `${data.name} 정보가 수정되었습니다.` : `${data.name} 회차가 등록되었습니다.`);
+        toastOk(editing ? `${data.name} 정보가 수정되었습니다.` : `${data.name} 회차가 등록되었습니다.`);
         setEdit(null);
       }
       return;
@@ -31,7 +41,7 @@ function SessionsPanel() {
       DataStore.addAudit({ type: '회차', targetId: session.id, action: '수정', before, after: { ...session }, memo: '회차 수정' });
       toastOk(`${session.name} 정보가 수정되었습니다.`);
     } else {
-      const id = 's' + (Math.max(...state.sessions.map(s => parseInt(s.id.slice(1)))) + 1);
+      const id = nextMockSessionId();
       const nw = { id, applicants: 0, ...data };
       state.sessions.push(nw);
       DataStore.addAudit({ type: '회차', targetId: id, action: '생성', after: { ...nw }, memo: '회차 신규 등록' });
@@ -41,9 +51,29 @@ function SessionsPanel() {
     setEdit(null);
   };
 
-  const duplicate = (s) => {
-    const id = 's' + (Math.max(...state.sessions.map(x => parseInt(x.id.slice(1)))) + 1);
-    const copy = { ...s, id, no: s.no + 1, name: `제${s.no + 1}회 TOPIK(복제)`, status: 'planned', applicants: 0 };
+  const duplicate = async (s) => {
+    const nextNo = Math.max(0, ...state.sessions.map((x) => Number(x.no) || 0)) + 1;
+    if (DataStore.isApiMode && DataStore.isApiMode()) {
+      const ok = await DataStore.apiSaveSession({
+        no: nextNo,
+        name: `제${nextNo}회 TOPIK(복제)`,
+        applyStart: s.applyStart,
+        applyEnd: s.applyEnd,
+        payStart: s.payStart,
+        payEnd: s.payEnd,
+        examDate: s.examDate,
+        resultDate: s.resultDate || '',
+        cap: s.cap,
+        feeI: s.feeI,
+        feeII: s.feeII,
+        venues: (s.venues || []).map(String),
+        _isNew: true,
+      });
+      if (ok) toastOk('회차가 복제되었습니다.');
+      return;
+    }
+    const id = nextMockSessionId();
+    const copy = { ...s, id, no: nextNo, name: `제${nextNo}회 TOPIK(복제)`, status: 'planned', applicants: 0 };
     state.sessions.push(copy);
     DataStore.addAudit({ type: '회차', targetId: id, action: '생성', after: { ...copy }, memo: `복제: ${s.name}` });
     DataStore.notify();

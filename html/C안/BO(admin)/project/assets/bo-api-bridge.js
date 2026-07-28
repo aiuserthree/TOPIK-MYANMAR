@@ -1507,12 +1507,17 @@
       capacity: data.cap,
       venue_ids: (data.venues || []).map(function (v) { return parseInt(v, 10); }).filter(Boolean),
     };
-    var p = data.id && !data._isNew
+    // API round ids are numeric. Mock/local ids (s107, sNaN) must never PATCH.
+    var hasApiId = data.id != null && /^\d+$/.test(String(data.id));
+    var p = hasApiId && !data._isNew
       ? Api.updateExamRound(data.id, payload)
       : Api.createExamRound(payload);
     return p.then(function (res) {
       if (!res || !res.ok) { toastErr(TopikBoApi.parseError(res)); return false; }
       return DS.reloadSessions();
+    }).catch(function () {
+      toastErr("회차 저장 중 오류가 발생했습니다.");
+      return false;
     });
   };
 
