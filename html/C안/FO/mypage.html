@@ -535,6 +535,9 @@
           '<div class="it"><div class="l">' + esc(bt('mp.col_photo', '사진 심사')) + '</div>' + photoCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_pay', '응시료 수납')) + '</div>' + payCell(pl) + '</div>' +
           '<div class="it"><div class="l">' + esc(bt('mp.col_date', '접수일')) + '</div><div class="v" style="color:var(--text-2); font-weight:500;">' + esc(submitted) + '</div></div>' +
+          '<div class="it"><div class="l">' + esc(bt('mp.t_birth', '생년월일')) + '</div><div class="v" style="color:var(--text-2); font-weight:500;">' +
+            esc(formatBirthDate((currentProfile && currentProfile.birth_date) || item.birth_date || (pl && pl.birth_date) || '') || '—') +
+          '</div></div>' +
         '</div>' +
         (actions ? '<div class="app-actions">' + actions + '</div>' : '') +
       '</div>'
@@ -664,6 +667,15 @@
     });
   }
 
+  function formatBirthDate(raw) {
+    if (!raw || raw === '00000000') return '';
+    var birth = String(raw);
+    if (birth.length === 8) {
+      return birth.slice(0, 4) + '-' + birth.slice(4, 6) + '-' + birth.slice(6, 8);
+    }
+    return birth;
+  }
+
   function fillProfile(user, opts) {
     opts = opts || {};
     if (!user) return;
@@ -697,10 +709,7 @@
       (pl.exam_level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ');
     var payDone = pl.payment_status === 'paid';
     var u = currentProfile || {};
-    var birth = u.birth_date;
-    if (birth && birth.length === 8) {
-      birth = birth.slice(0, 4) + '-' + birth.slice(4, 6) + '-' + birth.slice(6, 8);
-    }
+    var birth = formatBirthDate(u.birth_date) || '—';
     document.getElementById('confirmBody').innerHTML =
       '<table class="table" style="margin: 0;"><tbody style="font-size: 13.5px;">' +
         '<tr><th style="width:110px;">' + esc(bt('mp.t_round', '회차')) + '</th><td>' + roundTitle(item) + '</td></tr>' +

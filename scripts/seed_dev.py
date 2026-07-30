@@ -16,7 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "apps" / "api"))
 
+from app.lib.formatting import format_application_no  # noqa: E402
 from app.models.admin import AdminUser  # noqa: E402
+from app.models.application import Application, ApplicationSubmission  # noqa: E402
 from app.models.content import FaqItem, Notice  # noqa: E402
 from app.models.exam import CountryRegionCode, ExamRound, ExamRoundVenue, ExamVenue  # noqa: E402
 from app.models.user import User  # noqa: E402
@@ -51,6 +53,57 @@ async def _sync_exam_fees(db: AsyncSession) -> None:
     for rnd in result.scalars().all():
         rnd.fee_level_i = fee_i
         rnd.fee_level_ii = fee_ii
+
+
+async def _ensure_demo_application(db: AsyncSession, demo_user: User) -> None:
+    """마이페이지 접수정보 확인용 — 데모 계정에 샘플 접수 1건이 없으면 생성."""
+    existing = await db.execute(
+        select(Application).where(
+            Application.user_id == demo_user.id,
+            Application.is_deleted.is_(False),
+        ).limit(1)
+    )
+    if existing.scalar_one_or_none():
+        return
+
+    rv = await db.execute(select(ExamRoundVenue).limit(1))
+    link = rv.scalar_one_or_none()
+    if not link:
+        return
+
+    sub_exists = await db.execute(
+        select(ApplicationSubmission).where(
+            ApplicationSubmission.user_id == demo_user.id,
+            ApplicationSubmission.exam_round_id == link.exam_round_id,
+        )
+    )
+    if sub_exists.scalar_one_or_none():
+        return
+
+    submission = ApplicationSubmission(
+        user_id=demo_user.id,
+        exam_round_id=link.exam_round_id,
+        exam_venue_id=link.exam_venue_id,
+        photo_checklist_confirmed=True,
+        accommodation_requested=False,
+        status="submitted",
+    )
+    db.add(submission)
+    await db.flush()
+    db.add(
+        Application(
+            submission_id=submission.id,
+            user_id=demo_user.id,
+            exam_round_id=link.exam_round_id,
+            exam_venue_id=link.exam_venue_id,
+            exam_level="I",
+            application_no=format_application_no(submission.id, "I"),
+            photo_review_status="approved",
+            info_review_status="approved",
+            status="submitted",
+            payment_status="unpaid",
+        )
+    )
 
 
 async def _ensure_round_107(db: AsyncSession) -> None:
@@ -116,25 +169,29 @@ async def main() -> None:
                 db.add(CountryRegionCode(country_code=cc, region_code=rc, name_ko=ko, name_en=en))
 
         user_res = await db.execute(select(User).where(User.email == "demo@topik-mm.local"))
-        if not user_res.scalar_one_or_none():
-            db.add(
-                User(
-                    email="demo@topik-mm.local",
-                    password_hash=_hash("DemoUser!2026"),
-                    name_ko="데모사용자",
-                    name_en="Demo User",
-                    birth_date="19900101",
-                    gender="1",
-                    nationality="미얀마",
-                    first_language="미얀마어",
-                    phone="09123456789",
-                    job_code=1,
-                    motive_code=1,
-                    purpose_code=1,
-                    marketing_opt_in=True,
-                    password_changed_at=datetime.now(timezone.utc) - timedelta(days=200),
-                )
+        demo_user = user_res.scalar_one_or_none()
+        if not demo_user:
+            demo_user = User(
+                email="demo@topik-mm.local",
+                password_hash=_hash("DemoUser!2026"),
+                name_ko="데모사용자",
+                name_en="Demo User",
+                birth_date="19900101",
+                gender="1",
+                nationality="미얀마",
+                first_language="미얀마어",
+                phone="09123456789",
+                job_code=1,
+                motive_code=1,
+                purpose_code=1,
+                marketing_opt_in=True,
+                password_changed_at=datetime.now(timezone.utc) - timedelta(days=200),
             )
+            db.add(demo_user)
+            await db.flush()
+        elif not demo_user.birth_date or demo_user.birth_date == "00000000":
+            # 마이페이지 접수정보 생년월일 표시용 — 미입력/플레이스홀더면 데모값 보정
+            demo_user.birth_date = "19900101"
 
         admin_res = await db.execute(select(AdminUser).where(AdminUser.email == "admin-dev@topik-mm.local"))
         if not admin_res.scalar_one_or_none():
@@ -149,6 +206,7 @@ async def main() -> None:
 
         await _ensure_round_107(db)
         await _sync_exam_fees(db)
+        await _ensure_demo_application(db, demo_user)
 
         # 레거시 데모 회차(99회) — 기존 DB 호환용, 신규에는 107회만 생성
         old99 = await db.execute(select(ExamRound).where(ExamRound.round_no == 99))
@@ -157,7 +215,7 @@ async def main() -> None:
 
         await db.commit()
     await engine.dispose()
-    print("Seed complete (제107회 + regions + demo accounts).")
+    print("Seed complete (제107회 + regions + demo accounts + sample application).")
 
 
 if __name__ == "__main__":
