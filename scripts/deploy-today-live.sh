@@ -33,9 +33,17 @@ source .venv/bin/activate
 pip install -q -r requirements.txt
 cd "${REMOTE}"
 systemctl restart myanmar-api
-sleep 3
 systemctl is-active myanmar-api
-curl -sf http://127.0.0.1:8000/health || { journalctl -u myanmar-api -n 20 --no-pager; exit 1; }
+
+# uvicorn 워커 startup 은 restart 반환보다 늦으므로 응답할 때까지 대기
+health_ok=0
+for i in \$(seq 1 60); do
+  if curl -sf -m 3 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    health_ok=1; echo "  /health OK (\${i}s)"; break
+  fi
+  sleep 1
+done
+[[ \${health_ok} -eq 1 ]] || { echo "ERROR: /health 60s 무응답" >&2; journalctl -u myanmar-api -n 20 --no-pager; exit 1; }
 python3 build-bo.py
 python3 build.py
 grep -q '수납 명단' public-bo/panels/applicants.jsx && echo "OK: payment roster UI deployed"

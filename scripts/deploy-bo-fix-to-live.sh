@@ -30,9 +30,17 @@ cd "${REMOTE}"
 cd apps/api && source .venv/bin/activate && pip install -q -r requirements.txt
 cd "${REMOTE}"
 systemctl restart myanmar-api
-sleep 3
 systemctl is-active myanmar-api
-curl -sf http://127.0.0.1:8000/health || echo "WARN: /health curl failed (API may still be starting)"
+
+# uvicorn 워커 startup 은 restart 반환보다 늦으므로 응답할 때까지 대기
+health_ok=0
+for i in \$(seq 1 60); do
+  if curl -sf -m 3 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    health_ok=1; echo "  /health OK (\${i}s)"; break
+  fi
+  sleep 1
+done
+[[ \${health_ok} -eq 1 ]] || echo "WARN: /health 60s 무응답 — continuing build"
 python3 build-bo.py
 grep -q "unpaid" public-bo/assets/data.js && echo "badge unpaid OK"
 grep -q "applicantReadyForApprove" public-bo/panels/applicants.jsx && echo "approve guard OK"

@@ -37,9 +37,17 @@ cd "${APP_ROOT}"
 cp scripts/systemd/myanmar-api-v2.service /etc/systemd/system/myanmar-api.service
 systemctl daemon-reload
 systemctl restart myanmar-api
-sleep 2
 systemctl is-active myanmar-api || { echo "ERROR: myanmar-api not running" >&2; exit 1; }
-curl -sf http://127.0.0.1:8000/health || echo "WARN: /health check failed — continuing build"
+
+# uvicorn 워커 startup 은 restart 반환보다 늦으므로 응답할 때까지 대기
+health_ok=0
+for i in $(seq 1 60); do
+  if curl -sf -m 3 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    health_ok=1; echo "  /health OK (${i}s)"; break
+  fi
+  sleep 1
+done
+[[ ${health_ok} -eq 1 ]] || echo "WARN: /health 60s 무응답 — continuing build"
 
 echo "==> Build FO + BO static (필수 — nginx는 public/ public-bo/ 만 서빙)"
 python3 build.py
