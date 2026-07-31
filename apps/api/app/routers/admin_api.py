@@ -2184,7 +2184,7 @@ async def send_marketing_notice(
 
     base = settings.public_fo_base.rstrip("/")
     published = fmt_date(notice.published_at) if notice.published_at else fmt_date(notice.created_at)
-    notice_url = f"{base}/notice.html"
+    notice_url = f"{base}/notice"
 
     result = await db.execute(
         select(User)

@@ -94,12 +94,12 @@ def _sends_user_submission_email(board_type: str) -> bool:
 
 def _board_post_url(base: str, board_type: str, post_id: int) -> str:
     norm = _normalize_board_type(board_type)
-    page = "refund-correction.html" if norm == "refund_correction" else "qna.html"
+    page = "refund-correction" if norm == "refund_correction" else "qna"
     return f"{base}/{page}?post={post_id}"
 
 
 def _board_bo_post_url(bo_base: str, post_id: int) -> str:
-    return f"{bo_base}/admin.html#board/{post_id}"
+    return f"{bo_base}/admin#board/{post_id}"
 
 
 def _level_label(level: str) -> str:
@@ -132,7 +132,7 @@ async def notify_application_approved(
             "level": _level_label(app.exam_level),
             "examDate": fmt_date(rnd.exam_date),
             "venueName": venue.name_ko if venue else "—",
-            "myPageUrl": f"{base}/mypage.html",
+            "myPageUrl": f"{base}/mypage",
         },
     )
 
@@ -159,8 +159,8 @@ async def notify_application_rejected(
             "roundName": rnd.title,
             "rejectReason": reject_reason or "사유 미기재",
             "rejectCode": reject_code,
-            "myPageUrl": f"{base}/mypage.html",
-            "refundUrl": f"{base}/refund-correction.html",
+            "myPageUrl": f"{base}/mypage",
+            "refundUrl": f"{base}/refund-correction",
         },
     )
 
@@ -184,7 +184,7 @@ async def notify_photo_rejected(
             "userName": user.name_ko,
             "photoRejectCode": photo_reject_code or "심사 반려",
             "photoRejectReason": photo_reject_note or "증명사진 기준에 맞지 않습니다.",
-            "editProfileUrl": f"{base}/mypage-profile.html",
+            "editProfileUrl": f"{base}/mypage-profile",
         },
     )
 
@@ -208,7 +208,7 @@ async def notify_info_rejected(
             "userName": user.name_ko,
             "infoRejectCode": info_reject_code or "정보 반려",
             "infoRejectReason": info_reject_note or "입력하신 기본정보(성명 등)를 확인해 주세요.",
-            "editProfileUrl": f"{base}/mypage-profile.html",
+            "editProfileUrl": f"{base}/mypage-profile",
         },
     )
 
@@ -397,7 +397,7 @@ async def notify_temp_password(
             variables={
                 "adminUsername": admin_username or getattr(user, "email", ""),
                 "temporaryPassword": temp_password,
-                "boLoginUrl": f"{bo_base}/admin-login.html",
+                "boLoginUrl": f"{bo_base}/admin-login",
             },
         )
         return result.get("queued_id")
@@ -411,7 +411,7 @@ async def notify_temp_password(
         variables={
             "userName": user.name_ko,
             "temporaryPassword": temp_password,
-            "loginUrl": f"{base}/login.html",
+            "loginUrl": f"{base}/login",
         },
     )
     return result.get("queued_id")
@@ -445,7 +445,7 @@ async def notify_account_status(
             "statusReason": status_reason or ("회원 탈퇴 요청" if action == "withdrawn" else "운영 정책에 따른 처리"),
             "statusUntil": until,
             "canceledApplications": str(canceled_applications),
-            "supportBoardUrl": f"{base}/qna.html",
+            "supportBoardUrl": f"{base}/qna",
         },
     )
 
@@ -484,8 +484,8 @@ async def notify_member_info_changed(
             "changedBy": changed_by,
             "changedFieldsSummary": " · ".join(changed_fields),
             "changeDiffHtml": "\n".join(diff_lines),
-            "myPageUrl": f"{base}/mypage-profile.html",
-            "supportBoardUrl": f"{base}/qna.html",
+            "myPageUrl": f"{base}/mypage-profile",
+            "supportBoardUrl": f"{base}/qna",
         },
     )
 
@@ -507,8 +507,8 @@ async def notify_password_expiry_reminder(db: AsyncSession, user: User, *, days_
             "userName": user.name_ko,
             "lastPasswordChange": last,
             "daysSincePwChange": str(days_since),
-            "passwordChangeUrl": f"{base}/mypage-profile.html#password",
-            "loginUrl": f"{base}/login.html",
+            "passwordChangeUrl": f"{base}/mypage-profile#password",
+            "loginUrl": f"{base}/login",
         },
     )
 
