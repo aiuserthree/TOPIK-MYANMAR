@@ -8,51 +8,51 @@
   const MENU = [
     {
       key: 'guide', label: 'TOPIK 안내', children: [
-        { href: 'guide-overview.html',   label: '시험 개요' },
-        { href: 'guide-intro.html',      label: '시험 소개' },
-        { href: 'guide-questions.html',  label: '문항 구성' },
-        { href: 'guide-evaluation.html', label: '평가 기준' }
+        { href: 'guide-overview',   label: '시험 개요' },
+        { href: 'guide-intro',      label: '시험 소개' },
+        { href: 'guide-questions',  label: '문항 구성' },
+        { href: 'guide-evaluation', label: '평가 기준' }
       ]
     },
     {
       key: 'rules', label: 'TOPIK 규정', children: [
-        { href: 'rules-notice.html', label: '유의 사항' },
-        { href: 'rules-answer.html', label: '답안 작성 요령' },
-        { href: 'rules-fee.html',    label: '응시료 규정' },
-        { href: 'rules-id.html',     label: '신분증 규정' }
+        { href: 'rules-notice', label: '유의 사항' },
+        { href: 'rules-answer', label: '답안 작성 요령' },
+        { href: 'rules-fee',    label: '응시료 규정' },
+        { href: 'rules-id',     label: '신분증 규정' }
       ]
     },
     {
       key: 'apply', label: 'TOPIK 접수', children: [
-        { href: 'apply-howto.html', label: '접수 방법' },
-        { href: 'register.html',    label: '시험 접수',  requireLogin: true },
-        { href: 'mypage.html',      label: '접수 확인',  requireLogin: true },
-        { href: 'ticket.html',      label: '수험표 출력' }
+        { href: 'apply-howto', label: '접수 방법' },
+        { href: 'register',    label: '시험 접수',  requireLogin: true },
+        { href: 'mypage',      label: '접수 확인',  requireLogin: true },
+        { href: 'ticket',      label: '수험표 출력' }
       ]
     },
     {
       key: 'board', label: '게시판', children: [
-        { href: 'notice.html',            label: '공지사항' },
-        { href: 'refund-correction.html', label: '환불·정보정정신청', requireLogin: true },
-        { href: 'qna.html',               label: '문의게시판',         requireLogin: true },
-        { href: 'faq.html',               label: 'FAQ' }
+        { href: 'notice',            label: '공지사항' },
+        { href: 'refund-correction', label: '환불·정보정정신청', requireLogin: true },
+        { href: 'qna',               label: '문의게시판',         requireLogin: true },
+        { href: 'faq',               label: 'FAQ' }
       ]
     }
   ];
 
   // 로그인 필요 메뉴 (시험 접수/접수 확인/환불·정보정정신청/문의게시판)
-  // 수험표 출력(ticket.html)은 가드 제외 — 0527 정책
+  // 수험표 출력(ticket)은 가드 제외 — 0527 정책
   const PROTECTED = new Set();
   MENU.forEach(m => m.children.forEach(c => { if (c.requireLogin) PROTECTED.add(c.href); }));
 
   const TAB = [
-    { href: 'index.html',   key: 'home',  label: '홈',
+    { href: '/',   key: 'home',  label: '홈',
       svg: '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>' },
-    { href: 'register.html', key: 'apply', label: '접수',
+    { href: 'register', key: 'apply', label: '접수',
       svg: '<svg viewBox="0 0 24 24"><path d="M9 4h6a2 2 0 0 1 2 2v14l-5-3-5 3V6a2 2 0 0 1 2-2z"/></svg>' },
-    { href: 'notice.html',  key: 'board', label: '게시판',
+    { href: 'notice',  key: 'board', label: '게시판',
       svg: '<svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>' },
-    { href: 'mypage.html',  key: 'me',    label: '마이',
+    { href: 'mypage',  key: 'me',    label: '마이',
       svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>' }
   ];
 
@@ -126,14 +126,14 @@
 
   const MENU_I18N = { guide: 'menu.guide', rules: 'menu.rules', apply: 'menu.apply', board: 'menu.board' };
   const SUB_I18N = {
-    'guide-overview.html': 'guide.overview', 'guide-intro.html': 'guide.intro',
-    'guide-questions.html': 'guide.questions', 'guide-evaluation.html': 'guide.evaluation',
-    'rules-notice.html': 'rules.notice', 'rules-answer.html': 'rules.answer',
-    'rules-fee.html': 'rules.fee', 'rules-id.html': 'rules.id',
-    'apply-howto.html': 'sub.apply_howto', 'register.html': 'sub.apply_reg',
-    'mypage.html': 'sub.apply_confirm', 'ticket.html': 'sub.apply_ticket',
-    'notice.html': 'sub.board_notice', 'refund-correction.html': 'sub.board_refund',
-    'qna.html': 'sub.board_qna', 'faq.html': 'sub.board_faq'
+    'guide-overview': 'guide.overview', 'guide-intro': 'guide.intro',
+    'guide-questions': 'guide.questions', 'guide-evaluation': 'guide.evaluation',
+    'rules-notice': 'rules.notice', 'rules-answer': 'rules.answer',
+    'rules-fee': 'rules.fee', 'rules-id': 'rules.id',
+    'apply-howto': 'sub.apply_howto', 'register': 'sub.apply_reg',
+    'mypage': 'sub.apply_confirm', 'ticket': 'sub.apply_ticket',
+    'notice': 'sub.board_notice', 'refund-correction': 'sub.board_refund',
+    'qna': 'sub.board_qna', 'faq': 'sub.board_faq'
   };
 
   function applyLangUI(lang) {
@@ -158,26 +158,31 @@
   };
   window.TPKMLang = Lang;
 
-  // ---- Active page detection ----
+  // ---- Active page detection (extensionless; /mypage.html and /mypage both work) ----
   function currentFile() {
-    const p = location.pathname.split('/').pop() || 'index.html';
-    return p || 'index.html';
+    var seg = (location.pathname || '/').replace(/\/+$/, '').split('/').pop() || '';
+    if (!seg || seg === 'index' || seg === 'index.html') return '/';
+    return seg.replace(/\.html$/i, '');
+  }
+  function currentNextTarget() {
+    var f = currentFile();
+    return (f === '/' ? '/' : f) + location.search;
   }
   function activeMenuKey() {
     const f = currentFile();
     for (const m of MENU) {
       if (m.children.some(c => c.href === f)) return m.key;
     }
-    if (['login.html','signup.html','mypage-profile.html'].includes(f)) return 'account';
+    if (['login','signup','mypage-profile'].includes(f)) return 'account';
     return 'home';
   }
   function activeTabKey() {
     const f = currentFile();
-    if (f === 'index.html') return 'home';
-    if (['register.html','apply-howto.html','ticket.html'].includes(f)) return 'apply';
-    if (['notice.html','qna.html','faq.html','refund-correction.html'].includes(f)) return 'board';
-    if (['mypage.html','mypage-profile.html','login.html','signup.html'].includes(f)) return 'me';
-    if (['guide-overview.html','guide-intro.html','guide-questions.html','guide-evaluation.html'].includes(f)) return 'home';
+    if (f === '/') return 'home';
+    if (['register','apply-howto','ticket'].includes(f)) return 'apply';
+    if (['notice','qna','faq','refund-correction'].includes(f)) return 'board';
+    if (['mypage','mypage-profile','login','signup'].includes(f)) return 'me';
+    if (['guide-overview','guide-intro','guide-questions','guide-evaluation'].includes(f)) return 'home';
     return '';
   }
 
@@ -198,18 +203,18 @@
     `).join('');
 
     const authHTML = user
-      ? `<a href="mypage.html" class="user-chip">
+      ? `<a href="mypage" class="user-chip">
           <span class="avatar">${(user.name || 'U').slice(0,1)}</span>
           <span>${user.name || 'My'}</span>
         </a>
         <button class="btn btn-secondary btn-sm" id="btnLogout">${Lang.t('menu.logout') || '로그아웃'}</button>`
-      : `<a href="login.html" class="btn btn-secondary btn-sm">${Lang.t('menu.login') || '로그인'}</a>
-         <a href="signup.html" class="btn btn-primary btn-sm">${Lang.t('menu.signup') || '회원가입'}</a>`;
+      : `<a href="login" class="btn btn-secondary btn-sm">${Lang.t('menu.login') || '로그인'}</a>
+         <a href="signup" class="btn btn-primary btn-sm">${Lang.t('menu.signup') || '회원가입'}</a>`;
 
     wrap.innerHTML = `
       <header class="gnb" role="banner">
         <div class="container gnb-inner">
-          <a href="index.html" class="gnb-logo" aria-label="TOPIK Myanmar 홈">
+          <a href="/" class="gnb-logo" aria-label="TOPIK Myanmar 홈">
             <img src="assets/topik-logo.png" alt="TOPIK — Test of Proficiency in Korean" class="gnb-logo-img" height="40">
           </a>
 
@@ -234,7 +239,7 @@
       <div class="drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
       <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="모바일 메뉴">
         <div class="drawer-head">
-          <a href="index.html" class="gnb-logo">
+          <a href="/" class="gnb-logo">
             <img src="assets/topik-logo.png" alt="TOPIK" class="gnb-logo-img gnb-logo-img--sm" height="36">
           </a>
           <button class="drawer-close" id="drawerClose" aria-label="메뉴 닫기">
@@ -244,10 +249,10 @@
         <div class="drawer-body">
           <div class="drawer-auth">
             ${user
-              ? `<a href="mypage.html" class="btn btn-secondary">${Lang.t('menu.mypage') || '마이페이지'}</a>
+              ? `<a href="mypage" class="btn btn-secondary">${Lang.t('menu.mypage') || '마이페이지'}</a>
                  <button class="btn btn-ghost" id="btnLogoutMobile">${Lang.t('menu.logout') || '로그아웃'}</button>`
-              : `<a href="login.html" class="btn btn-secondary">${Lang.t('menu.login') || '로그인'}</a>
-                 <a href="signup.html" class="btn btn-primary">${Lang.t('menu.signup') || '회원가입'}</a>`
+              : `<a href="login" class="btn btn-secondary">${Lang.t('menu.login') || '로그인'}</a>
+                 <a href="signup" class="btn btn-primary">${Lang.t('menu.signup') || '회원가입'}</a>`
             }
           </div>
           <nav class="drawer-menu" aria-label="모바일 주 메뉴">
@@ -308,7 +313,7 @@
     const onLogout = () => {
       if (confirm(Lang.t('msg.logout_confirm') || '로그아웃 하시겠습니까?')) {
         Auth.logout();
-        location.href = 'index.html';
+        location.href = '/';
       }
     };
     document.getElementById('btnLogout')?.addEventListener('click', onLogout);
@@ -373,8 +378,8 @@
             운영기관 <strong>주미얀마 대한민국 대사관</strong>
           </p>
           <div class="ft-policy">
-            <a href="privacy.html" class="ft-policy-privacy" data-i18n-content="foot.privacy">개인정보처리방침</a>
-            <a href="terms.html" data-i18n-content="foot.terms">이용약관</a>
+            <a href="privacy" class="ft-policy-privacy" data-i18n-content="foot.privacy">개인정보처리방침</a>
+            <a href="terms" data-i18n-content="foot.terms">이용약관</a>
           </div>
           <p class="copy" data-i18n-content="foot.copy">© 2025–2026 Embassy of the Republic of Korea in Myanmar. All rights reserved.</p>
         </div>
@@ -393,18 +398,18 @@
                 운영기관 <strong>주미얀마 대한민국 대사관</strong>
               </p>
               <div class="ft-policy">
-                <a href="privacy.html" class="ft-policy-privacy" data-i18n-content="foot.privacy">개인정보처리방침</a>
-                <a href="terms.html" data-i18n-content="foot.terms">이용약관</a>
+                <a href="privacy" class="ft-policy-privacy" data-i18n-content="foot.privacy">개인정보처리방침</a>
+                <a href="terms" data-i18n-content="foot.terms">이용약관</a>
               </div>
             </div>
             <div>
               <div class="ft-col-ttl" data-i18n-content="foot.menu">바로가기</div>
               <div class="links ft-links-col">
-                <a href="guide-overview.html" data-i18n-content="menu.guide">TOPIK 안내</a>
-                <a href="rules-notice.html" data-i18n-content="menu.rules">TOPIK 규정</a>
-                <a href="apply-howto.html" data-i18n-content="menu.apply">TOPIK 접수</a>
-                <a href="notice.html" data-i18n-content="notice.title">공지사항</a>
-                <a href="faq.html" data-i18n-content="faq.title">FAQ</a>
+                <a href="guide-overview" data-i18n-content="menu.guide">TOPIK 안내</a>
+                <a href="rules-notice" data-i18n-content="menu.rules">TOPIK 규정</a>
+                <a href="apply-howto" data-i18n-content="menu.apply">TOPIK 접수</a>
+                <a href="notice" data-i18n-content="notice.title">공지사항</a>
+                <a href="faq" data-i18n-content="faq.title">FAQ</a>
               </div>
             </div>
             <div>
@@ -433,10 +438,8 @@
   // 가입 미완료(구글 중도 이탈) 세션은 로그인 전과 동일 — 로그인 페이지로 유도.
   function redirectToLogin(nextHref) {
     if (Auth.isSignupPending()) Auth.logout();
-    const next = encodeURIComponent(
-      nextHref || (location.pathname.split('/').pop() + location.search)
-    );
-    location.href = 'login.html?next=' + next;
+    const next = encodeURIComponent(nextHref || currentNextTarget());
+    location.href = 'login?next=' + next;
   }
 
   // Add `data-require-login` on a <body> element OR pass through this helper.
@@ -444,9 +447,8 @@
     const body = document.body;
     if (!body.hasAttribute('data-require-login')) return;
     if (Auth.isLoggedIn()) return;
-    const next = location.pathname.split('/').pop() + location.search;
     if (Auth.isSignupPending()) Auth.logout();
-    location.replace('login.html?next=' + encodeURIComponent(next));
+    location.replace('login?next=' + encodeURIComponent(currentNextTarget()));
   }
 
   function syncProfileState() {

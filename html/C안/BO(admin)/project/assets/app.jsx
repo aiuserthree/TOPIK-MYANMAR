@@ -88,7 +88,7 @@ function ChangePasswordGate({ onDone }) {
 
   const goToLogin = () => {
     if (window.TopikBoApi) TopikBoApi.logout();
-    location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+    location.replace('admin-login?next=' + encodeURIComponent('admin' + location.hash));
   };
 
   useEffect(() => {
@@ -114,7 +114,7 @@ function ChangePasswordGate({ onDone }) {
       }
     } catch (e) { /* toast optional */ }
     if (window.TopikBoApi) TopikBoApi.logout();
-    location.replace('admin-login.html?pw_changed=1');
+    location.replace('admin-login?pw_changed=1');
   };
 
   const submit = (e) => {
@@ -201,14 +201,14 @@ function App() {
   // Boot: token + session check + load me into store + API data
   useEffect(() => {
     if (!window.TopikBoApi) {
-      location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+      location.replace('admin-login?next=' + encodeURIComponent('admin' + location.hash));
       return;
     }
     var cancelled = false;
     TopikBoApi.ensureSession().then(function (ok) {
       if (cancelled) return;
       if (!ok) {
-        location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+        location.replace('admin-login?next=' + encodeURIComponent('admin' + location.hash));
         return;
       }
       TopikBoApi.startIdleWatch(function () {
@@ -217,7 +217,7 @@ function App() {
             window.toast('30분간 활동이 없어 로그아웃되었습니다.');
           }
         } catch (e) { /* optional */ }
-        location.replace('admin-login.html?reason=idle&next=' + encodeURIComponent('admin.html' + location.hash));
+        location.replace('admin-login?reason=idle&next=' + encodeURIComponent('admin' + location.hash));
       });
       const raw = TopikBoApi.getSessionRaw();
       let me;
@@ -225,7 +225,7 @@ function App() {
         me = JSON.parse(raw);
       } catch (e) {
         TopikBoApi.logout();
-        location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+        location.replace('admin-login?next=' + encodeURIComponent('admin' + location.hash));
         return;
       }
       if (DataStore.normalizeRole) me.role = DataStore.normalizeRole(me.role);
@@ -256,7 +256,7 @@ function App() {
         ev.preventDefault();
         ev.stopImmediatePropagation();
         TopikBoApi.logout();
-        location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+        location.replace('admin-login?next=' + encodeURIComponent('admin' + location.hash));
       }
     }
     document.addEventListener('click', onClickGuard, true);
@@ -315,7 +315,7 @@ function App() {
     if (!confirm('로그아웃 하시겠습니까?')) return;
     DataStore.addAudit({ type: '관리자계정', targetId: state.me?.id || '', action: '로그아웃', memo: '' });
     if (window.TopikBoApi) TopikBoApi.logout();
-    location.replace('admin-login.html');
+    location.replace('admin-login');
   }, [state.me]);
 
   const badges = DataStore.badges();
@@ -427,7 +427,7 @@ function App() {
                 ))}
               </select>
             )}
-            <a className="tb-iconbtn" href="../../FO/index.html" target="_blank" rel="noopener" title="사이트 보기(새 창)">
+            <a className="tb-iconbtn" href="https://www.topik-myanmar.com/" target="_blank" rel="noopener" title="사이트 보기(새 창)">
               <I.ExternalLink/>
             </a>
             <div className="tb-user" title={me?.id}>

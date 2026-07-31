@@ -29,6 +29,9 @@ topik-mm-s3-api_accessKeys.csv
 # Personal checklist — never commit
 이것저것체크사항.txt
 
+# 로컬/운영 접속 메모 (SSH·계정 비밀번호 포함) — never commit
+로컬 서버 확인*.txt
+
 # API TypeScript build output
 api/dist/
 

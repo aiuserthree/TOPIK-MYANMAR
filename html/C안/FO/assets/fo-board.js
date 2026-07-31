@@ -359,7 +359,9 @@
       }
       if (!TopikApi.isLoggedIn()) {
         location.href =
-          'login.html?next=' + encodeURIComponent(location.pathname.split('/').pop());
+          'login?next=' + encodeURIComponent(
+            (location.pathname.replace(/\/+$/, '').split('/').pop() || '/').replace(/\.html$/i, '') || '/'
+          );
         return;
       }
 
@@ -666,8 +668,10 @@
       TopikApi.getBoardPosts(opts.boardType, { page: state.page }).then(function (res) {
         if (!res.ok) {
           if (res.status === 401) {
-            location.href = 'login.html?next=' +
-              encodeURIComponent(location.pathname.split('/').pop());
+            location.href = 'login?next=' +
+              encodeURIComponent(
+                (location.pathname.replace(/\/+$/, '').split('/').pop() || '/').replace(/\.html$/i, '') || '/'
+              );
             return;
           }
           listBody.innerHTML = emptyRow(TopikApi.parseError(res));

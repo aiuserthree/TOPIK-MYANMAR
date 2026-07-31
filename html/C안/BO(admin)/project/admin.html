@@ -22,7 +22,7 @@
 <script>
   (function () {
     if (!window.TopikBoApi || !TopikBoApi.isAuthenticated()) {
-      location.replace('admin-login.html?next=' + encodeURIComponent('admin.html' + location.hash));
+      location.replace('admin-login?next=' + encodeURIComponent('admin' + location.hash));
     }
   })();
 </script>

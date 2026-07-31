@@ -163,7 +163,7 @@
 
     <div class="auth-foot">
       <span data-i18n-content="login.no_account">아직 회원이 아니신가요?</span>
-      <a href="signup.html" data-i18n-content="signup.title">회원가입</a>
+      <a href="signup" data-i18n-content="signup.title">회원가입</a>
     </div>
   </div>
 </main>
@@ -313,11 +313,11 @@
     }
     if (laterBtn) {
       laterBtn.onclick = function () {
-        closeAndGo((new URLSearchParams(location.search).get('next')) || 'index.html');
+        closeAndGo((new URLSearchParams(location.search).get('next')) || '/');
       };
     }
     if (changeBtn) {
-      changeBtn.onclick = function () { closeAndGo('mypage-profile.html#password'); };
+      changeBtn.onclick = function () { closeAndGo('mypage-profile#password'); };
     }
     TPKM.openModal('modalPwExpiry');
   }
@@ -352,7 +352,7 @@
 
     const goNext = function () {
       const params = new URLSearchParams(location.search);
-      location.href = params.get('next') || 'index.html';
+      location.href = params.get('next') || '/';
     };
 
     if (!window.TopikApi || typeof TopikApi.login !== 'function') {
@@ -552,11 +552,11 @@
         var params = new URLSearchParams(location.search);
         if (body.profile_incomplete) {
           if (window.__tpkmRebuildNav) __tpkmRebuildNav();
-          location.href = 'signup.html?google=1' + (params.get('next') ? '&next=' + encodeURIComponent(params.get('next')) : '');
+          location.href = 'signup?google=1' + (params.get('next') ? '&next=' + encodeURIComponent(params.get('next')) : '');
           return;
         }
         maybeShowPwExpiry(!!body.password_change_due, function () {
-          location.href = params.get('next') || 'index.html';
+          location.href = params.get('next') || '/';
         });
       }).catch(function () {
         if (err) { err.classList.add('show'); err.querySelector('span').textContent = tr.fail; }
@@ -635,7 +635,7 @@
     }
 
     function goReset() {
-      location.href = './password-reset.html?email=' + encodeURIComponent(e);
+      location.href = './password-reset?email=' + encodeURIComponent(e);
     }
 
     // Demo / static preview (no API): keep the old hand-off behaviour.

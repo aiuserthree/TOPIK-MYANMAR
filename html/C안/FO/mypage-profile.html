@@ -378,9 +378,9 @@
     'mpp.leave_pw_required': { ko: '비밀번호를 입력해 주세요.', my: 'စကားဝှက် ထည့်ပါ။', en: 'Please enter your password.' },
     'mpp.leave_google_fail': { ko: 'Google 본인 확인에 실패했습니다. 다시 시도해 주세요.', my: 'Google အတည်ပြုခြင်း မအောင်မြင်ပါ။ ထပ်စမ်းကြည့်ပါ။', en: 'Google verification failed. Please try again.' },
     'mpp.approved_lock_notice': {
-      ko: '시험 접수가 최종 완료(승인)되어 기본정보 및 사진 수정이 불가합니다. 정보 정정이 필요한 경우, <a href="refund-correction.html">환불·정보정정신청</a> 게시판을 통해 요청을 하시기 바랍니다.',
-      my: 'လျှောက်လွှာ အတည်ပြုပြီးသားဖြစ်သောကြောင့် အခြေခံအချက်အလက်နှင့် ဓာတ်ပုံ ပြင်ဆင်ခြင်း မပြုလုပ်နိုင်ပါ။ အချက်အလက် ပြင်ဆင်ရန် လိုအပ်ပါက <a href="refund-correction.html">ငွေပြန်အမ်း · အချက်အလက်ပြင်ဆင်ရန် လျှောက်ထားမှု</a> မှတဆင့် တောင်းဆိုပါ။',
-      en: 'Basic information and photo cannot be edited because your registration has been approved. If you need a correction, please submit a request via the <a href="refund-correction.html">Refund &amp; Info Correction</a> board.'
+      ko: '시험 접수가 최종 완료(승인)되어 기본정보 및 사진 수정이 불가합니다. 정보 정정이 필요한 경우, <a href="refund-correction">환불·정보정정신청</a> 게시판을 통해 요청을 하시기 바랍니다.',
+      my: 'လျှောက်လွှာ အတည်ပြုပြီးသားဖြစ်သောကြောင့် အခြေခံအချက်အလက်နှင့် ဓာတ်ပုံ ပြင်ဆင်ခြင်း မပြုလုပ်နိုင်ပါ။ အချက်အလက် ပြင်ဆင်ရန် လိုအပ်ပါက <a href="refund-correction">ငွေပြန်အမ်း · အချက်အလက်ပြင်ဆင်ရန် လျှောက်ထားမှု</a> မှတဆင့် တောင်းဆိုပါ။',
+      en: 'Basic information and photo cannot be edited because your registration has been approved. If you need a correction, please submit a request via the <a href="refund-correction">Refund &amp; Info Correction</a> board.'
     }
   };
 </script>
@@ -645,7 +645,7 @@
       try {
         if (u) sessionStorage.setItem('tpkm_mypage_profile_seed', JSON.stringify(u));
       } catch (e) { /* ignore */ }
-      location.href = 'mypage.html';
+      location.href = 'mypage';
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;
@@ -683,7 +683,7 @@
       else if (window.TopikApi && TopikApi.logout) TopikApi.logout();
       if (window.__tpkmRebuildNav) __tpkmRebuildNav();
       alert(bt('mpp.js_pw_changed', '비밀번호가 변경되었습니다.\n보안을 위해 다시 로그인해 주세요.'));
-      location.href = 'login.html?reset=ok';
+      location.href = 'login?reset=ok';
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = prev;
@@ -729,14 +729,14 @@
     TPKM.closeModal('modalLeave');
     if (window.TPKMAuth) TPKMAuth.logout();
     alert(bt('mpp.js_leave_done', '회원 탈퇴가 완료되었습니다.\n진행 중이던 접수 내역은 모두 취소 처리되었습니다. 이용해 주셔서 감사합니다.'));
-    location.href = 'index.html';
+    location.href = '/';
   }
 
   function doWithdraw(payload, btn) {
     if (!window.TopikApi || !TopikApi.canUseApi()) {
       TPKM.closeModal('modalLeave');
       if (window.TPKMAuth) TPKMAuth.logout();
-      location.href = 'index.html';
+      location.href = '/';
       return;
     }
     if (btn) btn.disabled = true;

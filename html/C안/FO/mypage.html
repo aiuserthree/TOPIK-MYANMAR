@@ -163,7 +163,7 @@
         <div class="en" id="meNameEn">—</div>
         <div class="meta" id="meMeta">—</div>
       </div>
-      <a href="mypage-profile.html" class="edit" data-i18n-content="mp.edit_profile">내정보 수정</a>
+      <a href="mypage-profile" class="edit" data-i18n-content="mp.edit_profile">내정보 수정</a>
     </div>
 
     <div class="my-tabs">
@@ -212,7 +212,7 @@
         <div class="ico"></div>
         <div data-i18n-content="mp.cancel_note" data-i18n-content-html>
           <strong>취소는 오프라인 수납 전까지만 가능합니다.</strong>
-          수납 완료 후에는 <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.
+          수납 완료 후에는 <a href="refund-correction" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.
         </div>
       </div>
     </div>
@@ -233,7 +233,7 @@
     'mp.print': { ko: '인쇄', my: 'ပရင့်ထုတ်ရန်', en: 'Print' },
     'mp.cancel_q': { ko: '접수를 취소하시겠습니까?', my: 'လျှောက်ထားမှု ပယ်ဖျက်မှာ သေချာပါသလား။', en: 'Cancel this registration?' },
     'mp.cancel_desc': { ko: '접수를 취소하시면 사진 심사가 중단되며, 다시 접수하시려면 처음부터 진행해야 합니다.', my: 'ပယ်ဖျက်ပါက ဓာတ်ပုံစိစစ်မှု ရပ်တန့်မည်ဖြစ်ပြီး၊ ပြန်လျှောက်ရန် အစမှ ပြန်စရမည်။', en: 'Cancelling stops photo review; to re-register you must start over.' },
-    'mp.cancel_note': { ko: '<strong>취소는 오프라인 수납 전까지만 가능합니다.</strong> 수납 완료 후에는 <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.', my: '<strong>ပယ်ဖျက်ခြင်းကို အော့ဖ်လိုင်း ပေးသွင်းမတိုင်မီသာ ပြုလုပ်နိုင်သည်။</strong> ပေးသွင်းပြီးနောက် <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">ငွေပြန်အမ်း·ပြင်ဆင် ဘုတ်</a> ကို အသုံးပြုပါ။', en: '<strong>Cancellation is only possible before offline payment.</strong> After payment, use the <a href="refund-correction.html" class="text-primary" style="text-decoration:underline;">Refund/correction board</a>.' },
+    'mp.cancel_note': { ko: '<strong>취소는 오프라인 수납 전까지만 가능합니다.</strong> 수납 완료 후에는 <a href="refund-correction" class="text-primary" style="text-decoration:underline;">환불·정보정정신청 게시판</a>을 이용해 주세요.', my: '<strong>ပယ်ဖျက်ခြင်းကို အော့ဖ်လိုင်း ပေးသွင်းမတိုင်မီသာ ပြုလုပ်နိုင်သည်။</strong> ပေးသွင်းပြီးနောက် <a href="refund-correction" class="text-primary" style="text-decoration:underline;">ငွေပြန်အမ်း·ပြင်ဆင် ဘုတ်</a> ကို အသုံးပြုပါ။', en: '<strong>Cancellation is only possible before offline payment.</strong> After payment, use the <a href="refund-correction" class="text-primary" style="text-decoration:underline;">Refund/correction board</a>.' },
     'mp.cancel_btn': { ko: '접수 취소', my: 'လျှောက်လွှာ ပယ်ဖျက်', en: 'Cancel registration' },
     'mp.btn_confirm': { ko: '접수 확인증', my: 'လျှောက်ထားမှု လက်မှတ်', en: 'Confirmation' },
     'mp.btn_ticket': { ko: '수험표 출력', my: 'စာမေးပွဲဖြေဆိုခွင့်လက်မှတ် ထုတ်ရန်', en: 'Admit card' },
@@ -482,7 +482,7 @@
         esc(itemKey) + '">' + esc(bt('mp.btn_confirm', '접수 확인증')) + '</button>';
     }
     if (ticketOk) {
-      actions += '<a href="ticket.html?submission=' + encodeURIComponent(item.submission_id) +
+      actions += '<a href="ticket?submission=' + encodeURIComponent(item.submission_id) +
         '" class="btn btn-primary btn-sm" data-act="ticket">' + esc(bt('mp.btn_ticket', '수험표 출력')) + '</a>';
     }
     if (beforePay && !photoRejected && !infoRejected && !appRejected && item.application_id) {
@@ -492,15 +492,15 @@
         '">' + esc(bt('mp.cancel_btn', '접수 취소')) + '</button>';
     }
     if (photoRejected) {
-      actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="rephoto">' + esc(bt('mp.btn_rephoto', '사진 재등록')) + '</a>';
+      actions += '<a href="mypage-profile" class="btn btn-primary btn-sm" data-act="rephoto">' + esc(bt('mp.btn_rephoto', '사진 재등록')) + '</a>';
     }
     if (infoRejected) {
-      actions += '<a href="mypage-profile.html" class="btn btn-primary btn-sm" data-act="reinfo">' + esc(bt('mp.btn_reinfo', '정보 수정')) + '</a>';
+      actions += '<a href="mypage-profile" class="btn btn-primary btn-sm" data-act="reinfo">' + esc(bt('mp.btn_reinfo', '정보 수정')) + '</a>';
     }
     if (appRejected) {
       var reLv = pl.exam_level || item.exam_level || '';
       var reAppId = item.application_id || pl.id || '';
-      actions += '<a href="register.html?reapply=1&amp;exam_round_id=' + encodeURIComponent(item.exam_round_id) +
+      actions += '<a href="register?reapply=1&amp;exam_round_id=' + encodeURIComponent(item.exam_round_id) +
         (reLv ? '&amp;level=' + encodeURIComponent(reLv) : '') +
         (reAppId ? '&amp;application_id=' + encodeURIComponent(reAppId) : '') +
         '" class="btn btn-primary btn-sm" data-act="reapply">' + esc(bt('mp.btn_reapply', '재접수')) + '</a>';
@@ -552,7 +552,7 @@
       '<div class="empty">' +
         '<h3>' + esc(bt('mp.empty_active_t', '진행 중인 접수가 없습니다')) + '</h3>' +
         '<p>' + esc(bt('mp.empty_active_d', '시험 접수를 진행해 주세요.')) + '</p>' +
-        '<a href="register.html" class="btn btn-primary">' + esc(bt('mp.empty_active_btn', '시험 접수하기')) + '</a>' +
+        '<a href="register" class="btn btn-primary">' + esc(bt('mp.empty_active_btn', '시험 접수하기')) + '</a>' +
       '</div>'
     );
   }
@@ -803,7 +803,7 @@
 
     if (!useApi) {
       if (!window.TPKMAuth || !TPKMAuth.isLoggedIn()) {
-        location.href = 'login.html?next=' + encodeURIComponent('mypage.html');
+        location.href = 'login?next=' + encodeURIComponent('mypage');
         return;
       }
       showLoadError(bt('mp.api_off', 'API가 연결되지 않았습니다. 로그인 후 다시 시도해 주세요.'));
@@ -872,7 +872,7 @@
 
     if (!useApi) {
       if (!window.TPKMAuth || !TPKMAuth.isLoggedIn()) {
-        location.href = 'login.html?next=' + encodeURIComponent('mypage.html');
+        location.href = 'login?next=' + encodeURIComponent('mypage');
         return;
       }
       fillProfileFromAuth();

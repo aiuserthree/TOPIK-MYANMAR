@@ -3,7 +3,7 @@
 // Pure plain JS — exposes window.DataStore (no React deps here)
 //
 // Local UI 더미 사용법:
-//   http://localhost:8081/admin.html?mock=1#applicants
+//   http://localhost:8081/admin?mock=1#applicants
 //   (API 로그인 세션은 유지, 접수자 목록은 이 파일 데이터 사용)
 //   API 모드 복귀: ?mock=0 또는 localStorage/sessionStorage 에서 tpkm_bo_force_mock 제거
 // 검색어: "테스트" → 정보/사진 심사 시나리오 10건
@@ -110,7 +110,7 @@
   }
 
   // ---- Fixed scenarios for local UI testing (search: "테스트") ----
-  // Visible with mock data (admin.html?mock=1). API mode ignores these.
+  // Visible with mock data (admin?mock=1). API mode ignores these.
   const TEST_SCENARIOS = [
     {
       id: 'a9001', no: 9001, nameKo: '[테스트] 사진미심사', nameEn: 'TEST Photo Pending',

@@ -81,6 +81,20 @@ fi
 echo "  API started: $(systemctl show myanmar-api -p ActiveEnterTimestamp --value 2>/dev/null || echo unknown)"
 
 echo ""
+echo "==> nginx (extensionless URL 등 sites 설정 반영이 필요하면)"
+if [[ -f scripts/nginx/myanmar-v2.conf ]]; then
+  cp scripts/nginx/myanmar-v2.conf /etc/nginx/sites-available/myanmar-v2.conf
+  ln -sf /etc/nginx/sites-available/myanmar-v2.conf /etc/nginx/sites-enabled/myanmar-v2.conf
+  if nginx -t; then
+    systemctl reload nginx
+    echo "  nginx reloaded (try_files \$uri \$uri.html)"
+  else
+    echo "  WARN: nginx -t failed — sites config not reloaded" >&2
+  fi
+fi
+
+echo ""
 echo "==> Done. 확인:"
-echo "  https://admin.topik-myanmar.com → 처리 이력 상세 → 처리 사유"
+echo "  https://admin.topik-myanmar.com/admin"
+echo "  https://www.topik-myanmar.com/mypage"
 echo "  https://www.topik-myanmar.com"

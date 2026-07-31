@@ -440,8 +440,8 @@
       <p style="color: var(--text-3); font-size: 14px;" data-i18n-content="su.done_desc" data-i18n-content-html>회원가입이 완료되었습니다.<br>로그인 후 TOPIK 시험을 접수하실 수 있습니다.</p>
     </div>
     <div class="modal-foot">
-      <a href="login.html" class="btn btn-secondary" data-i18n-content="su.go_login">로그인</a>
-      <a href="register.html" class="btn btn-primary" data-i18n-content="su.go_register">시험 접수하기</a>
+      <a href="login" class="btn btn-secondary" data-i18n-content="su.go_login">로그인</a>
+      <a href="register" class="btn btn-primary" data-i18n-content="su.go_register">시험 접수하기</a>
     </div>
   </div>
 </div>
@@ -1164,7 +1164,7 @@
         // Existing account with a complete profile — treat as login.
         if (!body.is_new_user && !body.profile_incomplete) {
           var params = new URLSearchParams(location.search);
-          location.href = params.get('next') || 'index.html';
+          location.href = params.get('next') || '/';
           return;
         }
 
@@ -1206,9 +1206,9 @@
 
   // ---- 약관 보기 모달 (STEP3) ----
   var SIGNUP_TERMS_META = {
-    service: { title: { ko: '서비스 이용약관', my: 'ဝန်ဆောင်မှု အသုံးပြုမှု စည်းကမ်း', en: 'Terms of Service' }, page: 'terms.html' },
-    privacy: { title: { ko: '개인정보 수집·이용 동의', my: 'ကိုယ်ရေးအချက်အလက် ကောက်ယူ·အသုံးပြုမှု သဘောတူ', en: 'Consent to collection/use of personal data' }, page: 'privacy.html' },
-    marketing: { title: { ko: '마케팅 정보 수신 동의 (이메일)', my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူ (အီးမေးလ်)', en: 'Consent to marketing email' }, page: 'marketing.html' }
+    service: { title: { ko: '서비스 이용약관', my: 'ဝန်ဆောင်မှု အသုံးပြုမှု စည်းကမ်း', en: 'Terms of Service' }, page: 'terms' },
+    privacy: { title: { ko: '개인정보 수집·이용 동의', my: 'ကိုယ်ရေးအချက်အလက် ကောက်ယူ·အသုံးပြုမှု သဘောတူ', en: 'Consent to collection/use of personal data' }, page: 'privacy' },
+    marketing: { title: { ko: '마케팅 정보 수신 동의 (이메일)', my: 'ကြော်ငြာ အချက်အလက် လက်ခံရန် သဘောတူ (အီးမေးလ်)', en: 'Consent to marketing email' }, page: 'marketing' }
   };
 
   function termsLang() {

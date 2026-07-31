@@ -56,7 +56,7 @@
       .map(function (n) {
         var pin = n.is_pinned ? ' <span class="badge badge-new" style="margin-left:6px;">NEW</span>' : '';
         return (
-          '<a href="notice.html?id=' +
+          '<a href="notice?id=' +
           encodeURIComponent(n.id) +
           '" class="notice-row">' +
           '<span class="badge ' +

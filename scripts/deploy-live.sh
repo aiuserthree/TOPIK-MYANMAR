@@ -44,5 +44,5 @@ systemctl reload nginx
 
 echo ""
 echo "==> Done:"
-echo "  FO  https://www.topik-myanmar.com/index.html"
-echo "  BO  https://admin.topik-myanmar.com/admin.html"
+echo "  FO  https://www.topik-myanmar.com/"
+echo "  BO  https://admin.topik-myanmar.com/admin"

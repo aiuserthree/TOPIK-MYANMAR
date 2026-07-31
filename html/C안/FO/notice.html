@@ -282,7 +282,7 @@
   function closeDetail() {
     document.getElementById('listView').classList.remove('hidden');
     document.getElementById('detailView').classList.remove('active');
-    if (history.replaceState) history.replaceState(null, '', 'notice.html');
+    if (history.replaceState) history.replaceState(null, '', 'notice');
   }
   window.closeDetail = closeDetail;
 
@@ -374,7 +374,7 @@
     if (bodyEl) bodyEl.innerHTML = '<p style="color:var(--text-3);">' + ntEsc(bt('nt.detail_loading', '로딩 중입니다.')) + '</p>';
     if (attachEl) { attachEl.style.display = 'none'; attachEl.innerHTML = ''; }
     if (navEl) { navEl.style.display = 'none'; navEl.innerHTML = ''; }
-    if (history.replaceState) history.replaceState(null, '', 'notice.html?id=' + encodeURIComponent(id));
+    if (history.replaceState) history.replaceState(null, '', 'notice?id=' + encodeURIComponent(id));
 
     function noticeLang() {
       if (window.TPKMNotices && TPKMNotices.currentLang) return TPKMNotices.currentLang();
