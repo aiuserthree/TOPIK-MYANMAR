@@ -134,6 +134,20 @@
   .empty h3 { font-size: 16px; margin-bottom: 8px; color: var(--text-2); }
   .empty p { font-size: 13.5px; margin-bottom: 16px; }
 
+  /* 접수 확인증 — 증명사진(3.5×4.5 비율) */
+  .confirm-photo-row { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .confirm-photo {
+    width: 90px; height: 116px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-3);
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+  .confirm-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
   @media print {
     body.printing-confirm > *:not(#modalConfirm) { display: none !important; }
     body.printing-confirm #modalConfirm {
@@ -282,6 +296,8 @@
     'mp.t_level': { ko: '응시 급수', my: 'ဖြေဆိုအဆင့်', en: 'Level' },
     'mp.t_applicant': { ko: '응시자', my: 'ဖြေဆိုသူ', en: 'Applicant' },
     'mp.t_birth': { ko: '생년월일', my: 'မွေးနေ့', en: 'Date of birth' },
+    'mp.t_phone': { ko: '연락처', my: 'ဆက်သွယ်ရန်', en: 'Phone' },
+    'mp.t_email': { ko: '이메일', my: 'အီးမေးလ်', en: 'Email' },
     'mp.t_pay_status': { ko: '수납 상태', my: 'ပေးသွင်းမှု အခြေအနေ', en: 'Payment status' },
     'mp.t_fee': { ko: '응시료', my: 'ဖြေဆိုကြေး', en: 'Test fee' }
   };
@@ -703,6 +719,33 @@
     }
   }
 
+  /** 확인증 증명사진 — me-card 아바타와 같은 fileUrl + 인증 재시도 경로를 사용. */
+  function fillConfirmPhoto(user) {
+    var el = document.getElementById('confirmPhoto');
+    if (!el) return;
+    function placeholder() {
+      el.textContent = bt('mp.photo_placeholder', 'PHOTO');
+    }
+    var fileId = user && user.photo_file_id;
+    if (!fileId || user.photo_unavailable || !window.TopikApi || !TopikApi.fileUrl) {
+      placeholder();
+      return;
+    }
+    var url = TopikApi.fileUrl(fileId);
+    if (!url) {
+      placeholder();
+      return;
+    }
+    el.textContent = '';
+    var img = document.createElement('img');
+    img.alt = '';
+    img.onerror = TopikApi.imgFileOnError
+      ? TopikApi.imgFileOnError(fileId, placeholder)
+      : placeholder;
+    img.src = url;
+    el.appendChild(img);
+  }
+
   function openConfirmForItem(item) {
     var pl = primaryLevel(item);
     var levelText = item.levels_text || item.level_text ||
@@ -711,6 +754,8 @@
     var u = currentProfile || {};
     var birth = formatBirthDate(u.birth_date) || '—';
     document.getElementById('confirmBody').innerHTML =
+      '<div class="confirm-photo-row"><div class="confirm-photo" id="confirmPhoto">' +
+        esc(bt('mp.photo_placeholder', 'PHOTO')) + '</div></div>' +
       '<table class="table" style="margin: 0;"><tbody style="font-size: 13.5px;">' +
         '<tr><th style="width:110px;">' + esc(bt('mp.t_round', '회차')) + '</th><td>' + roundTitle(item) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.apply_no', '접수번호')) + '</th><td style="font-family:Inter,sans-serif;">' + esc(pl.application_no) + '</td></tr>' +
@@ -726,9 +771,12 @@
         '<tr><th>' + esc(bt('mp.col_date', '접수일')) + '</th><td>' + esc(item.submitted_at_formatted) + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_applicant', '응시자')) + '</th><td>' + esc(u.name_ko || '') + ' / ' + esc(u.name_en || '') + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_birth', '생년월일')) + '</th><td>' + esc(birth || '—') + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_phone', '연락처')) + '</th><td style="font-family:Inter,sans-serif;">' + esc(u.phone || '—') + '</td></tr>' +
+        '<tr><th>' + esc(bt('mp.t_email', '이메일')) + '</th><td style="font-family:Inter,sans-serif; word-break:break-all;">' + esc(u.email || '—') + '</td></tr>' +
         '<tr><th>' + esc(bt('mp.t_pay_status', '수납 상태')) + '</th><td><span class="status ' +
           (payDone ? 'status-approved">' + esc(bt('mp.pay_paid', '완료')) : 'status-pay">' + esc(bt('mp.pay_unpaid', '대기'))) + '</span></td></tr>' +
       '</tbody></table>';
+    fillConfirmPhoto(u);
     TPKM.openModal('modalConfirm');
   }
 
