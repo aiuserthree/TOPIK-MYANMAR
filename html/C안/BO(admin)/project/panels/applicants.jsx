@@ -1571,6 +1571,19 @@ function ApplicationConfirmModal({ id, onClose }) {
         학생 마이페이지의 <b>접수 확인증</b>과 동일한 정보입니다. 환불·정정 처리 시 학생이 출력한 접수증과 대조해 주세요.
       </p>
       <div id="app-confirm-print">
+        {/* 증명사진 — FO 확인증과 동일하게 우상단 3.5×4.5 비율 */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <div style={{
+            width: 90, height: 116, flex: '0 0 auto', overflow: 'hidden',
+            background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, color: 'var(--text-3)',
+          }}>
+            <PhotoImg src={a.photoUrl} alt={a.nameKo}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              fallback={<span>PHOTO</span>}/>
+          </div>
+        </div>
         <table className="dg" style={{ margin: 0, fontSize: 13.5 }}>
           <tbody>
             <tr><th style={{ width: 110, background: 'var(--bg-2)', color: 'var(--text-2)' }}>회차</th><td>{applicantRoundTitle(a, session)}</td></tr>
@@ -1581,6 +1594,8 @@ function ApplicationConfirmModal({ id, onClose }) {
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>접수일</th><td>{a.appliedAt || '—'}</td></tr>
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>응시자</th><td>{a.nameKo} / {a.nameEn}</td></tr>
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>생년월일</th><td><code className="code-id">{formatApplicantDob(a.dob)}</code></td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>연락처</th><td style={{ fontFamily: 'Inter,sans-serif' }}>{a.tel || '—'}</td></tr>
+            <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>이메일</th><td style={{ fontFamily: 'Inter,sans-serif', wordBreak: 'break-all' }}>{a.email || '—'}</td></tr>
             <tr><th style={{ background: 'var(--bg-2)', color: 'var(--text-2)' }}>수납 상태</th><td>{applicantPaymentPill(a)}</td></tr>
           </tbody>
         </table>
