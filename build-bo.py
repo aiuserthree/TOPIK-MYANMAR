@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import pathlib
+from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parent
 SHARED_SRC = ROOT / "html" / "shared"
@@ -60,6 +61,22 @@ def patch_html_api_meta(text: str) -> str:
     return patched
 
 
+# nginx는 admin 서브도메인의 js/css 도 Cache-Control immutable 7d 로 서빙한다.
+# ?v= 가 없으면 배포해도 관리자 브라우저가 최대 7일간 구버전 스크립트를 계속 쓴다.
+ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H")
+ASSET_URL_RE = re.compile(
+    r'((?:src|href)=")((?:shared|assets|panels)/[A-Za-z0-9._-]+\.(?:js|jsx|css))(?:\?v=[^"]*)?(")',
+    re.IGNORECASE,
+)
+
+
+def patch_asset_cache_bust(text: str) -> str:
+    return ASSET_URL_RE.sub(
+        lambda m: f"{m.group(1)}{m.group(2)}?v={ASSET_VERSION}{m.group(3)}",
+        text,
+    )
+
+
 def ignore(dir_path: str, names: list[str]) -> set[str]:
     return {n for n in names if n in SKIP_NAMES}
 
@@ -94,7 +111,9 @@ if SHARED_SRC.is_dir():
 
 for html in DST.glob("*.html"):
     text = html.read_text(encoding="utf-8")
-    patched = patch_html_api_meta(text.replace("../../shared/", "shared/"))
+    patched = patch_asset_cache_bust(
+        patch_html_api_meta(text.replace("../../shared/", "shared/"))
+    )
     if patched != text:
         html.write_text(patched, encoding="utf-8")
 

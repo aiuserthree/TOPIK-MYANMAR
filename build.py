@@ -71,8 +71,10 @@ VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scal
 API_META_RE = re.compile(r'\s*<meta name="topik-api-base"[^>]*>\n?', re.IGNORECASE)
 ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H")
 # nginx serves JS/CSS with Cache-Control immutable 7d — bump ?v= on each build.
+# 개별 파일 allowlist 였을 때 shared/form-validation.js 등이 빠져 7일간 구버전이 서빙됐다.
+# 로컬 asset(shared/·assets/) 전체를 대상으로 한다. CDN(https://…)은 매칭되지 않는다.
 ASSET_URL_RE = re.compile(
-    r'((?:src|href)=")((?:shared/api-client\.js|assets/common\.js|assets/fo-board\.js|assets/styles\.css))(?:\?v=[^"]*)?(")',
+    r'((?:src|href)=")((?:shared|assets)/[A-Za-z0-9._-]+\.(?:js|jsx|css))(?:\?v=[^"]*)?(")',
     re.IGNORECASE,
 )
 
