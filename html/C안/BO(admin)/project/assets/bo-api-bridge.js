@@ -814,33 +814,24 @@
   }
 
   function fail(msg) {
+    clearLists();
     DS.state.apiError = msg;
-    DS.state.applicants = [];
-    DS.state.sessions = [];
-    DS.state.venues = [];
-    DS.state.notices = [];
-    DS.state.noticeTrash = [];
-    DS.state.applicantTrash = [];
-    DS.state.faqs = [];
-    DS.state.refunds = [];
-    DS.state.inquiries = [];
-    DS.state.members = [];
-    DS.state.membersCatalog = [];
-    DS.state.membersMeta = null;
-    DS.state.terms = [];
-    DS.state.admins = [];
-    DS.state.audit = [];
-    DS.state.adminAccessLogs = [];
-    DS.state.memberAccessLogs = [];
-    DS.state.permHistory = [];
     DS.notify();
     return false;
   }
 
+  /**
+   * data.js 의 데모 더미데이터를 state 에서 걷어낸다.
+   * API 모드 부팅 첫 렌더는 API 응답보다 먼저 일어나므로, 여기서 비우지 않으면
+   * 제107회·응시자 88명 같은 데모 값이 잠깐 보였다가 실데이터로 교체된다.
+   * perms/matrix 는 제외한다 — 비우면 super 가 아닌 관리자의 can() 이 전부 false 가 되어
+   * 로딩 동안 메뉴가 사라진다.
+   */
   function clearLists() {
     DS.state.applicants = [];
     DS.state.sessions = [];
     DS.state.venues = [];
+    DS.state.regions = [];
     DS.state.notices = [];
     DS.state.noticeTrash = [];
     DS.state.applicantTrash = [];
@@ -853,6 +844,12 @@
     DS.state.terms = [];
     DS.state.admins = [];
     DS.state.audit = [];
+    DS.state.consents = [];
+    DS.state.adminAccessLogs = [];
+    DS.state.memberAccessLogs = [];
+    DS.state.permHistory = [];
+    // null 이 아닌 '' — 헤더 회차 <select value=…> 가 제어 컴포넌트로 유지된다.
+    DS.state.activeSessionId = '';
   }
 
   function toastErr(msg) {
@@ -952,6 +949,7 @@
     DS.useApi = true;
     setApiLoading(true);
     DS.state.apiError = null;
+    clearLists();
     DS.notify();
 
     var CRITICAL_NAMES = [
