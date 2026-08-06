@@ -180,10 +180,18 @@ function RefundDetailLP({ id, onClose, canAnswer = true }) {
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');
   };
 
+  // 정보정정 신청 → 회원 관리에서 '해당 신청자'만 검색된 상태로 수정 화면을 연다.
   const applyMemberFix = () => {
-    DataStore.addAudit({ type: '회원', targetId: '—', action: '수정', memo: `정보정정 신청 ${id} 기반 회원 정보 반영(데모)` });
-    toastOk('회원 정보 정정 패널이 열립니다(데모).');
-    location.hash = 'members';
+    const key = r.authorEmail || r.author || r.authorName || '';
+    if (!key) {
+      toastErr('신청자 정보를 확인할 수 없어 회원 관리로 이동합니다.');
+      location.hash = 'members';
+      return;
+    }
+    DataStore.addAudit({ type: '회원', targetId: r.userId || '—', action: '수정', memo: `정보정정 신청 ${id} 기반 회원 정보 정정 화면 이동(${key})` });
+    const params = new URLSearchParams({ q: key, open: 'edit' });
+    if (r.userId) params.set('user', r.userId);
+    location.hash = 'members?' + params.toString();
   };
 
   const replies = r.replies || [];

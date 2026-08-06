@@ -70,6 +70,11 @@ _CATALOG: dict[str, dict[str, str]] = {
         "my": "မွေးနေ့ ပုံစံ မမှန်ပါ။",
         "en": "Invalid date of birth format.",
     },
+    "name_ko_hangul_only": {
+        "ko": "한글 성명은 한글만 입력할 수 있습니다.",
+        "my": "ကိုရီးယား အမည်ကို ဟန်ဂူးလ် (ကိုရီးယားစာလုံး) ဖြင့်သာ ရိုက်ထည့်နိုင်ပါသည်။",
+        "en": "The Korean name may contain Hangul characters only.",
+    },
     "invalid_refresh_token": {
         "ko": "유효하지 않은 refresh token입니다.",
         "my": "မမှန်သော refresh token ဖြစ်သည်။",

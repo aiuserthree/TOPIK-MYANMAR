@@ -257,7 +257,8 @@
       <div class="row-2">
         <div class="form-row">
           <label class="label"><span data-i18n-content="su.name_ko">한글 성명</span> <span class="req">*</span></label>
-          <input class="input" id="su-name-ko" placeholder="홍길동" data-i18n-content="su.name_ko_ph" data-i18n-content-placeholder>
+          <input class="input" id="su-name-ko" placeholder="홍길동" data-i18n-content="su.name_ko_ph" data-i18n-content-placeholder inputmode="text" lang="ko">
+          <span class="hint" data-i18n-content="su.name_ko_hint">한글만 입력할 수 있습니다.</span>
         </div>
         <div class="form-row">
           <label class="label"><span data-i18n-content="su.name_en">영문 성명 (여권 표기)</span> <span class="req">*</span></label>
@@ -285,21 +286,22 @@
       <div class="row-2">
         <div class="form-row">
           <label class="label"><span data-i18n-content="su.nationality">국적</span> <span class="req">*</span></label>
+          <!-- value 는 화면 언어와 무관한 저장 표준값(한국어). 라벨만 번역된다. -->
           <select class="select" id="su-nationality">
             <option value="" data-i18n-content="form.select">선택</option>
-            <option data-i18n-content="nat.mm">미얀마</option>
-            <option data-i18n-content="nat.kr">대한민국</option>
-            <option data-i18n-content="qna.cat_etc">기타</option>
+            <option value="미얀마" data-i18n-content="nat.mm">미얀마</option>
+            <option value="대한민국" data-i18n-content="nat.kr">대한민국</option>
+            <option value="기타" data-i18n-content="qna.cat_etc">기타</option>
           </select>
         </div>
         <div class="form-row">
           <label class="label"><span data-i18n-content="su.lang1">제1언어</span> <span class="req">*</span></label>
           <select class="select" id="su-lang1">
             <option value="" data-i18n-content="form.select">선택</option>
-            <option data-i18n-content="lang.my">미얀마어</option>
-            <option data-i18n-content="lang.ko">한국어</option>
-            <option data-i18n-content="lang.en">영어</option>
-            <option data-i18n-content="qna.cat_etc">기타</option>
+            <option value="미얀마어" data-i18n-content="lang.my">미얀마어</option>
+            <option value="한국어" data-i18n-content="lang.ko">한국어</option>
+            <option value="영어" data-i18n-content="lang.en">영어</option>
+            <option value="기타" data-i18n-content="qna.cat_etc">기타</option>
           </select>
         </div>
       </div>
@@ -556,6 +558,18 @@
       }
     } catch (e) { /* ignore */ }
     return '';
+  }
+
+  /** 국적·제1언어 — 과거 번역 라벨로 저장된 값도 표준값(한국어)으로 되돌린다. */
+  function normalizeNationalityValue(v) {
+    var n = window.TPKMValidate && TPKMValidate.normalizeNationality
+      ? TPKMValidate.normalizeNationality(v) : '';
+    return n || v || '';
+  }
+  function normalizeFirstLanguageValue(v) {
+    var n = window.TPKMValidate && TPKMValidate.normalizeFirstLanguage
+      ? TPKMValidate.normalizeFirstLanguage(v) : '';
+    return n || v || '';
   }
 
   /** API is_valid_password와 동일: 8자+, 영문·숫자·특수문자 각 1자 이상 */
@@ -837,8 +851,8 @@
       document.getElementById('su-name-en').value = '';
       if (u.birth_date && u.birth_date !== '00000000') document.getElementById('su-birth').value = u.birth_date;
       if (u.gender) document.getElementById('su-gender').value = u.gender === '2' ? 'female' : 'male';
-      if (u.nationality) document.getElementById('su-nationality').value = u.nationality;
-      if (u.first_language) document.getElementById('su-lang1').value = u.first_language;
+      if (u.nationality) document.getElementById('su-nationality').value = normalizeNationalityValue(u.nationality);
+      if (u.first_language) document.getElementById('su-lang1').value = normalizeFirstLanguageValue(u.first_language);
       if (u.phone) document.getElementById('su-phone').value = u.phone;
       if (u.job_code) document.getElementById('su-job').value = String(u.job_code);
       if (u.motive_code) document.getElementById('su-motive').value = String(u.motive_code);
@@ -855,7 +869,11 @@
     if (cur === 2) {
       var pw = document.getElementById('su-pw').value;
       var pw2 = document.getElementById('su-pw2').value;
-      if (!document.getElementById('su-name-ko').value.trim()) {
+      if (window.TPKMValidate && TPKMValidate.validateKoreanName) {
+        var nameKoCheck = TPKMValidate.validateKoreanName(document.getElementById('su-name-ko').value);
+        if (!nameKoCheck.ok) { showSignupErr(nameKoCheck.message); return; }
+        document.getElementById('su-name-ko').value = nameKoCheck.value;
+      } else if (!document.getElementById('su-name-ko').value.trim()) {
         showSignupErr(bt('su.err_name_ko', '한글 성명을 입력해 주세요.')); return;
       }
       if (!document.getElementById('su-name-en').value.trim()) {
@@ -1190,6 +1208,11 @@
     if (v !== upper) this.value = upper;
   });
 
+  // 한글 성명 — 한글 외 문자는 입력·붙여넣기 시 제거
+  if (window.TPKMValidate && TPKMValidate.bindKoreanNameInput) {
+    TPKMValidate.bindKoreanNameInput(document.getElementById('su-name-ko'));
+  }
+
   // PW strength
   document.getElementById('su-pw').addEventListener('input', function () {
     const v = this.value;
@@ -1347,6 +1370,11 @@
       return;
     }
     if (!validateSignupBirth(true)) return;
+    if (window.TPKMValidate && TPKMValidate.validateKoreanName) {
+      var finishNameKo = TPKMValidate.validateKoreanName(document.getElementById('su-name-ko').value);
+      if (!finishNameKo.ok) { showSignupErr(finishNameKo.message); go(2); return; }
+      document.getElementById('su-name-ko').value = finishNameKo.value;
+    }
     var photoState = signupPhotoCtrl && signupPhotoCtrl.getState ? signupPhotoCtrl.getState() : {};
     var dataUrl = photoState.dataUrl || '';
     if (!dataUrl || dataUrl.indexOf('data:image') !== 0) {

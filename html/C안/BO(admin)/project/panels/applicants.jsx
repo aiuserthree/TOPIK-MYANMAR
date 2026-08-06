@@ -634,13 +634,16 @@ function ApplicantsPanel() {
               return { id: '', name: '', nameKo: '', exam: exam, level: '' };
             });
         var skippedList = body.skipped || [];
+        // 부여 대상 건수는 서버가 알려주는 전체 수(preview_total). rows 는 미리보기 표시용 일부.
+        var total = body.preview_total != null ? body.preview_total : (body.assigned || rows.length);
         return {
           result: rows,
-          targets: body.assigned || rows.length,
+          total: total,
+          targets: total,
           skipped: skippedList.length,
           warning: skippedList.length
             ? ('시험장 정보 없음으로 제외된 접수 ' + skippedList.length + '건이 있습니다. 시험장 관리를 확인해 주세요.')
-            : (rows.length === 0 && (body.eligible_count || 0) === 0
+            : (total === 0 && (body.eligible_count || 0) === 0
               ? '부여 대상이 없습니다. (상태 승인완료 + 수험번호 미부여 건만 대상)'
               : ''),
         };
@@ -654,8 +657,9 @@ function ApplicantsPanel() {
       .filter(a => a.sessionId === sessionId)
       .filter(a => a.status === 'approved' && !a.exam);
     // 같은 시험장에서 동시접수(Ⅰ+Ⅱ) 강제: 본 데모에서는 lvl=동시 동일 처리
-    // 알파벳 오름차순(영문)
-    const sorted = targets.slice().sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+    // 연명부와 동일 순서: 동시 응시자 우선 → 영문명 알파벳 오름차순
+    const dualRank = (a) => (a.isConcurrent || a.level === '동시' ? 0 : 1);
+    const sorted = targets.slice().sort((a, b) => (dualRank(a) - dualRank(b)) || a.nameEn.localeCompare(b.nameEn));
 
     // 그룹: 시험장×수준(7/8)
     const seqs = {}; // key: venueCode|lvlCode → 0001 시작
@@ -677,7 +681,7 @@ function ApplicantsPanel() {
       result.push({ id: a.id, name: a.nameEn, nameKo: a.nameKo, exam: assigned.join(' / '), level: a.level });
     }
 
-    if (preview) return { result, targets: targets.length, skipped: state.applicants.filter(a => a.sessionId === sessionId).length - targets.length };
+    if (preview) return { result, total: result.length, targets: targets.length, skipped: state.applicants.filter(a => a.sessionId === sessionId).length - targets.length };
 
     // 확정
     for (const r of result) {
@@ -1801,6 +1805,7 @@ function ExamAssignModal({ onClose, doAssign }) {
       </Modal>
     );
   }
+  const total = preview.total != null ? preview.total : preview.result.length;
   const confirm = async () => {
     await doAssign(false);
     onClose();
@@ -1809,10 +1814,10 @@ function ExamAssignModal({ onClose, doAssign }) {
     <Modal open onClose={onClose} title="수험번호 13자리 일괄 부여"
       footer={<>
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" onClick={confirm} disabled={preview.result.length === 0}>{preview.result.length}건 일괄 부여</button>
+        <button className="btn btn-primary" onClick={confirm} disabled={total === 0}>{total}건 일괄 부여</button>
       </>}>
       <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
-        <p>① 국가코드(3) <b>025</b> + ② 지역코드(3) + ③ 수준코드(1) <b>7=Ⅰ / 8=Ⅱ</b> + ④ 시험장코드(2) + ⑤ 응시자코드(4) — 영문 성명 알파벳 오름차순.</p>
+        <p>① 국가코드(3) <b>025</b> + ② 지역코드(3) + ③ 수준코드(1) <b>7=Ⅰ / 8=Ⅱ</b> + ④ 시험장코드(2) + ⑤ 응시자코드(4) — 연명부 순서(동시 응시자 우선 · 영문 성명 알파벳 오름차순).</p>
         <p style={{ marginTop: 4, color: 'var(--text-3)', fontSize: 12 }}>
           대상: 접수자 목록 상태 <b>승인완료</b> + 수험번호 미부여 · 환불자는 수험번호 유지<br/>
           이메일 발송: <b style={{ color: 'var(--danger)' }}>안 함</b> · 노출 시점: 별도 설정한 날짜에 FO 접수확인 페이지에서 공개
@@ -1824,7 +1829,7 @@ function ExamAssignModal({ onClose, doAssign }) {
         </div>
       ) : null}
       <div className="kpi-grid" style={{ margin: '14px 0' }}>
-        <div className="kpi"><div className="label">부여 대상</div><div className="val">{preview.result.length}</div></div>
+        <div className="kpi"><div className="label">부여 대상(승인 완료)</div><div className="val">{total}</div></div>
         <div className="kpi"><div className="label">제외(누락 사유)</div><div className="val">{preview.skipped || 0}</div></div>
       </div>
       <div id="exam-preview-table" style={{ maxHeight: 260, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 6 }}>
@@ -1840,7 +1845,7 @@ function ExamAssignModal({ onClose, doAssign }) {
             ))}
           </tbody>
         </table>
-        {preview.result.length > 50 && <div style={{ padding: 8, textAlign: 'center', fontSize: 12, color: 'var(--text-3)', background: 'var(--bg-2)' }}>… 외 {preview.result.length - 50}건</div>}
+        {total > 50 && <div style={{ padding: 8, textAlign: 'center', fontSize: 12, color: 'var(--text-3)', background: 'var(--bg-2)' }}>… 외 {total - 50}건 (미리보기는 50건까지 표시되며, 부여는 {total}건 전체에 적용됩니다)</div>}
       </div>
     </Modal>
   );
@@ -1921,7 +1926,8 @@ function ExcelExportModal({ onClose, rows }) {
                 <div key={g.k}>{g.k} <span style={{ color: 'var(--text-3)' }}>({g.n}행)</span></div>
               ))}
         </div>
-        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>※ 수험번호(영문명 정렬) 순으로 행 배치 · 파일당 단일 시트(여러 시트 작성 시 등록 불가).</div>
+        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3)' }}>※ 행 배치: <b>TOPIK Ⅰ·Ⅱ 동시 승인자 우선</b> → 수험번호(영문명 정렬) 순 · 파일당 단일 시트(여러 시트 작성 시 등록 불가).</div>
+        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-3)' }}>동시 응시자를 Ⅰ·Ⅱ 연명부 모두 앞쪽에 배치해 같은 시험장(캠퍼스)에 배정되도록 합니다. 수험번호 일괄 부여도 동일한 순서를 따릅니다.</div>
       </div>
     </Modal>
   );

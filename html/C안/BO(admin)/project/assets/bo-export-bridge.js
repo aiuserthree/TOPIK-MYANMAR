@@ -42,9 +42,41 @@
     ];
   }
 
-  // 수험번호(=영문명 정렬) 순. 미부여자는 영문명 보조 정렬.
-  function sortByExam(rows) {
+  /**
+   * TOPIK Ⅰ·Ⅱ를 함께 승인 완료한(동시 응시) submissionId 집합.
+   * 필터로 한 수준만 보고 있어도 판정이 흔들리지 않도록 회차 전체 접수자에서 계산한다.
+   */
+  function dualLevelSubmissionIds(state) {
+    var levels = {};
+    var all = (state && state.applicants) || [];
+    var sid = state && state.activeSessionId;
+    all.forEach(function (a) {
+      if (!a || !a.submissionId) return;
+      if (sid && a.sessionId !== sid) return;
+      if (a.status !== 'approved') return;   // 승인 완료(수험번호 부여 포함) 건만 인정
+      var lv = a.levelBase || a.level;
+      if (!levels[a.submissionId]) levels[a.submissionId] = {};
+      if (lv === 'Ⅰ') levels[a.submissionId]['I'] = true;
+      if (lv === 'Ⅱ') levels[a.submissionId]['II'] = true;
+    });
+    var out = {};
+    Object.keys(levels).forEach(function (k) {
+      if (levels[k]['I'] && levels[k]['II']) out[k] = true;
+    });
+    return out;
+  }
+
+  /**
+   * 연명부 행 정렬 — 동시 응시자(Ⅰ+Ⅱ) 우선 → 수험번호 → 영문명.
+   * 동시 응시자를 Ⅰ·Ⅱ 연명부 모두 앞쪽에 두어야 수험번호도 앞번호로 부여되고,
+   * 시험장(캠퍼스)이 분리되어 오전/오후 이동해야 하는 상황을 막을 수 있다.
+   */
+  function sortByExam(rows, dualIds) {
+    var dual = dualIds || {};
+    function rank(a) { return (a && a.submissionId && dual[a.submissionId]) ? 0 : 1; }
     return rows.slice().sort(function (x, y) {
+      var dr = rank(x) - rank(y);
+      if (dr) return dr;
       var ea = (x.exam || x.examNo || '');
       var eb = (y.exam || y.examNo || '');
       if (ea && eb) return ea < eb ? -1 : ea > eb ? 1 : 0;
@@ -121,7 +153,8 @@
     var baseRows = opts.mode === 'full'
       ? (state.applicants || []).filter(function (a) { return a.sessionId === state.activeSessionId; })
       : (opts.rows || []);
-    var rows = sortByExam(baseRows);
+    var dualIds = dualLevelSubmissionIds(state);
+    var rows = sortByExam(baseRows, dualIds);
 
     var groups = buildGroups(rows, state);
     var levelsByVenue = {};
@@ -132,7 +165,7 @@
     });
     var files = Object.keys(groups).map(function (k) {
       var grp = groups[k];
-      var list = sortByExam(grp.list);
+      var list = sortByExam(grp.list, dualIds);
       return {
         filename: rosterExportFilename(
           sessionNo,

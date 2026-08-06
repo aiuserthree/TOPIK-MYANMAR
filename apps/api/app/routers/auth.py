@@ -51,8 +51,10 @@ from app.lib.mail import (
 )
 from app.models.system import EmailOutbox
 from app.lib.storage import save_photo
+from app.lib.profile_ko_labels import normalize_first_language, normalize_nationality
 from app.lib.validation import (
     gender_to_code,
+    is_hangul_name,
     is_under_minimum_age,
     is_valid_email,
     is_valid_password,
@@ -821,6 +823,8 @@ async def register(
             422,
             age=settings.min_signup_age_years,
         )
+    if not is_hangul_name(body.name_ko):
+        raise fo_api_error("VALIDATION_ERROR", "name_ko_hangul_only", lang)
     roster_err = validate_roster_codes(body.job_code, body.motive_code, body.purpose_code, lang=lang)
     if roster_err:
         raise api_error("VALIDATION_ERROR", roster_err)
@@ -839,8 +843,8 @@ async def register(
         name_en=body.name_en.strip(),
         birth_date=birth,
         gender=gender_to_code(body.gender),
-        nationality=body.nationality.strip(),
-        first_language=body.first_language.strip(),
+        nationality=normalize_nationality(body.nationality),
+        first_language=normalize_first_language(body.first_language),
         phone=body.phone.strip(),
         job_code=body.job_code,
         motive_code=body.motive_code,

@@ -25,8 +25,10 @@ from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.google_auth import verify_google_id_token
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import save_photo
+from app.lib.profile_ko_labels import normalize_first_language, normalize_nationality
 from app.lib.validation import (
     gender_to_code,
+    is_hangul_name,
     is_under_minimum_age,
     is_valid_password,
     normalize_birth_date,
@@ -191,6 +193,20 @@ async def update_me(
         data["birth_date"] = birth
     if "gender" in data and data["gender"]:
         data["gender"] = gender_to_code(data["gender"])
+    # 한글 성명은 한글만 허용. 값이 실제로 바뀔 때만 검증해 기존 회원(구글 가입 시
+    # 자동 채워진 라틴 문자 이름 등)이 다른 항목 수정에서 막히지 않게 한다.
+    # 단, 프로필 미완성(= Google 회원가입 마무리)은 회원가입과 동일하게 항상 검증한다.
+    if "name_ko" in data and data["name_ko"] is not None:
+        new_name_ko = str(data["name_ko"]).strip()
+        changed = new_name_ko != (user.name_ko or "").strip()
+        if (changed or is_profile_incomplete(user)) and not is_hangul_name(new_name_ko):
+            raise fo_api_error("VALIDATION_ERROR", "name_ko_hangul_only", lang)
+        data["name_ko"] = new_name_ko
+    # 국적·제1언어는 화면 언어와 무관한 표준값(한국어)으로 저장한다.
+    if "nationality" in data and data["nationality"]:
+        data["nationality"] = normalize_nationality(data["nationality"])
+    if "first_language" in data and data["first_language"]:
+        data["first_language"] = normalize_first_language(data["first_language"])
     roster_err = validate_roster_codes(
         data.get("job_code"), data.get("motive_code"), data.get("purpose_code"), lang=lang
     )

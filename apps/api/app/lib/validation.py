@@ -43,6 +43,15 @@ def is_under_minimum_age(birth_yyyymmdd: str, as_of: date | None = None) -> bool
     return age < settings.min_signup_age_years
 
 
+# 한글 성명 — 한글 음절·자모와 공백만 허용 (연명부 '한글성명' 컬럼 정합)
+HANGUL_NAME_RE = re.compile(r"^[가-힣ᄀ-ᇿ㄰-㆏\s]+$")
+
+
+def is_hangul_name(value: str | None) -> bool:
+    v = (value or "").strip()
+    return bool(v) and bool(HANGUL_NAME_RE.match(v))
+
+
 def gender_to_code(value: str) -> str:
     v = (value or "").strip().lower()
     if v in ("1", "m", "male", "남", "남성"):

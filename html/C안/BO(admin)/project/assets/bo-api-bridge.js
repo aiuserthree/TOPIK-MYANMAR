@@ -589,6 +589,10 @@
       type: row.category || row.post_type || "환불",
       title: row.title,
       author: row.author_email || row.author_name || ("user" + row.user_id),
+      // 정보정정 → 회원 관리 딥링크용 (신청 작성자 식별)
+      authorEmail: row.author_email || "",
+      authorName: row.author_name || "",
+      userId: row.user_id != null ? String(row.user_id) : "",
       createdAt: fmtMmt(row.created_at),
       status: REFUND_STATUS_UI[row.workflow_status] || "접수",
       hasAnswer: !!row.has_admin_reply || !!row.admin_reply,

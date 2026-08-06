@@ -191,9 +191,10 @@ function ChangePasswordGate({ onDone }) {
 }
 
 function App() {
-  // hash-based router (?#applicants)
-  const initial = () => (location.hash.replace('#', '') || 'dashboard');
-  const [route, setRoute] = useState(initial);
+  // hash-based router (#applicants, #members?user=12 — 쿼리스트링은 각 패널이 읽는다)
+  const routeFromHash = () =>
+    (location.hash.replace('#', '').split('?')[0] || 'dashboard');
+  const [route, setRoute] = useState(routeFromHash);
   const [sbOpen, setSbOpen] = useState(false);
   const [mustChange, setMustChange] = useState(false);
   const state = useStore();
@@ -264,7 +265,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const fn = () => setRoute(location.hash.replace('#', '') || 'dashboard');
+    const fn = () => setRoute(routeFromHash());
     window.addEventListener('hashchange', fn);
     return () => window.removeEventListener('hashchange', fn);
   }, []);

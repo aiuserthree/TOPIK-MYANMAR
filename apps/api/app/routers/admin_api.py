@@ -54,7 +54,7 @@ from app.lib.payment_roster import (
     parse_payment_xlsx,
     payment_export_filename,
 )
-from app.lib.roster_export import build_roster_zip, group_roster_rows
+from app.lib.roster_export import APPROVED_STATUSES, build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
 from app.lib.validation import is_valid_password
@@ -1551,6 +1551,10 @@ async def info_review(
     return {"info_review_status": app.info_review_status, "rev": app.rev}
 
 
+# 수험번호 일괄 부여 미리보기 응답에 실어 보낼 최대 행 수(부여 건수 제한이 아님).
+EXAM_PREVIEW_LIMIT = 500
+
+
 def _assign_group_serials(apps_sorted: list[Application], accommodation_ids: set[int]) -> dict[int, int]:
     """(지역,시험장,수준) 묶음 내 응시자코드(4자리) 일련번호 배정.
 
@@ -1623,8 +1627,10 @@ async def assign_exam_numbers(
             "dry_run": body.dry_run,
             "assigned": 0,
             "eligible_count": 0,
+            "preview_total": 0,
             "preview": [],
             "preview_rows": [],
+            "preview_limit": EXAM_PREVIEW_LIMIT,
             "groups": [],
             "skipped": [],
         }
@@ -1637,6 +1643,22 @@ async def assign_exam_numbers(
         )
     )
     accommodation_subs = {sid for (sid,) in sub_res.all()}
+
+    # 동시 응시(Ⅰ+Ⅱ 모두 승인 완료) submission — 연명부와 동일하게 그룹 내 앞순번 배정.
+    # 이미 부여된 건(exam_number_assigned)도 포함해야 회차 중간 재실행 시 판정이 유지된다.
+    dual_res = await db.execute(
+        select(Application.submission_id, Application.exam_level).where(
+            Application.exam_round_id == round_id,
+            Application.is_deleted.is_(False),
+            Application.status.in_(APPROVED_STATUSES),
+        )
+    )
+    levels_by_sub: dict[int, set[str]] = {}
+    for sub_id, lvl in dual_res.all():
+        levels_by_sub.setdefault(sub_id, set()).add(str(lvl or "I").upper())
+    dual_submission_ids = {
+        sid for sid, lv in levels_by_sub.items() if "I" in lv and "II" in lv
+    }
 
     venue_cache: dict[int, ExamVenue] = {}
 
@@ -1691,8 +1713,14 @@ async def assign_exam_numbers(
                     }
                 )
             continue
-        # 영문명 오름차순(동명 시 id 안정 정렬).
-        pairs.sort(key=lambda pu: ((pu[1].name_en or "").upper(), pu[0].id))
+        # 연명부와 동일 순서: 동시 응시(Ⅰ+Ⅱ) 우선 → 영문명 오름차순(동명 시 id 안정 정렬).
+        pairs.sort(
+            key=lambda pu: (
+                0 if pu[0].submission_id in dual_submission_ids else 1,
+                (pu[1].name_en or "").upper(),
+                pu[0].id,
+            )
+        )
         apps_sorted = [app for app, _ in pairs]
         accommodation_ids = {a.id for a in apps_sorted if a.submission_id in accommodation_subs}
         serials = _assign_group_serials(apps_sorted, accommodation_ids)
@@ -1766,8 +1794,12 @@ async def assign_exam_numbers(
         "dry_run": body.dry_run,
         "assigned": assigned if not body.dry_run else len(preview),
         "eligible_count": len(rows),
-        "preview": preview[:50],
-        "preview_rows": preview_rows[:50],
+        # preview_total: 실제 부여 대상 전체 건수(승인 완료 + 미부여).
+        # preview/preview_rows 는 모달 표시용 상한이며 부여 건수와 무관하다.
+        "preview_total": len(preview),
+        "preview": preview[:EXAM_PREVIEW_LIMIT],
+        "preview_rows": preview_rows[:EXAM_PREVIEW_LIMIT],
+        "preview_limit": EXAM_PREVIEW_LIMIT,
         "groups": group_summ,
         "skipped": skipped,
     }

@@ -11,16 +11,34 @@ function isGoogleMember(m) {
   return m && m.signupProvider === 'google';
 }
 
+/** #members?q=...&user=12&open=edit — 환불·정보정정 패널에서 넘어온 딥링크 파라미터 */
+function readMemberDeepLink() {
+  const raw = location.hash.split('?')[1] || '';
+  if (!raw) return null;
+  const p = new URLSearchParams(raw);
+  const q = (p.get('q') || '').trim();
+  const user = (p.get('user') || '').trim();
+  if (!q && !user) return null;
+  return { q, user, open: p.get('open') || '' };
+}
+
+function clearMemberDeepLink() {
+  if (location.hash.indexOf('?') > -1) {
+    history.replaceState(null, '', location.pathname + location.search + '#members');
+  }
+}
+
 function MembersPanel() {
   const state = useStore();
   const canEdit = DataStore.can('members', 'edit');
   const canSuspend = DataStore.can('members', 'suspend');
   const canReset = DataStore.can('members', 'reset');
   const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
+  const deepLink = useMemo(() => readMemberDeepLink(), []);
   const [stF, setStF] = useState('all');
   const [natF, setNatF] = useState('all');
-  const [q, setQ] = useState('');
-  const [qDebounced, setQDebounced] = useState('');
+  const [q, setQ] = useState(deepLink ? deepLink.q : '');
+  const [qDebounced, setQDebounced] = useState(deepLink ? deepLink.q : '');
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const PER = 12;
@@ -67,6 +85,28 @@ function MembersPanel() {
   }, [isApi, state.members, stF, natF, q]);
 
   useEffect(() => setPage(1), [stF, natF, qDebounced]);
+
+  // 정보정정 신청에서 넘어온 경우 — 해당 신청자만 검색된 상태에서 수정 화면을 바로 연다.
+  const deepLinkOpened = useRef(false);
+  useEffect(() => {
+    if (!deepLink || deepLinkOpened.current) return;
+    if (!filtered.length) return;
+    // 검색 결과가 아직 갱신되지 않은(직전 목록) 상태에서 엉뚱한 회원을 여는 것을 방지
+    const matchesQuery = (m) => {
+      if (!deepLink.q) return true;
+      const q = deepLink.q.toLowerCase();
+      return (m.email || '').toLowerCase().includes(q)
+        || (m.nameKo || '').includes(deepLink.q)
+        || (m.nameEn || '').toLowerCase().includes(q);
+    };
+    const hit = (deepLink.user && filtered.find(m => m.id === deepLink.user))
+      || (filtered.length === 1 && matchesQuery(filtered[0]) ? filtered[0] : null);
+    if (!hit) return;
+    deepLinkOpened.current = true;
+    if (deepLink.open === 'edit' && canEdit && hit.status !== 'withdrawn') setEditId(hit.id);
+    else setDetailId(hit.id);
+    clearMemberDeepLink();
+  }, [deepLink, filtered, canEdit]);
 
   const totalItems = isApi
     ? (state.membersMeta && state.membersMeta.total_items != null ? state.membersMeta.total_items : filtered.length)

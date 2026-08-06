@@ -42,6 +42,30 @@ ROSTER_GUIDE = [
 _LEVEL_FOLDER = {"I": "TOPIK Ⅰ", "II": "TOPIK Ⅱ"}
 _COUNTRY_NAME = "미얀마"
 
+# 동시 응시(Ⅰ+Ⅱ) 판정 대상 상태 — 승인 완료 건만 인정(수험번호 부여 대상과 동일).
+APPROVED_STATUSES = ("approved", "exam_number_assigned")
+
+
+def dual_level_submission_ids(
+    rows: list[dict[str, Any]],
+    *,
+    approved_only: bool = True,
+) -> set[int]:
+    """TOPIK Ⅰ·Ⅱ를 함께 접수(동시 응시)한 submission_id 집합.
+
+    고객사 요청: 동시 응시자는 Ⅰ·Ⅱ 연명부 모두에서 앞쪽에 배치되어야
+    같은 시험장(캠퍼스)에 배정되므로 오전/오후 이동 부담이 없다.
+    """
+    levels: dict[int, set[str]] = {}
+    for row in rows:
+        sid = row.get("submission_id")
+        if sid is None:
+            continue
+        if approved_only and (row.get("status") or "") not in APPROVED_STATUSES:
+            continue
+        levels.setdefault(sid, set()).add(str(row.get("exam_level") or "I").upper())
+    return {sid for sid, lv in levels.items() if "I" in lv and "II" in lv}
+
 
 def roster_export_basename(*, round_no: int | None, venue_name: str) -> str:
     """제{회차}회 TOPIK 지원자 연명부({국가}_{시험장})"""
@@ -107,11 +131,17 @@ def _roster_row(row: dict[str, Any]) -> list:
     ]
 
 
-def _sort_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _sort_rows(
+    rows: list[dict[str, Any]],
+    dual_ids: set[int] | frozenset = frozenset(),
+) -> list[dict[str, Any]]:
+    """동시 응시자(Ⅰ+Ⅱ) 우선 → 수험번호 → 영문명 순."""
+
     def key(r: dict[str, Any]) -> tuple:
+        dual = 0 if r.get("submission_id") in dual_ids else 1
         exam = r.get("exam_number") or ""
         name = (r.get("name_en") or r.get("name_ko") or "").lower()
-        return (0 if exam else 1, exam, name)
+        return (dual, 0 if exam else 1, exam, name, r.get("id") or 0)
 
     return sorted(rows, key=key)
 
@@ -142,13 +172,16 @@ def build_roster_zip(
         level_pfx, _, venue = key.split("|", 2)
         levels_by_venue.setdefault(venue, set()).add(level_pfx)
 
+    # 동시 응시 판정은 수준별 그룹을 가로질러야 하므로 전체 행에서 한 번만 계산.
+    dual_ids = dual_level_submission_ids([r for rows in groups.values() for r in rows])
+
     buf = io.BytesIO()
     venues_in_export: set[str] = set()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for key, rows in groups.items():
             level_pfx, _, venue = key.split("|", 2)
             venues_in_export.add(venue)
-            sorted_rows = _sort_rows(rows)
+            sorted_rows = _sort_rows(rows, dual_ids)
             data = [_roster_row(r) for r in sorted_rows]
             multi_level = len(levels_by_venue.get(venue, set())) > 1
             filename = roster_export_filename(

@@ -309,6 +309,8 @@
 
     /* ── 회원가입 JS (su.err_*) ── */
     'su.err_name_ko': { ko: '한글 성명을 입력해 주세요.', my: 'ကိုရီးယား အမည် ထည့်ပါ။', en: 'Please enter your Korean name.' },
+    'val.name_ko_hangul': { ko: '한글 성명은 한글만 입력할 수 있습니다.', my: 'ကိုရီးယား အမည်ကို ဟန်ဂူးလ် (ကိုရီးယားစာလုံး) ဖြင့်သာ ရိုက်ထည့်နိုင်ပါသည်။', en: 'The Korean name may contain Hangul characters only.' },
+    'su.name_ko_hint': { ko: '한글만 입력할 수 있습니다.', my: 'ဟန်ဂူးလ် (ကိုရီးယားစာလုံး) သာ ရိုက်ထည့်နိုင်သည်။', en: 'Hangul characters only.' },
     'su.err_name_en': { ko: '영문 성명을 입력해 주세요.', my: 'အင်္ဂလိပ် အမည် ထည့်ပါ။', en: 'Please enter your English name.' },
     'su.err_profile_codes': { ko: '성별·국적·제1언어를 선택해 주세요.', my: 'ကျား/မ·နိုင်ငံသား·ပထမဘာသာစကား ရွေးပါ။', en: 'Please select gender, nationality, and first language.' },
     'su.err_phone': { ko: '연락처를 입력해 주세요.', my: 'ဆက်သွယ်ရန်နံပါတ် ထည့်ပါ။', en: 'Please enter your phone number.' },
