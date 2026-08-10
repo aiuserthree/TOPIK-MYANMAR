@@ -141,7 +141,13 @@ function VenueEditLP({ edit, onClose, onSave }) {
     const r = state.regions.find(x => x.code === rc);
     setF(s => ({ ...s, regionCode: rc, region: r ? r.name.split('(')[0] : s.region }));
   };
-  const valid = /^[0-9]{2}$/.test(f.code) && f.code !== '00' && f.nameKo && f.nameEn && f.cap > 0;
+  const cap = Number(f.cap) || 0;
+  const capI = Number(f.capI) || 0;
+  const capII = Number(f.capII) || 0;
+  // 급수별 정원은 전체 정원(사람 수)을 넘을 수 없다 — 회차 관리와 동일한 규칙.
+  // Ⅰ+Ⅱ 합이 전체를 넘는 것은 동시 접수자 때문에 정상이다.
+  const levelCapOk = !(cap > 0) || (capI <= cap && capII <= cap);
+  const valid = /^[0-9]{2}$/.test(f.code) && f.code !== '00' && f.nameKo && f.nameEn && cap > 0 && levelCapOk;
   return (
     <LP open size="sm" title={v ? `시험장 수정 — ${v.nameKo}` : '시험장 등록'}
       sub={v ? '코드 변경 시 기존 부여된 수험번호와 충돌 정책 합의' : null}
@@ -176,7 +182,15 @@ function VenueEditLP({ edit, onClose, onSave }) {
         </FormRow>
         <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-3)' }}>
           ※ 전체 정원과 별개로 적용됩니다. 급수별 정원이 차면 이 시험장에서는 해당 급수만 접수가 막히고 다른 급수는 계속 접수됩니다.
+          Ⅰ·Ⅱ 동시 접수자 때문에 <b>Ⅰ+Ⅱ 합이 전체 정원보다 커도 정상</b>이며,
+          <b>각 급수 정원은 전체 정원을 넘을 수 없습니다.</b>
         </div>
+        {!levelCapOk && (
+          <div style={{ gridColumn: '1 / -1', padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
+            ※ 급수별 정원({DataStore.fmtNum(capI)} / {DataStore.fmtNum(capII)})이 전체 정원({DataStore.fmtNum(cap)})을 초과했습니다.
+            각 급수 정원을 전체 정원 이하로 입력해 주세요.
+          </div>
+        )}
       </FieldSet>
 
       <FieldSet legend="명칭 / 주소" cols={1}>

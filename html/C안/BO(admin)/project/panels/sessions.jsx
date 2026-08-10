@@ -244,6 +244,10 @@ function SessionEditLP({ edit, onClose, onSave }) {
     return true;
   };
 
+  // 급수별 정원은 전체 정원(사람 수)을 넘을 수 없다 — 한 사람이 같은 급수를 두 번 접수할 수
+  // 없으므로 Ⅰ 원서 수 ≤ 사람 수. 반대로 Ⅰ+Ⅱ 합이 전체를 넘는 것은 정상이다(동시 접수자).
+  const levelCapOk = !(cap > 0) || (capI <= cap && capII <= cap);
+
   const scheduleOk = f.applyStart && f.applyEnd && f.payStart && f.payEnd && f.examDate
     && f.applyStart <= f.applyEnd
     && f.applyEnd <= f.payStart
@@ -255,6 +259,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
     && !Number.isNaN(cap) && cap >= 0
     && !Number.isNaN(capI) && capI >= 0
     && !Number.isNaN(capII) && capII >= 0
+    && levelCapOk
     && !Number.isNaN(feeI) && feeI > 0
     && !Number.isNaN(feeII) && feeII > 0
     && venues.length > 0;
@@ -309,8 +314,16 @@ function SessionEditLP({ edit, onClose, onSave }) {
         </FormRow>
         <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-3)' }}>
           ※ 급수별 정원은 전체 정원과 별개로 적용됩니다. 둘 중 하나라도 차면 해당 급수 접수가 마감됩니다.
-          Ⅰ·Ⅱ를 함께 접수한 사람은 전체 정원 1명 + Ⅰ 1건 + Ⅱ 1건으로 계산됩니다.
+          Ⅰ·Ⅱ를 함께 접수한 사람은 전체 정원 1명 + Ⅰ 1건 + Ⅱ 1건으로 계산되므로,
+          <b>Ⅰ+Ⅱ 합이 전체 정원보다 커도 정상</b>입니다. 다만 한 사람이 같은 급수를 두 번 접수할 수는 없어
+          <b>각 급수 정원은 전체 정원을 넘을 수 없습니다.</b>
         </div>
+        {!levelCapOk && (
+          <div style={{ gridColumn: '1 / -1', padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
+            ※ 급수별 정원({DataStore.fmtNum(capI)} / {DataStore.fmtNum(capII)})이 전체 정원({DataStore.fmtNum(cap)})을 초과했습니다.
+            각 급수 정원을 전체 정원 이하로 입력해 주세요.
+          </div>
+        )}
       </FieldSet>
 
       <FieldSet legend="일정" cols={2}>

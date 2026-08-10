@@ -395,6 +395,25 @@ class RoundPatchBody(BaseModel):
     venue_ids: list[int] | None = None
 
 
+def _assert_level_capacity(capacity: int | None, level_i: int | None, level_ii: int | None) -> None:
+    """급수별 정원은 전체 정원(사람 수)을 넘을 수 없다.
+
+    한 사람이 같은 급수를 두 번 접수할 수 없으므로 급수별 원서 수 ≤ 사람 수.
+    반대로 Ⅰ+Ⅱ 합이 전체 정원을 넘는 것은 동시 접수자 때문에 정상이다.
+    전체 정원 0 = 무제한이므로 검사 대상이 아니다.
+    """
+    total = int(capacity or 0)
+    if total <= 0:
+        return
+    for label, value in (("TOPIK Ⅰ", level_i), ("TOPIK Ⅱ", level_ii)):
+        if int(value or 0) > total:
+            raise api_error(
+                "VALIDATION_ERROR",
+                f"{label} 정원({int(value or 0):,})이 전체 정원({total:,})을 초과할 수 없습니다.",
+                400,
+            )
+
+
 class TranslateBody(BaseModel):
     text: str
     source: str = "ko"
@@ -1835,6 +1854,7 @@ async def create_round(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)  # RBAC: 회차 생성/수정 = 최고관리자(계약서 7절)
+    _assert_level_capacity(body.capacity, body.capacity_level_i, body.capacity_level_ii)
     conflict = (
         await db.execute(select(ExamRound).where(ExamRound.round_no == body.round_no))
     ).scalar_one_or_none()
@@ -1911,6 +1931,8 @@ async def update_round(
     ):
         if key in patch:
             setattr(rnd, key, patch[key])
+    # 부분 수정이라도 병합 결과 기준으로 검사한다(전체 정원만 낮추는 경우 포함).
+    _assert_level_capacity(rnd.capacity, rnd.capacity_level_i, rnd.capacity_level_ii)
     if "venue_ids" in patch:
         await db.execute(delete(ExamRoundVenue).where(ExamRoundVenue.exam_round_id == round_id))
         for vid in patch["venue_ids"]:
@@ -2063,6 +2085,7 @@ async def update_venue(
     ):
         if key in body:
             setattr(venue, key, body[key])
+    _assert_level_capacity(venue.capacity, venue.capacity_level_i, venue.capacity_level_ii)
     await write_audit(
         db, admin_user_id=admin.id, action_type="exam_venue_update",
         target_type="exam_venues", target_id=venue_id, after_data=body, ip_address=ip,
@@ -2079,6 +2102,7 @@ async def create_venue(
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     _require_super(admin)  # RBAC: 시험장 생성 = 최고관리자
+    _assert_level_capacity(body.capacity, body.capacity_level_i, body.capacity_level_ii)
     region = await db.execute(
         select(CountryRegionCode).where(
             CountryRegionCode.country_code == body.country_code,
