@@ -95,6 +95,16 @@ def _has_in_progress_level(sub: ApplicationSubmission) -> bool:
     return False
 
 
+def _holds_venue(sub: ApplicationSubmission) -> bool:
+    """동일 회차에 취소되지 않은 급수가 하나라도 있는지(반려 포함).
+
+    한 사람의 Ⅰ·Ⅱ는 반드시 같은 시험장이어야 한다. 오전(Ⅰ)·오후(Ⅱ)가 다른
+    캠퍼스로 갈리면 응시자가 이동해야 하고 연명부도 나뉘기 때문이다.
+    반려 건도 재신청으로 되살아나므로 시험장을 함께 잠근다.
+    """
+    return any(not _is_app_cancelled(app) for app in _apps_by_level(sub).values())
+
+
 def _reactivate_application(
     app: Application,
     *,
@@ -277,7 +287,7 @@ async def submit_application(
 
     is_reapply = bool(existing and existing.cancelled_at is None and body.reapply)
     venue_locked = bool(
-        existing and existing.cancelled_at is None and _has_in_progress_level(existing)
+        existing and existing.cancelled_at is None and _holds_venue(existing)
     )
     # Lock venue after round (consistent lock order) before capacity checks.
     if venue_locked:

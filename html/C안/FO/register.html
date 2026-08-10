@@ -434,7 +434,7 @@
     'reg.level_full_note': { ko: '정원이 마감되어 접수할 수 없습니다.', my: 'လူဦးရေ ပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။', en: 'This level is full and cannot be selected.' },
     'reg.err_level_full': { ko: '선택한 급수의 정원이 마감되었습니다. 다른 급수나 시험장을 선택해 주세요.', my: 'ရွေးချယ်ထားသော အဆင့်၏ လူဦးရေ ပြည့်သွားပါပြီ။ အခြားအဆင့် သို့မဟုတ် အခြားစာစစ်ဌာနကို ရွေးပါ။', en: 'The selected level is full. Please choose another level or venue.' },
     'reg.venue_reapply_lock': { ko: '재접수 시 기존 시험장으로 접수됩니다.', my: 'ပြန်လျှောက်ရာတွင် ယခင်စာစစ်ဌာနဖြင့် လျှောက်ထားမည်။', en: 'Re-application uses your original exam venue.' },
-    'reg.venue_inprogress_lock': { ko: '진행 중인 급수와 동일한 시험장으로 접수됩니다.', my: 'လျောက်ထားဆဲ စာမေးပွဲနှင့် တူညီသော စာစစ်ဌာနတွင် လျှောက်ထားမည်။', en: 'Registration uses the same venue as your in-progress level.' },
+    'reg.venue_inprogress_lock': { ko: '동일 회차에 접수한 급수와 같은 시험장으로 접수됩니다.', my: 'ဤအကြိမ်ရေတွင် လျှောက်ထားပြီးသော အဆင့်နှင့် တူညီသော စာစစ်ဌာနတွင် လျှောက်ထားမည်။', en: 'Registration uses the same venue as the level you already registered for this session.' },
     'reg.level_title': { ko: '응시 급수 선택', my: 'ဖြေဆိုမည့် စာမေးပွဲကို ရွေးချယ်ရန်', en: 'Select level' },
     'reg.multi_select': { ko: '(복수 선택 가능)', my: '(တစ်ခုထက်ပို ရွေးနိုင်)', en: '(multiple allowed)' },
     'reg.level_desc': { ko: 'TOPIK Ⅰ과 Ⅱ를 동시에 응시하실 수 있습니다.', my: 'TOPIK Ⅰ နှင့် Ⅱ ကို တစ်ပြိုင်တည်း ဖြေဆိုနိုင်သည်။', en: 'You can take TOPIK I and II at the same time.' },
@@ -1074,6 +1074,15 @@
       (levelState.II && isActiveLevelApp(levelState.II));
   }
 
+  // 취소되지 않은 급수가 하나라도 있으면(반려 포함) 시험장을 잠근다.
+  // 한 사람의 Ⅰ·Ⅱ가 다른 캠퍼스로 갈리면 오전·오후 이동이 생기고 연명부도 나뉜다.
+  function holdsVenue(levelState) {
+    return ['I', 'II'].some(function (lv) {
+      var app = levelState[lv];
+      return !!app && !isCancelledLevelApp(app);
+    });
+  }
+
   function resolveReapplyVenueFromApps(roundApps, mode) {
     var inProgress = (roundApps || []).filter(isActiveLevelApp);
     var pool = inProgress.length ? inProgress : roundApps;
@@ -1227,7 +1236,7 @@
       if (isReapply) {
         REG_STATE.reapplySelectableLevels = reapplySelectableLevels.slice();
         resetVenueLock();
-        if (hasInProgressLevel(levelState)) {
+        if (holdsVenue(levelState)) {
           var lockedVenue = resolveReapplyVenueFromApps(roundApps, mode);
           if (lockedVenue && lockedVenue.venueId) {
             applyVenueLock(lockedVenue.venueId, lockedVenue.venueName, 'reapply');
@@ -1235,7 +1244,7 @@
         } else if (roundApps.length) {
           preselectVenueWithoutLock(roundApps[0].exam_venue_id);
         }
-      } else if (hasInProgressLevel(levelState)) {
+      } else if (holdsVenue(levelState)) {
         var lockedVenueNormal = resolveReapplyVenueFromApps(roundApps, null);
         if (lockedVenueNormal && lockedVenueNormal.venueId) {
           applyVenueLock(lockedVenueNormal.venueId, lockedVenueNormal.venueName, 'inprogress');

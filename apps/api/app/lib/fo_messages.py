@@ -201,9 +201,9 @@ _CATALOG: dict[str, dict[str, str]] = {
         "en": "{level} is full at the selected venue. Please choose another venue.",
     },
     "venue_locked": {
-        "ko": "다른 급수가 진행 중일 때는 기존 시험장으로만 접수할 수 있습니다.",
-        "my": "အခြားအဆင့် ဆောင်ရွက်ဆဲဖြစ်ပါက ယခင်စာစစ်ဌာနဖြင့် သာ လျှောက်ထားနိုင်သည်။",
-        "en": "While another level is in progress, you must use the same exam venue.",
+        "ko": "동일 회차에 이미 접수한 급수가 있어 기존 시험장으로만 접수할 수 있습니다.",
+        "my": "ဤအကြိမ်ရေတွင် လျှောက်ထားပြီးသော အဆင့်ရှိသဖြင့် ယခင်စာစစ်ဌာနဖြင့်သာ လျှောက်ထားနိုင်သည်။",
+        "en": "You already have a level registered for this session, so you must use the same exam venue.",
     },
     "invalid_venue": {
         "ko": "유효하지 않은 시험장입니다.",
