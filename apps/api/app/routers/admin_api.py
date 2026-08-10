@@ -54,6 +54,7 @@ from app.lib.payment_roster import (
     parse_payment_xlsx,
     payment_export_filename,
 )
+from app.lib.capacity import count_active_round_submissions, round_level_counts
 from app.lib.roster_export import APPROVED_STATUSES, build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
@@ -370,6 +371,8 @@ class RoundBody(BaseModel):
     fee_level_i: int
     fee_level_ii: int
     capacity: int
+    capacity_level_i: int = 0
+    capacity_level_ii: int = 0
     venue_ids: list[int] = Field(default_factory=list)
 
 
@@ -385,6 +388,8 @@ class RoundPatchBody(BaseModel):
     fee_level_i: int | None = None
     fee_level_ii: int | None = None
     capacity: int | None = None
+    capacity_level_i: int | None = None
+    capacity_level_ii: int | None = None
     registration_status: str | None = None
     exam_number_visible_at: datetime | None = None
     venue_ids: list[int] | None = None
@@ -405,6 +410,8 @@ class VenueBody(BaseModel):
     country_code: str = "025"
     region_code: str
     capacity: int
+    capacity_level_i: int = 0
+    capacity_level_ii: int = 0
     memo: str | None = None
 
 
@@ -1810,7 +1817,14 @@ async def admin_exam_rounds(_: AuthUser = Depends(require_any_admin), db: AsyncS
     result = await db.execute(select(ExamRound).options(selectinload(ExamRound.venue_links)).order_by(ExamRound.round_no.desc()))
     rounds = list(result.scalars().all())
     await sync_exam_rounds_status(db, rounds)
-    return {"items": [serialize_round(r) for r in rounds]}
+    items = []
+    for r in rounds:
+        data = serialize_round(r)
+        # BO 회차 목록 '정원' 컬럼에서 전체/급수별 접수 현황을 함께 보여준다.
+        data["registered_count"] = await count_active_round_submissions(db, r.id)
+        data["registered_levels"] = await round_level_counts(db, r.id)
+        items.append(data)
+    return {"items": items}
 
 
 @router.post("/exam-rounds")
@@ -1845,6 +1859,8 @@ async def create_round(
         fee_level_i=body.fee_level_i,
         fee_level_ii=body.fee_level_ii,
         capacity=body.capacity,
+        capacity_level_i=body.capacity_level_i,
+        capacity_level_ii=body.capacity_level_ii,
     )
     db.add(rnd)
     await db.flush()
@@ -1889,6 +1905,8 @@ async def update_round(
         "fee_level_i",
         "fee_level_ii",
         "capacity",
+        "capacity_level_i",
+        "capacity_level_ii",
         "exam_number_visible_at",
     ):
         if key in patch:
@@ -2039,7 +2057,10 @@ async def update_venue(
     venue = (await db.execute(select(ExamVenue).where(ExamVenue.id == venue_id))).scalar_one_or_none()
     if not venue:
         raise api_error("NOT_FOUND", "시험장을 찾을 수 없습니다.", 404)
-    for key in ("venue_code", "name_ko", "name_en", "name_my", "address", "region_code", "capacity", "memo", "is_active"):
+    for key in (
+        "venue_code", "name_ko", "name_en", "name_my", "address", "region_code",
+        "capacity", "capacity_level_i", "capacity_level_ii", "memo", "is_active",
+    ):
         if key in body:
             setattr(venue, key, body[key])
     await write_audit(
@@ -2075,6 +2096,8 @@ async def create_venue(
         country_code=body.country_code,
         region_code=body.region_code,
         capacity=body.capacity,
+        capacity_level_i=body.capacity_level_i,
+        capacity_level_ii=body.capacity_level_ii,
         memo=body.memo,
     )
     db.add(venue)

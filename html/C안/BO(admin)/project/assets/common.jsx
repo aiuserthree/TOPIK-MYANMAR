@@ -228,6 +228,17 @@ function Pill({ kind, children }) {
   return <span className={`pill pill-${kind}`}>{children}</span>;
 }
 
+// ----- 정원 표기 (회차·시험장 공용) -----
+// 0 = 미정(무제한) → '—'. 전체/Ⅰ/Ⅱ를 한 칸에 묶어 보여준다.
+function fmtCapValue(n) {
+  const v = Number(n);
+  return !v || Number.isNaN(v) || v <= 0 ? '—' : DataStore.fmtNum(v);
+}
+
+function fmtCapTriple(cap, capI, capII) {
+  return `${fmtCapValue(cap)} / ${fmtCapValue(capI)} / ${fmtCapValue(capII)}`;
+}
+
 // ----- Bulk action bar -----
 function BulkBar({ count, children, onClear }) {
   if (!count) return null;

@@ -1067,7 +1067,18 @@
       return st === 'scheduled' || st === 'planned';
     }
 
-    function isRoundFull(r) {
+    // 급수별 정원(level_occupancy). capacity<=0(무제한)이면 마감으로 보지 않음.
+    function isLevelFull(r, level) {
+      var occ = r && r.level_occupancy ? r.level_occupancy[level] : null;
+      if (!occ) return false;
+      var cap = Number(occ.capacity);
+      if (!(cap > 0)) return false;
+      if (occ.is_full === true) return true;
+      var registered = Number(occ.registered_count);
+      return !isNaN(registered) && registered >= cap;
+    }
+
+    function isRoundTotalFull(r) {
       if (!r) return false;
       // API is_full만 신뢰. capacity<=0(무제한)이거나 remaining/registered 누락 시 만석으로 보지 않음.
       if (r.is_full === true) {
@@ -1079,6 +1090,13 @@
       var cap2 = Number(r.capacity);
       var registered = Number(r.registered_count);
       return cap2 > 0 && !isNaN(registered) && registered >= cap2;
+    }
+
+    // Ⅰ·Ⅱ 중 하나만 마감이면 접수는 계속 열려 있다(남은 급수로 접수 가능).
+    function isRoundFull(r) {
+      if (!r) return false;
+      if (isRoundTotalFull(r)) return true;
+      return isLevelFull(r, 'I') && isLevelFull(r, 'II');
     }
 
     function isApplyOpen(r) {

@@ -55,6 +55,9 @@ class ExamVenue(TimestampMixin, Base):
     country_code: Mapped[str] = mapped_column(String(3), nullable=False, server_default="025")
     region_code: Mapped[str] = mapped_column(String(3), nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    # 급수별 정원(0=무제한). capacity(사람 수 상한)와 별개로 적용된다.
+    capacity_level_i: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    capacity_level_ii: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     memo: Mapped[Optional[str]] = mapped_column(Text)
 
@@ -74,6 +77,9 @@ class ExamRound(TimestampMixin, Base):
     fee_level_i: Mapped[int] = mapped_column(Integer, nullable=False)
     fee_level_ii: Mapped[int] = mapped_column(Integer, nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False)
+    # 급수별 정원(0=무제한). capacity(사람 수 상한)와 별개로 적용된다.
+    capacity_level_i: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    capacity_level_ii: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     registration_status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default="scheduled"
     )

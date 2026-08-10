@@ -69,7 +69,7 @@ function VenuesPanel() {
         <div className="dg-scroll">
           <table className="dg">
             <thead><tr>
-              <th>코드</th><th>지역</th><th>한글 명칭</th><th>영문 명칭</th><th>미얀마어 명칭</th><th>주소</th><th className="num">정원</th><th>상태</th><th>비고</th><th>관리</th>
+              <th>코드</th><th>지역</th><th>한글 명칭</th><th>영문 명칭</th><th>미얀마어 명칭</th><th>주소</th><th className="num">정원(전체/Ⅰ/Ⅱ)</th><th>상태</th><th>비고</th><th>관리</th>
             </tr></thead>
             <tbody>
               {list.map(v => (
@@ -80,7 +80,7 @@ function VenuesPanel() {
                   <td className="muted">{v.nameEn}</td>
                   <td className="muted">{v.nameMy || '—'}</td>
                   <td className="muted" style={{ maxWidth: 240, overflow:'hidden', textOverflow:'ellipsis' }}>{v.address}</td>
-                  <td className="num">{DataStore.fmtNum(v.cap)}</td>
+                  <td className="num">{fmtCapTriple(v.cap, v.capI, v.capII)}</td>
                   <td>
                     <Pill kind={v.active ? 'active' : 'inactive'}>{v.active ? '활성' : '비활성'}</Pill>
                   </td>
@@ -107,10 +107,16 @@ function VenueEditLP({ edit, onClose, onSave }) {
   const state = useStore();
   const v = edit.id ? state.venues.find(x => x.id === edit.id) : null;
   const [f, setF] = useState(v ? { ...v } : {
-    code: '', regionCode: '001', region: '양곤', nameKo: '', nameEn: '', nameMy: '', address: '', cap: 100, active: true, memo: ''
+    code: '', regionCode: '001', region: '양곤', nameKo: '', nameEn: '', nameMy: '', address: '', cap: 100, capI: 0, capII: 0, active: true, memo: ''
   });
   const [translating, setTranslating] = useState(false);
   const set = (k, val) => setF(s => ({ ...s, [k]: val }));
+  // 정원 입력: 포커스 시 전체 선택 → 기존 값(0 등) 위에 바로 덮어쓸 수 있게 (회차 관리와 동일)
+  const selectAllOnFocus = (e) => e.target.select();
+  const parseRequiredInt = (raw) => {
+    const n = parseInt(raw, 10);
+    return Number.isNaN(n) ? 0 : n;
+  };
   const applyMyanmarTranslate = async () => {
     if (!f.nameKo || translating) return;
     setTranslating(true);
@@ -156,9 +162,21 @@ function VenueEditLP({ edit, onClose, onSave }) {
         <FormRow label="시험장 코드 (2자리, 01~99)" required hint="동일 지역 내 unique, 00 사용 불가">
           <input className="input" maxLength={2} value={f.code} onChange={e => set('code', e.target.value.replace(/\D/g,''))}/>
         </FormRow>
-        <FormRow label="정원" required>
-          <input type="number" className="input" value={f.cap} onChange={e => set('cap', parseInt(e.target.value||'0'))}/>
+        <FormRow label="전체 정원 (인원)" required hint="Ⅰ·Ⅱ 동시 접수자도 1명">
+          <input type="number" className="input" min={0} value={f.cap || 0} onFocus={selectAllOnFocus} onChange={e => set('cap', parseRequiredInt(e.target.value))}/>
         </FormRow>
+      </FieldSet>
+
+      <FieldSet legend="급수별 정원 (접수 원서 수)" cols={2}>
+        <FormRow label="TOPIK Ⅰ 정원" hint="0 = 미정(무제한)">
+          <input type="number" className="input" min={0} value={f.capI || 0} onFocus={selectAllOnFocus} onChange={e => set('capI', parseRequiredInt(e.target.value))}/>
+        </FormRow>
+        <FormRow label="TOPIK Ⅱ 정원" hint="0 = 미정(무제한)">
+          <input type="number" className="input" min={0} value={f.capII || 0} onFocus={selectAllOnFocus} onChange={e => set('capII', parseRequiredInt(e.target.value))}/>
+        </FormRow>
+        <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-3)' }}>
+          ※ 전체 정원과 별개로 적용됩니다. 급수별 정원이 차면 이 시험장에서는 해당 급수만 접수가 막히고 다른 급수는 계속 접수됩니다.
+        </div>
       </FieldSet>
 
       <FieldSet legend="명칭 / 주소" cols={1}>

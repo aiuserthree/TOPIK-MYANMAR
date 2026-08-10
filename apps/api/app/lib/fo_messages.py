@@ -190,6 +190,16 @@ _CATALOG: dict[str, dict[str, str]] = {
         "my": "ရွေးချယ်ထားသော စာစစ်ဌာန လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။ အခြားစာစစ်ဌာနကို ရွေးပါ။",
         "en": "The selected venue is full. Please choose another venue.",
     },
+    "round_level_full": {
+        "ko": "{level} 정원이 마감되어 접수할 수 없습니다. 다른 급수를 선택해 주세요.",
+        "my": "{level} အတွက် လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။ အခြားအဆင့်ကို ရွေးပါ။",
+        "en": "{level} is full and no longer accepting registrations. Please choose another level.",
+    },
+    "venue_level_full": {
+        "ko": "선택한 시험장의 {level} 정원이 마감되었습니다. 다른 시험장을 선택해 주세요.",
+        "my": "ရွေးချယ်ထားသော စာစစ်ဌာန၏ {level} လူဦးရေ ပြည့်သွားပါပြီ။ အခြားစာစစ်ဌာနကို ရွေးပါ။",
+        "en": "{level} is full at the selected venue. Please choose another venue.",
+    },
     "venue_locked": {
         "ko": "다른 급수가 진행 중일 때는 기존 시험장으로만 접수할 수 있습니다.",
         "my": "အခြားအဆင့် ဆောင်ရွက်ဆဲဖြစ်ပါက ယခင်စာစစ်ဌာနဖြင့် သာ လျှောက်ထားနိုင်သည်။",

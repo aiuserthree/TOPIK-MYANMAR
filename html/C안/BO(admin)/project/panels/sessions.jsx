@@ -64,6 +64,8 @@ function SessionsPanel() {
         examDate: s.examDate,
         resultDate: s.resultDate || '',
         cap: s.cap,
+        capI: s.capI,
+        capII: s.capII,
         feeI: s.feeI,
         feeII: s.feeII,
         venues: (s.venues || []).map(String),
@@ -118,7 +120,7 @@ function SessionsPanel() {
             <thead>
               <tr>
                 <th>회차</th><th>회차명</th><th>접수기간</th><th>시험일</th><th>발표일</th>
-                <th className="num">정원</th><th className="num">접수자</th><th>응시료(Ⅰ/Ⅱ)</th><th>시험장</th><th>상태</th><th>관리</th>
+                <th className="num">정원(전체/Ⅰ/Ⅱ)</th><th className="num">접수자(전체/Ⅰ/Ⅱ)</th><th>응시료(Ⅰ/Ⅱ)</th><th>시험장</th><th>상태</th><th>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -134,8 +136,8 @@ function SessionsPanel() {
                     <td className="code">{s.applyStart} ~ {s.applyEnd}</td>
                     <td className="code">{s.examDate}</td>
                     <td className="code muted">{DataStore.fmtResultDate(s.resultDate)}</td>
-                    <td className="num">{DataStore.fmtNum(s.cap)}</td>
-                    <td className="num">{DataStore.fmtNum(s.applicants || 0)}</td>
+                    <td className="num">{fmtCapTriple(s.cap, s.capI, s.capII)}</td>
+                    <td className="num">{DataStore.fmtNum(s.applicants || 0)} / {DataStore.fmtNum(s.applicantsI || 0)} / {DataStore.fmtNum(s.applicantsII || 0)}</td>
                     <td className="code">{DataStore.fmtNum(s.feeI)}/{DataStore.fmtNum(s.feeII)}</td>
                     <td>{s.venues.length}개소</td>
                     <td><Pill kind={statusKind}>{statusLabel}</Pill></td>
@@ -201,6 +203,8 @@ function SessionEditLP({ edit, onClose, onSave }) {
     payStart: existing.payStart || '',
     payEnd: existing.payEnd || '',
     cap: existing.cap != null ? Number(existing.cap) : 0,
+    capI: existing.capI != null ? Number(existing.capI) : 0,
+    capII: existing.capII != null ? Number(existing.capII) : 0,
     feeI: existing.feeI != null ? Number(existing.feeI) : 0,
     feeII: existing.feeII != null ? Number(existing.feeII) : 0,
     no: existing.no != null ? Number(existing.no) : nextNo,
@@ -208,7 +212,7 @@ function SessionEditLP({ edit, onClose, onSave }) {
     no: nextNo,
     name: '',
     applyStart: '', applyEnd: '', payStart: '', payEnd: '', examDate: '', resultDate: '',
-    cap: 1000, feeI: 25, feeII: 25, venues: [], status: 'planned'
+    cap: 1000, capI: 0, capII: 0, feeI: 25, feeII: 25, venues: [], status: 'planned'
   });
 
   useEffect(() => { if (!f.name && !existing) setF(s => ({ ...s, name: `제${s.no}회 TOPIK` })); }, []);
@@ -226,6 +230,8 @@ function SessionEditLP({ edit, onClose, onSave }) {
   });
   const venues = (f.venues || []).map(String);
   const cap = Number(f.cap);
+  const capI = Number(f.capI);
+  const capII = Number(f.capII);
   const feeI = Number(f.feeI);
   const feeII = Number(f.feeII);
 
@@ -247,6 +253,8 @@ function SessionEditLP({ edit, onClose, onSave }) {
   const valid = f.name.trim()
     && scheduleOk
     && !Number.isNaN(cap) && cap >= 0
+    && !Number.isNaN(capI) && capI >= 0
+    && !Number.isNaN(capII) && capII >= 0
     && !Number.isNaN(feeI) && feeI > 0
     && !Number.isNaN(feeII) && feeII > 0
     && venues.length > 0;
@@ -284,9 +292,25 @@ function SessionEditLP({ edit, onClose, onSave }) {
           </div>
           <span className="hint">접수 시작일 00:00(MMT) 이전=예정 · 기간 내=접수중 · 마감일 23:59(MMT) 이후=마감. 폐지는 목록에서 별도 처리.</span>
         </FormRow>
-        <FormRow label="정원" required>
-          <input type="number" className="input" value={f.cap} min={0} onFocus={selectAllOnFocus} onChange={e => set('cap', parseRequiredInt(e.target.value))}/>
+        <FormRow label="전체 정원 (인원)" required>
+          <input type="number" className="input" min={0} value={f.cap || 0} onFocus={selectAllOnFocus} onChange={e => set('cap', parseRequiredInt(e.target.value))}/>
+          <span className="hint">Ⅰ·Ⅱ 동시 접수자도 1명으로 계산합니다. 0 = 미정(무제한).</span>
         </FormRow>
+      </FieldSet>
+
+      <FieldSet legend="급수별 정원 (접수 원서 수)" cols={2}>
+        <FormRow label="TOPIK Ⅰ 정원">
+          <input type="number" className="input" min={0} value={f.capI || 0} onFocus={selectAllOnFocus} onChange={e => set('capI', parseRequiredInt(e.target.value))}/>
+          <span className="hint">{existing ? `현재 접수 ${DataStore.fmtNum(existing.applicantsI || 0)}건 · ` : ''}0 = 미정(무제한)</span>
+        </FormRow>
+        <FormRow label="TOPIK Ⅱ 정원">
+          <input type="number" className="input" min={0} value={f.capII || 0} onFocus={selectAllOnFocus} onChange={e => set('capII', parseRequiredInt(e.target.value))}/>
+          <span className="hint">{existing ? `현재 접수 ${DataStore.fmtNum(existing.applicantsII || 0)}건 · ` : ''}0 = 미정(무제한)</span>
+        </FormRow>
+        <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-3)' }}>
+          ※ 급수별 정원은 전체 정원과 별개로 적용됩니다. 둘 중 하나라도 차면 해당 급수 접수가 마감됩니다.
+          Ⅰ·Ⅱ를 함께 접수한 사람은 전체 정원 1명 + Ⅰ 1건 + Ⅱ 1건으로 계산됩니다.
+        </div>
       </FieldSet>
 
       <FieldSet legend="일정" cols={2}>

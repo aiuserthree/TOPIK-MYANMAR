@@ -12,7 +12,10 @@ from app.database import get_db_session
 from app.lib.capacity import (
     count_active_round_submissions,
     count_active_venue_submissions,
+    level_occupancy_snapshot,
     occupancy_snapshot,
+    round_level_counts,
+    venue_level_counts,
 )
 from app.lib.exam_round_status import sync_exam_rounds_status
 from app.models.exam import ExamRound, ExamRoundVenue, ExamVenue
@@ -52,6 +55,12 @@ def serialize_round(r: ExamRound) -> dict:
         "fee_level_ii": r.fee_level_ii,
         "fees": {"I": r.fee_level_i, "II": r.fee_level_ii},
         "capacity": r.capacity,
+        "capacity_level_i": int(r.capacity_level_i or 0),
+        "capacity_level_ii": int(r.capacity_level_ii or 0),
+        "capacities": {
+            "I": int(r.capacity_level_i or 0),
+            "II": int(r.capacity_level_ii or 0),
+        },
         "registration_status": r.registration_status,
         "exam_number_visible_at": r.exam_number_visible_at.isoformat() if r.exam_number_visible_at else None,
         "venue_ids": [link.exam_venue_id for link in r.venue_links],
@@ -69,6 +78,8 @@ def serialize_venue(v: ExamVenue) -> dict:
         "country_code": v.country_code,
         "region_code": v.region_code,
         "capacity": v.capacity,
+        "capacity_level_i": int(v.capacity_level_i or 0),
+        "capacity_level_ii": int(v.capacity_level_ii or 0),
         "is_active": v.is_active,
         "memo": v.memo,
     }
@@ -79,7 +90,10 @@ async def serialize_round_public(db: AsyncSession, r: ExamRound) -> dict:
     data = serialize_round(r)
     registered = await count_active_round_submissions(db, r.id)
     data.update(occupancy_snapshot(int(r.capacity or 0), registered))
+    round_levels = await round_level_counts(db, r.id)
+    data["level_occupancy"] = level_occupancy_snapshot(r, round_levels)
 
+    venue_levels = await venue_level_counts(db, r.id)
     venue_stats: list[dict] = []
     for link in r.venue_links:
         venue = getattr(link, "exam_venue", None)
@@ -91,8 +105,13 @@ async def serialize_round_public(db: AsyncSession, r: ExamRound) -> dict:
         stat = {
             "exam_venue_id": venue.id,
             "capacity": int(venue.capacity or 0),
+            "capacity_level_i": int(venue.capacity_level_i or 0),
+            "capacity_level_ii": int(venue.capacity_level_ii or 0),
         }
         stat.update(occupancy_snapshot(int(venue.capacity or 0), v_registered))
+        stat["level_occupancy"] = level_occupancy_snapshot(
+            venue, venue_levels.get(venue.id)
+        )
         venue_stats.append(stat)
     data["venue_stats"] = venue_stats
     return data
@@ -103,6 +122,7 @@ async def serialize_venue_public(
     v: ExamVenue,
     *,
     exam_round_id: int | None = None,
+    level_counts: dict[int, dict[str, int]] | None = None,
 ) -> dict:
     """FO exam-venues payload; occupancy when exam_round_id is provided."""
     data = serialize_venue(v)
@@ -112,6 +132,9 @@ async def serialize_venue_public(
         db, exam_round_id=exam_round_id, exam_venue_id=v.id
     )
     data.update(occupancy_snapshot(int(v.capacity or 0), registered))
+    if level_counts is None:
+        level_counts = await venue_level_counts(db, exam_round_id)
+    data["level_occupancy"] = level_occupancy_snapshot(v, level_counts.get(v.id))
     return data
 
 
@@ -148,7 +171,13 @@ async def list_exam_venues(
         select(ExamVenue).where(ExamVenue.is_active.is_(True)).order_by(ExamVenue.venue_code)
     )
     venues = list(result.scalars().all())
+    level_counts = (
+        await venue_level_counts(db, exam_round_id) if exam_round_id is not None else None
+    )
     items = [
-        await serialize_venue_public(db, v, exam_round_id=exam_round_id) for v in venues
+        await serialize_venue_public(
+            db, v, exam_round_id=exam_round_id, level_counts=level_counts
+        )
+        for v in venues
     ]
     return {"items": items}

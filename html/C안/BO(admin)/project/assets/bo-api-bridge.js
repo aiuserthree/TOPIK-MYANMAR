@@ -330,6 +330,12 @@
     };
   }
 
+  // 정원 입력값 → 정수. 빈칸/NaN/음수는 0(무제한)으로 정규화.
+  function toCapacity(v) {
+    var n = parseInt(v, 10);
+    return isNaN(n) || n < 0 ? 0 : n;
+  }
+
   function mapSession(row, applicantCounts) {
     var st = STATUS_MAP[row.registration_status] || "planned";
     return {
@@ -343,11 +349,17 @@
       examDate: isoDate(row.exam_date),
       resultDate: isoDate(row.result_date), // null/empty → BO UI에서 '미정'
       cap: row.capacity,
+      capI: row.capacity_level_i != null ? row.capacity_level_i : 0,
+      capII: row.capacity_level_ii != null ? row.capacity_level_ii : 0,
       feeI: row.fee_level_i,
       feeII: row.fee_level_ii,
       venues: (row.venue_ids || []).map(String),
       status: st,
-      applicants: applicantCounts[row.id] || 0,
+      applicants: row.registered_count != null
+        ? row.registered_count
+        : (applicantCounts[row.id] || 0),
+      applicantsI: (row.registered_levels && row.registered_levels.I) || 0,
+      applicantsII: (row.registered_levels && row.registered_levels.II) || 0,
       examNumberVisibleAt: row.exam_number_visible_at || "",
     };
   }
@@ -363,6 +375,8 @@
       nameMy: row.name_my || "",
       address: row.address || "",
       cap: row.capacity,
+      capI: row.capacity_level_i != null ? row.capacity_level_i : 0,
+      capII: row.capacity_level_ii != null ? row.capacity_level_ii : 0,
       active: row.is_active !== false,
       memo: row.memo || "",
     };
@@ -1507,6 +1521,8 @@
       fee_level_i: data.feeI,
       fee_level_ii: data.feeII,
       capacity: data.cap,
+      capacity_level_i: toCapacity(data.capI),
+      capacity_level_ii: toCapacity(data.capII),
       venue_ids: (data.venues || []).map(function (v) { return parseInt(v, 10); }).filter(Boolean),
     };
     // API round ids are numeric. Mock/local ids (s107, sNaN) must never PATCH.
@@ -1532,6 +1548,8 @@
       address: data.address,
       region_code: data.regionCode,
       capacity: data.cap,
+      capacity_level_i: toCapacity(data.capI),
+      capacity_level_ii: toCapacity(data.capII),
       memo: data.memo || null,
     };
     var p = data.id && !data._isNew

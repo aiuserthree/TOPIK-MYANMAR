@@ -9,7 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
-from app.lib.capacity import ensure_round_capacity, ensure_venue_capacity
+from app.lib.capacity import (
+    ensure_round_capacity,
+    ensure_round_level_capacity,
+    ensure_venue_capacity,
+    ensure_venue_level_capacity,
+    level_capacity,
+)
 from app.lib.consents import persist_term_consents, required_terms_consent_error
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user
 from app.lib.errors import api_error, fo_api_error
@@ -113,6 +119,49 @@ def _reactivate_application(
     app.paid_at = None
     app.payment_memo = None
     app.payment_cancel_reason = None
+
+
+async def _ensure_level_capacity(
+    db: AsyncSession,
+    *,
+    exam_round: ExamRound,
+    venue: ExamVenue,
+    levels: list[str],
+    lang: str,
+) -> None:
+    """급수별 정원(회차·시험장) 검증.
+
+    ``levels``에는 이번 요청으로 **새로 좌석을 차지하는** 급수만 넘긴다
+    (반려 재신청처럼 기존 행을 되살리는 경우는 이미 좌석을 쥐고 있으므로 제외).
+    """
+    for level in levels:
+        if not await ensure_round_level_capacity(
+            db,
+            exam_round_id=exam_round.id,
+            level=level,
+            capacity=level_capacity(exam_round, level),
+        ):
+            raise fo_api_error(
+                "ROUND_LEVEL_FULL",
+                "round_level_full",
+                lang,
+                409,
+                level=level_label(level, lang),
+            )
+        if not await ensure_venue_level_capacity(
+            db,
+            exam_round_id=exam_round.id,
+            exam_venue_id=venue.id,
+            level=level,
+            capacity=level_capacity(venue, level),
+        ):
+            raise fo_api_error(
+                "VENUE_LEVEL_FULL",
+                "venue_level_full",
+                lang,
+                409,
+                level=level_label(level, lang),
+            )
 
 
 async def _purge_expired_drafts(db: AsyncSession, user_id: int) -> None:
@@ -271,6 +320,15 @@ async def submit_application(
                 level=level_label(level, lang),
             )
 
+        # 취소된 급수 행을 되살리는 경우만 급수 좌석을 새로 차지한다(반려 재신청은 유지).
+        await _ensure_level_capacity(
+            db,
+            exam_round=exam_round,
+            venue=venue,
+            levels=[lv for lv in levels if _is_app_cancelled(existing_apps[lv])],
+            lang=lang,
+        )
+
         existing.photo_checklist_confirmed = body.photo_checklist_confirmed
         existing.accommodation_requested = body.accommodation_requested
         existing.status = "submitted"
@@ -318,6 +376,11 @@ async def submit_application(
                 raise fo_api_error("ALREADY_SUBMITTED", "level_in_progress", lang, 409, levels=names)
             raise fo_api_error("ALREADY_SUBMITTED", "already_submitted_round", lang, 409)
 
+        # 회차 좌석(사람)은 이미 쥐고 있지만, 추가하는 급수는 새 급수 좌석을 차지한다.
+        await _ensure_level_capacity(
+            db, exam_round=exam_round, venue=venue, levels=levels_to_add, lang=lang
+        )
+
         venue_id = existing.exam_venue_id if venue_locked else body.exam_venue_id
         if venue_locked:
             existing.exam_venue_id = venue_id
@@ -364,6 +427,9 @@ async def submit_application(
         capacity=int(venue.capacity or 0),
     ):
         raise fo_api_error("VENUE_FULL", "venue_full", lang, 409)
+    await _ensure_level_capacity(
+        db, exam_round=exam_round, venue=venue, levels=levels, lang=lang
+    )
 
     if existing:
         # UNIQUE(user_id, exam_round_id) keeps cancelled rows — re-activate instead of INSERT.

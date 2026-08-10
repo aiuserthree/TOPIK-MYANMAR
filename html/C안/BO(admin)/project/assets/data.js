@@ -19,11 +19,11 @@
 
   // ---- Master data ----
   const VENUES = [
-    { id: 'v01', code: '01', regionCode: '001', region: '양곤', nameKo: '양곤대 흘라잉캠퍼스', nameEn: 'Yangon Univ. Hlaing Campus', address: 'No.1, Pyay Rd, Hlaing Tsp, Yangon', cap: 600, active: true, memo: '— 1차 시험 주 시험장. 책임자: U Aung (운영 합의 후 기재)' },
-    { id: 'v02', code: '02', regionCode: '001', region: '양곤', nameKo: '한국문화원', nameEn: 'Korean Cultural Center', address: '#3, Min Yegyaw St, Yangon', cap: 240, active: true, memo: '' },
-    { id: 'v03', code: '03', regionCode: '002', region: '만달레이', nameKo: '만달레이 외국어대학교', nameEn: 'Mandalay Univ. of Foreign Languages', address: '78th St, Mandalay', cap: 320, active: true, memo: '' },
-    { id: 'v04', code: '04', regionCode: '003', region: '네피도', nameKo: '네피도 한국어교육원', nameEn: 'Naypyidaw Korean Edu. Center', address: 'Zabuthiri, Naypyidaw', cap: 180, active: true, memo: '' },
-    { id: 'v05', code: '05', regionCode: '004', region: '몽유와', nameKo: '몽유와대학교', nameEn: 'Monywa University', address: 'Monywa, Sagaing', cap: 120, active: false, memo: '2026-1차 운영 보류' },
+    { id: 'v01', code: '01', regionCode: '001', region: '양곤', nameKo: '양곤대 흘라잉캠퍼스', nameEn: 'Yangon Univ. Hlaing Campus', address: 'No.1, Pyay Rd, Hlaing Tsp, Yangon', cap: 600, capI: 240, capII: 420, active: true, memo: '— 1차 시험 주 시험장. 책임자: U Aung (운영 합의 후 기재)' },
+    { id: 'v02', code: '02', regionCode: '001', region: '양곤', nameKo: '한국문화원', nameEn: 'Korean Cultural Center', address: '#3, Min Yegyaw St, Yangon', cap: 240, capI: 100, capII: 170, active: true, memo: '' },
+    { id: 'v03', code: '03', regionCode: '002', region: '만달레이', nameKo: '만달레이 외국어대학교', nameEn: 'Mandalay Univ. of Foreign Languages', address: '78th St, Mandalay', cap: 320, capI: 130, capII: 220, active: true, memo: '' },
+    { id: 'v04', code: '04', regionCode: '003', region: '네피도', nameKo: '네피도 한국어교육원', nameEn: 'Naypyidaw Korean Edu. Center', address: 'Zabuthiri, Naypyidaw', cap: 180, capI: 70, capII: 130, active: true, memo: '' },
+    { id: 'v05', code: '05', regionCode: '004', region: '몽유와', nameKo: '몽유와대학교', nameEn: 'Monywa University', address: 'Monywa, Sagaing', cap: 120, capI: 50, capII: 90, active: false, memo: '2026-1차 운영 보류' },
   ];
 
   const REGIONS = [
@@ -34,10 +34,10 @@
   ];
 
   const SESSIONS = [
-    { id: 's107', no: 107, name: '제107회 TOPIK', applyStart: '2026-07-17', applyEnd: '2026-07-21', payStart: '2026-07-24', payEnd: '2026-07-26', examDate: '2026-10-18', resultDate: '', cap: 1200, feeI: 25, feeII: 25, venues: ['v01','v02','v03','v04'], status: 'open', applicants: 0 },
-    { id: 's106', no: 106, name: '제106회 TOPIK', applyStart: '2026-06-01', applyEnd: '2026-07-21', payStart: '2026-07-24', payEnd: '2026-07-26', examDate: '2026-09-19', resultDate: '2026-10-20', cap: 1200, feeI: 25, feeII: 25, venues: ['v01','v02','v03','v04'], status: 'closed', applicants: 0 },
-    { id: 's105', no: 105, name: '제105회 TOPIK', applyStart: '2026-02-10', applyEnd: '2026-03-15', payStart: '2026-03-18', payEnd: '2026-03-20', examDate: '2026-05-09', resultDate: '2026-06-10', cap: 1000, feeI: 25, feeII: 25, venues: ['v01','v02','v03'], status: 'closed', applicants: 942 },
-    { id: 's104', no: 104, name: '제104회 TOPIK', applyStart: '2025-10-01', applyEnd: '2025-10-31', payStart: '2025-11-03', payEnd: '2025-11-05', examDate: '2025-12-14', resultDate: '2026-01-15', cap: 1000, feeI: 25, feeII: 25, venues: ['v01','v02','v03'], status: 'closed', applicants: 887 },
+    { id: 's107', no: 107, name: '제107회 TOPIK', applyStart: '2026-07-17', applyEnd: '2026-07-21', payStart: '2026-07-24', payEnd: '2026-07-26', examDate: '2026-10-18', resultDate: '', cap: 1200, capI: 450, capII: 800, feeI: 25, feeII: 25, venues: ['v01','v02','v03','v04'], status: 'open', applicants: 0 },
+    { id: 's106', no: 106, name: '제106회 TOPIK', applyStart: '2026-06-01', applyEnd: '2026-07-21', payStart: '2026-07-24', payEnd: '2026-07-26', examDate: '2026-09-19', resultDate: '2026-10-20', cap: 1200, capI: 450, capII: 800, feeI: 25, feeII: 25, venues: ['v01','v02','v03','v04'], status: 'closed', applicants: 0 },
+    { id: 's105', no: 105, name: '제105회 TOPIK', applyStart: '2026-02-10', applyEnd: '2026-03-15', payStart: '2026-03-18', payEnd: '2026-03-20', examDate: '2026-05-09', resultDate: '2026-06-10', cap: 1000, capI: 0, capII: 0, feeI: 25, feeII: 25, venues: ['v01','v02','v03'], status: 'closed', applicants: 942 },
+    { id: 's104', no: 104, name: '제104회 TOPIK', applyStart: '2025-10-01', applyEnd: '2025-10-31', payStart: '2025-11-03', payEnd: '2025-11-05', examDate: '2025-12-14', resultDate: '2026-01-15', cap: 1000, capI: 0, capII: 0, feeI: 25, feeII: 25, venues: ['v01','v02','v03'], status: 'closed', applicants: 887 },
   ];
 
   // ---- Applicants ----
