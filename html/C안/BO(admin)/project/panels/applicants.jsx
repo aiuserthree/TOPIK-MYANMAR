@@ -1122,7 +1122,9 @@ function ExamVisibilityCard({ sessionId }) {
         <button className="btn btn-primary" style={{ marginTop: 23 }} onClick={save} disabled={saving}>
           {saving ? '저장 중…' : '노출 시점 저장'}
         </button>
-        {iso && <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 설정(MMT): <code className="code-id">{(DataStore.fmtMmt ? DataStore.fmtMmt(iso) : iso).replace('T', ' ').slice(0, 16)}</code></div>}
+        {iso
+          ? <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 설정(MMT): <code className="code-id">{(DataStore.fmtMmt ? DataStore.fmtMmt(iso) : iso).replace('T', ' ').slice(0, 16)}</code></div>
+          : <div style={{ marginTop: 27, fontSize: 12, color: 'var(--st-photo)' }}>현재 <b>미설정</b> — 수험번호를 부여해도 응시자에게 노출되지 않습니다.</div>}
       </div>
     </div>
   );

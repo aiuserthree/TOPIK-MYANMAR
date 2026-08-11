@@ -426,11 +426,13 @@ def derive_rejection_info(apps: list) -> dict | None:
 
 
 def exam_number_visible(exam_number: str | None, round_visible_at: datetime | None) -> bool:
-    """수험번호 FO 노출 게이팅: 부여 후, 공개일 미설정이면 즉시 노출, 설정 시 해당 시각 이후."""
-    if not exam_number:
+    """수험번호 FO 노출 게이팅: 부여되고 + 공개일이 설정되고 + 그 시각이 지난 뒤에만 노출.
+
+    공개일 **미설정은 비공개**다. 관리자가 공개일을 정하지 않은 상태에서 수험번호를
+    부여했다는 이유만으로 응시자에게 노출되면 안 된다(제108회 조기 노출 사례).
+    """
+    if not exam_number or not round_visible_at:
         return False
-    if not round_visible_at:
-        return True
     return datetime.now(timezone.utc) >= _as_aware(round_visible_at)
 
 

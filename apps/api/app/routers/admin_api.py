@@ -30,7 +30,13 @@ from app.lib.deps import (
 )
 from app.lib.errors import api_error
 from app.lib.translate import translate_text
-from app.lib.formatting import board_status_label, fmt_date, fmt_datetime, resolve_application_no
+from app.lib.formatting import (
+    board_status_label,
+    exam_number_visible as _exam_number_visible,
+    fmt_date,
+    fmt_datetime,
+    resolve_application_no,
+)
 from app.config import get_settings
 from app.lib.email_notify import (
     notify_account_status,
@@ -545,7 +551,13 @@ def _app_row_dict(
         "info_reject_note": app.info_reject_note,
         "photo_file_id": app.photo_file_id,
         "exam_number": app.exam_number,
-        "exam_number_visible": app.exam_number_visible,
+        # 회차 정보가 있으면 공개일 기준으로 즉시 계산 — 저장 컬럼은 부여 시점 값이라
+        # 공개일을 나중에 바꾸면 실제 FO 노출 여부와 어긋난다.
+        "exam_number_visible": (
+            _exam_number_visible(app.exam_number, rnd.exam_number_visible_at)
+            if rnd is not None
+            else app.exam_number_visible
+        ),
         "application_no": resolve_application_no(app.application_no, app.submission_id, app.exam_level),
         # --- 연명부 10개 컬럼 채울 필드(계약서 3절) ---
         "name_ko": user.name_ko if user else None,
@@ -1774,9 +1786,10 @@ async def assign_exam_numbers(
             if not body.dry_run:
                 app.exam_number = exam_number
                 app.status = "exam_number_assigned"
-                app.exam_number_visible = (
-                    not rnd.exam_number_visible_at
-                    or rnd.exam_number_visible_at <= datetime.now(timezone.utc)
+                # 공개일 미설정 = 비공개. 부여 자체가 노출 사유가 되어서는 안 된다.
+                app.exam_number_visible = bool(
+                    rnd.exam_number_visible_at
+                    and rnd.exam_number_visible_at <= datetime.now(timezone.utc)
                 )
                 assigned += 1
         group_summ.append(
@@ -1933,6 +1946,20 @@ async def update_round(
             setattr(rnd, key, patch[key])
     # 부분 수정이라도 병합 결과 기준으로 검사한다(전체 정원만 낮추는 경우 포함).
     _assert_level_capacity(rnd.capacity, rnd.capacity_level_i, rnd.capacity_level_ii)
+    if "exam_number_visible_at" in patch:
+        # 공개일을 바꾸면 이미 부여된 건의 노출 플래그도 새 기준으로 다시 맞춘다.
+        visible_now = bool(
+            rnd.exam_number_visible_at
+            and rnd.exam_number_visible_at <= datetime.now(timezone.utc)
+        )
+        await db.execute(
+            update(Application)
+            .where(
+                Application.exam_round_id == round_id,
+                Application.exam_number.isnot(None),
+            )
+            .values(exam_number_visible=visible_now)
+        )
     if "venue_ids" in patch:
         await db.execute(delete(ExamRoundVenue).where(ExamRoundVenue.exam_round_id == round_id))
         for vid in patch["venue_ids"]:
