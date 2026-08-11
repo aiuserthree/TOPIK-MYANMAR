@@ -1113,7 +1113,7 @@ function ExamVisibilityCard({ sessionId }) {
         <h3>수험번호 / 수험표 노출 시점 설정 (FO 접수확인)</h3>
       </div>
       <div className="acard-body" style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <FormRow label="노출 시작일" hint="이 일시(MMT) 이전에는 사용자 화면(FO)에서 수험번호 미노출">
+        <FormRow label="노출 시작일" hint="비워 두면 공개되지 않습니다. 입력한 일시(MMT) 이후부터 사용자 화면(FO)에 노출됩니다.">
           <input type="date" className="input" style={{ height: 38, width: 200 }} value={date} onChange={e => setDate(e.target.value)}/>
         </FormRow>
         <FormRow label="노출 시작 시각">
@@ -1124,7 +1124,7 @@ function ExamVisibilityCard({ sessionId }) {
         </button>
         {iso
           ? <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 설정(MMT): <code className="code-id">{(DataStore.fmtMmt ? DataStore.fmtMmt(iso) : iso).replace('T', ' ').slice(0, 16)}</code></div>
-          : <div style={{ marginTop: 27, fontSize: 12, color: 'var(--st-photo)' }}>현재 <b>미설정</b> — 수험번호를 부여해도 응시자에게 노출되지 않습니다.</div>}
+          : <div style={{ marginTop: 27, fontSize: 12, color: 'var(--text-3)' }}>현재 <b>미설정</b> — 노출 시점을 정하기 전까지 응시자에게 공개되지 않습니다.</div>}
       </div>
     </div>
   );
