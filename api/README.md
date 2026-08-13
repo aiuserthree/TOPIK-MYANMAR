@@ -3,7 +3,7 @@
 > **⚠️ 운영 API는 `apps/api/` (FastAPI)입니다.** 본 `api/` 디렉터리는 초기 Fastify 프로토타입 참조용이며, 저장소에 일부 소스만 존재합니다.  
 > **현행 문서:** [`apps/api/README.md`](../apps/api/README.md) · [`docs/DEV_SPEC.md`](../docs/DEV_SPEC.md)
 
-Node.js 20 + Fastify 4 + TypeScript. PostgreSQL schema: `../db/migrations/` (SQL V001~V008).
+Node.js 20 + Fastify 4 + TypeScript. PostgreSQL schema: `../db/migrations/` — 이 문서가 작성된 시점의 기준은 **V001~V008**이며, 현재 저장소는 **V022**까지 있습니다. V009 이후 스키마(공지 다국어·접근 로그·급수별 정원·수험번호 공개 정책 등)는 아래 엔드포인트 표에 반영되어 있지 않습니다.
 
 **macOS 로컬 실행 (PostgreSQL 설치부터):** [로컬실행_가이드.md](./로컬실행_가이드.md)
 
@@ -14,6 +14,11 @@ Node.js 20 + Fastify 4 + TypeScript. PostgreSQL schema: `../db/migrations/` (SQL
 - `psql` CLI (for `npm run migrate`)
 
 ## Quick start
+
+> **현재 저장소만으로는 실행되지 않습니다.** `api/package.json`·`api/scripts/`와 대부분의
+> `src/routes`·`src/lib`가 동봉되어 있지 않아 아래 `npm` 명령이 모두 실패합니다
+> (남아 있는 소스: `src/index.ts`, `src/lib/validation.ts`, `src/routes/{auth-signup,application-drafts,me}.ts`).
+> 아래는 전체 트리가 있을 때의 절차입니다. 실제 로컬 개발은 [`apps/api/README.md`](../apps/api/README.md)를 따르세요.
 
 ```bash
 # 1. PostgreSQL 준비 (로컬실행_가이드.md 참고)
@@ -224,6 +229,15 @@ Audit: `payment_complete` / `payment_cancel` / `exam_number_assign` / `photo_rev
 written to `admin_audit_logs`. Capacity guard: `POST .../payment` refuses when the venue is at
 `exam_venues.capacity` (override with `{"ignore_capacity":true}`).
 
+> **⚠️ 아래 BO 설명은 폐기되었습니다.** 당시 계획은 정적 BO(`html/C안/BO/`, React 없음)를
+> 본선으로 두고 React handoff는 확장하지 않는 것이었으나, **반대로 정리되었습니다.**
+> `html/C안/BO/`는 저장소에서 삭제되었고, 운영 BO는 `html/C안/BO(admin)/project/`
+> (React 18 CDN SPA, 패널 17개)가 `bo-api-bridge.js`로 FastAPI를 호출합니다.
+> 현행 구조는 [`docs/DEV_SPEC.md`](../docs/DEV_SPEC.md) §5.2를 보세요.
+
+<details>
+<summary>당시 계획 (기록용)</summary>
+
 **Static BO UI (NO React):** `html/C안/BO/` wires these endpoints via
 `html/shared/bo-api-client.js` + `assets/bo-common.js`:
 - `login.html` · `applications.html` (접수→수납→수험번호→연명부)
@@ -232,6 +246,8 @@ written to `admin_audit_logs`. Capacity guard: `POST .../payment` refuses when t
 
 All BO screens share a top nav (`.bo-nav`). The Claude-handoff `html/C안/BO(admin)/` is React/JSX
 and is intentionally **not** extended. Serve BO from an allowed origin (e.g. `http://localhost:8080`).
+
+</details>
 
 ### BO content management (공지/FAQ/약관/회차/시험장)
 
@@ -269,8 +285,9 @@ curl -s -X POST "$API/api/v1/admin/notices" -H "Authorization: Bearer $ADMIN_TOK
 
 > **마이그레이션 메모:** 위 기능은 새 테이블이 필요 없습니다 — `notices`/`faq_items`/`terms`/
 > `exam_rounds`/`exam_venues`/`country_region_codes`는 모두 `db/migrations/V001`에 이미 존재합니다.
-> 따라서 신규 스키마 마이그레이션 없음. (이후 스키마 변경 시 `db/migrations/V0xx`를 추가하고
-> `scripts/migrate.js`에 연결하세요.)
+> 따라서 신규 스키마 마이그레이션 없음. (**현행:** 스키마 변경 시 `db/migrations/V0xx.sql`만 추가하면
+> `scripts/run-migrations.sh`가 파일명 순서로 자동 적용합니다. 문서가 가리키는 `scripts/migrate.js`는
+> 레거시 트리의 파일로, 저장소에 없습니다.)
 
 ### 관리자 계정 프로비저닝 (운영 안전)
 
@@ -397,6 +414,10 @@ curl -s -X POST http://localhost:3000/api/v1/auth/login \
 
 ## Scripts
 
+> `api/package.json`이 저장소에 없어 아래 스크립트는 현재 실행할 수 없습니다 (레거시 트리 기준 목록).
+> 현행 대응: migration은 `scripts/run-migrations.sh`, 시드는 `scripts/seed_dev.py`·`seed_prod.py`,
+> 관리자 생성은 `scripts/create_admin.py`입니다.
+
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Hot reload (`tsx watch`) |
@@ -435,6 +456,8 @@ See `.env.example`. Key variables:
 
 ## Related
 
-- `../db/README.md` — schema & Flyway
-- `../docs/기능정의서/백엔드_스택_결정.md` — stack & phases
-- `../docs/기능정의서/REST_API_명세_초안.md` — full API spec
+- [`../docs/DEV_SPEC.md`](../docs/DEV_SPEC.md) — 현행 개발 스펙 (스키마 V001~V022, FO/BO 구조)
+- [`../apps/api/README.md`](../apps/api/README.md) — 운영 FastAPI 로컬 실행
+- `../db/migrations/` — SQL migration (V001~V022). `../db/README.md`는 없습니다
+- [`../docs/기능정의서/백엔드_스택_결정.md`](../docs/기능정의서/백엔드_스택_결정.md) — stack & phases
+- [`../docs/기능정의서/REST_API_명세_초안.md`](../docs/기능정의서/REST_API_명세_초안.md) — full API spec

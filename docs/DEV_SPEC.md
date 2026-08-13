@@ -709,7 +709,7 @@ bash scripts/deploy-all-from-git.sh
 2. **`html/C안/FO` → `apps/web` 이전 (중기)** — `apps/web`은 현재 홈 placeholder만
 3. **레거시 `api/` Fastify 정리** — 참조용 잔존; 신규 개발은 `apps/api` 기준
 4. **Google OAuth 운영 앱 등록** — API 구현 완료, 고객사 `GOOGLE_CLIENT_ID` 설정 대기
-5. **문서 정리** — `api/README.md`·`DEPLOY.md`의 `html/C안/BO/` 경로는 저장소와 불일치 (handoff 경로로 갱신 필요)
+5. ~~문서 정리 — `api/README.md`·`DEPLOY.md`의 `html/C안/BO/` 경로 불일치~~ — 정리 완료. `DEPLOY.md`는 이미 `BO(admin)/project/` 기준이었고, `api/README.md`의 정적 BO 계획은 폐기 표시 후 기록용으로 접어두었습니다
 6. **응시료·수납처** — 고객사 최종 문구 확정 후 `rules-fee.html` 등 정적 HTML 갱신 (API 연동 불필요, §15)
 
 ### 14.3 운영 유지 점검
