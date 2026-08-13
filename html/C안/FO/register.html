@@ -95,6 +95,17 @@
     font-size: 12px; font-weight: 600; color: var(--text-3);
     margin-top: 8px; display: none;
   }
+  /* 선택한 시험장에 마감된 급수가 있을 때 — 다른 시험장을 고르라는 안내 */
+  .venue-level-warn {
+    margin-top: 10px; max-width: 480px;
+    padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--warn-border, #f0c36d);
+    background: var(--warn-bg, #fff8e6);
+    color: var(--warn-text, #7a5a00);
+    font-size: 12.5px; line-height: 1.6;
+  }
+  .venue-level-warn[hidden] { display: none; }
+  .venue-level-warn strong { font-weight: 700; }
   .lvl-card .ck-box {
     width: 22px; height: 22px;
     border: 1.5px solid var(--border-strong);
@@ -227,6 +238,7 @@
           <option value="" data-i18n-content="reg.venue_ph">시험장을 선택해 주세요</option>
         </select>
         <div class="venue-lock-note" id="venueLockNote" data-i18n-content="reg.venue_reapply_lock">재접수 시 기존 시험장으로 접수됩니다.</div>
+        <div class="venue-level-warn" id="venueLevelFullNote" hidden></div>
       </div>
 
       <h2 class="h3" style="margin: 28px 0 6px;"><span data-i18n-content="reg.level_title">응시 급수 선택</span> <span style="font-size: 12px; color:var(--text-3); font-weight:400;" data-i18n-content="reg.multi_select">(복수 선택 가능)</span></h2>
@@ -432,6 +444,9 @@
     'reg.err_venue_full': { ko: '선택한 시험장 정원이 마감되어 접수할 수 없습니다. 다른 시험장을 선택해 주세요.', my: 'ရွေးချယ်ထားသော စာစစ်ဌာန လူဦးရေပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။ အခြားစာစစ်ဌာနကို ရွေးပါ။', en: 'The selected venue is full. Please choose another venue.' },
     'reg.venue_level_full_suffix': { ko: ' 마감', my: ' ပြည့်', en: ' full' },
     'reg.level_full_note': { ko: '정원이 마감되어 접수할 수 없습니다.', my: 'လူဦးရေ ပြည့်သွားသဖြင့် လျှောက်ထား၍ မရပါ။', en: 'This level is full and cannot be selected.' },
+    'reg.level_full_venue_note': { ko: '선택하신 시험장의 정원이 마감되었습니다.', my: 'ရွေးချယ်ထားသော စာစစ်ဌာန၏ လူဦးရေ ပြည့်သွားပါပြီ။', en: 'This level is full at the selected venue.' },
+    'reg.venue_level_full_title': { ko: '선택하신 시험장은 {level} 정원이 마감되었습니다.', my: 'ရွေးချယ်ထားသော စာစစ်ဌာနတွင် {level} လူဦးရေ ပြည့်သွားပါပြီ။', en: '{level} is full at the venue you selected.' },
+    'reg.venue_level_full_desc': { ko: 'TOPIK Ⅰ·Ⅱ를 함께 응시하실 예정이라면 다른 시험장을 선택해 주세요. 이 시험장으로 접수하시면 이후 {level} 추가 접수가 불가합니다.', my: 'TOPIK Ⅰ နှင့် Ⅱ နှစ်ခုလုံး ဖြေဆိုမည်ဆိုပါက အခြားစာစစ်ဌာနကို ရွေးပါ။ ဤစာစစ်ဌာနဖြင့် လျှောက်ထားပါက နောင်တွင် {level} ကို ထပ်မံ လျှောက်ထား၍ မရတော့ပါ။', en: 'If you plan to sit both TOPIK Ⅰ and Ⅱ, please choose another venue. If you register at this venue, you will not be able to add {level} later.' },
     'reg.err_level_full': { ko: '선택한 급수의 정원이 마감되었습니다. 다른 급수나 시험장을 선택해 주세요.', my: 'ရွေးချယ်ထားသော အဆင့်၏ လူဦးရေ ပြည့်သွားပါပြီ။ အခြားအဆင့် သို့မဟုတ် အခြားစာစစ်ဌာနကို ရွေးပါ။', en: 'The selected level is full. Please choose another level or venue.' },
     'reg.venue_reapply_lock': { ko: '재접수 시 기존 시험장으로 접수됩니다.', my: 'ပြန်လျှောက်ရာတွင် ယခင်စာစစ်ဌာနဖြင့် လျှောက်ထားမည်။', en: 'Re-application uses your original exam venue.' },
     'reg.venue_inprogress_lock': { ko: '동일 회차에 접수한 급수와 같은 시험장으로 접수됩니다.', my: 'ဤအကြိမ်ရေတွင် လျှောက်ထားပြီးသော အဆင့်နှင့် တူညီသော စာစစ်ဌာနတွင် လျှောက်ထားမည်။', en: 'Registration uses the same venue as the level you already registered for this session.' },
@@ -659,12 +674,22 @@
   }
 
   // 회차 정원 또는 선택한 시험장 정원 중 하나라도 해당 급수가 마감이면 선택 불가.
-  function isLevelClosedByCapacity(level) {
+  // 어느 쪽이 마감인지에 따라 안내 문구가 달라지므로 사유를 함께 돌려준다.
+  function levelClosedReason(level) {
     var round = getSelectedRound();
-    if (!round) return false;
-    if (isLevelFull(round, level)) return true;
+    if (!round) return null;
+    if (isLevelFull(round, level)) return 'round';
     var venue = getSelectedVenueObject();
-    return !!(venue && isVenueLevelFull(venue, round, level));
+    if (venue && isVenueLevelFull(venue, round, level)) return 'venue';
+    return null;
+  }
+
+  function isLevelClosedByCapacity(level) {
+    return !!levelClosedReason(level);
+  }
+
+  function levelDisplayName(level) {
+    return level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
   }
 
   function getSelectedVenueObject() {
@@ -1146,7 +1171,8 @@
   function setLevelCapacityLock(inputId, level) {
     var input = document.getElementById(inputId);
     if (!input || input.disabled) return; // 이미 다른 사유로 잠긴 경우 유지
-    if (!isLevelClosedByCapacity(level)) return;
+    var reason = levelClosedReason(level);
+    if (!reason) return;
     var card = input.closest('.lvl-card');
     var body = card && card.querySelector('div[style*="flex:1"]');
     input.checked = false;
@@ -1159,13 +1185,51 @@
         note.className = 'lvl-lock-note';
         body.appendChild(note);
       }
-      note.textContent = bt('reg.level_full_note', '정원이 마감되어 접수할 수 없습니다.');
+      note.textContent = reason === 'venue'
+        ? bt('reg.level_full_venue_note', '선택하신 시험장의 정원이 마감되었습니다.')
+        : bt('reg.level_full_note', '정원이 마감되어 접수할 수 없습니다.');
     }
+  }
+
+  // 선택한 시험장에 마감된 급수가 있으면, 다른 시험장을 고르라고 안내한다.
+  // 한 사람의 Ⅰ·Ⅱ는 같은 시험장으로 고정되므로 여기서 접수하면 마감된 급수는
+  // 나중에도 추가할 수 없다 — 그 점을 접수 전에 알려야 한다.
+  function syncVenueLevelFullNote() {
+    var box = document.getElementById('venueLevelFullNote');
+    if (!box) return;
+    var round = getSelectedRound();
+    var venue = getSelectedVenueObject();
+    var closed = (round && venue)
+      ? LEVELS.filter(function (lv) { return isVenueLevelFull(venue, round, lv); })
+      : [];
+    if (!closed.length || closed.length === LEVELS.length) {
+      // 마감 급수가 없거나 시험장 자체가 마감(선택 불가)이면 안내가 불필요하다.
+      box.hidden = true;
+      box.textContent = '';
+      return;
+    }
+    var names = closed.map(levelDisplayName).join(', ');
+    var title = document.createElement('strong');
+    title.textContent = btf(
+      'reg.venue_level_full_title',
+      '선택하신 시험장은 {level} 정원이 마감되었습니다.',
+      { level: names }
+    );
+    box.textContent = '';
+    box.appendChild(title);
+    box.appendChild(document.createElement('br'));
+    box.appendChild(document.createTextNode(btf(
+      'reg.venue_level_full_desc',
+      'TOPIK Ⅰ·Ⅱ를 함께 응시하실 예정이라면 다른 시험장을 선택해 주세요. 이 시험장으로 접수하시면 이후 {level} 추가 접수가 불가합니다.',
+      { level: names }
+    )));
+    box.hidden = false;
   }
 
   function applyLevelCapacityLocks() {
     setLevelCapacityLock('lvl1', 'I');
     setLevelCapacityLock('lvl2', 'II');
+    syncVenueLevelFullNote();
   }
 
   // 시험장을 바꾸면 급수별 마감 여부도 바뀐다 — 잠금을 풀고 다시 계산한다.
