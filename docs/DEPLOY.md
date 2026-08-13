@@ -7,6 +7,8 @@
 
 ## 1. 인프라 준비
 
+> 아래 1~5번은 **최초 구축용** 체크리스트입니다. 현재 운영 환경은 이미 전부 프로비저닝되어 서비스 중이며, 일상 배포는 §6의 `deploy-all-from-git.sh`만 사용합니다.
+
 | # | 항목 | 확인 |
 |---|------|------|
 | 1 | Web VPS (`115.68.222.58`) — nginx, certbot, Python 3.11+, git | ☐ |
@@ -21,15 +23,17 @@
 
 ## 2. DB (PostgreSQL)
 
-DB VPS에서 `V001` → `V012` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트.
+DB VPS에서 `V001` → `V022` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트로 **먼저** 실행합니다.
 
 ```bash
 cd /opt/myanmar-v2
-# V001~V012 — topik_app (일괄, V012 접근 로그 포함)
-bash scripts/run-migrations.sh
-
-# V007 — superuser (IWINV_SETUP.md §2.8)
+# 1) V007 — superuser 선행 (IWINV_SETUP.md §2.8)
+#    run-migrations.sh는 ON_ERROR_STOP=1이라, extension이 없으면 V007에서 중단되고
+#    V008 이후가 적용되지 않는다.
 sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
+
+# 2) V001~V022 일괄 — topik_app
+bash scripts/run-migrations.sh
 ```
 
 | # | 확인 |

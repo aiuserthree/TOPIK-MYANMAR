@@ -372,8 +372,9 @@ CORS_ORIGINS=https://www.topik-myanmar.com,https://admin.topik-myanmar.com
 
 ```bash
 cd /opt/myanmar-v2
-# migration V001~V006 적용 후
+# migration V001~V022 적용 후 (§2.8)
 CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py   # 제107회 + 지역코드 (demo 계정 없음)
+# 이후 회차는 BO 회차관리에서 등록합니다 — seed는 최초 1회 기준값입니다.
 ADMIN_EMAIL=admin@topik-myanmar.com ADMIN_PASSWORD='강한비밀번호' python3 scripts/create_admin.py
 ```
 
@@ -510,25 +511,35 @@ DATABASE_URL=postgresql+asyncpg://topik_app:PASSWORD@115.68.227.1:5432/topik_mya
 
 ### 2.8 기존 migration 적용
 
-migration 파일은 현재 저장소의 `db/migrations`에 있습니다. Web 서버 또는 DB 서버 중 저장소가 있는 곳에서 순서대로 적용합니다.
+migration 파일은 현재 저장소의 `db/migrations`(V001~V022)에 있습니다. Web 서버 또는 DB 서버 중 저장소가 있는 곳에서 적용합니다.
+
+**권장 — V007 선행 후 일괄 적용:**
 
 ```bash
 cd /opt/myanmar-v2
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V001__initial_schema.sql
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V002__email_outbox_retry.sql
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V003__bo_integration.sql
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V004__user_last_login.sql
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V005__application_drafts.sql
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V006__fo_contract_and_security.sql
-# V007: root(또는 현재 셸)가 파일을 읽고 postgres가 SQL 실행 — -f 상대경로는 /root 등에서 Permission denied
-psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V008__exam_venue_name_my.sql
-# V007: root(또는 현재 셸)가 파일을 읽고 postgres가 SQL 실행
+
+# 1) V007 — postgres superuser (CREATE EXTENSION vector)
+#    root(또는 현재 셸)가 파일을 읽고 postgres가 SQL 실행.
+#    `-f 상대경로`는 OS user postgres가 경로를 직접 열기 때문에 /root 등에서 Permission denied.
 sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
+
+# 2) V001~V022 일괄 — topik_app
+bash scripts/run-migrations.sh
 ```
 
-또는 일괄: `bash scripts/run-migrations.sh` (V007은 superuser 별도 적용 권장).
+**V007을 반드시 먼저 적용해야 하는 이유:** `run-migrations.sh`는 `psql -v ON_ERROR_STOP=1` + `set -e`로 돌기 때문에, extension이 없는 상태로 일괄 실행하면 V007에서 중단되고 **V008 이후가 적용되지 않습니다**. V007이 이미 적용된 DB에서는 `CREATE EXTENSION IF NOT EXISTS`가 그냥 통과하므로 재실행해도 안전합니다.
 
 V007의 `CREATE EXTENSION`은 **postgres superuser** 권한이 필요합니다. `topik_app`으로 V007을 실행하면 extension 생성에서 실패합니다.
+
+개별 파일을 직접 적용해야 한다면 파일명 순서(V001 → V022)를 지키고, V007만 위와 같이 superuser로 실행합니다:
+
+```bash
+psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V001__initial_schema.sql
+# … V002 ~ V006 동일 …
+# V007은 superuser로 (위 1번)
+psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V008__exam_venue_name_my.sql
+# … V009 ~ V022 동일 …
+```
 
 저장소가 DB VPS에 없으면 로컬에서 `scp db/migrations/V007__pgvector_semantic_search.sql root@115.68.227.1:/tmp/` 후:
 
@@ -596,6 +607,18 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 
 ### 3.3 코드 업데이트 절차
 
+**권장 — 일괄 배포 스크립트:**
+
+```bash
+cd /opt/myanmar-v2
+git fetch origin
+bash scripts/deploy-all-from-git.sh
+```
+
+`origin/main` 소스 반영 → migration → API 재시작(`/health` 폴링) → `build.py` + `build-bo.py`를 순서대로 실행합니다. 스크립트는 실행 도중 `git checkout origin/main -- scripts/`로 자기 자신을 덮어쓰므로 본문이 `main()`으로 감싸여 있습니다 — bash가 파일 오프셋 기준으로 이어 읽어 깨지는 것을 막기 위함이니, 이 구조를 풀지 마세요.
+
+**수동 절차 (스크립트를 쓰지 않을 때):**
+
 ```bash
 cd /opt/myanmar-v2
 git pull
@@ -615,7 +638,9 @@ python3 build-bo.py
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-DB migration이 추가되면 `db/migrations`의 새 파일을 순서대로 적용한 뒤 API를 재시작합니다.
+DB migration이 추가되면 `bash scripts/run-migrations.sh`(§2.8)를 돌린 뒤 API를 재시작합니다. 정적 파일만 바뀐 경우 `scripts/deploy-static-live.sh`로 FO/BO만 재빌드할 수 있습니다.
+
+**migration 실패는 배포를 멈추지 않습니다.** `deploy-all-from-git.sh`의 migration 단계는 `|| echo "WARN: …" — continuing`으로 되어 있어, 실패해도 API 재시작·정적 빌드가 그대로 진행됩니다. 배포 로그에서 `WARN: migration step had errors`를 반드시 확인하세요 — 특히 V007이 미적용이면 여기서 멈춘 뒤 **V008 이후가 조용히 누락된 채** 배포가 끝납니다.
 
 ### 3.4 운영 스모크 테스트 (스테이징 없이 단일 배포 후)
 
@@ -627,7 +652,7 @@ DB migration이 추가되면 `db/migrations`의 새 파일을 순서대로 적�
 | 2 | S3 연결 | FO 가입 또는 프로필 사진 업로드 | 500 없음, DB `file_attachments` 행 생성 |
 | 3 | 사진 조회 | 브라우저 `<img>` / `GET /api/v1/files/:id?token=` | 이미지 표시 (S3 프록시) |
 | 4 | FO 회원가입 | `signup.html` → 인증 메일 | `email_outbox.status=sent` (SMTP 미준비 시 `mail_delivered:false`) |
-| 5 | 접수 | `register.html` 제107회 접수 | `applications` 행, 사진 스냅샷 `file_id` |
+| 5 | 접수 | `register.html`에서 접수 진행 중인 회차로 접수 | `applications` 행, 사진 스냅샷 `file_id` |
 | 6 | BO 로그인 | `https://admin.topik-myanmar.com/admin-login.html` | `create_admin.py` 계정으로 로그인, Network 탭 API가 **same-origin `/api`** |
 | 7 | BO 사진 | 접수 상세 패널 | `TopikBoApi.fileUrl` 이미지 표시 |
 | 8 | BO 승인/반려 | 테스트 접수 처리 | `email_outbox` 트랜잭션 메일 enqueue |
@@ -635,7 +660,7 @@ DB migration이 추가되면 `db/migrations`의 새 파일을 순서대로 적�
 
 **S3 스모크 (CLI, Web 서버):** §5.6 AWS CLI put/list 후 3~7번으로 API 경유 최종 확인.
 
-**SMTP 미완(DNS 대기) 시:** 가입은 가능하나 `mail_delivered:false` — DNS·테라웹메일 확정 후 §6.6 9~11번 재검.
+**SMTP 미완 시:** 가입은 가능하나 `mail_delivered:false` — 테라웹메일·DNS(MX/SPF/DKIM) 설정 후 §6.6 9~11번 재검. 운영 도메인은 이미 전환 완료 상태이므로, 이 경로는 신규 환경 구축·계정 교체 시에 해당합니다.
 
 ## 4. 보안 체크리스트
 
