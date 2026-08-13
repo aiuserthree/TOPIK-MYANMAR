@@ -59,7 +59,7 @@ TOPIK-MYANMAR/
 ├── db/seed/               # dev_seed.sql, prod_seed.sql
 ├── scripts/               # seed, deploy, migrate, test
 ├── build.py / build-bo.py # 정적 빌드 (public/, public-bo/ — git 비추적)
-├── 시안/                  # 디자인 시안 + 이메일 템플릿 원본 (실제 렌더는 apps/api/app/lib/email_*, 13종 ko/my/en)
+├── 시안/                  # 디자인 시안 + 이메일 템플릿 원본 (실제 렌더는 apps/api/app/lib/email_*, 15종 ko/my/en)
 └── docs/                  # 설계·운영 문서
 ```
 
