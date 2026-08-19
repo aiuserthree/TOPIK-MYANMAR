@@ -42,8 +42,8 @@ function PermHistoryPanel() {
   const rows = filtered.slice((page - 1) * PER, page * PER);
 
   const exportCSV = () => {
-    const headers = ['시각', '변경자', 'IP', '대상', '변경 유형', '등급', '메뉴', '메모'];
-    const csvRows = filtered.map(l => [l.ts, l.actor, l.ip, l.target, l.changeType, l.role, l.menu, l.memo || '']);
+    const headers = ['시각', '변경자', '이메일', 'IP', '대상', '변경 유형', '등급', '메뉴', '메모'];
+    const csvRows = filtered.map(l => [l.ts, l.actorName || '', l.actor, l.ip, l.target, l.changeType, l.role, l.menu, l.memo || '']);
     const fn = '권한변경이력_' + new Date().toISOString().slice(0, 10) + '.csv';
     const after = () => {
       DataStore.addAudit({ type: '관리자계정', targetId: '권한매트릭스', action: '게시', memo: `권한 변경 이력 CSV보내기(${filtered.length}건)` });
@@ -113,7 +113,7 @@ function PermHistoryPanel() {
               {rows.map(l => (
                 <tr key={l.id}>
                   <td className="code">{l.ts}</td>
-                  <td><code className="code-id">{l.actor}</code></td>
+                  <td><ActorCell name={l.actorName} email={l.actor}/></td>
                   <td className="code muted">{l.ip}</td>
                   <td className="code">{l.target}</td>
                   <td><span className="pill pill-applied">{l.changeType}</span></td>
@@ -154,7 +154,7 @@ function PermHistoryDetailLP({ id, onClose }) {
       <FieldSet legend="기본" cols={2}>
         <KV k="변경 시각" v={<code className="code-id">{l.ts}</code>}/>
         <KV k="변경 유형" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{l.changeType}</span>}/>
-        <KV k="변경자" v={<code className="code-id">{l.actor}</code>}/>
+        <KV k="변경자" v={<ActorCell name={l.actorName} email={l.actor}/>}/>
         <KV k="IP" v={<code className="code-id">{l.ip}</code>}/>
         <KV k="대상" v={<code className="code-id">{l.target}</code>}/>
         <KV k="등급" v={DataStore.roleLabel(l.role)}/>

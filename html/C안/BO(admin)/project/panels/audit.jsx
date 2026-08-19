@@ -65,7 +65,7 @@ function AuditPanel() {
   const rows = isApi ? state.audit : demoFiltered.slice((page - 1) * PER, page * PER);
 
   const exportCSV = async () => {
-    const headers = ['시각', '처리자', 'IP', '유형', '대상ID', '액션', '메모'];
+    const headers = ['시각', '처리자', '이메일', 'IP', '유형', '대상ID', '액션', '메모'];
     let list = demoFiltered;
     if (isApi && DataStore.fetchAuditAll) {
       const res = await DataStore.fetchAuditAll(query);
@@ -75,7 +75,7 @@ function AuditPanel() {
         toastErr(`조건에 맞는 ${DataStore.fmtNum(res.total)}건 중 최근 ${DataStore.fmtNum(list.length)}건만 내보냅니다. 기간을 좁혀 주세요.`);
       }
     }
-    const csvRows = list.map(l => [l.ts, l.actor, l.ip, l.type, l.targetId, l.action, l.memo || '']);
+    const csvRows = list.map(l => [l.ts, l.actorName || '', l.actor, l.ip, l.type, l.targetId, l.action, l.memo || '']);
     const fn = '처리이력_' + new Date().toISOString().slice(0, 10) + '.csv';
     const after = () => toastOk(`${DataStore.fmtNum(csvRows.length)}건의 처리 이력 CSV를 생성했습니다.`);
     if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, csvRows).then(after); }
@@ -105,7 +105,7 @@ function AuditPanel() {
         <div className="controls">
           <select className="select" value={actorF} onChange={e => applyFilter(setActorF)(e.target.value)} disabled={!canSeeAll}>
             <option value="all">전체 처리자</option>
-            {state.admins.map(a => <option key={a.id} value={a.id}>{a.id} · {a.name}</option>)}
+            {state.admins.map(a => <option key={a.id} value={a.id}>{a.name} · {a.email}</option>)}
           </select>
           <select className="select" value={typeF} onChange={e => applyFilter(setTypeF)(e.target.value)}>
             <option value="all">전체 유형</option>
@@ -130,7 +130,7 @@ function AuditPanel() {
               {rows.map(l => (
                 <tr key={l.id}>
                   <td className="code">{l.ts}</td>
-                  <td><code className="code-id">{l.actor}</code></td>
+                  <td><ActorCell name={l.actorName} email={l.actor}/></td>
                   <td className="code muted">{l.ip}</td>
                   <td>{l.type}</td>
                   <td className="code">{l.targetId}</td>
@@ -178,7 +178,7 @@ function AuditDetailLP({ id, onClose }) {
       <FieldSet legend="기본" cols={2}>
         <KV k="처리 시각" v={<code className="code-id">{l.ts}</code>}/>
         <KV k="액션" v={<span className="pill" style={{ background: 'var(--bg-3)' }}>{l.action}</span>}/>
-        <KV k="처리자" v={<><code className="code-id">{l.actor}</code></>}/>
+        <KV k="처리자" v={<ActorCell name={l.actorName} email={l.actor}/>}/>
         <KV k="IP" v={<code className="code-id">{l.ip}</code>}/>
         <KV k="유형" v={l.type}/>
         <KV k="대상 ID" v={<code className="code-id">{l.targetId}</code>}/>

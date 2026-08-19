@@ -354,6 +354,19 @@ function BoardAttachments({ attachments }) {
   );
 }
 
+// ----- 처리자/변경자 셀 (처리 이력·권한 변경 이력 공용) -----
+/** 이름과 이메일을 함께 보여 준다. 필터는 이름으로 고르는데 목록에는 이메일만
+    나와서, 걸러 낸 결과가 같은 사람인지 알아보기 어려웠다. */
+function ActorCell({ name, email }) {
+  if (!name) return <code className="code-id">{email || '—'}</code>;
+  return (
+    <div style={{ lineHeight: 1.35 }}>
+      <b style={{ fontSize: 12.5 }}>{name}</b>
+      <div className="muted" style={{ fontSize: 11.5, fontFamily: 'Inter' }}>{email}</div>
+    </div>
+  );
+}
+
 // ----- 처리 이력 변경 내용 — 사람이 읽는 표 + 원본 JSON 접기 -----
 function AuditChangeSection({ name, rows, showTitle, mode }) {
   const R = window.BOAuditReadable;
@@ -443,4 +456,4 @@ function AuditChangeView({ before, after, type, actionType, legend }) {
 // Export to window
 Object.assign(window, { useStore, useState, useEffect, useMemo, useCallback, useRef, Fragment, h,
   LP, Modal, ConfirmModal, ToastHost, toast, toastOk, toastErr,
-  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, AuditChangeView, I });
+  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, AuditChangeView, ActorCell, I });
