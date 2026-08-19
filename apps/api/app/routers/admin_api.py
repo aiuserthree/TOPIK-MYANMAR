@@ -3821,6 +3821,9 @@ async def permission_history(
         stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
     if change_type:
         stmt = stmt.where(_perm_history_change_type_filter(change_type))
+    # 대상 드롭다운은 '대상 필터를 뺀' 현재 조건에서 뽑는다 — 대상을 고른 뒤
+    # 목록이 그 하나로 줄어들면 다른 값으로 바꿀 수 없다.
+    stmt_for_targets = stmt
     if target:
         stmt = stmt.where(_perm_history_target_sql() == target)
 
@@ -3829,9 +3832,15 @@ async def permission_history(
     page_logs = result_page.scalars().all()
 
     # '대상' 드롭다운 목록 — 파생값이라 화면에서 만들 수 없다(현재 페이지만 보이므로).
+    # 조건 없이 뽑으면 접수자 ID 등 권한 이력과 무관한 target_id 까지 딸려 온다.
+    # order_by(None) 필수 — created_at 정렬이 남으면 DISTINCT 와 충돌한다
+    # (Postgres: SELECT DISTINCT 의 ORDER BY 는 select 목록에 있어야 한다).
     targets = (
         await db.execute(
-            select(_perm_history_target_sql()).distinct().order_by(_perm_history_target_sql()).limit(200)
+            stmt_for_targets.with_only_columns(_perm_history_target_sql())
+            .order_by(None)
+            .distinct()
+            .limit(200)
         )
     ).scalars().all()
 
