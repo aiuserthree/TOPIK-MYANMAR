@@ -63,7 +63,9 @@ def patch_html_api_meta(text: str) -> str:
 
 # nginx는 admin 서브도메인의 js/css 도 Cache-Control immutable 7d 로 서빙한다.
 # ?v= 가 없으면 배포해도 관리자 브라우저가 최대 7일간 구버전 스크립트를 계속 쓴다.
-ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H")
+# 분 단위까지 쓴다. 시(%H) 단위면 같은 UTC 시간대에 두 번 배포할 때 ?v= 가 그대로라
+# nginx immutable 7d 캐시가 이전 스크립트를 계속 내려준다 (2026-08-19 실제로 겪음).
+ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
 ASSET_URL_RE = re.compile(
     r'((?:src|href)=")((?:shared|assets|panels)/[A-Za-z0-9._-]+\.(?:js|jsx|css))(?:\?v=[^"]*)?(")',
     re.IGNORECASE,
