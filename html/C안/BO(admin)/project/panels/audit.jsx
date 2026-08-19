@@ -1,7 +1,15 @@
 /* panels/audit.jsx — 관리자 처리 이력 (TPKM_BO_6_2_*) */
 
 const AUDIT_TYPES = ['접수자','사진','회차','시험장','공지','FAQ','환불·정정','문의','회원','약관','관리자계정'];
-const AUDIT_ACTIONS_F = ['생성','수정','삭제','승인','반려','정보승인','정보반려','수납','수납취소','게시','폐지','복구','정지','탈퇴','비밀번호초기화','비밀번호변경','로그인','로그아웃','비밀글열람','수험번호부여','내보내기','발송','취소'];
+const AUDIT_ACTIONS_F = ['생성','수정','삭제','상태변경','승인','반려','사진승인','사진반려','정보승인','정보반려','답변','댓글','메모','수납','수납취소','게시','폐지','복구','정지','탈퇴','권한변경','비밀번호초기화','비밀번호변경','로그인','로그아웃','비밀글열람','수험번호부여','내보내기','발송','취소'];
+
+/** 액션 배지 색. 사진승인·정보반려처럼 앞에 수식이 붙는 라벨도 같은 색으로 묶는다. */
+function auditPillClass(action) {
+  const a = action || '';
+  if (a.endsWith('승인') || a === '생성' || a === '수납' || a === '복구') return 'pill-approved';
+  if (a.endsWith('반려') || a === '삭제' || a === '폐지' || a === '취소') return 'pill-rejected';
+  return 'pill-applied';
+}
 
 function AuditPanel() {
   const state = useStore();
@@ -106,7 +114,7 @@ function AuditPanel() {
                   <td className="code muted">{l.ip}</td>
                   <td>{l.type}</td>
                   <td className="code">{l.targetId}</td>
-                  <td><span className={`pill ${l.action === '승인' || l.action === '생성' || l.action === '수납' ? 'pill-approved' : l.action === '반려' || l.action === '삭제' || l.action === '폐지' || l.action === '취소' ? 'pill-rejected' : 'pill-applied'}`}>{l.action}</span></td>
+                  <td><span className={`pill ${auditPillClass(l.action)}`}>{l.action}</span></td>
                   <td className="muted" style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.memo || '—'}</td>
                   <td>
                     <button className="ibtn ghost" onClick={() => setDetailId(l.id)}><I.Eye style={{ width: 12, height: 12 }}/></button>

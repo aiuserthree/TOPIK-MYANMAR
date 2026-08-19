@@ -466,20 +466,23 @@
   var TERM_STATUS_UI = { draft: "draft", published: "pub", retired: "retired" };
   var AUDIT_ACTION_UI = {
     approve: "승인", reject: "반려", payment_complete: "수납", payment_cancel: "수납취소",
-    board_reply: "수정", board_delete: "삭제", board_workflow: "수정",
+    board_reply: "답변", board_comment: "댓글", board_delete: "삭제",
+    board_workflow: "상태변경",
     term_create: "생성", term_update: "수정", term_publish: "게시", term_retire: "폐지",
     exam_round_revoke: "폐지", exam_round_restore: "복구",
     user_update: "수정", user_reset_password: "비밀번호초기화",
     admin_create: "생성", admin_update: "수정", admin_reset_password: "비밀번호초기화",
     exam_round_create: "생성", exam_venue_update: "수정", exam_number_assign: "수험번호부여",
-    photo_review_approve: "승인", photo_review_reject: "반려",
-    info_review_approve: "정보승인", info_review_reject: "정보반려", memo: "수정",
+    // 접수 승인/반려(approve·reject)와 구분한다 — 목록에서 둘 다 "승인"이면 뭘 한 건지 모른다.
+    // info_review_* 가 이미 정보승인/정보반려를 쓰므로 같은 규칙.
+    photo_review_approve: "사진승인", photo_review_reject: "사진반려",
+    info_review_approve: "정보승인", info_review_reject: "정보반려", memo: "메모",
     login: "로그인", logout: "로그아웃",
-    permission_matrix_update: "수정", admin_change_password: "비밀번호변경",
+    permission_matrix_update: "권한변경", admin_change_password: "비밀번호변경",
     // 운영 로그에 실제로 쌓이는데 라벨이 없어 영문 원문이 그대로 보이던 것들
     board_secret_view: "비밀글열람",
     application_delete: "삭제", application_purge: "삭제", application_restore: "복구",
-    exam_round_update: "수정", exam_round_status: "수정",
+    exam_round_update: "수정", exam_round_status: "상태변경",
     exam_venue_create: "생성", exam_venue_delete: "삭제",
     notice_create: "생성", notice_update: "수정", notice_delete: "삭제",
     notice_marketing_send: "발송",
