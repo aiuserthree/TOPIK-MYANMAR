@@ -666,6 +666,41 @@ img.photo-lg {
 .diff .before { color: #8a3a3a; background: #fcefef; border-color: #f1d3d3; }
 .diff .after  { color: #1a5a2a; background: #ecf6ee; border-color: #c8e5cd; }
 
+/* 처리 이력 — 사람이 읽는 변경 내용 (원본 JSON 은 .diff 로 접어 둠) */
+.chg { font-size: 13px; }
+.chg-summary {
+  background: var(--bg-2); border: 1px solid var(--border); border-left: 3px solid var(--primary);
+  border-radius: 6px; padding: 10px 12px; margin-bottom: 10px;
+  color: var(--text); line-height: 1.6; word-break: break-word;
+}
+.chg-hint { color: var(--text-3); font-size: 12px; margin-bottom: 8px; }
+.chg-sec + .chg-sec { margin-top: 16px; }
+.chg-sec-ttl { font-size: 12.5px; font-weight: 700; color: var(--text-2); margin-bottom: 3px; }
+.chg-table {
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+  border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+}
+.chg-table th, .chg-table td {
+  padding: 9px 11px; border-bottom: 1px solid var(--border);
+  text-align: left; vertical-align: top; line-height: 1.55;
+  word-break: break-word; overflow-wrap: anywhere;
+}
+.chg-table thead th {
+  background: var(--bg-3); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3);
+}
+.chg-table tbody th { background: var(--bg-2); font-weight: 600; color: var(--text-2); }
+.chg-table tbody tr:last-child th, .chg-table tbody tr:last-child td { border-bottom: none; }
+.chg-table .v-before { color: #8a3a3a; }
+.chg-table .v-after { color: #1a5a2a; font-weight: 600; }
+.chg-note { color: var(--text-3); font-size: 12px; margin-top: 8px; }
+.chg-raw-toggle {
+  display: inline-block; margin-top: 10px; padding: 0;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-3); font-size: 12px; text-decoration: underline;
+}
+.chg-raw-toggle:hover { color: var(--text-2); }
+
 /* photo review card grid */
 .photo-grid {
   display: grid;

@@ -168,20 +168,7 @@ function PermHistoryDetailLP({ id, onClose }) {
         </div>
       </FieldSet>
 
-      {(l.before || l.after) && (
-        <FieldSet legend="변경 내용 (Diff)" cols={1}>
-          <div className="diff">
-            <div>
-              <div className="h">Before</div>
-              <pre className="before">{l.before ? JSON.stringify(l.before, null, 2) : '— 이전 값 없음'}</pre>
-            </div>
-            <div>
-              <div className="h">After</div>
-              <pre className="after">{l.after ? JSON.stringify(l.after, null, 2) : '— 이후 값 없음'}</pre>
-            </div>
-          </div>
-        </FieldSet>
-      )}
+      <AuditChangeView before={l.before} after={l.after} type="관리자계정"/>
 
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
         ※ 권한 변경 이력은 append-only. 활성 세션은 다음 API 요청 시 새 권한이 적용됩니다.

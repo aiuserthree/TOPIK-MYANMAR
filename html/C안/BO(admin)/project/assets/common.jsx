@@ -354,7 +354,84 @@ function BoardAttachments({ attachments }) {
   );
 }
 
+// ----- 처리 이력 변경 내용 — 사람이 읽는 표 + 원본 JSON 접기 -----
+function AuditChangeSection({ name, rows, showTitle }) {
+  const R = window.BOAuditReadable;
+  if (!rows.length) return null;
+  const both = name === 'changed';
+  return (
+    <div className="chg-sec">
+      {showTitle && <div className="chg-sec-ttl">{R.sectionTitle(name)}</div>}
+      <div className="chg-hint">{R.sectionHint(name)}</div>
+      <table className="chg-table">
+        <thead>
+          <tr>
+            <th style={{ width: '30%' }}>항목</th>
+            {both && <th style={{ width: '35%' }}>변경 전</th>}
+            <th>{both ? '변경 후' : '기록된 값'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.key}>
+              <th scope="row">{r.label}</th>
+              {both && <td className="v-before">{r.before || '없음'}</td>}
+              <td className={both ? 'v-after' : ''}>{(both ? r.after : (r.after || r.before)) || '없음'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AuditChangeView({ before, after, type, legend }) {
+  const R = window.BOAuditReadable;
+  const result = useMemo(
+    () => (R ? R.diffRows(before, after, type) : null),
+    [R, before, after, type],
+  );
+  const [showRaw, setShowRaw] = useState(false);
+  if (!before && !after) return null;
+  if (!result) return null;
+
+  const filled = ['changed', 'result', 'context'].filter(n => result[n].length);
+
+  return (
+    <FieldSet legend={legend || '변경 내용'} cols={1}>
+      <div className="chg">
+        {result.total > 0 && <div className="chg-summary">{R.summaryText(result)}</div>}
+
+        {filled.map(name => (
+          <AuditChangeSection key={name} name={name} rows={result[name]} showTitle={filled.length > 1}/>
+        ))}
+
+        {!result.total && <div className="chg-note">이번 처리로 실제로 바뀐 항목은 없습니다.</div>}
+        {result.total > 0 && result.unchanged > 0 && (
+          <div className="chg-note">그 외 {result.unchanged}개 항목은 이전과 같습니다.</div>
+        )}
+
+        <button type="button" className="chg-raw-toggle" onClick={() => setShowRaw(v => !v)}>
+          {showRaw ? '원본 데이터 숨기기' : '원본 데이터(JSON) 보기 — 개발·장애 확인용'}
+        </button>
+        {showRaw && (
+          <div className="diff" style={{ marginTop: 8 }}>
+            <div>
+              <div className="h">Before</div>
+              <pre className="before">{before ? JSON.stringify(before, null, 2) : '— 이전 값 없음'}</pre>
+            </div>
+            <div>
+              <div className="h">After</div>
+              <pre className="after">{after ? JSON.stringify(after, null, 2) : '— 이후 값 없음'}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    </FieldSet>
+  );
+}
+
 // Export to window
 Object.assign(window, { useStore, useState, useEffect, useMemo, useCallback, useRef, Fragment, h,
   LP, Modal, ConfirmModal, ToastHost, toast, toastOk, toastErr,
-  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, I });
+  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, AuditChangeView, I });

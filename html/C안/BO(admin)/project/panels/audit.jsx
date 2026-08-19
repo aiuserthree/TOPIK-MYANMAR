@@ -161,20 +161,7 @@ function AuditDetailLP({ id, onClose }) {
         </div>
       </FieldSet>
 
-      {(l.before || l.after) && (
-        <FieldSet legend="변경 내용 (Diff)" cols={1}>
-          <div className="diff">
-            <div>
-              <div className="h">Before</div>
-              <pre className="before">{l.before ? JSON.stringify(l.before, null, 2) : '— 이전 값 없음'}</pre>
-            </div>
-            <div>
-              <div className="h">After</div>
-              <pre className="after">{l.after ? JSON.stringify(l.after, null, 2) : '— 이후 값 없음'}</pre>
-            </div>
-          </div>
-        </FieldSet>
-      )}
+      <AuditChangeView before={l.before} after={l.after} type={l.type}/>
 
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
         ※ 처리 이력은 append-only — 수정/삭제 불가. 최소 3년 보존 권장.
