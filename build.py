@@ -69,7 +69,9 @@ API_BASE = os.environ.get("TOPIK_API_BASE", _DEFAULT_API_BASE).rstrip("/")
 API_META = f'<meta name="topik-api-base" content="{API_BASE}">' if API_BASE else ""
 VIEWPORT_META = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
 API_META_RE = re.compile(r'\s*<meta name="topik-api-base"[^>]*>\n?', re.IGNORECASE)
-ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H")
+# 분 단위까지 쓴다. 시(%H) 단위면 같은 UTC 시간대에 두 번 배포할 때 ?v= 가 그대로라
+# 그 사이 페이지를 연 사용자에게 아래 immutable 7d 캐시가 구버전을 계속 내려준다.
+ASSET_VERSION = os.environ.get("ASSET_VERSION") or datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
 # nginx serves JS/CSS with Cache-Control immutable 7d — bump ?v= on each build.
 # 개별 파일 allowlist 였을 때 shared/form-validation.js 등이 빠져 7일간 구버전이 서빙됐다.
 # 로컬 asset(shared/·assets/) 전체를 대상으로 한다. CDN(https://…)은 매칭되지 않는다.
