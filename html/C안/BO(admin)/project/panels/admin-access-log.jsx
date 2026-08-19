@@ -43,7 +43,10 @@ function AdminAccessLogPanel() {
   const demoFiltered = useMemo(() => {
     if (isApi) return [];
     let r = baseLog.slice();
-    if (adminF !== 'all') r = r.filter(l => l.adminEmail === adminF || l.name === adminF);
+    if (adminF !== 'all') {
+      const who = state.admins.find(a => a.id === adminF);
+      r = r.filter(l => l.adminId === adminF || (who && (l.adminEmail === who.email || l.name === who.name)));
+    }
     if (actionF !== 'all') r = r.filter(l => l.action === actionF);
     if (resultF !== 'all') r = r.filter(l => l.result === resultF);
     if (range > 0) {
@@ -53,7 +56,7 @@ function AdminAccessLogPanel() {
     }
     if (query.ip) r = r.filter(l => l.ip && l.ip.includes(query.ip));
     return r;
-  }, [isApi, baseLog, adminF, actionF, resultF, range, query.ip]);
+  }, [isApi, baseLog, state.admins, adminF, actionF, resultF, range, query.ip]);
 
   const total = isApi ? (state.adminAccessTotal || 0) : demoFiltered.length;
   const totalPages = Math.max(1, Math.ceil(total / PER));
@@ -110,7 +113,7 @@ function AdminAccessLogPanel() {
         <div className="controls">
           <select className="select" value={adminF} onChange={e => applyFilter(setAdminF)(e.target.value)}>
             <option value="all">전체 관리자</option>
-            {state.admins.map(a => <option key={a.id} value={a.email}>{a.name} · {a.email}</option>)}
+            {state.admins.map(a => <option key={a.id} value={a.id}>{a.name} · {a.email}</option>)}
           </select>
           <select className="select" value={actionF} onChange={e => applyFilter(setActionF)(e.target.value)}>
             <option value="all">전체 액션</option>

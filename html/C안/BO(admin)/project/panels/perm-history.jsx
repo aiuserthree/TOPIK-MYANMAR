@@ -109,7 +109,7 @@ function PermHistoryPanel() {
           <select className="select" value={actorF} onChange={e => applyFilter(setActorF)(e.target.value)}>
             <option value="all">전체 변경자</option>
             {state.admins.filter(a => a.role === 'super').map(a => (
-              <option key={a.id} value={a.id}>{a.id} · {a.name}</option>
+              <option key={a.id} value={a.id}>{a.name} · {a.email}</option>
             ))}
           </select>
           <select className="select" value={changeF} onChange={e => applyFilter(setChangeF)(e.target.value)}>
