@@ -742,6 +742,34 @@
         opts
       );
     },
+    // --- 예외 접수 처리(제110회~) ---
+    changeApplicationLevel: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/change-level",
+        "POST",
+        payload || {},
+        opts
+      );
+    },
+    reinstateApplication: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/reinstate",
+        "POST",
+        payload || {},
+        opts
+      );
+    },
+    designateApplication: function (payload) {
+      return apiFetch("/api/v1/admin/applications/designate", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      });
+    },
+    getExamRoundCapacity: function (roundId) {
+      return apiFetch(
+        "/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/capacity"
+      );
+    },
     assignExamNumbers: function (roundId, payload) {
       return apiFetch("/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/assign-exam-numbers", {
         method: "POST",

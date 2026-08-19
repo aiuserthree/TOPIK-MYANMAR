@@ -592,18 +592,28 @@ p { margin: 0; }
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: modal-in .2s var(--ease);
+  /* 내용이 화면보다 길면 본문만 스크롤한다. 높이 제한이 없으면 backdrop 이
+     세로 가운데 정렬이라 제목·버튼이 화면 위아래로 잘려 나간다. */
+  max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column;
 }
+/* 입력 항목이 많은 모달(지정 접수 등) — 좁은 폭이면 세로로 길어져 스크롤이 잦다. */
+.modal.modal-wide { max-width: 640px; }
 @keyframes modal-in {
   from { transform: translateY(8px) scale(0.98); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
-.modal-head { padding: 20px 24px 0; }
+.modal-head { padding: 20px 24px 0; flex: none; }
 .modal-head h3 { font-size: 18px; }
-.modal-body { padding: 12px 24px 24px; color: var(--text-2); font-size: 14.5px; line-height: 1.65; }
+.modal-body {
+  padding: 12px 24px 24px; color: var(--text-2); font-size: 14.5px; line-height: 1.65;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+}
 .modal-foot {
   padding: 16px 24px;
   background: var(--bg-2);
   display: flex; gap: 8px; justify-content: flex-end;
+  flex: none;
 }
 .modal-foot .btn { min-width: 100px; }
 

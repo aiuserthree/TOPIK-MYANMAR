@@ -11,14 +11,14 @@
 | **운영 FO** | `html/C안/FO/` (25페이지, HTML/CSS/JS) | FastAPI 연동 완료 → `build.py` → `public/` |
 | **운영 BO** | `html/C안/BO(admin)/project/` (React 18 CDN SPA) | 패널 16개 FastAPI 연동 → `build-bo.py` → `public-bo/` |
 | **운영 API** | `apps/api/` (FastAPI) | FO/BO REST API 구현 완료 |
-| **DB** | `db/migrations/V001`~`V012` | PostgreSQL 15 + pgvector |
+| **DB** | `db/migrations/V001`~`V023` | PostgreSQL 15 + pgvector |
 | **신규 FO (중기)** | `apps/web/` (Vite + React) | 홈 placeholder만 존재, 미운영 |
 | **레거시 API** | `api/` (Fastify) | 참조용 잔존 |
 
 ## 빠른 시작 (로컬)
 
 ```bash
-# 1. DB 마이그레이션 (V001~V012)
+# 1. DB 마이그레이션 (V001~V023)
 bash scripts/run-migrations.sh
 # V007(pgvector)만 superuser 필요: sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
 
@@ -30,10 +30,14 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 # 3. 시드 (다른 터미널, 저장소 루트)
 python3 scripts/seed_dev.py
 
-# 4. FO/BO 정적 서버
-cd html/C안/FO && python3 -m http.server 8080          # http://localhost:8080
-cd html/C안/BO\(admin\)/project && python3 -m http.server 8081  # BO
+# 4. FO/BO 정적 서버 (저장소 루트에서)
+python3 scripts/serve_static.py "html/C안/FO" 8080                    # FO
+python3 scripts/serve_static.py "html/C안/BO(admin)/project" 8081     # BO
 ```
+
+> `python3 -m http.server` 대신 `scripts/serve_static.py` 를 씁니다. 운영 nginx 의
+> `try_files $uri $uri.html` 을 흉내 내므로 확장자 없는 경로(`/admin`, `/notice` 등)가
+> 로컬에서도 열립니다. 순정 `http.server` 로 띄우면 BO 로그인 직후 `/admin` 에서 **404** 가 납니다.
 
 | 서비스 | URL | 데모 계정 (seed 후) |
 | --- | --- | --- |
@@ -50,8 +54,8 @@ Myanmar_v2.0/
 ├── html/C안/FO/           # 운영 FO (HTML/CSS/JS)
 ├── html/C안/BO(admin)/project/  # 운영 BO SPA
 ├── html/shared/           # api-client.js, bo-api-client.js, roster-codes.js
-├── db/migrations/         # V001~V012 SQL
-├── scripts/               # seed, deploy, migrate, test
+├── db/migrations/         # V001~V023 SQL
+├── scripts/               # seed, deploy, migrate, test, serve_static(로컬 정적 서버)
 ├── build.py / build-bo.py # 정적 빌드
 └── docs/                  # 설계·운영 문서
 ```

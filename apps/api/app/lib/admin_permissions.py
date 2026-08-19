@@ -17,7 +17,7 @@ from app.models.admin import AdminPermissionMatrix
 # Menu ids align with BO DataStore.permSections (panels/permissions.jsx).
 PERM_MENUS: dict[str, list[str]] = {
     "dashboard": ["view"],
-    "applicants": ["view", "photo", "pay", "approve", "reject", "exam", "export", "delete"],
+    "applicants": ["view", "photo", "pay", "approve", "reject", "exam", "export", "delete", "exception"],
     "sessions": ["view", "create", "edit", "delete"],
     "venues": ["view", "create", "edit", "delete"],
     "notices": ["view", "create", "edit", "delete"],
@@ -125,7 +125,7 @@ def perm_schema() -> dict[str, Any]:
     return {"sections": sections, "actions": {
         "view": "조회", "create": "등록", "edit": "수정", "delete": "삭제",
         "photo": "사진심사", "pay": "수납", "approve": "승인", "reject": "반려",
-        "exam": "수험번호부여", "answer": "답변", "publish": "게시·폐지",
+        "exam": "수험번호부여", "exception": "예외처리", "answer": "답변", "publish": "게시·폐지",
         "suspend": "정지·탈퇴", "reset": "비번초기화", "deactivate": "비활성",
         "export": "내보내기", "viewAll": "전체이력", "viewOwn": "본인이력",
     }}

@@ -50,6 +50,8 @@ class ApplicationSubmission(TimestampMixin, Base):
     )
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     cancel_reason: Mapped[Optional[str]] = mapped_column(Text)
+    # 취소 직전 status — 관리자 복원(reinstate)이 원래 단계로 되돌릴 때 쓴다.
+    cancelled_from_status: Mapped[Optional[str]] = mapped_column(String(30))
 
     applications: Mapped[list["Application"]] = relationship(
         "Application", back_populates="submission", cascade="all, delete-orphan"
@@ -98,7 +100,18 @@ class Application(TimestampMixin, Base):
     reject_reason: Mapped[Optional[str]] = mapped_column(Text)
     cancel_reason: Mapped[Optional[str]] = mapped_column(Text)
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    cancelled_from_status: Mapped[Optional[str]] = mapped_column(String(30))
     approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    # 예외 접수 처리(제110회~) — level_change | reinstate | designated. NULL=일반 접수
+    # exception_type 은 '마지막 처리'라 덮어써진다. 지정 접수 여부(특별 관리 대상)는
+    # 이후 어떤 처리를 해도 남아야 하므로 is_designated 로 따로 붙잡아 둔다.
+    exception_type: Mapped[Optional[str]] = mapped_column(String(20))
+    is_designated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    exception_reason: Mapped[Optional[str]] = mapped_column(Text)
+    exception_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    exception_admin_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("admin_users.id", ondelete="SET NULL")
+    )
     rev: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

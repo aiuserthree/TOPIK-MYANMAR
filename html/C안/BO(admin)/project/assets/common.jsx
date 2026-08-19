@@ -81,7 +81,7 @@ function LP({ open, title, sub, onClose, size, children, footer, tabs }) {
 }
 
 // ----- Modal (centered, smaller) -----
-function Modal({ open, title, onClose, children, footer, danger }) {
+function Modal({ open, title, onClose, children, footer, danger, wide }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -91,7 +91,7 @@ function Modal({ open, title, onClose, children, footer, danger }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 320 }}>
-      <div className="modal" role="dialog" aria-modal="true">
+      <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ color: danger ? 'var(--danger)' : undefined }}>{title}</h3>
           <button className="lp-close" onClick={onClose} aria-label="닫기" style={{ marginRight: -8 }}><I.X/></button>

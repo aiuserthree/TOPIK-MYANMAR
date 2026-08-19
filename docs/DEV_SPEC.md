@@ -145,6 +145,7 @@ apps/api/
 | Export | `roster.xlsx`, `photos.zip` | **구현** (`GET /admin/exam-rounds/{id}/roster.xlsx`, `photos.zip`) |
 | Find email | `POST /auth/find-email` | **구현** |
 | Marketing mail | `POST /admin/notices/{id}/send-marketing` | **구현** |
+| 예외 접수 처리 | `POST /admin/applications/{id}/change-level`, `/{id}/reinstate`, `POST /admin/applications/designate`, `GET /admin/exam-rounds/{id}/capacity` | **구현** (제110회~ · 권한 `applicants:exception`) |
 | Internal | `/internal/notifications/*` | **미구현** |
 
 **환경 변수** (`.env.example`):
@@ -304,8 +305,10 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 | `V010__board_official_reply_history.sql` | 게시판 공식 답변 이력 |
 | `V011__admin_permission_matrix.sql` | BO 권한 매트릭스 JSONB |
 | `V012__access_logs.sql` | `admin_access_logs`, `member_access_logs` |
+| … | V013~V022 (OTP 잠금·약관 문구·수납 기간·접수 휴지통·정보 심사·급수별 정원·수험번호 비공개 기본값) |
+| `V023__application_exception_intake.sql` | **예외 접수 처리(제110회~)** — `applications.exception_type/reason/at/admin_id`, `applications.is_designated`, `applications·application_submissions.cancelled_from_status` |
 
-운영·로컬 모두 **V001 → V012 순서**로 적용. 일괄: `bash scripts/run-migrations.sh` ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8). V007의 `CREATE EXTENSION vector`는 **postgres superuser** + **stdin**(`< 절대경로`)으로 실행합니다. Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적용 기준은 SQL migration입니다.
+운영·로컬 모두 **V001 → V023 순서**로 적용. 일괄: `bash scripts/run-migrations.sh` ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8). V007의 `CREATE EXTENSION vector`는 **postgres superuser** + **stdin**(`< 절대경로`)으로 실행합니다. Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적용 기준은 SQL migration입니다.
 
 ### 6.2 스키마 개요 (문서·V005 기준)
 
@@ -318,6 +321,7 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 - **V010:** `board_comments.is_official_reply` — 환불·문의 공식 답변 이력
 - **V011:** `admin_permission_matrix` — BO 권한 매트릭스 저장
 - **V012:** `admin_access_logs`, `member_access_logs` — BO 접근 로그·감사
+- **V023:** 예외 접수 처리 — `applications.exception_*`(유형·사유·시각·처리자)는 **마지막 예외 처리**를 담는다. 지정 접수 여부는 이후 급수 정정·복원으로 덮이면 특별 관리 명단이 깨지므로 `is_designated` 플래그로 따로 고정한다. `cancelled_from_status`는 FO 취소 직전 단계를 보관해 관리자 복원이 원래 단계로 되돌아가게 한다
 
 ### 6.2.1 pgvector (의미 검색·RAG)
 
@@ -504,18 +508,20 @@ FastAPI(`:8000`)를 띄운 뒤, 소스 디렉터리에서 정적 서버로 FO/BO
 **FO:**
 
 ```bash
-cd html/C안/FO
-python3 -m http.server 8080
-# http://localhost:8080/index.html
+python3 scripts/serve_static.py "html/C안/FO" 8080
+# http://localhost:8080/
 ```
 
 **BO:**
 
 ```bash
-cd html/C안/BO\(admin\)/project
-python3 -m http.server 8081
-# http://localhost:8081/admin-login.html
+python3 scripts/serve_static.py "html/C안/BO(admin)/project" 8081
+# http://localhost:8081/admin-login
 ```
+
+> `scripts/serve_static.py` 는 운영 nginx 의 `try_files $uri $uri.html $uri/` 를 흉내 냅니다.
+> 순정 `python3 -m http.server` 로 띄우면 확장자 없는 경로에서 404 가 나며, 특히 **BO 로그인
+> 직후 이동하는 `/admin` 이 열리지 않습니다**(로그인은 됐는데 404 화면).
 
 | 항목 | 값 |
 | --- | --- |

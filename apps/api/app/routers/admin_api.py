@@ -46,6 +46,7 @@ from app.lib.formatting import (
     exam_number_visible as _exam_number_visible,
     fmt_date,
     fmt_datetime,
+    format_application_no,
     resolve_application_no,
 )
 from app.config import get_settings
@@ -62,7 +63,7 @@ from app.lib.email_notify import (
     notify_temp_password,
     count_active_applications,
 )
-from app.lib.profile import PROFILE_INCOMPLETE_BIRTH
+from app.lib.profile import PROFILE_INCOMPLETE_BIRTH, is_full_member
 from app.lib.validation import JOB_CODES, MOTIVE_CODES, PURPOSE_CODES
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.payment_roster import (
@@ -71,7 +72,29 @@ from app.lib.payment_roster import (
     parse_payment_xlsx,
     payment_export_filename,
 )
-from app.lib.capacity import count_active_round_submissions, round_level_counts
+from app.lib.capacity import (
+    count_active_round_submissions,
+    count_active_venue_submissions,
+    level_occupancy_snapshot,
+    normalize_level,
+    occupancy_snapshot,
+    round_level_counts,
+    venue_level_counts,
+)
+from app.lib.exception_intake import (
+    EXCEPTION_TYPE_LABELS,
+    LEVEL_CHANGE_FIELDS,
+    REINSTATE_FIELDS,
+    assert_level_seat_free,
+    assert_person_seat_free,
+    is_active_seat,
+    is_cancelled,
+    level_text as _level_text,
+    mark_exception,
+    require_reason,
+    reset_for_reintake,
+    status_after_reinstate,
+)
 from app.lib.roster_export import APPROVED_STATUSES, build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
@@ -178,6 +201,34 @@ class InfoReviewBody(BaseModel):
 
 class RevBody(BaseModel):
     rev: int | None = None
+
+
+# --- 예외 접수 처리(제110회~) ---------------------------------------------
+class LevelChangeBody(BaseModel):
+    """토픽 Ⅰ·Ⅱ 혼동 접수자의 급수 정정."""
+
+    exam_level: str
+    reason: str = ""
+    rev: int | None = None
+
+
+class ReinstateBody(BaseModel):
+    """잘못 누른 '취소'를 '접수'로 되돌린다."""
+
+    reason: str = ""
+    rev: int | None = None
+
+
+class DesignateBody(BaseModel):
+    """마감 이후 지정 접수(한국 교민 자녀 등 특별 관리 대상)."""
+
+    user_id: int
+    exam_round_id: int
+    exam_venue_id: int
+    exam_levels: list[str] = Field(default_factory=list)
+    accommodation_requested: bool = False
+    reason: str = ""
+    allow_over_capacity: bool = False
 
 
 class ApplicationMemoBody(BaseModel):
@@ -592,6 +643,14 @@ def _app_row_dict(
         "email": user.email if user else None,
         "phone": user.phone if user else None,
         "reject_reason": app.reject_reason,
+        "cancel_reason": app.cancel_reason,
+        "cancelled_at": app.cancelled_at.isoformat() if app.cancelled_at else None,
+        # 예외 접수 처리(제110회~) — BO 목록·상세에서 일반 접수와 구분해 표시한다.
+        "exception_type": app.exception_type,
+        "exception_type_label": EXCEPTION_TYPE_LABELS.get(app.exception_type or "", None),
+        "is_designated": bool(app.is_designated),
+        "exception_reason": app.exception_reason,
+        "exception_at": app.exception_at.isoformat() if app.exception_at else None,
         "payment_receipt_no": app.payment_receipt_no,
         "payment_memo": app.payment_memo,
         "paid_at": app.paid_at.isoformat() if app.paid_at else None,
@@ -677,6 +736,9 @@ async def admin_list_applications(
     exam_venue_id: int | None = Query(None),
     exam_level: str | None = Query(None),
     status: str | None = Query(None),
+    exception_type: str | None = Query(
+        None, description="예외 처리 건만 — level_change|reinstate|designated|any"
+    ),
     q: str | None = Query(None, description="이름·이메일·생년월일·접수번호·수험번호 검색"),
     trash: bool = Query(False),
     page: int = Query(1, ge=1),
@@ -695,6 +757,23 @@ async def admin_list_applications(
         stmt = stmt.where(Application.exam_level == exam_level)
     if status:
         stmt = stmt.where(Application.status == status)
+    if exception_type and exception_type.strip():
+        wanted = exception_type.strip()
+        if wanted == "any":
+            stmt = stmt.where(
+                or_(Application.exception_type.isnot(None), Application.is_designated.is_(True))
+            )
+        elif wanted == "designated":
+            # 급수 정정 등으로 exception_type 이 덮어써져도 특별 관리 명단에서 빠지면 안 된다.
+            stmt = stmt.where(Application.is_designated.is_(True))
+        elif wanted in EXCEPTION_TYPE_LABELS:
+            stmt = stmt.where(Application.exception_type == wanted)
+        else:
+            raise api_error(
+                "VALIDATION_ERROR",
+                "exception_type은 level_change|reinstate|designated|any 중 하나여야 합니다.",
+                400,
+            )
     if q and q.strip():
         term = f"%{q.strip()}%"
         app_no_expr = func.coalesce(
@@ -1303,6 +1382,29 @@ async def restore_application(
     ).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "휴지통에 접수가 없습니다.", 404)
+    # 휴지통에 있는 동안 같은 급수로 다시 접수됐을 수 있다(FO 재신청·BO 지정 접수).
+    # 그대로 살리면 한 사람이 같은 회차·급수에 두 번 접수된 상태가 된다.
+    conflict = (
+        await db.execute(
+            select(Application.id)
+            .where(
+                Application.submission_id == app.submission_id,
+                Application.id != app.id,
+                Application.exam_level == app.exam_level,
+                Application.is_deleted.is_(False),
+                Application.status != "cancelled",
+                Application.cancelled_at.is_(None),
+            )
+            .limit(1)
+        )
+    ).first()
+    if conflict:
+        raise api_error(
+            "LEVEL_ALREADY_APPLIED",
+            f"이 응시자는 같은 회차 {_level_text(app.exam_level)}에 이미 접수되어 있습니다. "
+            "복구하면 같은 급수가 두 건이 되므로, 남길 한 건을 정한 뒤 다시 시도해 주세요.",
+            409,
+        )
     app.is_deleted = False
     app.deleted_at = None
     await write_audit(
@@ -1622,6 +1724,458 @@ async def info_review(
     return {"info_review_status": app.info_review_status, "rev": app.rev}
 
 
+# ---------------------------------------------------------------------------
+# 예외 접수 처리(제110회~) — 급수 정정 · 취소 복원 · 지정 접수
+#
+# 셋 다 접수 마감 이후에도 동작해야 한다(그게 존재 이유다). 대신 정원은 일반
+# 접수와 똑같이 지키고, 처리 흔적은 접수 행(applications.exception_*)과 감사
+# 로그 양쪽에 남긴다. 권한은 applicants:exception — 기본값은 최고관리자 전용이며
+# 권한 매트릭스에서 일반관리자에게 부여할 수 있다.
+# ---------------------------------------------------------------------------
+async def _lock_round_and_venue(
+    db: AsyncSession,
+    *,
+    round_id: int,
+    venue_id: int,
+    require_active_venue: bool,
+) -> tuple[ExamRound, ExamVenue]:
+    """정원 계산과 반영을 한 트랜잭션에 묶기 위해 회차 → 시험장 순으로 잠근다.
+
+    FO 접수(applications.submit_application)와 잠금 순서를 맞춰야 데드락이 없다.
+    """
+    rnd = (
+        await db.execute(select(ExamRound).where(ExamRound.id == round_id).with_for_update())
+    ).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    if rnd.registration_status == "revoked":
+        raise api_error("VALIDATION_ERROR", "폐지된 회차는 예외 처리할 수 없습니다.", 400)
+    stmt = select(ExamVenue).where(ExamVenue.id == venue_id)
+    if require_active_venue:
+        stmt = stmt.where(ExamVenue.is_active)
+    venue = (await db.execute(stmt.with_for_update())).scalar_one_or_none()
+    if not venue:
+        raise api_error(
+            "INVALID_VENUE", "시험장을 찾을 수 없거나 사용 중지된 시험장입니다.", 400
+        )
+    return rnd, venue
+
+
+def _exception_audit_payload(app: Application) -> dict:
+    return {
+        "application_id": app.id,
+        "submission_id": app.submission_id,
+        "user_id": app.user_id,
+        "exam_round_id": app.exam_round_id,
+        "exam_venue_id": app.exam_venue_id,
+        "exam_level": app.exam_level,
+        "application_no": resolve_application_no(
+            app.application_no, app.submission_id, app.exam_level
+        ),
+        "status": app.status,
+        "exception_type": app.exception_type,
+    }
+
+
+@router.post("/applications/{app_id}/change-level")
+async def change_application_level(
+    app_id: int,
+    body: LevelChangeBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
+    admin: AuthUser = Depends(matrix_perm("applicants", "exception")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """토픽 Ⅰ·Ⅱ 를 혼동해 접수한 응시자의 급수를 정정한다(접수 기간·마감 이후 모두).
+
+    옮겨 갈 급수의 정원이 비어 있을 때만 허용한다. 지금 쥔 급수 좌석은 이동과
+    동시에 비므로 대상 급수만 검사하면 된다.
+    """
+    app = (
+        await db.execute(select(Application).where(Application.id == app_id))
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    reason = require_reason(body.reason, label="급수 정정 사유")
+
+    target = normalize_level(body.exam_level)
+    if not target:
+        raise api_error("VALIDATION_ERROR", "급수는 TOPIK Ⅰ 또는 Ⅱ 여야 합니다.", 400)
+    if target == normalize_level(app.exam_level):
+        raise api_error("VALIDATION_ERROR", f"이미 {_level_text(target)} 접수입니다.", 400)
+    if app.is_deleted:
+        raise api_error("VALIDATION_ERROR", "휴지통에 있는 접수입니다. 복구 후 처리해 주세요.", 400)
+    if is_cancelled(app):
+        raise api_error(
+            "VALIDATION_ERROR",
+            "취소된 접수입니다. 「취소 → 접수 복원」 후 급수를 정정해 주세요.",
+            400,
+        )
+    if app.exam_number:
+        raise api_error(
+            "EXAM_NUMBER_ASSIGNED",
+            "수험번호가 부여된 접수는 급수를 정정할 수 없습니다. "
+            "수험번호에 급수 코드가 들어가므로 부여 전에 처리해야 합니다.",
+            409,
+        )
+
+    rnd, venue = await _lock_round_and_venue(
+        db, round_id=app.exam_round_id, venue_id=app.exam_venue_id, require_active_venue=False
+    )
+
+    duplicated = (
+        await db.execute(
+            select(Application.id)
+            .where(
+                Application.submission_id == app.submission_id,
+                Application.id != app.id,
+                Application.exam_level == target,
+                Application.is_deleted.is_(False),
+                Application.status != "cancelled",
+                Application.cancelled_at.is_(None),
+            )
+            .limit(1)
+        )
+    ).first()
+    if duplicated:
+        raise api_error(
+            "LEVEL_ALREADY_APPLIED",
+            f"이 응시자는 이미 {_level_text(target)}에 접수되어 있습니다. "
+            "동시 접수 건은 급수 정정 대신 한쪽을 취소해 주세요.",
+            409,
+        )
+
+    await assert_level_seat_free(db, exam_round=rnd, venue=venue, level=target)
+
+    before_level = normalize_level(app.exam_level)
+    fee_before = rnd.fee_level_i if before_level == "I" else rnd.fee_level_ii
+    fee_after = rnd.fee_level_i if target == "I" else rnd.fee_level_ii
+    before = snapshot(app, LEVEL_CHANGE_FIELDS)
+
+    app.exam_level = target
+    app.application_no = format_application_no(app.submission_id, target)
+    mark_exception(app, exception_type="level_change", reason=reason, admin_user_id=admin.id)
+    bump_rev(app)
+
+    fee_changed = int(fee_before or 0) != int(fee_after or 0)
+    memo = reason
+    if fee_changed and app.payment_status == "paid":
+        memo = (
+            f"{reason} / 수납 완료 건 — 응시료 ${fee_before} → ${fee_after} 차액 정산 필요"
+        )
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="application_level_change",
+        target_type="applications",
+        target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, LEVEL_CHANGE_FIELDS),
+        memo=memo,
+        ip_address=ip,
+    )
+    await db.commit()
+    return {
+        "changed": True,
+        "exam_level": app.exam_level,
+        "application_no": resolve_application_no(
+            app.application_no, app.submission_id, app.exam_level
+        ),
+        "fee_before": fee_before,
+        "fee_after": fee_after,
+        "fee_changed": fee_changed,
+        "payment_status": app.payment_status,
+        "rev": app.rev,
+    }
+
+
+@router.post("/applications/{app_id}/reinstate")
+async def reinstate_application(
+    app_id: int,
+    body: ReinstateBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
+    admin: AuthUser = Depends(matrix_perm("applicants", "exception")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """잘못 누른 '취소'를 '접수'로 되돌린다 — 마감 이후 재신청이 막힌 응시자 구제.
+
+    취소 직전 단계(``cancelled_from_status``)로 정확히 복원한다. 좌석은 취소와
+    함께 이미 반납됐으므로 복원할 자리가 남아 있는지 다시 확인한다.
+    """
+    app = (
+        await db.execute(
+            select(Application)
+            .where(Application.id == app_id)
+            .options(
+                selectinload(Application.submission).selectinload(
+                    ApplicationSubmission.applications
+                )
+            )
+        )
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    reason = require_reason(body.reason, label="복원 사유")
+
+    if app.is_deleted:
+        raise api_error(
+            "VALIDATION_ERROR", "휴지통에 있는 접수입니다. 「복구」 후 처리해 주세요.", 400
+        )
+    if not is_cancelled(app):
+        raise api_error("VALIDATION_ERROR", "취소된 접수만 복원할 수 있습니다.", 400)
+
+    rnd, venue = await _lock_round_and_venue(
+        db, round_id=app.exam_round_id, venue_id=app.exam_venue_id, require_active_venue=False
+    )
+
+    sub = app.submission
+    siblings = [a for a in (sub.applications if sub else []) if a.id != app.id]
+    # 같은 회차에 살아 있는 급수가 하나도 없으면 '사람 좌석'을 새로 차지한다.
+    if not any(is_active_seat(a) for a in siblings):
+        await assert_person_seat_free(db, exam_round=rnd, venue=venue)
+    await assert_level_seat_free(db, exam_round=rnd, venue=venue, level=app.exam_level)
+
+    before = snapshot(app, REINSTATE_FIELDS)
+    app.status = status_after_reinstate(app)
+    app.cancelled_at = None
+    app.cancel_reason = None
+    app.cancelled_from_status = None
+    mark_exception(app, exception_type="reinstate", reason=reason, admin_user_id=admin.id)
+    bump_rev(app)
+
+    if sub and (sub.cancelled_at or sub.status == "cancelled"):
+        sub.status = sub.cancelled_from_status or "submitted"
+        sub.cancelled_at = None
+        sub.cancel_reason = None
+        sub.cancelled_from_status = None
+
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="application_reinstate",
+        target_type="applications",
+        target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, REINSTATE_FIELDS),
+        memo=reason,
+        ip_address=ip,
+    )
+    await db.commit()
+    return {"reinstated": True, "status": app.status, "rev": app.rev}
+
+
+@router.post("/applications/designate")
+async def designate_application(
+    body: DesignateBody,
+    admin: AuthUser = Depends(matrix_perm("applicants", "exception")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """마감 이후 지정 접수 — 한국 교민 자녀 등 특별 관리 대상을 관리자가 직접 접수.
+
+    접수 기간(``registration_status``)은 보지 않는다. 그게 이 기능의 목적이다.
+    대신 대상은 **가입이 완료된 회원**이어야 한다 — 연명부에 들어갈 사진·성명·
+    생년월일·직업 코드 등은 회원 정보에서 가져오므로 계정 없이는 접수를 만들 수 없다.
+    """
+    reason = require_reason(body.reason, label="지정 접수 사유")
+
+    levels: list[str] = []
+    for raw in body.exam_levels:
+        lv = normalize_level(raw)
+        if lv and lv not in levels:
+            levels.append(lv)
+    if not levels:
+        raise api_error("VALIDATION_ERROR", "응시 급수를 선택해 주세요.", 400)
+
+    if body.allow_over_capacity:
+        # 정원을 넘겨서까지 넣는 건 최고관리자 판단 사항(계약서 7절 RBAC와 같은 기준).
+        _require_super(admin)
+
+    user = (
+        await db.execute(select(User).where(User.id == body.user_id))
+    ).scalar_one_or_none()
+    if not user:
+        raise api_error("NOT_FOUND", "회원을 찾을 수 없습니다.", 404)
+    if user.status in ("suspended", "withdrawn"):
+        raise api_error(
+            "VALIDATION_ERROR", "정지·탈퇴 회원은 지정 접수할 수 없습니다.", 400
+        )
+    if user.status != "active" or not is_full_member(user):
+        raise api_error(
+            "PROFILE_INCOMPLETE",
+            "가입 절차(증명사진·기본정보)가 완료되지 않은 회원입니다. "
+            "회원이 마이페이지에서 정보를 완성한 뒤 다시 시도해 주세요.",
+            400,
+        )
+
+    rnd, venue = await _lock_round_and_venue(
+        db,
+        round_id=body.exam_round_id,
+        venue_id=body.exam_venue_id,
+        require_active_venue=True,
+    )
+    linked = set(
+        (
+            await db.execute(
+                select(ExamRoundVenue.exam_venue_id).where(
+                    ExamRoundVenue.exam_round_id == rnd.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if linked and venue.id not in linked:
+        raise api_error("INVALID_VENUE", "해당 회차에 배정된 시험장이 아닙니다.", 400)
+
+    existing = (
+        await db.execute(
+            select(ApplicationSubmission)
+            .where(
+                ApplicationSubmission.user_id == user.id,
+                ApplicationSubmission.exam_round_id == rnd.id,
+            )
+            .options(selectinload(ApplicationSubmission.applications))
+        )
+    ).scalar_one_or_none()
+
+    rows_by_level: dict[str, Application] = {}
+    active_rows: list[Application] = []
+    if existing:
+        for row in existing.applications:
+            if row.is_deleted:
+                continue
+            lv = normalize_level(row.exam_level)
+            if not lv:
+                continue
+            if is_active_seat(row):
+                active_rows.append(row)
+            prev = rows_by_level.get(lv)
+            if prev is None or (is_cancelled(prev) and not is_cancelled(row)):
+                rows_by_level[lv] = row
+
+    if active_rows and existing and existing.exam_venue_id != venue.id:
+        # 한 사람의 Ⅰ·Ⅱ 는 반드시 같은 시험장 — 오전·오후가 갈리면 응시자가 이동해야 한다.
+        raise api_error(
+            "VENUE_LOCKED",
+            "이 응시자는 이미 다른 시험장에 접수되어 있습니다. "
+            "TOPIK Ⅰ·Ⅱ 는 같은 시험장이어야 합니다.",
+            400,
+        )
+
+    for lv in levels:
+        row = rows_by_level.get(lv)
+        if row is not None and not is_cancelled(row):
+            raise api_error(
+                "LEVEL_ALREADY_APPLIED",
+                f"이 응시자는 이미 {_level_text(lv)}에 접수되어 있습니다. "
+                "이미 접수된 급수를 빼고 다시 시도해 주세요.",
+                409,
+            )
+
+    over_capacity = bool(body.allow_over_capacity)
+    if not over_capacity:
+        if not active_rows:
+            await assert_person_seat_free(db, exam_round=rnd, venue=venue)
+        for lv in levels:
+            await assert_level_seat_free(db, exam_round=rnd, venue=venue, level=lv)
+
+    now = datetime.now(timezone.utc)
+    if existing:
+        submission = existing
+        submission.exam_venue_id = venue.id
+        submission.photo_checklist_confirmed = True
+        submission.accommodation_requested = bool(
+            submission.accommodation_requested or body.accommodation_requested
+        )
+        submission.status = "submitted"
+        submission.cancelled_at = None
+        submission.cancel_reason = None
+        submission.cancelled_from_status = None
+        if not active_rows:
+            submission.submitted_at = now
+    else:
+        submission = ApplicationSubmission(
+            user_id=user.id,
+            exam_round_id=rnd.id,
+            exam_venue_id=venue.id,
+            photo_checklist_confirmed=True,
+            accommodation_requested=body.accommodation_requested,
+            status="submitted",
+            submitted_at=now,
+        )
+        db.add(submission)
+        await db.flush()
+
+    created: list[Application] = []
+    for lv in levels:
+        row = rows_by_level.get(lv)
+        if row is not None:
+            reset_for_reintake(row, venue_id=venue.id, photo_file_id=user.photo_file_id)
+            row.application_no = format_application_no(submission.id, lv)
+        else:
+            row = Application(
+                submission_id=submission.id,
+                user_id=user.id,
+                exam_round_id=rnd.id,
+                exam_venue_id=venue.id,
+                exam_level=lv,
+                application_no=format_application_no(submission.id, lv),
+                photo_file_id=user.photo_file_id,
+                status="submitted",
+            )
+            db.add(row)
+        row.exam_venue_id = venue.id
+        mark_exception(
+            row, exception_type="designated", reason=reason, admin_user_id=admin.id, now=now
+        )
+        # 특별 관리 표식 — 이후 급수 정정·복원으로 exception_type 이 바뀌어도 유지된다.
+        row.is_designated = True
+        bump_rev(row)
+        created.append(row)
+
+    # 접수 행 id 를 받아야 감사 로그를 접수 상세에 붙일 수 있다.
+    await db.flush()
+    memo = reason if not over_capacity else f"{reason} / 정원 초과 지정"
+    for row in created:
+        await write_audit(
+            db,
+            admin_user_id=admin.id,
+            action_type="application_designate",
+            target_type="applications",
+            target_id=row.id,
+            after_data={
+                **_exception_audit_payload(row),
+                "over_capacity": over_capacity,
+                "designated_by_round": rnd.round_no,
+            },
+            memo=memo,
+            ip_address=ip,
+        )
+    await db.commit()
+    return {
+        "designated": True,
+        "submission_id": submission.id,
+        "over_capacity": over_capacity,
+        "applications": [
+            {
+                "id": row.id,
+                "exam_level": row.exam_level,
+                "status": row.status,
+                "application_no": resolve_application_no(
+                    row.application_no, row.submission_id, row.exam_level
+                ),
+            }
+            for row in created
+        ],
+    }
+
+
 # 수험번호 일괄 부여 미리보기 응답에 실어 보낼 최대 행 수(부여 건수 제한이 아님).
 EXAM_PREVIEW_LIMIT = 500
 
@@ -1890,6 +2444,71 @@ async def admin_exam_rounds(_: AuthUser = Depends(require_any_admin), db: AsyncS
         data["registered_levels"] = await round_level_counts(db, r.id)
         items.append(data)
     return {"items": items}
+
+
+@router.get("/exam-rounds/{round_id}/capacity")
+async def exam_round_capacity(
+    round_id: int,
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """회차·시험장 잔여 정원 — 예외 처리(급수 정정·지정 접수) 화면이 쓰는 실시간 현황.
+
+    "제한인원이 비었을 경우"를 관리자가 처리 **전에** 눈으로 확인할 수 있어야 한다.
+    실제 방어는 각 예외 엔드포인트가 회차·시험장 행을 잠그고 다시 검사한다.
+    """
+    rnd = (
+        await db.execute(
+            select(ExamRound)
+            .where(ExamRound.id == round_id)
+            .options(selectinload(ExamRound.venue_links))
+        )
+    ).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+
+    round_levels = await round_level_counts(db, round_id)
+    per_venue_levels = await venue_level_counts(db, round_id)
+    linked_ids = [link.exam_venue_id for link in rnd.venue_links]
+
+    venue_stmt = select(ExamVenue)
+    if linked_ids:
+        venue_stmt = venue_stmt.where(ExamVenue.id.in_(linked_ids))
+    else:
+        venue_stmt = venue_stmt.where(ExamVenue.is_active)
+    venues = (await db.execute(venue_stmt.order_by(ExamVenue.name_ko))).scalars().all()
+
+    venue_items = []
+    for v in venues:
+        registered = await count_active_venue_submissions(
+            db, exam_round_id=round_id, exam_venue_id=v.id
+        )
+        item = {
+            "id": v.id,
+            "name_ko": v.name_ko,
+            "name_en": v.name_en,
+            "is_active": v.is_active,
+            "capacity": int(v.capacity or 0),
+            "level_occupancy": level_occupancy_snapshot(v, per_venue_levels.get(v.id)),
+        }
+        item.update(occupancy_snapshot(int(v.capacity or 0), registered))
+        venue_items.append(item)
+
+    round_registered = await count_active_round_submissions(db, round_id)
+    round_item = {
+        "id": rnd.id,
+        "round_no": rnd.round_no,
+        "title": rnd.title,
+        "registration_status": rnd.registration_status,
+        "registration_end_at": rnd.registration_end_at.isoformat()
+        if rnd.registration_end_at
+        else None,
+        "capacity": int(rnd.capacity or 0),
+        "fees": {"I": rnd.fee_level_i, "II": rnd.fee_level_ii},
+        "level_occupancy": level_occupancy_snapshot(rnd, round_levels),
+    }
+    round_item.update(occupancy_snapshot(int(rnd.capacity or 0), round_registered))
+    return {"round": round_item, "venues": venue_items}
 
 
 @router.post("/exam-rounds")
@@ -3020,8 +3639,10 @@ def _user_list_item(u: User) -> dict:
         "email": u.email,
         "name_ko": u.name_ko,
         "name_en": u.name_en,
+        "birth_date": u.birth_date,
         "phone": u.phone,
         "nationality": u.nationality,
+        "photo_file_id": u.photo_file_id,
         "status": u.status,
         "marketing_opt_in": u.marketing_opt_in,
         "signup_provider": u.signup_provider or "email",

@@ -28,7 +28,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 # BO 정적 서버
 cd html/C안/BO\(admin\)/project
-python3 -m http.server 8081
+python3 ../../../scripts/serve_static.py project 8081   # nginx try_files 재현(/admin 404 방지)
 # http://localhost:8081/admin-login.html
 ```
 

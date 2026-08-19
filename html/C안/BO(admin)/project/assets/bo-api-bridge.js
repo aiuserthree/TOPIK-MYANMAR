@@ -326,6 +326,13 @@
       email: row.email || "",
       tel: row.phone || "",
       accommodation: !!row.accommodation_requested,
+      cancelReason: row.cancel_reason || "",
+      cancelledAt: fmtMmt(row.cancelled_at),
+      exceptionType: row.exception_type || "",
+      isDesignated: !!row.is_designated,
+      exceptionLabel: row.exception_type_label || "",
+      exceptionReason: row.exception_reason || "",
+      exceptionAt: fmtMmt(row.exception_at),
       rev: row.rev != null ? row.rev : null,
     };
   }
@@ -492,6 +499,9 @@
     faq_create: "생성", faq_update: "수정", faq_delete: "삭제",
     photos_export: "내보내기", roster_export: "내보내기",
     payment_roster_export: "내보내기", payment_roster_import: "수납",
+    // 예외 접수 처리(제110회~)
+    application_level_change: "급수정정", application_reinstate: "접수복원",
+    application_designate: "지정접수",
   };
   var ADMIN_ACCESS_ACTION_UI = {
     login: "로그인", logout: "로그아웃", login_failed: "로그인실패", session_expired: "세션만료",
@@ -1520,6 +1530,77 @@
       var bad = ress.find(function (r) { return !r.ok; });
       if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
       return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+    });
+  };
+
+  // --- 예외 접수 처리(제110회~) ----------------------------------------
+  // 급수 정정 · 취소 복원 · 지정 접수. 셋 다 서버가 정원·중복을 다시 검사하므로
+  // 화면은 결과 메시지만 그대로 보여 주고, 성공 시 목록을 다시 읽는다.
+  DS.apiChangeApplicantLevel = function (id, level, reason) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.changeApplicationLevel(
+      id,
+      { exam_level: level, reason: reason },
+      { rev: applicantRev(id) }
+    ).then(function (res) {
+      if (!res.ok) {
+        if (Api.isConflict && Api.isConflict(res)) {
+          toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+          return DS.reloadApplicants(sessionId).then(function () { return null; });
+        }
+        toastErr(TopikBoApi.parseError(res));
+        return null;
+      }
+      var body = res.body || {};
+      return DS.reloadApplicants(sessionId).then(function () { return body; });
+    });
+  };
+
+  DS.apiReinstateApplicant = function (id, reason) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.reinstateApplication(id, { reason: reason }, { rev: applicantRev(id) })
+      .then(function (res) {
+        return handleMutation(res, function () { return DS.reloadApplicants(sessionId); })
+          .then(function (ok) {
+            if (!ok) return null;
+            return res.body || {};
+          });
+      });
+  };
+
+  DS.apiDesignateApplicant = function (payload) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.designateApplication(payload || {}).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return null; }
+      var body = res.body || {};
+      return DS.reloadApplicants(sessionId).then(function () { return body; });
+    });
+  };
+
+  DS.fetchRoundCapacity = function (roundId) {
+    if (!DS.isApiMode() || !roundId || !/^\d+$/.test(String(roundId))) {
+      return Promise.resolve(null);
+    }
+    return Api.getExamRoundCapacity(roundId).then(function (res) {
+      return res.ok ? (res.body || null) : null;
+    });
+  };
+
+  DS.searchMembersForDesignate = function (q) {
+    if (!DS.isApiMode()) return Promise.resolve([]);
+    return Api.getUsers({ q: q, status: "active", page_size: 20 }).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return []; }
+      return ((res.body && res.body.items) || []).map(function (u) {
+        return {
+          id: u.id,
+          nameKo: u.name_ko || "—",
+          nameEn: u.name_en || "",
+          email: u.email || "",
+          dob: u.birth_date || "",
+          phone: u.phone || "",
+          hasPhoto: u.photo_file_id != null,
+        };
+      });
     });
   };
 

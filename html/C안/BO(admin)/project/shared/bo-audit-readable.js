@@ -27,6 +27,10 @@
     info_review_status: '정보 심사 상태', info_reject_code: '정보 반려 사유',
     info_reject_note: '정보 반려 메모',
     exam_venue_id: '시험장', exam_round_id: '회차', user_id: '회원 번호',
+    exception_type: '예외 처리 유형', exception_reason: '예외 처리 사유',
+    exception_at: '예외 처리 일시', exception_admin_id: '예외 처리자',
+    cancelled_from_status: '취소 직전 단계', over_capacity: '정원 초과 지정',
+    application_id: '접수 번호', designated_by_round: '지정 접수 회차',
 
     // 회차
     round_no: '회차 번호', exam_date: '시험일', result_date: '합격 발표일',
@@ -113,6 +117,10 @@
       notice: '공지', event: '행사',
     },
     exam_level: { I: 'TOPIK Ⅰ', II: 'TOPIK Ⅱ', '1': 'TOPIK Ⅰ', '2': 'TOPIK Ⅱ' },
+    exception_type: {
+      level_change: '급수 정정', reinstate: '취소 → 접수 복원', designated: '지정 접수',
+    },
+    cancelled_from_status: APP_STATUS,
   };
 
   // true/false 를 항목 뜻에 맞는 한국어로.
@@ -127,6 +135,7 @@
     must_change_password: ['필요', '불필요'],
     dry_run: ['시뮬레이션(실제 반영 안 함)', '실제 반영'],
     is_secret: ['비밀글', '공개글'],
+    over_capacity: ['정원 초과 지정', '정원 내 지정'],
   };
 
   var JOB_LABELS = {
@@ -440,6 +449,9 @@
     payment_complete: { what: '응시료 수납을 완료 처리했습니다.', kind: 'change' },
     payment_cancel: { what: '응시료 수납을 취소 처리했습니다.', kind: 'change' },
     payment_roster_import: { what: '수납 명부 파일을 올려 수납 상태를 일괄 반영했습니다.', kind: 'change' },
+    application_level_change: { what: '토픽 Ⅰ·Ⅱ 를 혼동한 접수의 급수를 정정했습니다. 사유는 위 「처리 사유」에 있습니다.', kind: 'change' },
+    application_reinstate: { what: "잘못 누른 '취소'를 '접수'로 되돌렸습니다. 사유는 위 「처리 사유」에 있습니다.", kind: 'change' },
+    application_designate: { what: '마감 이후 지정 접수로 접수를 생성했습니다. 사유는 위 「처리 사유」에 있습니다.', kind: 'change' },
     reject: { what: '접수를 반려했습니다. 사유는 위 「처리 사유」에 있습니다.', kind: 'change' },
     memo: { what: '접수자에게 관리자 메모를 남겼습니다. 메모 내용은 위 「처리 사유」에 있습니다.', kind: 'change' },
     board_reply: { what: '게시글에 답변을 등록했습니다.', kind: 'change' },
