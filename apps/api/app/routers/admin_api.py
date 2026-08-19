@@ -3467,6 +3467,11 @@ async def put_permissions_matrix(
     }
 
 
+# 로그인·로그아웃은 관리자 접근 로그와 같은 사건을 중복 기록한 것이라 처리 이력에서
+# 감춘다(운영 302건 전부가 양쪽에 있었다). 행 자체는 append-only 로 그대로 둔다.
+_AUDIT_HIDDEN_ACTIONS = ("login", "logout")
+
+
 @router.get("/audit-logs")
 async def audit_logs(
     page: int = Query(1, ge=1),
@@ -3493,7 +3498,9 @@ async def audit_logs(
     if not can_all and not role_has(matrix, admin.role, "audit", "viewOwn"):
         raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
 
-    stmt = select(AdminAuditLog)
+    stmt = select(AdminAuditLog).where(
+        AdminAuditLog.action_type.notin_(_AUDIT_HIDDEN_ACTIONS)
+    )
     if not can_all:
         # 본인 이력만 — 반드시 limit 앞에서 건다. 뒤에서 자르면 '최신 200건 중 내 것'이
         # 되어, 다른 관리자가 활발하면 본인 기록이 통째로 사라진다.

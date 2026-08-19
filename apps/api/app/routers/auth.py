@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db_session
 from app.lib.access_log import write_admin_access, write_member_access
-from app.lib.audit import write_audit
 from app.lib.deps import AuthUser, get_client_ip, get_optional_user
 from app.lib.errors import api_error, fo_api_error
 from app.lib.fo_messages import fo_message
@@ -488,10 +487,8 @@ async def _login_admin(
         ip_address=ip,
         user_agent=user_agent,
     )
-    await write_audit(
-        db, admin_user_id=admin.id, action_type="login",
-        target_type="admin_users", target_id=admin.id, ip_address=ip,
-    )
+    # 처리 이력에는 남기지 않는다 — 위 write_admin_access 와 같은 사건이고,
+    # 관리자 접근 로그가 User-Agent·실패 사유까지 더 많이 남긴다.
     await db.commit()
     return _admin_token_response(admin)
 
@@ -662,10 +659,6 @@ async def logout(
             admin_email=admin_row.email if admin_row else auth.email,
             ip_address=ip,
             user_agent=ua,
-        )
-        await write_audit(
-            db, admin_user_id=auth.id, action_type="logout",
-            target_type="admin_users", target_id=auth.id, ip_address=ip,
         )
         await db.commit()
     elif auth and not auth.is_admin:

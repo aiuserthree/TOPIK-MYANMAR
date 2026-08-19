@@ -1,7 +1,7 @@
 /* panels/audit.jsx — 관리자 처리 이력 (TPKM_BO_6_2_*) */
 
 const AUDIT_TYPES = ['접수자','사진','회차','시험장','공지','FAQ','환불·정정','문의','회원','약관','관리자계정'];
-const AUDIT_ACTIONS_F = ['등록','생성','수정','삭제','상태변경','승인','반려','사진승인','사진반려','정보승인','정보반려','답변','댓글','메모','수납','수납취소','게시','폐지','복구','정지','탈퇴','권한변경','비밀번호초기화','비밀번호변경','로그인','로그아웃','비밀글열람','수험번호부여','내보내기','취소'];
+const AUDIT_ACTIONS_F = ['등록','생성','수정','삭제','상태변경','승인','반려','사진승인','사진반려','정보승인','정보반려','답변','댓글','메모','수납','수납취소','게시','폐지','복구','정지','탈퇴','권한변경','비밀번호초기화','비밀번호변경','비밀글열람','수험번호부여','내보내기','취소'];
 
 /** 액션 배지 색. 사진승인·정보반려처럼 앞에 수식이 붙는 라벨도 같은 색으로 묶는다. */
 function auditPillClass(action) {
@@ -87,7 +87,10 @@ function AuditPanel() {
       <div className="panel-head">
         <div>
           <h1>관리자 처리 이력</h1>
-          <div className="sub">{canSeeAll ? '모든 관리자의 처리 이력을 조회합니다.' : <span>본인 처리 이력만 조회됩니다 (권한: <b>{DataStore.roleLabel(myRole)}</b>)</span>}</div>
+          <div className="sub">
+            {canSeeAll ? '모든 관리자의 처리 이력을 조회합니다.' : <span>본인 처리 이력만 조회됩니다 (권한: <b>{DataStore.roleLabel(myRole)}</b>)</span>}
+            {' '}로그인 기록은 <a href="#admin-access-log">관리자 접근 로그</a>에 있습니다.
+          </div>
         </div>
         <div className="actions">
           <button className="btn btn-secondary" disabled={!canSeeAll} onClick={exportCSV}>
