@@ -2120,25 +2120,89 @@
     return DS.loadAuditPage({ page: 1 });
   };
 
-  DS.reloadAdminAccessLogs = function (q) {
+  /** 한글 액션 라벨 → 서버 action_type 목록. 라벨 하나가 여러 종류에 대응한다
+      (회원 '로그인' = login·register·google_login). */
+  function reverseActionTypes(map, label) {
+    if (!label || label === "all") return null;
+    var out = [];
+    Object.keys(map).forEach(function (k) { if (map[k] === label) out.push(k); });
+    return out.length ? out : null;
+  }
+
+  function accessQuery(o, page, pageSize, actionMap) {
+    var q = { page: page, page_size: pageSize };
+    var acts = reverseActionTypes(actionMap, o.action);
+    if (acts) q.action_types = acts.join(",");
+    if (o.result === "성공") q.success = true;
+    else if (o.result === "실패") q.success = false;
+    if (o.days) q.days = o.days;
+    return q;
+  }
+
+  /* 예전에는 최신 500건만 받아 화면에서 걸렀다. 회원 접근 로그는 6만 건이 넘어
+     0.8% 만 보였고, 필터도 그 안에서만 동작했다. 이제 서버가 처리한다. */
+  DS.loadAdminAccessPage = function (opts) {
     if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getAdminAccessLogs(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
-      if (res.ok && res.body && res.body.items) {
-        DS.state.adminAccessLogs = res.body.items.map(mapAdminAccessLog);
-      }
+    var o = opts || {};
+    var q = accessQuery(o, o.page || 1, o.pageSize || 25, ADMIN_ACCESS_ACTION_UI);
+    if (o.adminId && o.adminId !== "all") q.admin_user_id = o.adminId;
+    if (o.ip) q.ip = o.ip;
+    DS.state.adminAccessLoading = true;
+    DS.notify();
+    return Api.getAdminAccessLogs(q).then(function (res) {
+      DS.state.adminAccessLoading = false;
+      var body = (res.ok && res.body) || {};
+      DS.state.adminAccessLogs = (body.items || []).map(mapAdminAccessLog);
+      DS.state.adminAccessTotal = body.total_items != null ? body.total_items : DS.state.adminAccessLogs.length;
       DS.notify();
+      return res;
     });
   };
 
-  DS.reloadMemberAccessLogs = function (q) {
-    if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getMemberAccessLogs(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
-      if (res.ok && res.body && res.body.items) {
-        DS.state.memberAccessLogs = res.body.items.map(mapMemberAccessLog);
-      }
-      DS.notify();
+  DS.fetchAdminAccessAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    var o = opts || {};
+    var q = accessQuery(o, 1, 2000, ADMIN_ACCESS_ACTION_UI);
+    if (o.adminId && o.adminId !== "all") q.admin_user_id = o.adminId;
+    if (o.ip) q.ip = o.ip;
+    return Api.getAdminAccessLogs(q).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapAdminAccessLog), total: body.total_items || 0 };
     });
   };
+
+  DS.loadMemberAccessPage = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve();
+    var o = opts || {};
+    var q = accessQuery(o, o.page || 1, o.pageSize || 25, MEMBER_ACCESS_ACTION_UI);
+    if (o.email) q.email = o.email;
+    DS.state.memberAccessLoading = true;
+    DS.notify();
+    return Api.getMemberAccessLogs(q).then(function (res) {
+      DS.state.memberAccessLoading = false;
+      var body = (res.ok && res.body) || {};
+      DS.state.memberAccessLogs = (body.items || []).map(mapMemberAccessLog);
+      DS.state.memberAccessTotal = body.total_items != null ? body.total_items : DS.state.memberAccessLogs.length;
+      DS.notify();
+      return res;
+    });
+  };
+
+  DS.fetchMemberAccessAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    var o = opts || {};
+    var q = accessQuery(o, 1, 2000, MEMBER_ACCESS_ACTION_UI);
+    if (o.email) q.email = o.email;
+    return Api.getMemberAccessLogs(q).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapMemberAccessLog), total: body.total_items || 0 };
+    });
+  };
+
+  DS.reloadAdminAccessLogs = function (q) { return DS.loadAdminAccessPage(q || {}); };
+  DS.reloadMemberAccessLogs = function (q) { return DS.loadMemberAccessPage(q || {}); };
 
   DS.reloadPermHistory = function (q) {
     if (!DS.isApiMode()) return Promise.resolve();

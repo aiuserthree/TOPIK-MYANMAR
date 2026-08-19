@@ -4,6 +4,7 @@ const MEMBER_ACCESS_ACTIONS_F = ['로그인', '로그아웃', '페이지접근',
 
 function MemberAccessLogPanel() {
   const state = useStore();
+  const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
   useEffect(() => {
     if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.reloadMemberAccessLogs) {
       DataStore.reloadMemberAccessLogs();
@@ -21,9 +22,28 @@ function MemberAccessLogPanel() {
   const PER = 25;
   const [detailId, setDetailId] = useState(null);
 
+  const applyFilter = (setter) => (v) => { setter(v); setPage(1); };
+
+  const query = useMemo(() => ({
+    // 회원 선택과 이메일 검색은 둘 다 email 로 나간다 — 선택이 있으면 그쪽이 우선.
+    email: memberF !== 'all' ? memberF : (emailQ.trim() || null),
+    action: actionF, result: resultF,
+    days: range || null,
+  }), [memberF, actionF, resultF, range, emailQ]);
+
+  /* 서버가 필터·페이징을 처리한다. 예전처럼 최신 500건만 받아 화면에서 거르면
+     로그가 500건을 넘는 순간 조용히 잘린다. */
+  useEffect(() => {
+    if (!isApi || !DataStore.loadMemberAccessPage) return;
+    const t = setTimeout(() => DataStore.loadMemberAccessPage({ ...query, page, pageSize: PER }), query.email ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [isApi, query, page]);
+
   const baseLog = state.memberAccessLogs || [];
 
-  const filtered = useMemo(() => {
+  // 데모(비 API) 모드 — 더미를 화면에서 거른다.
+  const demoFiltered = useMemo(() => {
+    if (isApi) return [];
     let r = baseLog.slice();
     if (memberF !== 'all') r = r.filter(l => l.email === memberF);
     if (actionF !== 'all') r = r.filter(l => l.action === actionF);
@@ -33,22 +53,27 @@ function MemberAccessLogPanel() {
       const cutoffStr = cutoff.toISOString().slice(0, 10);
       r = r.filter(l => l.ts.slice(0, 10) >= cutoffStr);
     }
-    if (emailQ) r = r.filter(l => l.email && l.email.includes(emailQ));
+    if (query.email) r = r.filter(l => l.email && l.email.includes(query.email));
     return r;
-  }, [baseLog, memberF, actionF, resultF, range, emailQ]);
+  }, [isApi, baseLog, memberF, actionF, resultF, range, query.email]);
 
-  useEffect(() => setPage(1), [memberF, actionF, resultF, range, emailQ]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER));
-  const rows = filtered.slice((page - 1) * PER, page * PER);
+  const total = isApi ? (state.memberAccessTotal || 0) : demoFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PER));
+  const rows = isApi ? baseLog : demoFiltered.slice((page - 1) * PER, page * PER);
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     const headers = ['시각', '한글성명', '영문성명', '이메일', 'IP', '액션', '경로', '결과', 'User-Agent', '메모'];
-    const csvRows = filtered.map(l => [l.ts, l.nameKo, l.nameEn, l.email, l.ip, l.action, l.path || '', l.result, l.userAgent || '', l.memo || '']);
+    let list = demoFiltered;
+    if (isApi && DataStore.fetchMemberAccessAll) {
+      const res = await DataStore.fetchMemberAccessAll(query);
+      list = res.rows;
+      if (res.total > list.length) {
+        toastErr(`조건에 맞는 ${DataStore.fmtNum(res.total)}건 중 최근 ${DataStore.fmtNum(list.length)}건만 내보냅니다. 기간을 좁혀 주세요.`);
+      }
+    }
+    const csvRows = list.map(l => [l.ts, l.nameKo, l.nameEn, l.email, l.ip, l.action, l.path || '', l.result, l.userAgent || '', l.memo || '']);
     const fn = '회원접근로그_' + new Date().toISOString().slice(0, 10) + '.csv';
-    const after = () => {
-      DataStore.addAudit({ type: '관리자계정', targetId: '—', action: '게시', memo: `회원 접근 로그 CSV보내기(${filtered.length}건)` });
-      toastOk(`${filtered.length}건의 접근 로그 CSV를 생성했습니다.`);
-    };
+    const after = () => toastOk(`${DataStore.fmtNum(csvRows.length)}건의 접근 로그 CSV를 생성했습니다.`);
     if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, csvRows).then(after); }
     else after();
   };
@@ -80,27 +105,27 @@ function MemberAccessLogPanel() {
 
       <div className="filterbar">
         <div className="chips">
-          <button className={`chip ${range === 0 ? 'active' : ''}`} onClick={() => setRange(0)}>전체 기간<span className="cnt">{baseLog.length}</span></button>
-          <button className={`chip ${range === 7 ? 'active' : ''}`} onClick={() => setRange(7)}>최근 7일</button>
-          <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => setRange(30)}>최근 30일</button>
+          <button className={`chip ${range === 0 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(0)}>전체 기간<span className="cnt">{DataStore.fmtNum(total)}</span></button>
+          <button className={`chip ${range === 7 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(7)}>최근 7일</button>
+          <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(30)}>최근 30일</button>
         </div>
         <div className="controls">
-          <select className="select" value={memberF} onChange={e => setMemberF(e.target.value)}>
+          <select className="select" value={memberF} onChange={e => applyFilter(setMemberF)(e.target.value)}>
             <option value="all">전체 회원</option>
             {(state.membersCatalog || state.members).filter(m => m.status === 'active').slice(0, 20).map(m => (
               <option key={m.id} value={m.email}>{m.nameKo || m.name} · {m.email}</option>
             ))}
           </select>
-          <select className="select" value={actionF} onChange={e => setActionF(e.target.value)}>
+          <select className="select" value={actionF} onChange={e => applyFilter(setActionF)(e.target.value)}>
             <option value="all">전체 액션</option>
             {MEMBER_ACCESS_ACTIONS_F.map(a => <option key={a}>{a}</option>)}
           </select>
-          <select className="select" value={resultF} onChange={e => setResultF(e.target.value)}>
+          <select className="select" value={resultF} onChange={e => applyFilter(setResultF)(e.target.value)}>
             <option value="all">전체 결과</option>
             <option>성공</option>
             <option>실패</option>
           </select>
-          <input className="input search" placeholder="이메일 검색" value={emailQ} onChange={e => setEmailQ(e.target.value)}/>
+          <input className="input search" placeholder="이메일 검색" value={emailQ} onChange={e => applyFilter(setEmailQ)(e.target.value)}/>
         </div>
       </div>
 
@@ -126,13 +151,13 @@ function MemberAccessLogPanel() {
                 </tr>
               ))}
               {!rows.length && (
-                <tr><td colSpan="7"><div className="empty"><div className="ttl">조건에 맞는 로그가 없습니다</div></div></td></tr>
+                <tr><td colSpan="7"><div className="empty"><div className="ttl">{(state.adminAccessLoading || state.memberAccessLoading) ? '불러오는 중…' : '조건에 맞는 로그가 없습니다'}</div></div></td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="dg-foot">
-          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(filtered.length)}</b>건</div>
+          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(total)}</b>건</div>
           <Pager page={page} total={totalPages} onPage={setPage}/>
         </div>
       </div>

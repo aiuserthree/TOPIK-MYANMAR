@@ -3647,9 +3647,10 @@ def _access_log_migration_error() -> None:
 @router.get("/access-logs/admins")
 async def admin_access_logs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=500),
+    page_size: int = Query(50, ge=1, le=2000),
     admin_user_id: int | None = Query(None),
     action_type: str | None = Query(None),
+    action_types: str | None = Query(None),
     success: bool | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     ip: str | None = Query(None),
@@ -3663,6 +3664,10 @@ async def admin_access_logs(
             stmt = stmt.where(AdminAccessLog.admin_user_id == admin_user_id)
         if action_type:
             stmt = stmt.where(AdminAccessLog.action_type == action_type)
+        if action_types:
+            wanted = [a.strip() for a in action_types.split(",") if a.strip()]
+            if wanted:
+                stmt = stmt.where(AdminAccessLog.action_type.in_(wanted))
         if success is not None:
             stmt = stmt.where(AdminAccessLog.success == success)
         cutoff = _access_days_filter(days)
@@ -3687,10 +3692,11 @@ async def admin_access_logs(
 @router.get("/access-logs/members")
 async def member_access_logs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=500),
+    page_size: int = Query(50, ge=1, le=2000),
     user_id: int | None = Query(None),
     email: str | None = Query(None),
     action_type: str | None = Query(None),
+    action_types: str | None = Query(None),
     success: bool | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     admin: AuthUser = Depends(require_admin),
@@ -3705,6 +3711,11 @@ async def member_access_logs(
             stmt = stmt.where(MemberAccessLog.email.ilike(f"%{email.strip()}%"))
         if action_type:
             stmt = stmt.where(MemberAccessLog.action_type == action_type)
+        if action_types:
+            # UI 한 라벨이 여러 종류에 대응한다 — 로그인 = login·register·google_login
+            wanted = [a.strip() for a in action_types.split(",") if a.strip()]
+            if wanted:
+                stmt = stmt.where(MemberAccessLog.action_type.in_(wanted))
         if success is not None:
             stmt = stmt.where(MemberAccessLog.success == success)
         cutoff = _access_days_filter(days)
