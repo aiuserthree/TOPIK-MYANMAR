@@ -22,9 +22,9 @@
     payment_memo: '수납 메모', paid_at: '수납 일시', payment_cancel_reason: '수납 취소 사유',
     reject_reason: '반려 사유', cancel_reason: '취소 사유', cancelled_at: '취소 일시',
     approved_at: '승인 일시',
-    photo_review_status: '사진 심사 상태', photo_reject_code: '사진 반려 사유(코드)',
+    photo_review_status: '사진 심사 상태', photo_reject_code: '사진 반려 사유',
     photo_reject_note: '사진 반려 메모',
-    info_review_status: '정보 심사 상태', info_reject_code: '정보 반려 사유(코드)',
+    info_review_status: '정보 심사 상태', info_reject_code: '정보 반려 사유',
     info_reject_note: '정보 반려 메모',
     exam_venue_id: '시험장', exam_round_id: '회차', user_id: '회원 번호',
 
@@ -67,7 +67,8 @@
     board_notify_opt_in: '게시판 알림 수신', matrix: '메뉴 권한',
 
     // 게시판
-    workflow_status: '처리 상태',
+    workflow_status: '처리 상태', board_type: '게시판 종류', is_secret: '비밀글 여부',
+    admin_replied_at: '답변 일시', admin_replier_id: '답변한 관리자(번호)',
 
     // 일괄 처리·내보내기 결과
     included: '포함된 사진', missing: '누락된 사진', files: '생성된 파일',
@@ -97,7 +98,11 @@
     info_review_status: { pending: '심사 대기', approved: '승인', rejected: '반려' },
     registration_status: { scheduled: '접수 예정', open: '접수중', closed: '접수 마감', revoked: '폐지' },
     role: { super: '최고관리자', admin: '일반관리자', standard: '일반관리자', general: '일반관리자', readonly: '조회관리자', viewer: '조회관리자' },
-    workflow_status: { received: '접수', in_review: '검토중', completed: '처리 완료', rejected: '반려' },
+    workflow_status: {
+      received: '접수', in_review: '검토중', answered: '답변 완료',
+      completed: '처리 완료', rejected: '반려',
+    },
+    board_type: { inquiry: '문의 게시판', refund_correction: '환불·정보정정' },
     term_type: { service: '이용약관', privacy: '개인정보 처리방침', marketing: '마케팅 수신' },
     gender: { M: '남성', F: '여성', m: '남성', f: '여성' },
     preferred_lang: { ko: '한국어', my: '미얀마어', en: '영어' },
@@ -121,6 +126,7 @@
     board_notify_opt_in: ['받음', '받지 않음'],
     must_change_password: ['필요', '불필요'],
     dry_run: ['시뮬레이션(실제 반영 안 함)', '실제 반영'],
+    is_secret: ['비밀글', '공개글'],
   };
 
   var JOB_LABELS = {
@@ -395,12 +401,20 @@
     },
     context: {
       title: '처리 직전 상태',
-      hint: '되돌릴 때를 대비해 함께 남긴 값입니다. 이 항목들이 지워졌다는 뜻은 아닙니다.',
+      // 대상 자체가 사라진 삭제·폐지와, 일부 필드만 patch 된 수정은 뜻이 다르다.
+      hint: '처리 직전 상태로 함께 남긴 값입니다. 이 항목들이 지워졌다는 뜻은 아닙니다.',
+      hintWhenOnly: '삭제·폐지되기 전에 저장돼 있던 값입니다. 복구하거나 대조할 때 쓰는 기록입니다.',
     },
   };
 
   function sectionTitle(name) { return (SECTIONS[name] || {}).title || ''; }
-  function sectionHint(name) { return (SECTIONS[name] || {}).hint || ''; }
+
+  /** mode 를 넘기면 그 상황에 맞는 설명을 고른다. */
+  function sectionHint(name, mode) {
+    var sec = SECTIONS[name] || {};
+    if (name === 'context' && mode === 'before') return sec.hintWhenOnly;
+    return sec.hint || '';
+  }
 
   // ------------------------------------------------- 전·후 값이 없는 처리 설명
   /**
@@ -414,6 +428,7 @@
     login: { what: '관리자 콘솔에 로그인했습니다.', kind: 'view' },
     logout: { what: '관리자 콘솔에서 로그아웃했습니다.', kind: 'view' },
     board_secret_view: { what: '문의 게시판의 비밀글 본문을 열람했습니다.', kind: 'view' },
+    board_comment: { what: '게시글에 관리자 댓글을 남겼습니다.', kind: 'change' },
     photos_export: { what: '접수 사진을 압축 파일로 내려받았습니다.', kind: 'view' },
     roster_export: { what: '연명부를 내려받았습니다.', kind: 'view' },
     payment_roster_export: { what: '수납 명부를 내려받았습니다.', kind: 'view' },

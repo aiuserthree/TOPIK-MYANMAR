@@ -19,7 +19,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
-from app.lib.audit import write_audit
+from app.lib.audit import (
+    APPLICATION_REJECT_FIELDS,
+    BOARD_POST_FIELDS,
+    BOARD_REPLY_FIELDS,
+    INFO_REVIEW_FIELDS,
+    PAYMENT_CANCEL_FIELDS,
+    PAYMENT_FIELDS,
+    PHOTO_REVIEW_FIELDS,
+    snapshot,
+    write_audit,
+)
 from app.lib.board_helpers import build_comment_tree, official_replies_for_post, parse_parent_comment_id, resolve_comment_is_secret
 from app.lib.deps import (
     AuthUser,
@@ -1007,6 +1017,7 @@ async def import_payment_roster_xlsx(
                     }
                 )
                 continue
+            before_row = snapshot(app, PAYMENT_FIELDS)
             app.payment_status = "paid"
             if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
                 app.status = "payment_pending"
@@ -1018,6 +1029,8 @@ async def import_payment_roster_xlsx(
                 action_type="payment_complete",
                 target_type="applications",
                 target_id=app.id,
+                before_data=before_row,
+                after_data=snapshot(app, PAYMENT_FIELDS),
                 memo="수납 명단 엑셀 일괄 업로드",
                 ip_address=ip,
             )
@@ -1405,6 +1418,7 @@ async def reject_application(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    before = snapshot(app, APPLICATION_REJECT_FIELDS)
     app.status = "rejected"
     app.reject_reason = body.reject_reason
     bump_rev(app)
@@ -1412,7 +1426,12 @@ async def reject_application(
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
     if user and rnd:
         await notify_application_rejected(db, app, user, rnd, reject_reason=body.reject_reason)
-    await write_audit(db, admin_user_id=admin.id, action_type="reject", target_type="applications", target_id=app_id, memo=body.reject_reason, ip_address=ip)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="reject",
+        target_type="applications", target_id=app_id,
+        before_data=before, after_data=snapshot(app, APPLICATION_REJECT_FIELDS),
+        memo=body.reject_reason, ip_address=ip,
+    )
     await db.commit()
     return {"rejected": True, "rev": app.rev}
 
@@ -1435,6 +1454,7 @@ async def payment_application(
         raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 수납할 수 있습니다.", 400)
     if app.info_review_status != "approved":
         raise api_error("INFO_NOT_APPROVED", "정보 심사 승인 후 수납할 수 있습니다.", 400)
+    before = snapshot(app, PAYMENT_FIELDS)
     app.payment_status = "paid"
     # 수납 완료 ≠ 승인처리 완료 — 승인은 별도 /approve 엔드포인트에서만 반영
     if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
@@ -1449,6 +1469,8 @@ async def payment_application(
         action_type="payment_complete",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, PAYMENT_FIELDS),
         memo=body.payment_memo,
         ip_address=ip,
     )
@@ -1471,6 +1493,7 @@ async def cancel_payment(
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
     reason = (body.payment_cancel_reason or "").strip()
+    before = snapshot(app, PAYMENT_CANCEL_FIELDS)
     if reason:
         app.payment_cancel_reason = reason
     app.payment_status = "refunded"
@@ -1481,6 +1504,8 @@ async def cancel_payment(
         action_type="payment_cancel",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, PAYMENT_CANCEL_FIELDS),
         memo=reason or None,
         ip_address=ip,
     )
@@ -1502,6 +1527,7 @@ async def photo_review(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    before = snapshot(app, PHOTO_REVIEW_FIELDS)
     if body.action == "approve":
         app.photo_review_status = "approved"
         app.status = "payment_pending"
@@ -1528,6 +1554,8 @@ async def photo_review(
         action_type=f"photo_review_{body.action}",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, PHOTO_REVIEW_FIELDS),
         ip_address=ip,
     )
     await db.commit()
@@ -1549,6 +1577,7 @@ async def info_review(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    before = snapshot(app, INFO_REVIEW_FIELDS)
     if body.action == "approve":
         app.info_review_status = "approved"
         app.info_reject_code = None
@@ -1582,6 +1611,8 @@ async def info_review(
         action_type=f"info_review_{body.action}",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, INFO_REVIEW_FIELDS),
         memo=body.info_reject_note or body.info_reject_code,
         ip_address=ip,
     )
@@ -2614,7 +2645,11 @@ async def create_term(body: TermBody, admin: AuthUser = Depends(matrix_perm("ter
     row = Term(**body.model_dump(), status="draft")
     db.add(row)
     await db.flush()
-    await write_audit(db, admin_user_id=admin.id, action_type="term_create", target_type="terms", target_id=row.id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="term_create",
+        target_type="terms", target_id=row.id,
+        after_data={"term_type": row.term_type, "version": row.version, "title": row.title, "status": row.status},
+    )
     await db.commit()
     return {"id": row.id}
 
@@ -2856,8 +2891,12 @@ async def delete_board_post(
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
     await assert_perm(db, admin, board_menu_for_type(post.board_type), "delete")
+    before = snapshot(post, BOARD_POST_FIELDS)  # delete 후에는 읽을 수 없다
     await db.delete(post)
-    await write_audit(db, admin_user_id=admin.id, action_type="board_delete", target_type="board_posts", target_id=post_id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="board_delete",
+        target_type="board_posts", target_id=post_id, before_data=before,
+    )
     await db.commit()
     return {"deleted": True}
 
@@ -2909,6 +2948,7 @@ async def reply_post(
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
     await assert_perm(db, admin, board_menu_for_type(post.board_type), "answer")
+    before = snapshot(post, BOARD_REPLY_FIELDS)
     post.admin_reply = body.body.strip()
     post.admin_replied_at = datetime.now(timezone.utc)
     post.admin_replier_id = admin.id
@@ -2924,7 +2964,11 @@ async def reply_post(
     user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
     if user:
         await notify_board_reply(db, post, user, activity_type="공식 답변")
-    await write_audit(db, admin_user_id=admin.id, action_type="board_reply", target_type="board_posts", target_id=post_id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="board_reply",
+        target_type="board_posts", target_id=post_id,
+        before_data=before, after_data=snapshot(post, BOARD_REPLY_FIELDS),
+    )
     await db.commit()
     return {"replied": True}
 

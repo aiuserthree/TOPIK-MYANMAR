@@ -355,14 +355,14 @@ function BoardAttachments({ attachments }) {
 }
 
 // ----- 처리 이력 변경 내용 — 사람이 읽는 표 + 원본 JSON 접기 -----
-function AuditChangeSection({ name, rows, showTitle }) {
+function AuditChangeSection({ name, rows, showTitle, mode }) {
   const R = window.BOAuditReadable;
   if (!rows.length) return null;
   const both = name === 'changed';
   return (
     <div className="chg-sec">
       {showTitle && <div className="chg-sec-ttl">{R.sectionTitle(name)}</div>}
-      <div className="chg-hint">{R.sectionHint(name)}</div>
+      <div className="chg-hint">{R.sectionHint(name, mode)}</div>
       <table className="chg-table">
         <thead>
           <tr>
@@ -403,7 +403,7 @@ function AuditChangeView({ before, after, type, actionType, legend }) {
         {result.total > 0 && <div className="chg-summary">{R.summaryText(result)}</div>}
 
         {filled.map(name => (
-          <AuditChangeSection key={name} name={name} rows={result[name]} showTitle={filled.length > 1}/>
+          <AuditChangeSection key={name} name={name} rows={result[name]} showTitle={filled.length > 1} mode={result.mode}/>
         ))}
 
         {/* 표가 빌 때 — 값이 같아서인지, 애초에 전·후를 안 남기는 처리인지 구분해서 설명한다 */}
