@@ -23,6 +23,7 @@ from app.lib.security import (
     create_refresh_token,
     decode_email_verify_token,
     decode_refresh_token,
+    read_expired_refresh_sub,
     hash_code,
     hash_password,
     verify_code,
@@ -639,6 +640,33 @@ async def find_email(
     return {"matches": matches}
 
 
+async def _log_admin_session_expired(
+    db: AsyncSession, refresh_token: str, ip: str | None, user_agent: str | None
+) -> None:
+    """만료된 관리자 refresh 토큰이면 접근 로그에 session_expired 를 남긴다."""
+    sub = read_expired_refresh_sub(refresh_token)
+    if not sub or not sub.startswith("admin:"):
+        return  # 위조·손상 토큰이거나 회원 세션 — 회원은 별도 화면이 없어 남기지 않는다
+    try:
+        admin_id = int(sub.partition(":")[2])
+    except ValueError:
+        return
+    admin_row = (
+        await db.execute(select(AdminUser).where(AdminUser.id == admin_id))
+    ).scalar_one_or_none()
+    if not admin_row:
+        return
+    await write_admin_access(
+        db,
+        action_type="session_expired",
+        admin_user_id=admin_row.id,
+        admin_email=admin_row.email,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
+    await db.commit()
+
+
 @router.post("/logout")
 async def logout(
     request: Request,
@@ -680,11 +708,16 @@ async def logout(
 async def refresh(
     body: RefreshBody,
     request: Request,
+    ip: str | None = Depends(get_client_ip),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
     lang = _resolve_request_locale(None, request)
     payload = decode_refresh_token(body.refresh_token)
     if not payload or not payload.get("sub"):
+        # 세션 만료를 남기는 자리다. 토큰 검증부(get_optional_user)에서 남기면
+        # BO 폴링이 20초마다 돌아 만료된 탭 하나가 시간당 수백 건을 쌓는다.
+        # 여기는 세션이 끝날 때 한 번만 지나간다.
+        await _log_admin_session_expired(db, body.refresh_token, ip, _user_agent(request))
         raise fo_api_error("INVALID_TOKEN", "invalid_refresh_token", lang, 401)
     sub = str(payload["sub"])
     kind, _, ident = sub.partition(":")

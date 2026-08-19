@@ -314,10 +314,11 @@ function App() {
   const navigate = useCallback((id) => { location.hash = id; }, []);
   const logout = useCallback(() => {
     if (!confirm('로그아웃 하시겠습니까?')) return;
-    DataStore.addAudit({ type: '관리자계정', targetId: state.me?.id || '', action: '로그아웃', memo: '' });
-    if (window.TopikBoApi) TopikBoApi.logout();
-    location.replace('admin-login');
-  }, [state.me]);
+    // 로그아웃 기록은 관리자 접근 로그에 남는다 — 서버 호출 후 이동한다.
+    const go = () => location.replace('admin-login');
+    if (window.TopikBoApi && TopikBoApi.logoutRemote) TopikBoApi.logoutRemote().then(go, go);
+    else { if (window.TopikBoApi) TopikBoApi.logout(); go(); }
+  }, []);
 
   const badges = DataStore.badges();
   const me = state.me;
