@@ -402,6 +402,50 @@
   function sectionTitle(name) { return (SECTIONS[name] || {}).title || ''; }
   function sectionHint(name) { return (SECTIONS[name] || {}).hint || ''; }
 
+  // ------------------------------------------------- 전·후 값이 없는 처리 설명
+  /**
+   * 운영 로그의 약 70%는 before/after 를 남기지 않는다(로그인·사진심사·수납 등).
+   * 표가 비면 상세가 통째로 사라져 보이므로, 무슨 처리였는지 문장으로 대신 설명한다.
+   *
+   * kind - 'view': 값을 바꾸지 않는 열람·인증 기록
+   *        'change': 값은 바뀌지만 전·후를 이력에 남기지 않는 처리
+   */
+  var ACTION_NOTES = {
+    login: { what: '관리자 콘솔에 로그인했습니다.', kind: 'view' },
+    logout: { what: '관리자 콘솔에서 로그아웃했습니다.', kind: 'view' },
+    board_secret_view: { what: '문의 게시판의 비밀글 본문을 열람했습니다.', kind: 'view' },
+    photos_export: { what: '접수 사진을 압축 파일로 내려받았습니다.', kind: 'view' },
+    roster_export: { what: '연명부를 내려받았습니다.', kind: 'view' },
+    payment_roster_export: { what: '수납 명부를 내려받았습니다.', kind: 'view' },
+
+    photo_review_approve: { what: '접수 사진을 심사해 승인했습니다.', kind: 'change' },
+    photo_review_reject: { what: '접수 사진을 심사해 반려했습니다. 반려 사유는 위 「처리 사유」에 있습니다.', kind: 'change' },
+    info_review_approve: { what: '접수 정보를 심사해 승인했습니다.', kind: 'change' },
+    info_review_reject: { what: '접수 정보를 심사해 반려했습니다. 반려 사유는 위 「처리 사유」에 있습니다.', kind: 'change' },
+    payment_complete: { what: '응시료 수납을 완료 처리했습니다.', kind: 'change' },
+    payment_cancel: { what: '응시료 수납을 취소 처리했습니다.', kind: 'change' },
+    payment_roster_import: { what: '수납 명부 파일을 올려 수납 상태를 일괄 반영했습니다.', kind: 'change' },
+    reject: { what: '접수를 반려했습니다. 사유는 위 「처리 사유」에 있습니다.', kind: 'change' },
+    memo: { what: '접수자에게 관리자 메모를 남겼습니다. 메모 내용은 위 「처리 사유」에 있습니다.', kind: 'change' },
+    board_reply: { what: '게시글에 답변을 등록했습니다.', kind: 'change' },
+    board_delete: { what: '게시글을 삭제했습니다.', kind: 'change' },
+    admin_change_password: { what: '본인 관리자 비밀번호를 변경했습니다.', kind: 'change' },
+    admin_reset_password: { what: '관리자 비밀번호를 초기화했습니다. 임시 비밀번호가 새로 발급됩니다.', kind: 'change' },
+    user_reset_password: { what: '회원 비밀번호를 초기화했습니다.', kind: 'change' },
+  };
+
+  var NOTE_TAIL = {
+    view: '값을 바꾸는 처리가 아니라 변경 내용이 없습니다.',
+    change: '이 처리는 전·후 값을 따로 남기지 않아 비교표가 없습니다.',
+  };
+
+  /** 전·후 값이 없을 때 표 대신 보여 줄 설명. actionType 을 모르면 일반 문구. */
+  function actionNote(actionType) {
+    var n = ACTION_NOTES[actionType];
+    if (!n) return '이 처리는 전·후 값을 남기지 않았습니다. 처리 시각·처리자·대상은 위 「기본」에서 확인할 수 있습니다.';
+    return n.what + ' ' + NOTE_TAIL[n.kind];
+  }
+
   /** 상세 위쪽에 한 줄로 붙일 요약 — 조사(을/를) 없이 읽히도록 구성한다. */
   function summaryText(result) {
     if (!result || !result.total) return '';
@@ -436,5 +480,6 @@
     summaryText: summaryText,
     sectionTitle: sectionTitle,
     sectionHint: sectionHint,
+    actionNote: actionNote,
   };
 })(typeof window !== 'undefined' ? window : this);

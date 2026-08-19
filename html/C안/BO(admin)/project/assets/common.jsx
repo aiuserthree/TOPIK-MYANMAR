@@ -385,17 +385,17 @@ function AuditChangeSection({ name, rows, showTitle }) {
   );
 }
 
-function AuditChangeView({ before, after, type, legend }) {
+function AuditChangeView({ before, after, type, actionType, legend }) {
   const R = window.BOAuditReadable;
   const result = useMemo(
     () => (R ? R.diffRows(before, after, type) : null),
     [R, before, after, type],
   );
   const [showRaw, setShowRaw] = useState(false);
-  if (!before && !after) return null;
   if (!result) return null;
 
   const filled = ['changed', 'result', 'context'].filter(n => result[n].length);
+  const hasRaw = !!before || !!after;
 
   return (
     <FieldSet legend={legend || '변경 내용'} cols={1}>
@@ -406,15 +406,24 @@ function AuditChangeView({ before, after, type, legend }) {
           <AuditChangeSection key={name} name={name} rows={result[name]} showTitle={filled.length > 1}/>
         ))}
 
-        {!result.total && <div className="chg-note">이번 처리로 실제로 바뀐 항목은 없습니다.</div>}
+        {/* 표가 빌 때 — 값이 같아서인지, 애초에 전·후를 안 남기는 처리인지 구분해서 설명한다 */}
+        {!result.total && (
+          <div className="chg-summary">
+            {hasRaw
+              ? '기록된 값이 처리 전과 같습니다. 실제로 바뀐 항목은 없습니다.'
+              : R.actionNote(actionType)}
+          </div>
+        )}
         {result.total > 0 && result.unchanged > 0 && (
           <div className="chg-note">그 외 {result.unchanged}개 항목은 이전과 같습니다.</div>
         )}
 
-        <button type="button" className="chg-raw-toggle" onClick={() => setShowRaw(v => !v)}>
-          {showRaw ? '원본 데이터 숨기기' : '원본 데이터(JSON) 보기 — 개발·장애 확인용'}
-        </button>
-        {showRaw && (
+        {hasRaw && (
+          <button type="button" className="chg-raw-toggle" onClick={() => setShowRaw(v => !v)}>
+            {showRaw ? '원본 데이터 숨기기' : '원본 데이터(JSON) 보기 — 개발·장애 확인용'}
+          </button>
+        )}
+        {hasRaw && showRaw && (
           <div className="diff" style={{ marginTop: 8 }}>
             <div>
               <div className="h">Before</div>

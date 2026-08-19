@@ -475,7 +475,17 @@
     photo_review_approve: "승인", photo_review_reject: "반려",
     info_review_approve: "정보승인", info_review_reject: "정보반려", memo: "수정",
     login: "로그인", logout: "로그아웃",
-    permission_matrix_update: "수정", admin_change_password: "비밀번호초기화",
+    permission_matrix_update: "수정", admin_change_password: "비밀번호변경",
+    // 운영 로그에 실제로 쌓이는데 라벨이 없어 영문 원문이 그대로 보이던 것들
+    board_secret_view: "비밀글열람",
+    application_delete: "삭제", application_purge: "삭제", application_restore: "복구",
+    exam_round_update: "수정", exam_round_status: "수정",
+    exam_venue_create: "생성", exam_venue_delete: "삭제",
+    notice_create: "생성", notice_update: "수정", notice_delete: "삭제",
+    notice_marketing_send: "발송",
+    faq_create: "생성", faq_update: "수정", faq_delete: "삭제",
+    photos_export: "내보내기", roster_export: "내보내기",
+    payment_roster_export: "내보내기", payment_roster_import: "수납",
   };
   var ADMIN_ACCESS_ACTION_UI = {
     login: "로그인", logout: "로그아웃", login_failed: "로그인실패", session_expired: "세션만료",
@@ -757,6 +767,7 @@
       type: AUDIT_TYPE_UI[row.target_type] || row.target_type || "—",
       targetId: String(row.target_id || "—"),
       action: AUDIT_ACTION_UI[row.action_type] || row.action_type || "—",
+      actionType: row.action_type || "",   // 상세에서 처리 내용 설명을 찾는 키
       before: row.before_data || null,
       after: row.after_data || null,
       memo: row.memo || "",

@@ -1,7 +1,7 @@
 /* panels/audit.jsx — 관리자 처리 이력 (TPKM_BO_6_2_*) */
 
 const AUDIT_TYPES = ['접수자','사진','회차','시험장','공지','FAQ','환불·정정','문의','회원','약관','관리자계정'];
-const AUDIT_ACTIONS_F = ['생성','수정','삭제','승인','반려','수납','수납취소','게시','폐지','정지','탈퇴','비밀번호초기화','로그인','로그아웃','수험번호부여','취소'];
+const AUDIT_ACTIONS_F = ['생성','수정','삭제','승인','반려','정보승인','정보반려','수납','수납취소','게시','폐지','복구','정지','탈퇴','비밀번호초기화','비밀번호변경','로그인','로그아웃','비밀글열람','수험번호부여','내보내기','발송','취소'];
 
 function AuditPanel() {
   const state = useStore();
@@ -161,7 +161,7 @@ function AuditDetailLP({ id, onClose }) {
         </div>
       </FieldSet>
 
-      <AuditChangeView before={l.before} after={l.after} type={l.type}/>
+      <AuditChangeView before={l.before} after={l.after} type={l.type} actionType={l.actionType}/>
 
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
         ※ 처리 이력은 append-only — 수정/삭제 불가. 최소 3년 보존 권장.
