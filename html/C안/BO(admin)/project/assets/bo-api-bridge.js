@@ -917,7 +917,9 @@
     DS.state.auditTotal = 0;
     DS.state.consents = [];
     DS.state.adminAccessLogs = [];
+    DS.state.adminAccessTotal = 0;
     DS.state.memberAccessLogs = [];
+    DS.state.memberAccessTotal = 0;
     DS.state.permHistory = [];
     // null 이 아닌 '' — 헤더 회차 <select value=…> 가 제어 컴포넌트로 유지된다.
     DS.state.activeSessionId = '';
@@ -1128,14 +1130,10 @@
         DS.state.perms = mapMatrixToPerms(permRes.body.matrix);
       }
 
-      /* 접근 로그·권한 이력은 부팅 때 미리 받지 않는다. 세 화면 모두 진입 시
-         자기 페이지를 직접 조회하므로, 여기서 500건씩 당겨 봐야 그 결과를
-         덮어쓰기만 하고(회원 접근 로그는 6만 건짜리다) 대부분은 열어 보지도 않는다. */
-      DS.state.adminAccessLogs = [];
-      DS.state.memberAccessLogs = [];
-      DS.state.permHistory = [];
-      DS.state.adminAccessTotal = 0;
-      DS.state.memberAccessTotal = 0;
+      /* 접근 로그·권한 이력은 부팅 때 건드리지 않는다. 세 화면 모두 진입 시
+         자기 페이지를 직접 조회하므로 선조회가 필요 없고(회원 접근 로그는 6만
+         건짜리다), 여기서 비우면 먼저 도착한 패널 조회 결과를 덮어쓴다.
+         초기화는 부팅 시작의 clearLists() 가 이미 했다. */
       return finishInit();
 
       function finishInit() {
