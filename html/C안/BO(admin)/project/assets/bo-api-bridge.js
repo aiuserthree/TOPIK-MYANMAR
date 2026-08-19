@@ -484,8 +484,11 @@
     application_delete: "삭제", application_purge: "삭제", application_restore: "복구",
     exam_round_update: "수정", exam_round_status: "상태변경",
     exam_venue_create: "생성", exam_venue_delete: "삭제",
-    notice_create: "생성", notice_update: "수정", notice_delete: "삭제",
-    notice_marketing_send: "발송",
+    // 공지 등록 한 번에 notice_create + notice_marketing_send 두 줄이 쌓인다.
+    // 관리자가 한 일은 '등록' 하나이므로 둘 다 등록으로 보여 준다 —
+    // 메일 몇 건이 나갔는지는 상세의 「메일 발송 예약」에서 확인한다.
+    notice_create: "등록", notice_marketing_send: "등록",
+    notice_update: "수정", notice_delete: "삭제",
     faq_create: "생성", faq_update: "수정", faq_delete: "삭제",
     photos_export: "내보내기", roster_export: "내보내기",
     payment_roster_export: "내보내기", payment_roster_import: "수납",
@@ -520,6 +523,39 @@
     admin_users: "관리자계정", exam_rounds: "회차", exam_venues: "시험장",
     notices: "공지", faq_items: "FAQ",
   };
+
+  /** UI 한글 라벨 → 서버 action_type 목록. 라벨 하나에 여러 종류가 붙는다(수정·삭제 등). */
+  function auditActionTypesFor(label) {
+    if (!label || label === "all") return null;
+    var out = [];
+    Object.keys(AUDIT_ACTION_UI).forEach(function (k) {
+      if (AUDIT_ACTION_UI[k] === label) out.push(k);
+    });
+    return out.length ? out : null;
+  }
+
+  /** UI 한글 유형 → 서버 target_type. */
+  function auditTargetTypeFor(label) {
+    if (!label || label === "all") return null;
+    var hit = null;
+    Object.keys(AUDIT_TYPE_UI).forEach(function (k) {
+      if (AUDIT_TYPE_UI[k] === label) hit = k;
+    });
+    return hit;
+  }
+
+  /** 화면 필터 → 서버 쿼리. loadAuditPage/fetchAuditAll 공용. */
+  function auditQuery(o, page, pageSize) {
+    var q = { page: page, page_size: pageSize };
+    var acts = auditActionTypesFor(o.action);
+    if (acts) q.action_types = acts.join(",");
+    var tt = auditTargetTypeFor(o.type);
+    if (tt) q.target_type = tt;
+    if (o.actor && o.actor !== "all") q.admin_user_id = o.actor;
+    if (o.days) q.days = o.days;
+    if (o.targetId) q.target_id = o.targetId;
+    return q;
+  }
 
   function roleUi(r) {
     if (r === "admin" || r === "standard") return "general";
@@ -876,6 +912,7 @@
     DS.state.terms = [];
     DS.state.admins = [];
     DS.state.audit = [];
+    DS.state.auditTotal = 0;
     DS.state.consents = [];
     DS.state.adminAccessLogs = [];
     DS.state.memberAccessLogs = [];
@@ -1000,7 +1037,7 @@
       fetchAllUsers({}),
       Api.getTerms(),
       Api.getAdminUsers(),
-      Api.getAuditLogs(),
+      Api.getAuditLogs({ page: 1, page_size: 25 }),
       Api.getPermissionMatrix(),
       fetchAllApplications({ trash: "true" }),
     ]).then(function (results) {
@@ -1078,8 +1115,11 @@
 
       if (audRes.ok && audRes.body && audRes.body.items) {
         DS.state.audit = audRes.body.items.map(mapAudit);
+        DS.state.auditTotal = audRes.body.total_items != null
+          ? audRes.body.total_items : DS.state.audit.length;
       } else {
         DS.state.audit = [];
+        DS.state.auditTotal = 0;
       }
 
       if (permRes.ok && permRes.body && permRes.body.matrix) {
@@ -2041,18 +2081,41 @@
     });
   };
 
-  DS.reloadAudit = function () {
+  /** 처리 이력 한 페이지 조회. 필터·페이징 모두 서버가 처리한다. */
+  DS.loadAuditPage = function (opts) {
     if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getAuditLogs().then(function (res) {
+    var o = opts || {};
+    DS.state.auditLoading = true;
+    DS.notify();
+    return Api.getAuditLogs(auditQuery(o, o.page || 1, o.pageSize || 25)).then(function (res) {
+      DS.state.auditLoading = false;
       if (!res.ok) {
         DS.state.apiError = TopikBoApi.parseError(res);
         DS.state.audit = [];
+        DS.state.auditTotal = 0;
       } else {
-        DS.state.audit = ((res.body && res.body.items) || []).map(mapAudit);
+        var body = res.body || {};
+        DS.state.audit = (body.items || []).map(mapAudit);
+        DS.state.auditTotal = body.total_items != null ? body.total_items : DS.state.audit.length;
         DS.state.apiError = null;
       }
       DS.notify();
+      return res;
     });
+  };
+
+  /** CSV 내보내기용 — 같은 필터로 전량 조회(서버 상한 2000건). */
+  DS.fetchAuditAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    return Api.getAuditLogs(auditQuery(opts || {}, 1, 2000)).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapAudit), total: body.total_items || 0 };
+    });
+  };
+
+  DS.reloadAudit = function () {
+    return DS.loadAuditPage({ page: 1 });
   };
 
   DS.reloadAdminAccessLogs = function (q) {
@@ -2096,7 +2159,7 @@
           return res.body.audit_logs.map(mapAudit);
         }
       }
-      return Api.getAuditLogs({ target_type: "applications", target_id: id }).then(function (audRes) {
+      return Api.getAuditLogs({ target_type: "applications", target_id: id, page_size: 200 }).then(function (audRes) {
         if (!audRes.ok) return [];
         return ((audRes.body && audRes.body.items) || []).map(mapAudit);
       });

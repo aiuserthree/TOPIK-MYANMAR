@@ -1,7 +1,7 @@
 /* panels/audit.jsx — 관리자 처리 이력 (TPKM_BO_6_2_*) */
 
 const AUDIT_TYPES = ['접수자','사진','회차','시험장','공지','FAQ','환불·정정','문의','회원','약관','관리자계정'];
-const AUDIT_ACTIONS_F = ['생성','수정','삭제','상태변경','승인','반려','사진승인','사진반려','정보승인','정보반려','답변','댓글','메모','수납','수납취소','게시','폐지','복구','정지','탈퇴','권한변경','비밀번호초기화','비밀번호변경','로그인','로그아웃','비밀글열람','수험번호부여','내보내기','발송','취소'];
+const AUDIT_ACTIONS_F = ['등록','생성','수정','삭제','상태변경','승인','반려','사진승인','사진반려','정보승인','정보반려','답변','댓글','메모','수납','수납취소','게시','폐지','복구','정지','탈퇴','권한변경','비밀번호초기화','비밀번호변경','로그인','로그아웃','비밀글열람','수험번호부여','내보내기','취소'];
 
 /** 액션 배지 색. 사진승인·정보반려처럼 앞에 수식이 붙는 라벨도 같은 색으로 묶는다. */
 function auditPillClass(action) {
@@ -13,15 +13,10 @@ function auditPillClass(action) {
 
 function AuditPanel() {
   const state = useStore();
-  useEffect(() => {
-    if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.reloadAudit) DataStore.reloadAudit();
-  }, []);
+  const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
   const me = state.me;
   const myRole = me?.role || 'super';
   const canSeeAll = myRole === 'super';
-
-  // 일반/조회는 본인 이력만
-  const baseLog = useMemo(() => canSeeAll ? state.audit : state.audit.filter(l => l.actor === me?.id), [state.audit, canSeeAll, me]);
 
   const [actorF, setActorF] = useState('all');
   const [typeF, setTypeF] = useState('all');
@@ -32,33 +27,58 @@ function AuditPanel() {
   const PER = 25;
   const [detailId, setDetailId] = useState(null);
 
-  const filtered = useMemo(() => {
-    let r = baseLog.slice();
+  // 필터를 바꾸면 항상 1페이지로. 별도 effect 로 두면 조회가 두 번 나간다.
+  const applyFilter = (setter) => (v) => { setter(v); setPage(1); };
+
+  const query = useMemo(() => ({
+    actor: actorF, type: typeF, action: actionF,
+    days: range || null, targetId: targetQ.trim() || null,
+  }), [actorF, typeF, actionF, range, targetQ]);
+
+  /* API 모드는 서버가 필터·페이징을 처리한다. 예전처럼 최신 200건만 받아
+     화면에서 거르면, 이력이 6천 건을 넘긴 지금은 있는 기록도 안 보인다. */
+  useEffect(() => {
+    if (!isApi || !DataStore.loadAuditPage) return;
+    const delay = query.targetId ? 300 : 0;   // 대상 ID 검색은 타이핑 중 연타 방지
+    const t = setTimeout(() => DataStore.loadAuditPage({ ...query, page, pageSize: PER }), delay);
+    return () => clearTimeout(t);
+  }, [isApi, query, page]);
+
+  // 데모(비 API) 모드 — data.js 더미를 화면에서 거른다.
+  const demoFiltered = useMemo(() => {
+    if (isApi) return [];
+    let r = canSeeAll ? state.audit : state.audit.filter(l => l.actor === me?.id);
     if (actorF !== 'all') r = r.filter(l => l.actor === actorF);
-    if (typeF !== 'all')  r = r.filter(l => l.type === typeF);
+    if (typeF !== 'all') r = r.filter(l => l.type === typeF);
     if (actionF !== 'all') r = r.filter(l => l.action === actionF);
     if (range > 0) {
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - range);
       const cutoffStr = cutoff.toISOString().slice(0, 10);
       r = r.filter(l => l.ts.slice(0, 10) >= cutoffStr);
     }
-    if (targetQ) r = r.filter(l => l.targetId && l.targetId.includes(targetQ));
+    if (query.targetId) r = r.filter(l => l.targetId && l.targetId.includes(query.targetId));
     return r;
-  }, [baseLog, actorF, typeF, actionF, range, targetQ]);
+  }, [isApi, state.audit, canSeeAll, me, actorF, typeF, actionF, range, query.targetId]);
 
-  useEffect(() => setPage(1), [actorF, typeF, actionF, range, targetQ]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER));
-  const rows = filtered.slice((page-1)*PER, page*PER);
+  const total = isApi ? (state.auditTotal || 0) : demoFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PER));
+  const rows = isApi ? state.audit : demoFiltered.slice((page - 1) * PER, page * PER);
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     const headers = ['시각', '처리자', 'IP', '유형', '대상ID', '액션', '메모'];
-    const rows = filtered.map(l => [l.ts, l.actor, l.ip, l.type, l.targetId, l.action, l.memo || '']);
+    let list = demoFiltered;
+    if (isApi && DataStore.fetchAuditAll) {
+      const res = await DataStore.fetchAuditAll(query);
+      list = res.rows;
+      // 상한에 걸려 잘렸으면 조용히 넘어가지 않는다 — 전량인 줄 알고 쓰면 안 되는 자료다.
+      if (res.total > list.length) {
+        toastErr(`조건에 맞는 ${DataStore.fmtNum(res.total)}건 중 최근 ${DataStore.fmtNum(list.length)}건만 내보냅니다. 기간을 좁혀 주세요.`);
+      }
+    }
+    const csvRows = list.map(l => [l.ts, l.actor, l.ip, l.type, l.targetId, l.action, l.memo || '']);
     const fn = '처리이력_' + new Date().toISOString().slice(0, 10) + '.csv';
-    const after = () => {
-      DataStore.addAudit({ type: '관리자계정', targetId: '—', action: '게시', memo: `처리 이력 CSV 내보내기(${filtered.length}건)` });
-      toastOk(`${filtered.length}건의 처리 이력 CSV를 생성했습니다.`);
-    };
-    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, rows).then(after); }
+    const after = () => toastOk(`${DataStore.fmtNum(csvRows.length)}건의 처리 이력 CSV를 생성했습니다.`);
+    if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, csvRows).then(after); }
     else after();
   };
 
@@ -78,24 +98,24 @@ function AuditPanel() {
 
       <div className="filterbar">
         <div className="chips">
-          <button className={`chip ${range === 0 ? 'active' : ''}`} onClick={() => setRange(0)}>전체 기간<span className="cnt">{baseLog.length}</span></button>
-          <button className={`chip ${range === 7 ? 'active' : ''}`} onClick={() => setRange(7)}>최근 7일</button>
-          <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => setRange(30)}>최근 30일</button>
+          <button className={`chip ${range === 0 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(0)}>전체 기간<span className="cnt">{DataStore.fmtNum(total)}</span></button>
+          <button className={`chip ${range === 7 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(7)}>최근 7일</button>
+          <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(30)}>최근 30일</button>
         </div>
         <div className="controls">
-          <select className="select" value={actorF} onChange={e => setActorF(e.target.value)} disabled={!canSeeAll}>
+          <select className="select" value={actorF} onChange={e => applyFilter(setActorF)(e.target.value)} disabled={!canSeeAll}>
             <option value="all">전체 처리자</option>
             {state.admins.map(a => <option key={a.id} value={a.id}>{a.id} · {a.name}</option>)}
           </select>
-          <select className="select" value={typeF} onChange={e => setTypeF(e.target.value)}>
+          <select className="select" value={typeF} onChange={e => applyFilter(setTypeF)(e.target.value)}>
             <option value="all">전체 유형</option>
             {AUDIT_TYPES.map(t => <option key={t}>{t}</option>)}
           </select>
-          <select className="select" value={actionF} onChange={e => setActionF(e.target.value)}>
+          <select className="select" value={actionF} onChange={e => applyFilter(setActionF)(e.target.value)}>
             <option value="all">전체 액션</option>
             {AUDIT_ACTIONS_F.map(a => <option key={a}>{a}</option>)}
           </select>
-          <input className="input search" placeholder="대상 ID 검색" value={targetQ} onChange={e => setTargetQ(e.target.value)}/>
+          <input className="input search" placeholder="대상 ID 검색" value={targetQ} onChange={e => applyFilter(setTargetQ)(e.target.value)}/>
         </div>
       </div>
 
@@ -122,13 +142,15 @@ function AuditPanel() {
                 </tr>
               ))}
               {!rows.length && (
-                <tr><td colSpan="8"><div className="empty"><div className="ttl">조건에 맞는 이력이 없습니다</div></div></td></tr>
+                <tr><td colSpan="8"><div className="empty"><div className="ttl">
+                  {state.auditLoading ? '불러오는 중…' : '조건에 맞는 이력이 없습니다'}
+                </div></div></td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="dg-foot">
-          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(filtered.length)}</b>건</div>
+          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(total)}</b>건</div>
           <Pager page={page} total={totalPages} onPage={setPage}/>
         </div>
       </div>

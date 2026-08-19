@@ -3467,28 +3467,61 @@ async def put_permissions_matrix(
 
 @router.get("/audit-logs")
 async def audit_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=2000),
     target_type: str | None = Query(None),
     target_id: str | None = Query(None),
+    action_types: str | None = Query(None),
+    admin_user_id: int | None = Query(None),
+    days: int | None = Query(None, ge=1, le=3650),
     admin: AuthUser = Depends(require_any_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    """처리 이력 조회 — 페이지네이션·필터 모두 SQL에서 처리한다.
+
+    예전에는 최신 200건만 통째로 내려 주고 화면에서 걸렀다. 이력이 6천 건을 넘긴
+    지금은 기간·유형·액션 필터가 그 200건 안에서만 동작해, 있는 기록도 '없음'으로
+    보이고 CSV 내보내기도 200건에서 잘렸다.
+
+    action_types 는 콤마 구분. BO 액션 필터는 한글 라벨 하나가 여러 action_type 에
+    대응하므로(예: 승인 → approve) 화면에서 역매핑해 보낸다.
+    """
     matrix = await load_matrix(db)
-    if admin.role != "super":
-        can_all = role_has(matrix, admin.role, "audit", "viewAll")
-        can_own = role_has(matrix, admin.role, "audit", "viewOwn")
-        if not can_all and not can_own:
-            raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
-    stmt = select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc())
+    can_all = admin.role == "super" or role_has(matrix, admin.role, "audit", "viewAll")
+    if not can_all and not role_has(matrix, admin.role, "audit", "viewOwn"):
+        raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
+
+    stmt = select(AdminAuditLog)
+    if not can_all:
+        # 본인 이력만 — 반드시 limit 앞에서 건다. 뒤에서 자르면 '최신 200건 중 내 것'이
+        # 되어, 다른 관리자가 활발하면 본인 기록이 통째로 사라진다.
+        stmt = stmt.where(AdminAuditLog.admin_user_id == admin.id)
+    elif admin_user_id is not None:
+        stmt = stmt.where(AdminAuditLog.admin_user_id == admin_user_id)
     if target_type:
         stmt = stmt.where(AdminAuditLog.target_type == target_type)
     if target_id is not None:
         stmt = stmt.where(AdminAuditLog.target_id == str(target_id))
-    limit = 100 if (target_type or target_id is not None) else 200
-    result = await db.execute(stmt.limit(limit))
-    logs = result.scalars().all()
-    if admin.role != "super" and not role_has(matrix, admin.role, "audit", "viewAll"):
-        logs = [l for l in logs if l.admin_user_id == admin.id]
-    return {"items": await _serialize_audit_logs(db, logs)}
+    if action_types:
+        wanted = [a.strip() for a in action_types.split(",") if a.strip()]
+        if wanted:
+            stmt = stmt.where(AdminAuditLog.action_type.in_(wanted))
+    cutoff = _access_days_filter(days)
+    if cutoff is not None:
+        stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
+
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    result = await db.execute(
+        stmt.order_by(AdminAuditLog.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return {
+        "items": await _serialize_audit_logs(db, result.scalars().all()),
+        "page": page,
+        "page_size": page_size,
+        "total_items": total,
+    }
 
 
 _PERM_HISTORY_ACTIONS = ("permission_matrix_update", "admin_update", "admin_create")
