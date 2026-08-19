@@ -1128,34 +1128,14 @@
         DS.state.perms = mapMatrixToPerms(permRes.body.matrix);
       }
 
-      var isSuper = DS.state.me && (DS.state.me.role === "super");
-      if (isSuper) {
-        DS.state.adminAccessLogs = [];
-        DS.state.memberAccessLogs = [];
-        DS.state.permHistory = [];
-        return Promise.all([
-          Api.getAdminAccessLogs({ page_size: 500 }),
-          Api.getMemberAccessLogs({ page_size: 500 }),
-          Api.getPermissionHistory({ page_size: 500 }),
-        ]).then(function (extra) {
-          if (extra[0].ok && extra[0].body && extra[0].body.items) {
-            DS.state.adminAccessLogs = extra[0].body.items.map(mapAdminAccessLog);
-          }
-          if (extra[1].ok && extra[1].body && extra[1].body.items) {
-            DS.state.memberAccessLogs = extra[1].body.items.map(mapMemberAccessLog);
-          }
-          if (extra[2].ok && extra[2].body && extra[2].body.items) {
-            DS.state.permHistory = extra[2].body.items.map(mapPermHistory);
-          }
-          return finishInit();
-        }).catch(function () {
-          /* 접근 로그·권한 이력은 부가 기능 — 실패해도 BO 본화면은 사용 가능 */
-          return finishInit();
-        });
-      }
+      /* 접근 로그·권한 이력은 부팅 때 미리 받지 않는다. 세 화면 모두 진입 시
+         자기 페이지를 직접 조회하므로, 여기서 500건씩 당겨 봐야 그 결과를
+         덮어쓰기만 하고(회원 접근 로그는 6만 건짜리다) 대부분은 열어 보지도 않는다. */
       DS.state.adminAccessLogs = [];
       DS.state.memberAccessLogs = [];
       DS.state.permHistory = [];
+      DS.state.adminAccessTotal = 0;
+      DS.state.memberAccessTotal = 0;
       return finishInit();
 
       function finishInit() {
