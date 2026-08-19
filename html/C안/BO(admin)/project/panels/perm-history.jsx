@@ -1,9 +1,11 @@
 /* panels/perm-history.jsx — 권한 변경 이력 (TPKM_BO_6_8_*) */
 
-const PERM_CHANGE_TYPES = ['메뉴 권한 변경', '등급 변경', '액션 추가', '액션 제거'];
+// 서버 _perm_history_change_type 이 만들어 내는 값과 일치해야 한다.
+const PERM_CHANGE_TYPES = ['메뉴 권한 변경', '계정 등록', '등급 변경', '관리자 수정'];
 
 function PermHistoryPanel() {
   const state = useStore();
+  const isApi = !!(DataStore.isApiMode && DataStore.isApiMode());
   useEffect(() => {
     if (DataStore.isApiMode && DataStore.isApiMode() && DataStore.reloadPermHistory) {
       DataStore.reloadPermHistory();
@@ -20,11 +22,25 @@ function PermHistoryPanel() {
   const PER = 25;
   const [detailId, setDetailId] = useState(null);
 
+  const applyFilter = (setter) => (v) => { setter(v); setPage(1); };
+
+  const query = useMemo(() => ({
+    actor: actorF, changeType: changeF, target: targetF, days: range || null,
+  }), [actorF, changeF, targetF, range]);
+
+  useEffect(() => {
+    if (!isApi || !DataStore.loadPermHistoryPage) return;
+    DataStore.loadPermHistoryPage({ ...query, page, pageSize: PER });
+  }, [isApi, query, page]);
+
   const baseLog = state.permHistory || [];
 
-  const targets = useMemo(() => [...new Set(baseLog.map(l => l.target))], [baseLog]);
+  /* '대상' 은 before/after 에서 파생되는 값이라 SQL 컬럼이 없다. 서버가 목록을
+     따로 내려 준다 — 현재 페이지 행에서 만들면 25건 안의 값만 나온다. */
+  const targets = isApi ? (state.permHistoryTargets || []) : [...new Set(baseLog.map(l => l.target))];
 
-  const filtered = useMemo(() => {
+  const demoFiltered = useMemo(() => {
+    if (isApi) return [];
     let r = baseLog.slice();
     if (actorF !== 'all') r = r.filter(l => l.actor === actorF);
     if (changeF !== 'all') r = r.filter(l => l.changeType === changeF);
@@ -35,20 +51,25 @@ function PermHistoryPanel() {
       r = r.filter(l => l.ts.slice(0, 10) >= cutoffStr);
     }
     return r;
-  }, [baseLog, actorF, changeF, targetF, range]);
+  }, [isApi, baseLog, actorF, changeF, targetF, range]);
 
-  useEffect(() => setPage(1), [actorF, changeF, targetF, range]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER));
-  const rows = filtered.slice((page - 1) * PER, page * PER);
+  const total = isApi ? (state.permHistoryTotal || 0) : demoFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PER));
+  const rows = isApi ? baseLog : demoFiltered.slice((page - 1) * PER, page * PER);
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     const headers = ['시각', '변경자', '이메일', 'IP', '대상', '변경 유형', '등급', '메뉴', '메모'];
-    const csvRows = filtered.map(l => [l.ts, l.actorName || '', l.actor, l.ip, l.target, l.changeType, l.role, l.menu, l.memo || '']);
+    let list = demoFiltered;
+    if (isApi && DataStore.fetchPermHistoryAll) {
+      const res = await DataStore.fetchPermHistoryAll(query);
+      list = res.rows;
+      if (res.total > list.length) {
+        toastErr(`조건에 맞는 ${DataStore.fmtNum(res.total)}건 중 최근 ${DataStore.fmtNum(list.length)}건만 내보냅니다. 기간을 좁혀 주세요.`);
+      }
+    }
+    const csvRows = list.map(l => [l.ts, l.actorName || '', l.actor, l.ip, l.target, l.changeType, l.role, l.menu, l.memo || '']);
     const fn = '권한변경이력_' + new Date().toISOString().slice(0, 10) + '.csv';
-    const after = () => {
-      DataStore.addAudit({ type: '관리자계정', targetId: '권한매트릭스', action: '게시', memo: `권한 변경 이력 CSV보내기(${filtered.length}건)` });
-      toastOk(`${filtered.length}건의 권한 변경 이력 CSV를 생성했습니다.`);
-    };
+    const after = () => toastOk(`${DataStore.fmtNum(csvRows.length)}건의 권한 변경 이력 CSV를 생성했습니다.`);
     if (window.TOPIKExport && TOPIKExport.downloadCsv) { TOPIKExport.downloadCsv(fn, headers, csvRows).then(after); }
     else after();
   };
@@ -80,22 +101,22 @@ function PermHistoryPanel() {
 
       <div className="filterbar">
         <div className="chips">
-          <button className={`chip ${range === 0 ? 'active' : ''}`} onClick={() => setRange(0)}>전체 기간<span className="cnt">{baseLog.length}</span></button>
-          <button className={`chip ${range === 7 ? 'active' : ''}`} onClick={() => setRange(7)}>최근 7일</button>
-          <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => setRange(30)}>최근 30일</button>
+          <button className={`chip ${range === 0 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(0)}>전체 기간<span className="cnt">{DataStore.fmtNum(total)}</span></button>
+          <button className={`chip ${range === 7 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(7)}>최근 7일</button>
+          <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(30)}>최근 30일</button>
         </div>
         <div className="controls">
-          <select className="select" value={actorF} onChange={e => setActorF(e.target.value)}>
+          <select className="select" value={actorF} onChange={e => applyFilter(setActorF)(e.target.value)}>
             <option value="all">전체 변경자</option>
             {state.admins.filter(a => a.role === 'super').map(a => (
               <option key={a.id} value={a.id}>{a.id} · {a.name}</option>
             ))}
           </select>
-          <select className="select" value={changeF} onChange={e => setChangeF(e.target.value)}>
+          <select className="select" value={changeF} onChange={e => applyFilter(setChangeF)(e.target.value)}>
             <option value="all">전체 변경 유형</option>
             {PERM_CHANGE_TYPES.map(t => <option key={t}>{t}</option>)}
           </select>
-          <select className="select" value={targetF} onChange={e => setTargetF(e.target.value)}>
+          <select className="select" value={targetF} onChange={e => applyFilter(setTargetF)(e.target.value)}>
             <option value="all">전체 대상</option>
             {targets.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -131,7 +152,7 @@ function PermHistoryPanel() {
           </table>
         </div>
         <div className="dg-foot">
-          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(filtered.length)}</b>건</div>
+          <div className="info">총 <b style={{ color: 'var(--text)', fontFamily: 'Inter' }}>{DataStore.fmtNum(total)}</b>건</div>
           <Pager page={page} total={totalPages} onPage={setPage}/>
         </div>
       </div>

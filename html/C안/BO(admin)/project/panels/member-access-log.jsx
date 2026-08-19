@@ -13,11 +13,10 @@ function MemberAccessLogPanel() {
   const myRole = state.me?.role || 'super';
   const canSeeAll = myRole === 'super';
 
-  const [memberF, setMemberF] = useState('all');
   const [actionF, setActionF] = useState('all');
   const [resultF, setResultF] = useState('all');
   const [range, setRange] = useState(0);
-  const [emailQ, setEmailQ] = useState('');
+  const [searchQ, setSearchQ] = useState('');
   const [page, setPage] = useState(1);
   const PER = 25;
   const [detailId, setDetailId] = useState(null);
@@ -25,17 +24,15 @@ function MemberAccessLogPanel() {
   const applyFilter = (setter) => (v) => { setter(v); setPage(1); };
 
   const query = useMemo(() => ({
-    // 회원 선택과 이메일 검색은 둘 다 email 로 나간다 — 선택이 있으면 그쪽이 우선.
-    email: memberF !== 'all' ? memberF : (emailQ.trim() || null),
-    action: actionF, result: resultF,
+    q: searchQ.trim() || null, action: actionF, result: resultF,
     days: range || null,
-  }), [memberF, actionF, resultF, range, emailQ]);
+  }), [actionF, resultF, range, searchQ]);
 
   /* 서버가 필터·페이징을 처리한다. 예전처럼 최신 500건만 받아 화면에서 거르면
      로그가 500건을 넘는 순간 조용히 잘린다. */
   useEffect(() => {
     if (!isApi || !DataStore.loadMemberAccessPage) return;
-    const t = setTimeout(() => DataStore.loadMemberAccessPage({ ...query, page, pageSize: PER }), query.email ? 300 : 0);
+    const t = setTimeout(() => DataStore.loadMemberAccessPage({ ...query, page, pageSize: PER }), query.q ? 300 : 0);
     return () => clearTimeout(t);
   }, [isApi, query, page]);
 
@@ -45,7 +42,6 @@ function MemberAccessLogPanel() {
   const demoFiltered = useMemo(() => {
     if (isApi) return [];
     let r = baseLog.slice();
-    if (memberF !== 'all') r = r.filter(l => l.email === memberF);
     if (actionF !== 'all') r = r.filter(l => l.action === actionF);
     if (resultF !== 'all') r = r.filter(l => l.result === resultF);
     if (range > 0) {
@@ -53,9 +49,12 @@ function MemberAccessLogPanel() {
       const cutoffStr = cutoff.toISOString().slice(0, 10);
       r = r.filter(l => l.ts.slice(0, 10) >= cutoffStr);
     }
-    if (query.email) r = r.filter(l => l.email && l.email.includes(query.email));
+    if (query.q) {
+      const kw = query.q.toLowerCase();
+      r = r.filter(l => [l.email, l.nameKo, l.nameEn].some(v => v && v.toLowerCase().includes(kw)));
+    }
     return r;
-  }, [isApi, baseLog, memberF, actionF, resultF, range, query.email]);
+  }, [isApi, baseLog, actionF, resultF, range, query.q]);
 
   const total = isApi ? (state.memberAccessTotal || 0) : demoFiltered.length;
   const totalPages = Math.max(1, Math.ceil(total / PER));
@@ -110,12 +109,6 @@ function MemberAccessLogPanel() {
           <button className={`chip ${range === 30 ? 'active' : ''}`} onClick={() => applyFilter(setRange)(30)}>최근 30일</button>
         </div>
         <div className="controls">
-          <select className="select" value={memberF} onChange={e => applyFilter(setMemberF)(e.target.value)}>
-            <option value="all">전체 회원</option>
-            {(state.membersCatalog || state.members).filter(m => m.status === 'active').slice(0, 20).map(m => (
-              <option key={m.id} value={m.email}>{m.nameKo || m.name} · {m.email}</option>
-            ))}
-          </select>
           <select className="select" value={actionF} onChange={e => applyFilter(setActionF)(e.target.value)}>
             <option value="all">전체 액션</option>
             {MEMBER_ACCESS_ACTIONS_F.map(a => <option key={a}>{a}</option>)}
@@ -125,7 +118,7 @@ function MemberAccessLogPanel() {
             <option>성공</option>
             <option>실패</option>
           </select>
-          <input className="input search" placeholder="이메일 검색" value={emailQ} onChange={e => applyFilter(setEmailQ)(e.target.value)}/>
+          <input className="input search" placeholder="이름·이메일 검색 (일부만 입력해도 됩니다)" value={searchQ} onChange={e => applyFilter(setSearchQ)(e.target.value)}/>
         </div>
       </div>
 
@@ -133,14 +126,14 @@ function MemberAccessLogPanel() {
         <div className="dg-scroll">
           <table className="dg">
             <thead><tr>
-              <th>시각</th><th>이메일</th><th>IP</th>
+              <th>시각</th><th>회원</th><th>IP</th>
               <th>액션</th><th>경로</th><th>결과</th><th>상세</th>
             </tr></thead>
             <tbody>
               {rows.map(l => (
                 <tr key={l.id}>
                   <td className="code">{l.ts}</td>
-                  <td className="muted" style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.email}</td>
+                  <td style={{ maxWidth: 220 }}><ActorCell name={l.nameKo || l.nameEn} email={l.email}/></td>
                   <td className="code muted">{l.ip}</td>
                   <td><span className={`pill ${l.action === '로그인' ? 'pill-approved' : l.action === '로그인실패' ? 'pill-rejected' : 'pill-applied'}`}>{l.action}</span></td>
                   <td className="code">{l.path || '—'}</td>

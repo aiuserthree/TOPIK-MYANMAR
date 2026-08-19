@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, case, cast, delete, func, literal, not_, or_, select, update
+from sqlalchemy import Text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -3585,6 +3586,57 @@ async def _serialize_member_access_logs(db: AsyncSession, logs: list[MemberAcces
     return out
 
 
+def _perm_role_changed_sql():
+    """등급 변경 조건을 SQL로. _perm_history_change_type 의 파이썬 판정과 같아야 한다.
+
+    before/after 가 '있는 dict' 일 때만 본다 — JSONB 는 SQL NULL 과 'null'::jsonb 가
+    다르고, 파이썬은 둘 다 falsy 로 보므로 jsonb_typeof 로 맞춘다. 빈 dict 도 falsy.
+    """
+    def is_obj(col):
+        # 빈 dict 도 파이썬에서 falsy — jsonb::text 로 비교하면 JSONB 리터럴이 필요 없다.
+        return and_(func.jsonb_typeof(col) == "object", cast(col, Text) != "{}")
+    return and_(
+        is_obj(AdminAuditLog.before_data),
+        is_obj(AdminAuditLog.after_data),
+        AdminAuditLog.before_data["role"].astext.is_distinct_from(
+            AdminAuditLog.after_data["role"].astext
+        ),
+    )
+
+
+def _perm_history_change_type_filter(change_type: str):
+    """UI 변경 유형 → SQL 조건. 파생값이라 예전엔 상한 조회 후 메모리에서 걸렀다."""
+    if change_type == "메뉴 권한 변경":
+        return AdminAuditLog.action_type == "permission_matrix_update"
+    if change_type == "계정 등록":
+        return AdminAuditLog.action_type == "admin_create"
+    if change_type == "등급 변경":
+        return and_(AdminAuditLog.action_type == "admin_update", _perm_role_changed_sql())
+    if change_type == "관리자 수정":
+        # before_data 가 SQL NULL 이면 조건식이 NULL 이 되어 NOT 도 NULL → 행이 빠진다.
+        # 파이썬은 이 경우를 '관리자 수정' 으로 보므로 coalesce 로 false 를 채운다.
+        return and_(
+            AdminAuditLog.action_type == "admin_update",
+            not_(func.coalesce(_perm_role_changed_sql(), literal(False))),
+        )
+    return AdminAuditLog.action_type == change_type
+
+
+def _perm_history_target_sql():
+    """목록의 '대상' 열과 같은 값을 만드는 SQL 식 (권한매트릭스 | 이메일 | target_id)."""
+    return case(
+        (AdminAuditLog.target_type == "admin_permission_matrix", literal("권한매트릭스")),
+        (
+            and_(
+                func.jsonb_typeof(AdminAuditLog.after_data) == "object",
+                AdminAuditLog.after_data["email"].astext.isnot(None),
+            ),
+            AdminAuditLog.after_data["email"].astext,
+        ),
+        else_=AdminAuditLog.target_id,
+    )
+
+
 def _perm_history_change_type(action_type: str, before: dict | None, after: dict | None) -> str:
     if action_type == "permission_matrix_update":
         return "메뉴 권한 변경"
@@ -3695,6 +3747,7 @@ async def member_access_logs(
     page_size: int = Query(50, ge=1, le=2000),
     user_id: int | None = Query(None),
     email: str | None = Query(None),
+    q: str | None = Query(None),
     action_type: str | None = Query(None),
     action_types: str | None = Query(None),
     success: bool | None = Query(None),
@@ -3709,6 +3762,15 @@ async def member_access_logs(
             stmt = stmt.where(MemberAccessLog.user_id == user_id)
         if email:
             stmt = stmt.where(MemberAccessLog.email.ilike(f"%{email.strip()}%"))
+        if q and q.strip():
+            # 이름은 로그 테이블에 없다 — users 를 거쳐 찾는다.
+            like = f"%{q.strip()}%"
+            named = select(User.id).where(
+                or_(User.name_ko.ilike(like), User.name_en.ilike(like), User.email.ilike(like))
+            )
+            stmt = stmt.where(
+                or_(MemberAccessLog.email.ilike(like), MemberAccessLog.user_id.in_(named))
+            )
         if action_type:
             stmt = stmt.where(MemberAccessLog.action_type == action_type)
         if action_types:
@@ -3738,9 +3800,10 @@ async def member_access_logs(
 @router.get("/permission-history")
 async def permission_history(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=500),
+    page_size: int = Query(50, ge=1, le=2000),
     admin_user_id: int | None = Query(None),
     change_type: str | None = Query(None),
+    target: str | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
@@ -3757,24 +3820,27 @@ async def permission_history(
     if cutoff is not None:
         stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
     if change_type:
-        # change_type는 파생 값이라 SQL 필터 대신 상한 조회 후 메모리 필터
-        cap = min(2000, page * page_size * 4)
-        result_all = await db.execute(stmt.limit(cap))
-        all_logs = [
-            l for l in result_all.scalars().all()
-            if _perm_history_change_type(l.action_type, l.before_data, l.after_data) == change_type
-        ]
-        total = len(all_logs)
-        page_logs = all_logs[(page - 1) * page_size : page * page_size]
-    else:
-        total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
-        result_page = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
-        page_logs = result_page.scalars().all()
+        stmt = stmt.where(_perm_history_change_type_filter(change_type))
+    if target:
+        stmt = stmt.where(_perm_history_target_sql() == target)
+
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    result_page = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+    page_logs = result_page.scalars().all()
+
+    # '대상' 드롭다운 목록 — 파생값이라 화면에서 만들 수 없다(현재 페이지만 보이므로).
+    targets = (
+        await db.execute(
+            select(_perm_history_target_sql()).distinct().order_by(_perm_history_target_sql()).limit(200)
+        )
+    ).scalars().all()
+
     return {
         "items": await _serialize_perm_history(db, page_logs),
         "page": page,
         "page_size": page_size,
         "total_items": total,
+        "targets": [t for t in targets if t],
     }
 
 

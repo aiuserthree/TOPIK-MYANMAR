@@ -921,6 +921,8 @@
     DS.state.memberAccessLogs = [];
     DS.state.memberAccessTotal = 0;
     DS.state.permHistory = [];
+    DS.state.permHistoryTotal = 0;
+    DS.state.permHistoryTargets = [];
     // null 이 아닌 '' — 헤더 회차 <select value=…> 가 제어 컴포넌트로 유지된다.
     DS.state.activeSessionId = '';
   }
@@ -2154,7 +2156,7 @@
     if (!DS.isApiMode()) return Promise.resolve();
     var o = opts || {};
     var q = accessQuery(o, o.page || 1, o.pageSize || 25, MEMBER_ACCESS_ACTION_UI);
-    if (o.email) q.email = o.email;
+    if (o.q) q.q = o.q;
     DS.state.memberAccessLoading = true;
     DS.notify();
     return Api.getMemberAccessLogs(q).then(function (res) {
@@ -2171,7 +2173,7 @@
     if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
     var o = opts || {};
     var q = accessQuery(o, 1, 2000, MEMBER_ACCESS_ACTION_UI);
-    if (o.email) q.email = o.email;
+    if (o.q) q.q = o.q;
     return Api.getMemberAccessLogs(q).then(function (res) {
       if (!res.ok) return { rows: [], total: 0 };
       var body = res.body || {};
@@ -2182,15 +2184,42 @@
   DS.reloadAdminAccessLogs = function (q) { return DS.loadAdminAccessPage(q || {}); };
   DS.reloadMemberAccessLogs = function (q) { return DS.loadMemberAccessPage(q || {}); };
 
-  DS.reloadPermHistory = function (q) {
+  function permHistoryQuery(o, page, pageSize) {
+    var q = { page: page, page_size: pageSize };
+    if (o.actor && o.actor !== "all") q.admin_user_id = o.actor;
+    if (o.changeType && o.changeType !== "all") q.change_type = o.changeType;
+    if (o.target && o.target !== "all") q.target = o.target;
+    if (o.days) q.days = o.days;
+    return q;
+  }
+
+  DS.loadPermHistoryPage = function (opts) {
     if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getPermissionHistory(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
-      if (res.ok && res.body && res.body.items) {
-        DS.state.permHistory = res.body.items.map(mapPermHistory);
-      }
+    var o = opts || {};
+    DS.state.permHistoryLoading = true;
+    DS.notify();
+    return Api.getPermissionHistory(permHistoryQuery(o, o.page || 1, o.pageSize || 25)).then(function (res) {
+      DS.state.permHistoryLoading = false;
+      var body = (res.ok && res.body) || {};
+      DS.state.permHistory = (body.items || []).map(mapPermHistory);
+      DS.state.permHistoryTotal = body.total_items != null ? body.total_items : DS.state.permHistory.length;
+      // '대상' 은 파생값이라 화면에서 목록을 만들 수 없다 — 서버가 준 것을 쓴다.
+      if (body.targets) DS.state.permHistoryTargets = body.targets;
       DS.notify();
+      return res;
     });
   };
+
+  DS.fetchPermHistoryAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    return Api.getPermissionHistory(permHistoryQuery(opts || {}, 1, 2000)).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapPermHistory), total: body.total_items || 0 };
+    });
+  };
+
+  DS.reloadPermHistory = function (q) { return DS.loadPermHistoryPage(q || {}); };
 
   /** 접수자 상세 LP — 해당 접수 건(target_type=applications) 처리 이력·메모 조회 */
   DS.fetchApplicantAudit = function (appId) {
