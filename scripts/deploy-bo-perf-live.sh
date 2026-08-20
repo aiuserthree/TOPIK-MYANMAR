@@ -24,6 +24,12 @@ LOG="${LOG:-/var/log/myanmar-deploy-bo-perf.log}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
 DRY_RUN="${DRY_RUN:-0}"
 
+# 마지막으로 배포에 성공한 커밋을 적어 두는 표식.
+# origin/main 을 "현재 배포된 것"으로 쓰면 안 된다 — 그건 원격 참조라 누가 fetch 만
+# 해도 앞으로 움직이고, 작업 트리에 실제로 체크아웃된 것과는 무관하다. 그렇게 하면
+# 배포 직전에 누가 fetch 한 것만으로 PREV == NEW 가 되어 배포가 조용히 건너뛰어진다.
+STATE_FILE="${STATE_FILE:-${APP_ROOT}/.deployed-commit}"
+
 # 이 배포가 건드리는 경로 — 롤백도 같은 목록으로 되돌린다.
 PATHS=(
   "apps/api/app/"
@@ -52,6 +58,7 @@ rollback() {
   systemctl restart myanmar-api
   health_wait >/dev/null
   python3 build-bo.py 2>&1 | tee -a "${LOG}"
+  echo "${PREV}" > "${STATE_FILE}"
   if curl -sf -m 3 http://127.0.0.1:8000/health >/dev/null 2>&1; then
     log "롤백 완료 — 서비스 정상"
   else
@@ -64,8 +71,13 @@ main() {
 
   log "===== BO 성능 개선 배포 시작 ====="
 
-  # 현재 배포되어 있는 커밋 — 롤백 지점. fetch 前에 잡아야 한다.
-  PREV="$(git rev-parse origin/main)"
+  # 현재 배포되어 있는 커밋 — 롤백 지점.
+  if [[ -s "${STATE_FILE}" ]]; then
+    PREV="$(cat "${STATE_FILE}")"
+  else
+    PREV="$(git rev-parse origin/main)"
+    log "WARN: ${STATE_FILE} 가 없어 현재 origin/main 을 롤백 지점으로 삼습니다"
+  fi
   log "현재 배포 커밋: $(git log -1 --format='%h %s' "${PREV}")"
 
   git fetch origin --quiet || { log "ERROR: git fetch 실패 — 중단"; exit 1; }
@@ -162,6 +174,7 @@ main() {
     exit 1
   fi
 
+  echo "${NEW}" > "${STATE_FILE}"
   log "===== 배포 완료: $(git log -1 --format='%h %s' "${NEW}") ====="
 }
 
