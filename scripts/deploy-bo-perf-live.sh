@@ -30,6 +30,13 @@ DRY_RUN="${DRY_RUN:-0}"
 # 배포 직전에 누가 fetch 한 것만으로 PREV == NEW 가 되어 배포가 조용히 건너뛰어진다.
 STATE_FILE="${STATE_FILE:-${APP_ROOT}/.deployed-commit}"
 
+# 저장소 소유자가 root 가 아니라서(UNKNOWN:staff / .git 은 deploy:deploy) git 이
+# "dubious ownership" 으로 거부한다. 대화형 SSH 에서는 /root/.gitconfig 의
+# safe.directory 예외를 읽어 넘어가지만, systemd 로 돌 때는 HOME 이 없어 그 설정을
+# 못 읽는다 — 2026-08-20 첫 예약 배포가 이것 때문에 fetch 단계에서 멈췄다.
+# 환경에 기대지 않도록 호출마다 예외를 직접 준다.
+GIT=(git -c "safe.directory=${APP_ROOT}")
+
 # 이 배포가 건드리는 경로 — 롤백도 같은 목록으로 되돌린다.
 PATHS=(
   "apps/api/app/"
@@ -54,7 +61,7 @@ health_wait() {
 
 rollback() {
   log "!!! 롤백 — ${PREV} 로 되돌립니다"
-  git checkout "${PREV}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"
+  "${GIT[@]}" checkout "${PREV}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"
   systemctl restart myanmar-api
   health_wait >/dev/null
   python3 build-bo.py 2>&1 | tee -a "${LOG}"
@@ -75,14 +82,14 @@ main() {
   if [[ -s "${STATE_FILE}" ]]; then
     PREV="$(cat "${STATE_FILE}")"
   else
-    PREV="$(git rev-parse origin/main)"
+    PREV="$("${GIT[@]}" rev-parse origin/main)"
     log "WARN: ${STATE_FILE} 가 없어 현재 origin/main 을 롤백 지점으로 삼습니다"
   fi
-  log "현재 배포 커밋: $(git log -1 --format='%h %s' "${PREV}")"
+  log "현재 배포 커밋: $("${GIT[@]}" log -1 --format='%h %s' "${PREV}")"
 
-  git fetch origin --quiet || { log "ERROR: git fetch 실패 — 중단"; exit 1; }
-  NEW="$(git rev-parse origin/main)"
-  log "반영할 커밋:   $(git log -1 --format='%h %s' "${NEW}")"
+  "${GIT[@]}" fetch origin --quiet || { log "ERROR: git fetch 실패 — 중단"; exit 1; }
+  NEW="$("${GIT[@]}" rev-parse origin/main)"
+  log "반영할 커밋:   $("${GIT[@]}" log -1 --format='%h %s' "${NEW}")"
 
   if [[ "${PREV}" == "${NEW}" ]]; then
     log "origin/main 에 변경이 없습니다 — 할 일 없음"
@@ -97,7 +104,7 @@ main() {
   fi
 
   log "==> 소스 갱신"
-  if ! git checkout "${NEW}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"; then
+  if ! "${GIT[@]}" checkout "${NEW}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"; then
     log "ERROR: checkout 실패 — 변경 없이 중단"
     exit 1
   fi
@@ -175,7 +182,7 @@ main() {
   fi
 
   echo "${NEW}" > "${STATE_FILE}"
-  log "===== 배포 완료: $(git log -1 --format='%h %s' "${NEW}") ====="
+  log "===== 배포 완료: $("${GIT[@]}" log -1 --format='%h %s' "${NEW}") ====="
 }
 
 main "$@"
