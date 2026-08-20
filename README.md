@@ -56,7 +56,8 @@ Myanmar_v2.0/
 ├── html/shared/           # api-client.js, bo-api-client.js, roster-codes.js
 ├── db/migrations/         # V001~V023 SQL
 ├── scripts/               # seed, deploy, migrate, test, serve_static(로컬 정적 서버)
-├── build.py / build-bo.py # 정적 빌드
+│                          # precompile-jsx.js — build-bo.py 가 쓰는 JSX 사전 컴파일
+├── build.py / build-bo.py # 정적 빌드 (build-bo 는 node 로 JSX 사전 컴파일, 없으면 경고 후 생략)
 └── docs/                  # 설계·운영 문서
 ```
 

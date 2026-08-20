@@ -87,6 +87,22 @@ python3 build.py
 python3 build-bo.py
 ```
 
+> **`build-bo.py` 는 node 를 씁니다.** BO 의 JSX 19개를 빌드 때 미리 컴파일해
+> (`scripts/precompile-jsx.js`) 브라우저에서 babel 로 매번 컴파일하던 것을 없앱니다.
+> BO 부팅 시 받는 양이 962KB → 약 360KB 로 줄어듭니다(gzip 전송 기준 실측).
+> babel standalone 하나가 668KB 를 차지하므로, 사전 컴파일하면 그게 통째로 빠집니다.
+>
+> node 가 없으면 빌드는 **깨지지 않고** 다음 경고를 남긴 뒤 기존 방식(브라우저 babel)
+> 으로 산출물을 만듭니다 — 동작은 같고 느릴 뿐입니다.
+>
+> ```
+> WARN: JSX 사전 컴파일을 건너뜁니다(...). 브라우저 babel 로 동작합니다.
+> ```
+>
+> 이 경고가 보이면 서버에 node 를 설치(`apt install -y nodejs`)한 뒤 `python3 build-bo.py`
+> 를 다시 실행하십시오. 빌드 결과에 `.jsx` 가 남아 있는지로도 확인할 수 있습니다
+> (`find public-bo -name '*.jsx' | wc -l` → 사전 컴파일되면 `0`).
+
 | 서비스 | nginx root | URL |
 |--------|------------|-----|
 | FO | `public/` (단기) 또는 `apps/web/dist/` (중기) | `https://www.topik-myanmar.com` |
