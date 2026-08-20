@@ -729,6 +729,24 @@ async def _load_app_refs(
         rounds = {r.id: r for r in res.scalars().all()}
     return users, venues, rounds
 
+async def _app_row_after_mutation(db: AsyncSession, app: Application) -> dict:
+    """변경된 접수 1건을 목록(GET /applications)과 똑같은 형태로 돌려준다.
+
+    BO 는 수납·심사 처리 뒤 접수자 목록 전체를 다시 받아 왔다. 접수자가 늘수록
+    처리 1건당 왕복이 함께 늘어(500건씩 순차 페이징 + 휴지통까지 2세트) 현장에서
+    체감 지연이 커졌다. 응답에 바뀐 행을 실어 보내 그 행만 교체하도록 한다.
+
+    상태 전이 규칙(수납 시 status, paid_at 등)은 엔드포인트마다 다르므로
+    클라이언트에서 재현하지 않고 여기서 확정된 결과를 그대로 내려준다.
+    """
+    users, venues, rounds = await _load_app_refs(db, [app])
+    return _app_row_dict(
+        app,
+        users.get(app.user_id),
+        venues.get(app.exam_venue_id),
+        rounds.get(app.exam_round_id),
+    )
+
 
 @router.get("/applications")
 async def admin_list_applications(
@@ -1505,7 +1523,7 @@ async def approve_application(
         await notify_application_approved(db, app, user, rnd, venue)
     await write_audit(db, admin_user_id=admin.id, action_type="approve", target_type="applications", target_id=app_id, before_data={"status": before}, after_data={"status": app.status}, ip_address=ip)
     await db.commit()
-    return {"approved": True, "rev": app.rev}
+    return {"approved": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/reject")
@@ -1537,7 +1555,7 @@ async def reject_application(
         memo=body.reject_reason, ip_address=ip,
     )
     await db.commit()
-    return {"rejected": True, "rev": app.rev}
+    return {"rejected": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/payment")
@@ -1579,7 +1597,7 @@ async def payment_application(
         ip_address=ip,
     )
     await db.commit()
-    return {"paid": True, "rev": app.rev}
+    return {"paid": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/payment/cancel")
@@ -1614,7 +1632,7 @@ async def cancel_payment(
         ip_address=ip,
     )
     await db.commit()
-    return {"refunded": True, "rev": app.rev}
+    return {"refunded": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/photo-review")
@@ -1663,7 +1681,7 @@ async def photo_review(
         ip_address=ip,
     )
     await db.commit()
-    return {"photo_review_status": app.photo_review_status, "rev": app.rev}
+    return {"photo_review_status": app.photo_review_status, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/info-review")
@@ -1721,7 +1739,7 @@ async def info_review(
         ip_address=ip,
     )
     await db.commit()
-    return {"info_review_status": app.info_review_status, "rev": app.rev}
+    return {"info_review_status": app.info_review_status, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 # ---------------------------------------------------------------------------

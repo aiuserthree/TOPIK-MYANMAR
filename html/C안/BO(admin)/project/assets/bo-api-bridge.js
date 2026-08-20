@@ -955,7 +955,7 @@
     return m && m.rev != null ? m.rev : undefined;
   }
 
-  function handleMutation(res, reloadFn) {
+  function handleMutation(res, reloadFn, applyFn) {
     if (Api.isConflict && Api.isConflict(res)) {
       toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
       if (reloadFn) return reloadFn().then(function () { return false; });
@@ -965,15 +965,59 @@
       toastErr(TopikBoApi.parseError(res));
       return Promise.resolve(false);
     }
+    // applyFn 이 갱신 행을 반영했으면 목록 전체를 다시 받지 않는다.
+    if (applyFn && applyFn()) return Promise.resolve(true);
     if (reloadFn) return reloadFn().then(function () { return true; });
     return Promise.resolve(true);
   }
 
-  function applyRevFromResponse(id, res) {
-    if (res.body && res.body.rev != null) {
-      var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
-      if (a) a.rev = res.body.rev;
+  /**
+   * 수납·심사 응답에 실려 온 갱신 행만 목록에 반영한다.
+   *
+   * 예전에는 처리할 때마다 reloadApplicants 로 접수자 목록 전체를 다시 받았다.
+   * 500건씩 순차 페이징에 휴지통까지 2세트라, 접수자가 늘수록 처리 1건당 왕복이
+   * 함께 늘어 현장(미얀마)에서 체감 지연이 컸다. 서버가 목록과 같은 형태로
+   * 바뀐 행(item)을 돌려주므로 그 행만 갈아끼운다.
+   *
+   * 하나라도 반영할 수 없으면(item 없는 구버전 API, 현재 목록에 없는 행) false 를
+   * 돌려주고 호출부가 기존대로 전체 재조회로 물러선다.
+   */
+  function applyServerRows(ress) {
+    var items = [];
+    for (var i = 0; i < ress.length; i++) {
+      var row = ress[i] && ress[i].body && ress[i].body.item;
+      if (!row) return false;
+      items.push(row);
     }
+    var list = DS.state.applicants;
+    for (var j = 0; j < items.length; j++) {
+      var item = items[j];
+      var key = String(item.id);
+      var idx = list.findIndex(function (x) { return x.id === key; });
+      if (idx < 0) return false;
+      // no(순번)는 목록에서의 위치로 정해진다 — 같은 자리에 넣어야 번호가 유지된다.
+      list[idx] = mapApplicant(item, idx);
+    }
+    // '동시' 표시는 같은 submission 의 다른 행과 함께 봐야 정해지므로 목록 기준으로 다시 계산.
+    markConcurrentApplicants(list);
+    DS.notify();
+    return true;
+  }
+
+  /**
+   * 일괄 처리(승인·반려·수납·수납취소) 응답 처리. 반환값은 기존과 같은 '처리 건수'.
+   * 충돌(409)은 최신 상태가 필요하므로 그대로 전체 재조회한다.
+   */
+  function applyBulkMutation(ress, ids, sessionId) {
+    var conflict = ress.find(function (r) { return Api.isConflict(r); });
+    if (conflict) {
+      toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+      return DS.reloadApplicants(sessionId).then(function () { return 0; });
+    }
+    var bad = ress.find(function (r) { return !r.ok; });
+    if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
+    if (applyServerRows(ress)) return Promise.resolve(ids.length);
+    return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
   }
 
   function regionNameMap(items) {
@@ -1428,44 +1472,44 @@
   DS.apiPhotoApprove = function (id) {
     var sessionId = DS.state.activeSessionId;
     return Api.photoReview(id, { action: "approve" }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
   DS.apiPhotoReject = function (id, reason) {
     var sessionId = DS.state.activeSessionId;
     return Api.photoReview(id, { action: "reject", photo_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
   DS.apiInfoApprove = function (id) {
     var sessionId = DS.state.activeSessionId;
     return Api.infoReview(id, { action: "approve" }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
   DS.apiInfoReject = function (id, reason) {
     var sessionId = DS.state.activeSessionId;
     return Api.infoReview(id, { action: "reject", info_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
@@ -1474,14 +1518,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.approveApplication(id, {}, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
@@ -1490,14 +1527,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.rejectApplication(id, { reject_reason: reason }, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
@@ -1506,14 +1536,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.paymentApplication(id, { payment_memo: info.memo }, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
@@ -1522,14 +1545,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.cancelPayment(id, { payment_cancel_reason: reason }, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
