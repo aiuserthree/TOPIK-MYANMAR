@@ -315,12 +315,13 @@ function ApplicantsPanel() {
 
   useEffect(() => {
     if (!apiSessionReady || !DataStore.reloadApplicants) return;
-    DataStore.reloadApplicants(sessionId);
+    // DS.setSession 도 같은 조회를 건다 — dedupe 로 한 번만 나가게 한다.
+    DataStore.reloadApplicants(sessionId, { dedupe: true });
   }, [sessionId, apiSessionReady]);
 
   useEffect(() => {
     if (viewTab === 'trash' && apiSessionReady && DataStore.reloadApplicants) {
-      DataStore.reloadApplicants(sessionId, { trash: true });
+      DataStore.reloadApplicants(sessionId, { trash: true, dedupe: true });
     }
   }, [viewTab, sessionId, apiSessionReady]);
 

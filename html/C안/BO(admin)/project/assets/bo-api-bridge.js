@@ -1233,7 +1233,10 @@
     return out;
   }
 
-  DS.reloadApplicants = function (sessionId, opts) {
+  /**
+   * 접수자 목록 전체 조회. 실제 요청은 여기서 낸다 — 합치기는 DS.reloadApplicants 가 한다.
+   */
+  function reloadApplicantsNow(sessionId, opts) {
     if (!DS.isApiMode()) return Promise.resolve();
     opts = opts || {};
 
@@ -1315,6 +1318,41 @@
 
       DS.notify();
     });
+  }
+
+  /**
+   * 화면을 열 때 패널의 useEffect 와 DS.setSession 이 같은 조회를 동시에 건다.
+   * 제19회처럼 접수자가 5,000명대면 한 번이 11페이지(약 7MB)라, 겹치는 만큼 그대로
+   * 낭비된다. 실제로 운영 로그에서 같은 페이지 요청이 노트북 한 대당 2~3번씩 겹쳤다.
+   *
+   * 같은 조회가 이미 떠 있으면 그 약속을 함께 쓴다. 다만 데이터를 바꾼 뒤의 재조회
+   * (삭제·복원·예외 처리·충돌)는 변경 전에 출발한 요청에 올라타면 옛 데이터를 보게
+   * 되므로 합치지 않는다 — opts.dedupe 를 준 호출만 합친다.
+   */
+  var inflightApplicants = {};
+
+  function applicantsRequestKey(sessionId, opts) {
+    return [
+      sessionId == null ? "" : String(sessionId),
+      opts.trash ? "trash" : "live",
+      opts.q || "",
+    ].join("|");
+  }
+
+  DS.reloadApplicants = function (sessionId, opts) {
+    opts = opts || {};
+    if (!opts.dedupe) return reloadApplicantsNow(sessionId, opts);
+
+    var key = applicantsRequestKey(sessionId, opts);
+    if (inflightApplicants[key]) return inflightApplicants[key];
+
+    function settled() { delete inflightApplicants[key]; }
+    var p = reloadApplicantsNow(sessionId, opts).then(
+      function (v) { settled(); return v; },
+      function (e) { settled(); throw e; }
+    );
+    inflightApplicants[key] = p;
+    return p;
   };
 
   DS.apiDeleteApplicant = function (id) {
@@ -2377,6 +2415,7 @@
   var origSetSession = DS.setSession;
   DS.setSession = function (sessionId) {
     origSetSession(sessionId);
-    if (DS.isApiMode()) DS.reloadApplicants(sessionId);
+    // 접수자 패널의 useEffect 도 같은 조회를 건다 — dedupe 로 한 번만 나가게 한다.
+    if (DS.isApiMode()) DS.reloadApplicants(sessionId, { dedupe: true });
   };
 })(typeof window !== "undefined" ? window : globalThis);
