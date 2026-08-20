@@ -136,6 +136,14 @@ main() {
     fail=1
   fi
 
+  # D 가 적용됐는지: 화면 열 때 겹치는 명단 조회를 합치는 코드가 있는지.
+  if grep -q "applicantsRequestKey" public-bo/assets/bo-api-bridge.js; then
+    log "  BO: 중복 조회 합치기 OK"
+  else
+    log "  ERROR: BO 에 D 가 반영되지 않음"
+    fail=1
+  fi
+
   if [[ -f public-bo/admin.html ]]; then
     log "  admin.html OK"
   else
