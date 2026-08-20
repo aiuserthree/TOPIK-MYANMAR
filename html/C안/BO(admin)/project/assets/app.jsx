@@ -275,18 +275,26 @@ function App() {
   const apiReady = !mustChange && !state.apiLoading && DataStore.isApiMode && DataStore.isApiMode();
 
   // FO 신규 접수 반영 — 대시보드·접수자 화면에서 주기·포커스 시 목록 갱신
+  //
+  // 한 번의 갱신이 접수자 명단 전체(제19회 기준 11페이지 약 500KB)를 받는다.
+  // 20초마다 무조건 돌리면 탭을 열어두기만 해도 시간당 50MB 가 나간다 — 2026-08-20
+  // 운영 로그에서 처리 2건에 명단 조회 247회가 찍힌 것이 이것이었다. 그래서
+  //   · 화면이 가려져 있으면 돌리지 않는다 (다시 보일 때 onVisible 이 갱신한다)
+  //   · 앞 갱신이 아직 안 끝났으면 그 요청에 합친다 (dedupe)
+  //   · 주기를 60초로 늦춘다 — 새 접수자를 1분 안에 보면 충분하다
   useEffect(() => {
     if (!apiReady || !['dashboard', 'applicants'].includes(route)) return;
     if (!DataStore.reloadApplicants) return;
     var sid = state.activeSessionId;
     if (!sid || !/^\d+$/.test(String(sid))) return;
-    var reload = function () { DataStore.reloadApplicants(sid); };
+    var reload = function () { DataStore.reloadApplicants(sid, { dedupe: true }); };
+    var reloadIfVisible = function () { if (!document.hidden) reload(); };
     reload();
     var onFocus = function () { reload(); };
     var onVisible = function () { if (!document.hidden) reload(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
-    var timer = setInterval(reload, 20000);
+    var timer = setInterval(reloadIfVisible, 60000);
     return function () {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
@@ -298,12 +306,14 @@ function App() {
   useEffect(() => {
     if (!apiReady || !DataStore.reloadBoardBadges) return;
     var reload = function () { DataStore.reloadBoardBadges(); };
+    var reloadIfVisible = function () { if (!document.hidden) reload(); };
     reload();
     var onFocus = function () { reload(); };
     var onVisible = function () { if (!document.hidden) reload(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
-    var timer = setInterval(reload, 20000);
+    // 가려진 탭에서는 돌리지 않는다 — 다시 보일 때 onVisible 이 갱신한다.
+    var timer = setInterval(reloadIfVisible, 20000);
     return function () {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);

@@ -5,8 +5,12 @@
 # 접수가 통째로 멈추므로, 헬스체크가 통과하지 못하면 직전 배포 커밋으로 되돌리고
 # 다시 기동한다.
 #
-# 전체 배포(deploy-all-from-git.sh)와 달리 migration 은 돌리지 않는다 — B·C 는
-# 스키마를 바꾸지 않는다. 의존성도 추가되지 않아 pip install 도 생략한다.
+# 전체 배포(deploy-all-from-git.sh)와 달리 migration 은 돌리지 않는다 — 이 갈래의
+# 변경은 스키마를 바꾸지 않는다. 의존성도 추가되지 않아 pip install 도 생략한다.
+#
+# API 재시작은 apps/api/ 가 실제로 바뀐 배포에서만 한다. 재시작은 워커 2개를 동시에
+# 내려 몇 초간 502 가 나가므로(2026-08-20 배포 때 응시자 3명이 겪음), BO 정적 파일만
+# 바뀌는 배포는 무중단으로 끝낸다.
 #
 # 본문을 main() 으로 감싼 이유: 이 스크립트는 실행 도중 scripts/ 를 체크아웃하며
 # 자기 자신을 덮어쓴다. bash 는 스크립트를 파일 오프셋 기준으로 이어 읽으므로,
@@ -62,8 +66,10 @@ health_wait() {
 rollback() {
   log "!!! 롤백 — ${PREV} 로 되돌립니다"
   "${GIT[@]}" checkout "${PREV}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"
-  systemctl restart myanmar-api
-  health_wait >/dev/null
+  if [[ "${API_CHANGED:-1}" == "1" ]]; then
+    systemctl restart myanmar-api
+    health_wait >/dev/null
+  fi
   python3 build-bo.py 2>&1 | tee -a "${LOG}"
   echo "${PREV}" > "${STATE_FILE}"
   if curl -sf -m 3 http://127.0.0.1:8000/health >/dev/null 2>&1; then
@@ -97,7 +103,11 @@ main() {
   fi
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    log "[DRY_RUN] 아래 경로를 ${NEW} 로 갱신하고 API 재시작 + BO 재빌드합니다:"
+    if "${GIT[@]}" diff --quiet "${PREV}" "${NEW}" -- apps/api/; then
+      log "[DRY_RUN] API 변경 없음 → 재시작 없이 BO 만 재빌드합니다. 갱신 경로:"
+    else
+      log "[DRY_RUN] API 변경 있음 → 재시작 + BO 재빌드합니다. 갱신 경로:"
+    fi
     printf '  %s\n' "${PATHS[@]}" | tee -a "${LOG}"
     log "[DRY_RUN] 실제 변경 없음"
     exit 0
@@ -109,16 +119,23 @@ main() {
     exit 1
   fi
 
-  log "==> API 재시작"
-  systemctl restart myanmar-api
-
-  if elapsed="$(health_wait)"; then
-    log "  /health OK (${elapsed}s)"
+  # 재시작은 워커 2개를 동시에 내려 몇 초간 502 가 나간다 — 2026-08-20 배포 때
+  # 응시자 3명이 실제로 겪었다. BO 정적 파일만 바뀌는 배포에서는 그럴 이유가 없다.
+  if "${GIT[@]}" diff --quiet "${PREV}" "${NEW}" -- apps/api/; then
+    API_CHANGED=0
+    log "==> API 변경 없음 — 재시작 건너뜀 (무중단)"
   else
-    log "ERROR: API 가 ${HEALTH_TIMEOUT}s 안에 응답하지 않았습니다"
-    journalctl -u myanmar-api -n 30 --no-pager 2>&1 | tee -a "${LOG}"
-    rollback
-    exit 1
+    API_CHANGED=1
+    log "==> API 재시작 (apps/api 변경 있음)"
+    systemctl restart myanmar-api
+    if elapsed="$(health_wait)"; then
+      log "  /health OK (${elapsed}s)"
+    else
+      log "ERROR: API 가 ${HEALTH_TIMEOUT}s 안에 응답하지 않았습니다"
+      journalctl -u myanmar-api -n 30 --no-pager 2>&1 | tee -a "${LOG}"
+      rollback
+      exit 1
+    fi
   fi
 
   log "==> BO 정적 재빌드"
