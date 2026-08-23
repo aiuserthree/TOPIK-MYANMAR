@@ -11,9 +11,10 @@
 # 전체 배포(deploy-all-from-git.sh)와 달리 migration 은 돌리지 않는다 — 이 갈래의
 # 변경은 스키마를 바꾸지 않는다. 의존성도 추가되지 않아 pip install 도 생략한다.
 #
-# API 재시작은 apps/api/ 가 실제로 바뀐 배포에서만 한다. 재시작은 워커 2개를 동시에
-# 내려 몇 초간 502 가 나가므로(2026-08-20 배포 때 응시자 3명이 겪음), BO 정적 파일만
-# 바뀌는 배포는 무중단으로 끝낸다.
+# API 는 apps/api/ 가 실제로 바뀐 배포에서만 건드리고, 그때도 restart 가 아니라
+# reload(SIGHUP)를 쓴다. gunicorn 마스터가 소켓을 붙든 채 워커를 하나씩 교체하므로
+# 요청이 떨어지지 않는다. .env 를 바꿨거나 systemd 유닛 자체를 바꿨다면 systemd 가
+# 그것을 기동 시에만 읽으므로 RESTART_API=1 로 강제 재시작해야 한다.
 #
 # 본문을 main() 으로 감싼 이유: 이 스크립트는 실행 도중 scripts/ 를 체크아웃하며
 # 자기 자신을 덮어쓴다. bash 는 스크립트를 파일 오프셋 기준으로 이어 읽으므로,
@@ -30,6 +31,7 @@ APP_ROOT="${APP_ROOT:-/opt/myanmar-v2}"
 LOG="${LOG:-/var/log/myanmar-deploy-bo-perf.log}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
 DRY_RUN="${DRY_RUN:-0}"
+RESTART_API="${RESTART_API:-0}"   # .env·유닛 변경 등 완전 재시작이 필요할 때 1
 
 # 마지막으로 배포에 성공한 커밋을 적어 두는 표식.
 # origin/main 을 "현재 배포된 것"으로 쓰면 안 된다 — 그건 원격 참조라 누가 fetch 만
@@ -47,6 +49,7 @@ GIT=(git -c "safe.directory=${APP_ROOT}")
 # 이 배포가 건드리는 경로 — 롤백도 같은 목록으로 되돌린다.
 PATHS=(
   "apps/api/app/"
+  "apps/api/requirements.txt"
   "html/C안/BO(admin)/"
   "html/C안/FO/"
   "html/shared/"          # FO·BO 공용 — 자체 호스팅 폰트(vendor/)가 여기 있다
@@ -73,7 +76,7 @@ rollback() {
   log "!!! 롤백 — ${PREV} 로 되돌립니다"
   "${GIT[@]}" checkout "${PREV}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"
   if [[ "${API_CHANGED:-1}" == "1" ]]; then
-    systemctl restart myanmar-api
+    systemctl reload myanmar-api || systemctl restart myanmar-api
     health_wait >/dev/null
   fi
   python3 build.py 2>&1 | tee -a "${LOG}"
@@ -113,7 +116,7 @@ main() {
     if "${GIT[@]}" diff --quiet "${PREV}" "${NEW}" -- apps/api/; then
       log "[DRY_RUN] API 변경 없음 → 재시작 없이 BO 만 재빌드합니다. 갱신 경로:"
     else
-      log "[DRY_RUN] API 변경 있음 → 재시작 + BO 재빌드합니다. 갱신 경로:"
+      log "[DRY_RUN] API 변경 있음 → 리로드(무중단) + 재빌드합니다. 갱신 경로:"
     fi
     printf '  %s\n' "${PATHS[@]}" | tee -a "${LOG}"
     log "[DRY_RUN] 실제 변경 없음"
@@ -133,8 +136,13 @@ main() {
     log "==> API 변경 없음 — 재시작 건너뜀 (무중단)"
   else
     API_CHANGED=1
-    log "==> API 재시작 (apps/api 변경 있음)"
-    systemctl restart myanmar-api
+    if [[ "${RESTART_API}" == "1" ]]; then
+      log "==> API 재시작 (RESTART_API=1 — 몇 초간 응답이 끊길 수 있음)"
+      systemctl restart myanmar-api
+    else
+      log "==> API 리로드 (apps/api 변경 있음 — 무중단)"
+      systemctl reload myanmar-api
+    fi
     if elapsed="$(health_wait)"; then
       log "  /health OK (${elapsed}s)"
     else

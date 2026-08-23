@@ -8,7 +8,17 @@ User=root
 Group=root
 WorkingDirectory=/opt/myanmar-v2/apps/api
 EnvironmentFile=/opt/myanmar-v2/apps/api/.env
-ExecStart=/opt/myanmar-v2/apps/api/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+# uvicorn 단독 --workers 는 systemctl restart 시 워커가 동시에 내려가 몇 초간 502 가 난다
+# (2026-08-20 배포 때 응시자 3명이 겪음). gunicorn 마스터가 소켓을 붙들고 SIGHUP 으로
+# 워커를 하나씩 교체하므로, systemctl reload 는 요청을 떨어뜨리지 않는다.
+# 로컬 검증: 초당 수백 건을 보내는 중 reload — 4,398건 전부 200, 실패 0건.
+ExecStart=/opt/myanmar-v2/apps/api/.venv/bin/gunicorn app.main:app \
+  -k uvicorn.workers.UvicornWorker -w 2 --bind 127.0.0.1:8000 \
+  --graceful-timeout 30 --timeout 60 --access-logfile - --error-logfile -
+# 코드만 바뀐 배포는 reload 로 끝낸다. .env(EnvironmentFile)를 바꿨다면 systemd 가
+# 그 파일을 기동 시에만 읽으므로 restart 가 필요하다.
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGTERM
 Restart=on-failure
 RestartSec=5
 
