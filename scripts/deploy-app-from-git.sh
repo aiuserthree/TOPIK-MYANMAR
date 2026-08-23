@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
-# FO·BO 정적 + API 코드 운영 반영 (성능 개선 갈래).
+# git 의 origin/main 을 운영에 반영한다 — FO·BO 정적 + API 코드.
 #
-# 이름은 BO 로 시작하지만 FO 까지 다룬다 — 폰트를 html/shared/vendor 로 옮기면서
-# FO 도 대상이 되었다. 이름 정리는 별건.
+# deploy-all-from-git.sh 와의 차이: 이쪽은 앱 코드만 다룬다. migration 은 돌리지
+# 않고(이 갈래의 변경은 스키마를 바꾸지 않는다), systemd 유닛도 건드리지 않는다.
+# 대신 배포 표식 기반 롤백과 반영 검증이 있고, API 는 재시작이 아니라 리로드한다.
+# 스키마·유닛·인프라가 바뀌는 배포는 deploy-all-from-git.sh 를 쓴다.
 #
 # 예약 실행(무인)을 전제로 만들었다. 사람이 지켜보지 않는 사이 API 기동에 실패하면
 # 접수가 통째로 멈추므로, 헬스체크가 통과하지 못하면 직전 배포 커밋으로 되돌리고
 # 다시 기동한다.
-#
-# 전체 배포(deploy-all-from-git.sh)와 달리 migration 은 돌리지 않는다 — 이 갈래의
-# 변경은 스키마를 바꾸지 않는다. 의존성도 추가되지 않아 pip install 도 생략한다.
 #
 # API 는 apps/api/ 가 실제로 바뀐 배포에서만 건드리고, 그때도 restart 가 아니라
 # reload(SIGHUP)를 쓴다. gunicorn 마스터가 소켓을 붙든 채 워커를 하나씩 교체하므로
@@ -23,12 +22,13 @@
 # (deploy-all-from-git.sh 가 같은 이유로 같은 구조를 쓴다.)
 #
 # 사용:
-#   bash scripts/deploy-bo-perf-live.sh              # 지금 실행
-#   DRY_RUN=1 bash scripts/deploy-bo-perf-live.sh    # 무엇을 할지만 출력
+#   bash scripts/deploy-app-from-git.sh              # 지금 실행
+#   DRY_RUN=1 bash scripts/deploy-app-from-git.sh    # 무엇을 할지만 출력
+#   RESTART_API=1 bash scripts/deploy-app-from-git.sh  # 리로드 대신 완전 재시작
 set -uo pipefail
 
 APP_ROOT="${APP_ROOT:-/opt/myanmar-v2}"
-LOG="${LOG:-/var/log/myanmar-deploy-bo-perf.log}"
+LOG="${LOG:-/var/log/myanmar-deploy-app.log}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-60}"
 DRY_RUN="${DRY_RUN:-0}"
 RESTART_API="${RESTART_API:-0}"   # .env·유닛 변경 등 완전 재시작이 필요할 때 1
@@ -92,7 +92,7 @@ rollback() {
 main() {
   cd "${APP_ROOT}" || { echo "APP_ROOT 없음: ${APP_ROOT}"; exit 1; }
 
-  log "===== BO 성능 개선 배포 시작 ====="
+  log "===== 앱 배포 시작 (FO·BO 정적 + API 코드) ====="
 
   # 현재 배포되어 있는 커밋 — 롤백 지점.
   if [[ -s "${STATE_FILE}" ]]; then
@@ -127,6 +127,17 @@ main() {
   if ! "${GIT[@]}" checkout "${NEW}" -- "${PATHS[@]}" 2>&1 | tee -a "${LOG}"; then
     log "ERROR: checkout 실패 — 변경 없이 중단"
     exit 1
+  fi
+
+  # 의존성이 바뀌었으면 설치한다. 체크아웃만 하고 넘어가면 새 코드가 없는 패키지를
+  # import 해 기동에 실패하고, 그제야 롤백이 돈다.
+  if ! "${GIT[@]}" diff --quiet "${PREV}" "${NEW}" -- apps/api/requirements.txt; then
+    log "==> 의존성 설치 (requirements.txt 변경)"
+    if ! ./apps/api/.venv/bin/pip install -q -r apps/api/requirements.txt 2>&1 | tee -a "${LOG}"; then
+      log "ERROR: pip install 실패"
+      rollback
+      exit 1
+    fi
   fi
 
   # 재시작은 워커 2개를 동시에 내려 몇 초간 502 가 나간다 — 2026-08-20 배포 때

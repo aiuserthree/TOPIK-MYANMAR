@@ -238,3 +238,4 @@ PostgreSQL은 로컬 설치, 또는 IwinV DB VPS 원격 연결. 상세: [`apps/a
 | [`apps/api/README.md`](../apps/api/README.md) | FastAPI 로컬·migration |
 | [`scripts/deploy-all-from-git.sh`](../scripts/deploy-all-from-git.sh) | 운영 전체 배포 (API+DB+FO+BO) |
 | [`scripts/deploy-static-live.sh`](../scripts/deploy-static-live.sh) | FO/BO 정적만 재빌드 |
+| [`scripts/deploy-app-from-git.sh`](../scripts/deploy-app-from-git.sh) | 앱 코드만 반영 (FO·BO 정적 + API) — 표식 기반 롤백, API 무중단 리로드 |
