@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# BO 성능 개선(B: 갱신 행만 반영 / C: JSX 사전 컴파일) 운영 반영.
+# FO·BO 정적 + API 코드 운영 반영 (성능 개선 갈래).
+#
+# 이름은 BO 로 시작하지만 FO 까지 다룬다 — 폰트를 html/shared/vendor 로 옮기면서
+# FO 도 대상이 되었다. 이름 정리는 별건.
 #
 # 예약 실행(무인)을 전제로 만들었다. 사람이 지켜보지 않는 사이 API 기동에 실패하면
 # 접수가 통째로 멈추므로, 헬스체크가 통과하지 못하면 직전 배포 커밋으로 되돌리고
@@ -45,6 +48,9 @@ GIT=(git -c "safe.directory=${APP_ROOT}")
 PATHS=(
   "apps/api/app/"
   "html/C안/BO(admin)/"
+  "html/C안/FO/"
+  "html/shared/"          # FO·BO 공용 — 자체 호스팅 폰트(vendor/)가 여기 있다
+  "build.py"
   "build-bo.py"
   "scripts/"
 )
@@ -70,6 +76,7 @@ rollback() {
     systemctl restart myanmar-api
     health_wait >/dev/null
   fi
+  python3 build.py 2>&1 | tee -a "${LOG}"
   python3 build-bo.py 2>&1 | tee -a "${LOG}"
   echo "${PREV}" > "${STATE_FILE}"
   if curl -sf -m 3 http://127.0.0.1:8000/health >/dev/null 2>&1; then
@@ -138,6 +145,13 @@ main() {
     fi
   fi
 
+  log "==> FO 정적 재빌드"
+  if ! python3 build.py 2>&1 | tee -a "${LOG}"; then
+    log "ERROR: FO 빌드 실패"
+    rollback
+    exit 1
+  fi
+
   log "==> BO 정적 재빌드"
   if ! python3 build-bo.py 2>&1 | tee -a "${LOG}"; then
     log "ERROR: BO 빌드 실패"
@@ -180,10 +194,21 @@ main() {
     fail=1
   fi
 
-  if [[ -f public-bo/admin.html ]]; then
-    log "  admin.html OK"
+  # 자체 호스팅 폰트가 FO·BO 양쪽 산출물에 들어갔는지.
+  for d in public public-bo; do
+    n="$(find "$d/shared/vendor/fonts" -name '*.woff2' 2>/dev/null | wc -l | tr -d ' ')"
+    if [[ "$n" -gt 0 ]]; then
+      log "  ${d}: 폰트 ${n}개 OK"
+    else
+      log "  ERROR: ${d} 에 자체 호스팅 폰트가 없음"
+      fail=1
+    fi
+  done
+
+  if [[ -f public/index.html && -f public-bo/admin.html ]]; then
+    log "  index.html · admin.html OK"
   else
-    log "  ERROR: admin.html 없음"
+    log "  ERROR: index.html 또는 admin.html 없음"
     fail=1
   fi
 
