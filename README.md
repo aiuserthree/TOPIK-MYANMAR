@@ -74,12 +74,18 @@ TOPIK-MYANMAR/
 
 ## 배포
 
+Web VPS(`/opt/myanmar-v2`)에서 실행합니다. 배포 스크립트는 **두 개**이고, 무엇이 바뀌었느냐로 고릅니다.
+
 ```bash
-# Web VPS에서 origin/main → 운영 전체 반영 (API + BO + FO + migration)
+# 스키마·systemd 유닛·nginx 가 바뀐 배포 — migration 포함, API 재시작(수 초 중단)
 bash scripts/deploy-all-from-git.sh
+
+# 앱 코드·정적만 바뀐 배포 — 무중단 리로드, 실패 시 직전 커밋으로 자동 롤백
+bash scripts/deploy-app-from-git.sh
 ```
 
-체크리스트는 [`docs/DEPLOY.md`](docs/DEPLOY.md), VPS 상세 절차는 [`docs/IWINV_SETUP.md`](docs/IWINV_SETUP.md)를 따릅니다.
+선택 기준과 주의사항은 [`docs/DEPLOY.md` 「배포 스크립트 선택」](docs/DEPLOY.md#배포-스크립트-선택-먼저-읽기),
+VPS 상세 절차는 [`docs/IWINV_SETUP.md`](docs/IWINV_SETUP.md)를 따릅니다.
 
 ## 스키마 이력 (V013~V023)
 

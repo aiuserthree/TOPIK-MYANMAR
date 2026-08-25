@@ -5,9 +5,86 @@
 
 ---
 
+## 배포 스크립트 선택 (먼저 읽기)
+
+일상 배포에 쓰는 스크립트는 **두 개**입니다. 둘 다 Web VPS(`/opt/myanmar-v2`)에서 실행하며,
+`origin/main` 을 작업 트리에 체크아웃하는 방식은 같습니다. 차이는 **무엇까지 건드리느냐**와
+**실패했을 때 어떻게 되느냐**입니다.
+
+| | `deploy-all-from-git.sh` | `deploy-app-from-git.sh` |
+| --- | --- | --- |
+| 범위 | 전체 — 스키마·유닛·nginx 포함 | 앱만 — FO/BO 정적 + API 코드 |
+| DB migration | **실행** | 실행 안 함 |
+| systemd 유닛 | 복사 + `daemon-reload` | 건드리지 않음 |
+| nginx 설정 | `scripts/nginx/` 반영 + reload | 건드리지 않음 |
+| API 반영 | `systemctl restart` — **수 초 중단** | `apps/api/` 가 바뀐 배포에서만 `reload`(SIGHUP) — **무중단** |
+| 실패 시 | 롤백 없음 (migration 실패는 경고만 남기고 계속) | 직전 배포 커밋으로 **자동 롤백** |
+| 배포 지점 추적 | 없음 | `.deployed-commit` 표식 |
+| 미리보기 | 없음 | `DRY_RUN=1` |
+| 로그 | 표준 출력 | `/var/log/myanmar-deploy-app.log` + 표준 출력 |
+| 전제 | 사람이 지켜보는 대화형 | **예약 실행(무인)** |
+
+### `deploy-all-from-git.sh` 를 써야 하는 경우
+
+아래 중 하나라도 해당하면 이쪽입니다. `deploy-app-from-git.sh` 는 이 셋을 아예 건드리지 않으므로
+반영되지 않습니다.
+
+1. `db/migrations/` 에 새 SQL 이 추가됨
+2. `scripts/systemd/` 유닛 또는 `apps/api/.env` 변경 — systemd 는 이 값을 **기동 시에만** 읽으므로
+   reload 로는 반영되지 않습니다
+3. `scripts/nginx/` 설정 변경
+
+```bash
+cd /opt/myanmar-v2
+git fetch origin
+bash scripts/deploy-all-from-git.sh
+```
+
+### 그 외에는 `deploy-app-from-git.sh`
+
+앱 코드·정적 파일만 바뀐 배포는 이쪽이 낫습니다 — 무중단이고, 검증에 실패하면 직전 커밋으로 되돌립니다.
+
+```bash
+bash scripts/deploy-app-from-git.sh              # 지금 실행
+DRY_RUN=1 bash scripts/deploy-app-from-git.sh    # 무엇을 할지만 출력
+RESTART_API=1 bash scripts/deploy-app-from-git.sh  # 리로드 대신 완전 재시작
+```
+
+**왜 재시작이 아니라 리로드인가** — 2026-08-20 배포에서 `restart` 가 워커 2개를 동시에 내려
+수 초간 502 가 나갔고 응시자 3명이 실제로 겪었습니다. gunicorn 마스터가 소켓을 붙든 채 워커를
+하나씩 교체하는 `reload` 는 요청을 떨어뜨리지 않습니다. 다만 `.env`·유닛 변경은 reload 로
+반영되지 않으니 그때는 `RESTART_API=1` 또는 `deploy-all-from-git.sh` 를 씁니다.
+
+### 주의 — migration 실패가 배포를 멈추지 않습니다
+
+`deploy-all-from-git.sh` 의 migration 단계는 이렇게 되어 있습니다.
+
+```bash
+bash scripts/run-migrations.sh || echo "WARN: migration step had errors — continuing"
+```
+
+실패해도 API 재시작·정적 빌드가 그대로 진행됩니다. 배포 로그에서 **`WARN: migration step had errors`**
+를 반드시 확인하십시오. 특히 V007(pgvector)이 미적용이면 `run-migrations.sh` 가 거기서 멈추고
+**V008 이후가 누락된 채** 배포가 정상 종료됩니다 (§2 참고).
+
+### 두 스크립트가 모두 `main()` 으로 감싸여 있는 이유
+
+실행 도중 `git checkout … -- scripts/` 로 **자기 자신을 덮어쓰기** 때문입니다. bash 는 스크립트를
+파일 오프셋 기준으로 이어 읽으므로, 실행 중 파일이 바뀌면 엉뚱한 위치를 읽어 깨집니다. 함수 정의는
+호출 전에 통째로 파싱되므로 마지막 줄 `main "$@"` 까지 읽히고 나면 영향을 받지 않습니다.
+**이 구조를 풀지 마십시오.**
+
+### 그 외 `scripts/deploy-*.sh` · `push-*.sh`
+
+특정 시점의 일회성 패치 반영용으로 남아 있는 것들입니다(로컬 Mac 에서 SSH 로 밀어넣는 것 포함).
+일상 배포에는 쓰지 않습니다. 예외적으로 **정적만 재빌드**해야 할 때는
+`scripts/deploy-static-live.sh` (migration·API 재시작 없음)를 씁니다.
+
+---
+
 ## 1. 인프라 준비
 
-> 아래 1~5번은 **최초 구축용** 체크리스트입니다. 현재 운영 환경은 이미 전부 프로비저닝되어 서비스 중이며, 일상 배포는 §6의 `deploy-all-from-git.sh`만 사용합니다.
+> 아래 1~5번은 **최초 구축용** 체크리스트입니다. 현재 운영 환경은 이미 전부 프로비저닝되어 서비스 중이며, 일상 배포는 위 [배포 스크립트 선택](#배포-스크립트-선택-먼저-읽기)을 따릅니다.
 
 | # | 항목 | 확인 |
 |---|------|------|
@@ -185,15 +262,9 @@ TOPIK_API_BASE=http://127.0.0.1:8000 python3 build-bo.py
 | 9 | BO **관리자 접근 로그** — 로그인 후 이력 표시 | `GET /api/v1/admin/access-logs/admins` (super) |
 | 10 | FO 푸터 **개인정보처리방침** 볼드 표시 | `public/assets/styles.css` `.ft-policy-privacy` |
 
-**운영 전체 배포 (권장):**
-
-```bash
-cd /opt/myanmar-v2
-git fetch origin
-bash scripts/deploy-all-from-git.sh
-```
-
-`deploy-all-from-git.sh`는 `git checkout origin/main`으로 소스 반영 → migration → API 재시작 → `build.py` + `build-bo.py`를 순서대로 실행합니다.
+**운영 배포:** 어느 스크립트를 쓸지는 위의 [배포 스크립트 선택](#배포-스크립트-선택-먼저-읽기)을 따릅니다.
+스키마·유닛·nginx 가 바뀌면 `deploy-all-from-git.sh`(소스 반영 → migration → API 재시작 → `build.py` + `build-bo.py`),
+그 외 앱 변경은 `deploy-app-from-git.sh`(무중단 리로드 + 실패 시 자동 롤백)입니다.
 
 **BO go-live 노트:**
 - 화면 handoff: `html/C안/BO(admin)/project/` — `admin-login.html` + `admin.html`

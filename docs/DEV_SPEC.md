@@ -661,13 +661,16 @@ sudo nginx -t && sudo systemctl reload nginx
 - API: systemd `myanmar-api` + uvicorn `:8000`
 - SSL: certbot `--nginx` (`www`·`admin` 서브도메인)
 
-**운영 반영 진입점** — Web VPS에서 `origin/main`을 API + BO + FO + migration까지 한 번에 반영합니다:
+**운영 반영 진입점** — Web VPS에서 실행하는 배포 스크립트는 두 개입니다.
 
-```bash
-bash scripts/deploy-all-from-git.sh
-```
+| 스크립트 | 범위 | API | 실패 시 |
+| --- | --- | --- | --- |
+| `deploy-all-from-git.sh` | 전체 — migration·systemd 유닛·nginx 포함 | `restart` (수 초 중단) | 롤백 없음 |
+| `deploy-app-from-git.sh` | 앱만 — FO/BO 정적 + API 코드 | 변경 시에만 `reload` (무중단) | 직전 커밋으로 자동 롤백 |
 
-이 스크립트는 실행 도중 `git checkout origin/main -- scripts/`로 자기 자신을 덮어쓰므로 본문이 `main()`으로 감싸여 있습니다 (bash가 파일 오프셋 기준으로 이어 읽어 깨지는 것을 막기 위함). 개별 반영용 스크립트는 `scripts/deploy-*.sh`·`push-*.sh`를 참고하세요.
+스키마(`db/migrations/`)·유닛(`scripts/systemd/`)·`.env`·nginx 가 바뀌면 **반드시 `deploy-all-from-git.sh`** 를 씁니다 — `deploy-app-from-git.sh`는 이 넷을 건드리지 않습니다. 선택 기준·주의사항은 [`DEPLOY.md` 「배포 스크립트 선택」](DEPLOY.md#배포-스크립트-선택-먼저-읽기)에 정리되어 있습니다.
+
+두 스크립트 모두 실행 도중 `git checkout … -- scripts/`로 자기 자신을 덮어쓰므로 본문이 `main()`으로 감싸여 있습니다 (bash가 파일 오프셋 기준으로 이어 읽어 깨지는 것을 막기 위함) — 이 구조를 풀지 마세요. 그 외 `scripts/deploy-*.sh`·`push-*.sh`는 특정 시점의 일회성 패치용입니다.
 
 ### 12.2 FO·BO 정적 빌드 (IwinV)
 
