@@ -326,6 +326,13 @@
       email: row.email || "",
       tel: row.phone || "",
       accommodation: !!row.accommodation_requested,
+      cancelReason: row.cancel_reason || "",
+      cancelledAt: fmtMmt(row.cancelled_at),
+      exceptionType: row.exception_type || "",
+      isDesignated: !!row.is_designated,
+      exceptionLabel: row.exception_type_label || "",
+      exceptionReason: row.exception_reason || "",
+      exceptionAt: fmtMmt(row.exception_at),
       rev: row.rev != null ? row.rev : null,
     };
   }
@@ -466,16 +473,35 @@
   var TERM_STATUS_UI = { draft: "draft", published: "pub", retired: "retired" };
   var AUDIT_ACTION_UI = {
     approve: "승인", reject: "반려", payment_complete: "수납", payment_cancel: "수납취소",
-    board_reply: "수정", board_delete: "삭제", board_workflow: "수정",
+    board_reply: "답변", board_comment: "댓글", board_delete: "삭제",
+    board_workflow: "상태변경",
     term_create: "생성", term_update: "수정", term_publish: "게시", term_retire: "폐지",
     exam_round_revoke: "폐지", exam_round_restore: "복구",
     user_update: "수정", user_reset_password: "비밀번호초기화",
     admin_create: "생성", admin_update: "수정", admin_reset_password: "비밀번호초기화",
     exam_round_create: "생성", exam_venue_update: "수정", exam_number_assign: "수험번호부여",
-    photo_review_approve: "승인", photo_review_reject: "반려",
-    info_review_approve: "정보승인", info_review_reject: "정보반려", memo: "수정",
+    // 접수 승인/반려(approve·reject)와 구분한다 — 목록에서 둘 다 "승인"이면 뭘 한 건지 모른다.
+    // info_review_* 가 이미 정보승인/정보반려를 쓰므로 같은 규칙.
+    photo_review_approve: "사진승인", photo_review_reject: "사진반려",
+    info_review_approve: "정보승인", info_review_reject: "정보반려", memo: "메모",
     login: "로그인", logout: "로그아웃",
-    permission_matrix_update: "수정", admin_change_password: "비밀번호초기화",
+    permission_matrix_update: "권한변경", admin_change_password: "비밀번호변경",
+    // 운영 로그에 실제로 쌓이는데 라벨이 없어 영문 원문이 그대로 보이던 것들
+    board_secret_view: "비밀글열람",
+    application_delete: "삭제", application_purge: "삭제", application_restore: "복구",
+    exam_round_update: "수정", exam_round_status: "상태변경",
+    exam_venue_create: "생성", exam_venue_delete: "삭제",
+    // 공지 등록 한 번에 notice_create + notice_marketing_send 두 줄이 쌓인다.
+    // 관리자가 한 일은 '등록' 하나이므로 둘 다 등록으로 보여 준다 —
+    // 메일 몇 건이 나갔는지는 상세의 「메일 발송 예약」에서 확인한다.
+    notice_create: "등록", notice_marketing_send: "등록",
+    notice_update: "수정", notice_delete: "삭제",
+    faq_create: "생성", faq_update: "수정", faq_delete: "삭제",
+    photos_export: "내보내기", roster_export: "내보내기",
+    payment_roster_export: "내보내기", payment_roster_import: "수납",
+    // 예외 접수 처리(제110회~)
+    application_level_change: "급수정정", application_reinstate: "접수복원",
+    application_designate: "지정접수",
   };
   var ADMIN_ACCESS_ACTION_UI = {
     login: "로그인", logout: "로그아웃", login_failed: "로그인실패", session_expired: "세션만료",
@@ -507,6 +533,39 @@
     admin_users: "관리자계정", exam_rounds: "회차", exam_venues: "시험장",
     notices: "공지", faq_items: "FAQ",
   };
+
+  /** UI 한글 라벨 → 서버 action_type 목록. 라벨 하나에 여러 종류가 붙는다(수정·삭제 등). */
+  function auditActionTypesFor(label) {
+    if (!label || label === "all") return null;
+    var out = [];
+    Object.keys(AUDIT_ACTION_UI).forEach(function (k) {
+      if (AUDIT_ACTION_UI[k] === label) out.push(k);
+    });
+    return out.length ? out : null;
+  }
+
+  /** UI 한글 유형 → 서버 target_type. */
+  function auditTargetTypeFor(label) {
+    if (!label || label === "all") return null;
+    var hit = null;
+    Object.keys(AUDIT_TYPE_UI).forEach(function (k) {
+      if (AUDIT_TYPE_UI[k] === label) hit = k;
+    });
+    return hit;
+  }
+
+  /** 화면 필터 → 서버 쿼리. loadAuditPage/fetchAuditAll 공용. */
+  function auditQuery(o, page, pageSize) {
+    var q = { page: page, page_size: pageSize };
+    var acts = auditActionTypesFor(o.action);
+    if (acts) q.action_types = acts.join(",");
+    var tt = auditTargetTypeFor(o.type);
+    if (tt) q.target_type = tt;
+    if (o.actor && o.actor !== "all") q.admin_user_id = o.actor;
+    if (o.days) q.days = o.days;
+    if (o.targetId) q.target_id = o.targetId;
+    return q;
+  }
 
   function roleUi(r) {
     if (r === "admin" || r === "standard") return "general";
@@ -753,10 +812,12 @@
       id: "log" + row.id,
       ts: fmtMmt(row.created_at),
       actor: row.admin_email || (row.admin_user_id ? String(row.admin_user_id) : "admin"),
+      actorName: row.admin_name || "",
       ip: row.ip_address || "—",
       type: AUDIT_TYPE_UI[row.target_type] || row.target_type || "—",
       targetId: String(row.target_id || "—"),
       action: AUDIT_ACTION_UI[row.action_type] || row.action_type || "—",
+      actionType: row.action_type || "",   // 상세에서 처리 내용 설명을 찾는 키
       before: row.before_data || null,
       after: row.after_data || null,
       memo: row.memo || "",
@@ -820,6 +881,7 @@
       id: "ph" + row.id,
       ts: fmtMmt(row.created_at),
       actor: row.actor || "—",
+      actorName: row.actor_name || "",
       ip: row.ip_address || "—",
       target: row.target || "—",
       changeType: row.change_type || "—",
@@ -862,10 +924,15 @@
     DS.state.terms = [];
     DS.state.admins = [];
     DS.state.audit = [];
+    DS.state.auditTotal = 0;
     DS.state.consents = [];
     DS.state.adminAccessLogs = [];
+    DS.state.adminAccessTotal = 0;
     DS.state.memberAccessLogs = [];
+    DS.state.memberAccessTotal = 0;
     DS.state.permHistory = [];
+    DS.state.permHistoryTotal = 0;
+    DS.state.permHistoryTargets = [];
     // null 이 아닌 '' — 헤더 회차 <select value=…> 가 제어 컴포넌트로 유지된다.
     DS.state.activeSessionId = '';
   }
@@ -888,7 +955,7 @@
     return m && m.rev != null ? m.rev : undefined;
   }
 
-  function handleMutation(res, reloadFn) {
+  function handleMutation(res, reloadFn, applyFn) {
     if (Api.isConflict && Api.isConflict(res)) {
       toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
       if (reloadFn) return reloadFn().then(function () { return false; });
@@ -898,15 +965,59 @@
       toastErr(TopikBoApi.parseError(res));
       return Promise.resolve(false);
     }
+    // applyFn 이 갱신 행을 반영했으면 목록 전체를 다시 받지 않는다.
+    if (applyFn && applyFn()) return Promise.resolve(true);
     if (reloadFn) return reloadFn().then(function () { return true; });
     return Promise.resolve(true);
   }
 
-  function applyRevFromResponse(id, res) {
-    if (res.body && res.body.rev != null) {
-      var a = DS.state.applicants.find(function (x) { return x.id === String(id); });
-      if (a) a.rev = res.body.rev;
+  /**
+   * 수납·심사 응답에 실려 온 갱신 행만 목록에 반영한다.
+   *
+   * 예전에는 처리할 때마다 reloadApplicants 로 접수자 목록 전체를 다시 받았다.
+   * 500건씩 순차 페이징에 휴지통까지 2세트라, 접수자가 늘수록 처리 1건당 왕복이
+   * 함께 늘어 현장(미얀마)에서 체감 지연이 컸다. 서버가 목록과 같은 형태로
+   * 바뀐 행(item)을 돌려주므로 그 행만 갈아끼운다.
+   *
+   * 하나라도 반영할 수 없으면(item 없는 구버전 API, 현재 목록에 없는 행) false 를
+   * 돌려주고 호출부가 기존대로 전체 재조회로 물러선다.
+   */
+  function applyServerRows(ress) {
+    var items = [];
+    for (var i = 0; i < ress.length; i++) {
+      var row = ress[i] && ress[i].body && ress[i].body.item;
+      if (!row) return false;
+      items.push(row);
     }
+    var list = DS.state.applicants;
+    for (var j = 0; j < items.length; j++) {
+      var item = items[j];
+      var key = String(item.id);
+      var idx = list.findIndex(function (x) { return x.id === key; });
+      if (idx < 0) return false;
+      // no(순번)는 목록에서의 위치로 정해진다 — 같은 자리에 넣어야 번호가 유지된다.
+      list[idx] = mapApplicant(item, idx);
+    }
+    // '동시' 표시는 같은 submission 의 다른 행과 함께 봐야 정해지므로 목록 기준으로 다시 계산.
+    markConcurrentApplicants(list);
+    DS.notify();
+    return true;
+  }
+
+  /**
+   * 일괄 처리(승인·반려·수납·수납취소) 응답 처리. 반환값은 기존과 같은 '처리 건수'.
+   * 충돌(409)은 최신 상태가 필요하므로 그대로 전체 재조회한다.
+   */
+  function applyBulkMutation(ress, ids, sessionId) {
+    var conflict = ress.find(function (r) { return Api.isConflict(r); });
+    if (conflict) {
+      toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+      return DS.reloadApplicants(sessionId).then(function () { return 0; });
+    }
+    var bad = ress.find(function (r) { return !r.ok; });
+    if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
+    if (applyServerRows(ress)) return Promise.resolve(ids.length);
+    return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
   }
 
   function regionNameMap(items) {
@@ -986,7 +1097,7 @@
       fetchAllUsers({}),
       Api.getTerms(),
       Api.getAdminUsers(),
-      Api.getAuditLogs(),
+      Api.getAuditLogs({ page: 1, page_size: 25 }),
       Api.getPermissionMatrix(),
       fetchAllApplications({ trash: "true" }),
     ]).then(function (results) {
@@ -1064,42 +1175,21 @@
 
       if (audRes.ok && audRes.body && audRes.body.items) {
         DS.state.audit = audRes.body.items.map(mapAudit);
+        DS.state.auditTotal = audRes.body.total_items != null
+          ? audRes.body.total_items : DS.state.audit.length;
       } else {
         DS.state.audit = [];
+        DS.state.auditTotal = 0;
       }
 
       if (permRes.ok && permRes.body && permRes.body.matrix) {
         DS.state.perms = mapMatrixToPerms(permRes.body.matrix);
       }
 
-      var isSuper = DS.state.me && (DS.state.me.role === "super");
-      if (isSuper) {
-        DS.state.adminAccessLogs = [];
-        DS.state.memberAccessLogs = [];
-        DS.state.permHistory = [];
-        return Promise.all([
-          Api.getAdminAccessLogs({ page_size: 500 }),
-          Api.getMemberAccessLogs({ page_size: 500 }),
-          Api.getPermissionHistory({ page_size: 500 }),
-        ]).then(function (extra) {
-          if (extra[0].ok && extra[0].body && extra[0].body.items) {
-            DS.state.adminAccessLogs = extra[0].body.items.map(mapAdminAccessLog);
-          }
-          if (extra[1].ok && extra[1].body && extra[1].body.items) {
-            DS.state.memberAccessLogs = extra[1].body.items.map(mapMemberAccessLog);
-          }
-          if (extra[2].ok && extra[2].body && extra[2].body.items) {
-            DS.state.permHistory = extra[2].body.items.map(mapPermHistory);
-          }
-          return finishInit();
-        }).catch(function () {
-          /* 접근 로그·권한 이력은 부가 기능 — 실패해도 BO 본화면은 사용 가능 */
-          return finishInit();
-        });
-      }
-      DS.state.adminAccessLogs = [];
-      DS.state.memberAccessLogs = [];
-      DS.state.permHistory = [];
+      /* 접근 로그·권한 이력은 부팅 때 건드리지 않는다. 세 화면 모두 진입 시
+         자기 페이지를 직접 조회하므로 선조회가 필요 없고(회원 접근 로그는 6만
+         건짜리다), 여기서 비우면 먼저 도착한 패널 조회 결과를 덮어쓴다.
+         초기화는 부팅 시작의 clearLists() 가 이미 했다. */
       return finishInit();
 
       function finishInit() {
@@ -1143,7 +1233,10 @@
     return out;
   }
 
-  DS.reloadApplicants = function (sessionId, opts) {
+  /**
+   * 접수자 목록 전체 조회. 실제 요청은 여기서 낸다 — 합치기는 DS.reloadApplicants 가 한다.
+   */
+  function reloadApplicantsNow(sessionId, opts) {
     if (!DS.isApiMode()) return Promise.resolve();
     opts = opts || {};
 
@@ -1225,6 +1318,41 @@
 
       DS.notify();
     });
+  }
+
+  /**
+   * 화면을 열 때 패널의 useEffect 와 DS.setSession 이 같은 조회를 동시에 건다.
+   * 제19회처럼 접수자가 5,000명대면 한 번이 11페이지(약 7MB)라, 겹치는 만큼 그대로
+   * 낭비된다. 실제로 운영 로그에서 같은 페이지 요청이 노트북 한 대당 2~3번씩 겹쳤다.
+   *
+   * 같은 조회가 이미 떠 있으면 그 약속을 함께 쓴다. 다만 데이터를 바꾼 뒤의 재조회
+   * (삭제·복원·예외 처리·충돌)는 변경 전에 출발한 요청에 올라타면 옛 데이터를 보게
+   * 되므로 합치지 않는다 — opts.dedupe 를 준 호출만 합친다.
+   */
+  var inflightApplicants = {};
+
+  function applicantsRequestKey(sessionId, opts) {
+    return [
+      sessionId == null ? "" : String(sessionId),
+      opts.trash ? "trash" : "live",
+      opts.q || "",
+    ].join("|");
+  }
+
+  DS.reloadApplicants = function (sessionId, opts) {
+    opts = opts || {};
+    if (!opts.dedupe) return reloadApplicantsNow(sessionId, opts);
+
+    var key = applicantsRequestKey(sessionId, opts);
+    if (inflightApplicants[key]) return inflightApplicants[key];
+
+    function settled() { delete inflightApplicants[key]; }
+    var p = reloadApplicantsNow(sessionId, opts).then(
+      function (v) { settled(); return v; },
+      function (e) { settled(); throw e; }
+    );
+    inflightApplicants[key] = p;
+    return p;
   };
 
   DS.apiDeleteApplicant = function (id) {
@@ -1382,44 +1510,44 @@
   DS.apiPhotoApprove = function (id) {
     var sessionId = DS.state.activeSessionId;
     return Api.photoReview(id, { action: "approve" }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
   DS.apiPhotoReject = function (id, reason) {
     var sessionId = DS.state.activeSessionId;
     return Api.photoReview(id, { action: "reject", photo_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
   DS.apiInfoApprove = function (id) {
     var sessionId = DS.state.activeSessionId;
     return Api.infoReview(id, { action: "approve" }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
   DS.apiInfoReject = function (id, reason) {
     var sessionId = DS.state.activeSessionId;
     return Api.infoReview(id, { action: "reject", info_reject_note: reason }, { rev: applicantRev(id) }).then(function (res) {
-      return handleMutation(res, function () { return DS.reloadApplicants(sessionId); }).then(function (ok) {
-        if (!ok) return false;
-        applyRevFromResponse(id, res);
-        return true;
-      });
+      return handleMutation(
+        res,
+        function () { return DS.reloadApplicants(sessionId); },
+        function () { return applyServerRows([res]); }
+      );
     });
   };
 
@@ -1428,14 +1556,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.approveApplication(id, {}, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
@@ -1444,14 +1565,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.rejectApplication(id, { reject_reason: reason }, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
@@ -1460,14 +1574,7 @@
     return Promise.all(ids.map(function (id) {
       return Api.paymentApplication(id, { payment_memo: info.memo }, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
-      }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      return applyBulkMutation(ress, ids, sessionId);
     });
   };
 
@@ -1476,14 +1583,78 @@
     return Promise.all(ids.map(function (id) {
       return Api.cancelPayment(id, { payment_cancel_reason: reason }, { rev: applicantRev(id) });
     })).then(function (ress) {
-      var conflict = ress.find(function (r) { return Api.isConflict(r); });
-      if (conflict) {
-        toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
-        return DS.reloadApplicants(sessionId).then(function () { return 0; });
+      return applyBulkMutation(ress, ids, sessionId);
+    });
+  };
+
+  // --- 예외 접수 처리(제110회~) ----------------------------------------
+  // 급수 정정 · 취소 복원 · 지정 접수. 셋 다 서버가 정원·중복을 다시 검사하므로
+  // 화면은 결과 메시지만 그대로 보여 주고, 성공 시 목록을 다시 읽는다.
+  DS.apiChangeApplicantLevel = function (id, level, reason) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.changeApplicationLevel(
+      id,
+      { exam_level: level, reason: reason },
+      { rev: applicantRev(id) }
+    ).then(function (res) {
+      if (!res.ok) {
+        if (Api.isConflict && Api.isConflict(res)) {
+          toastErr("다른 관리자가 먼저 수정했습니다. 최신 데이터로 새로고침합니다.");
+          return DS.reloadApplicants(sessionId).then(function () { return null; });
+        }
+        toastErr(TopikBoApi.parseError(res));
+        return null;
       }
-      var bad = ress.find(function (r) { return !r.ok; });
-      if (bad) { toastErr(TopikBoApi.parseError(bad)); return 0; }
-      return DS.reloadApplicants(sessionId).then(function () { return ids.length; });
+      var body = res.body || {};
+      return DS.reloadApplicants(sessionId).then(function () { return body; });
+    });
+  };
+
+  DS.apiReinstateApplicant = function (id, reason) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.reinstateApplication(id, { reason: reason }, { rev: applicantRev(id) })
+      .then(function (res) {
+        return handleMutation(res, function () { return DS.reloadApplicants(sessionId); })
+          .then(function (ok) {
+            if (!ok) return null;
+            return res.body || {};
+          });
+      });
+  };
+
+  DS.apiDesignateApplicant = function (payload) {
+    var sessionId = DS.state.activeSessionId;
+    return Api.designateApplication(payload || {}).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return null; }
+      var body = res.body || {};
+      return DS.reloadApplicants(sessionId).then(function () { return body; });
+    });
+  };
+
+  DS.fetchRoundCapacity = function (roundId) {
+    if (!DS.isApiMode() || !roundId || !/^\d+$/.test(String(roundId))) {
+      return Promise.resolve(null);
+    }
+    return Api.getExamRoundCapacity(roundId).then(function (res) {
+      return res.ok ? (res.body || null) : null;
+    });
+  };
+
+  DS.searchMembersForDesignate = function (q) {
+    if (!DS.isApiMode()) return Promise.resolve([]);
+    return Api.getUsers({ q: q, status: "active", page_size: 20 }).then(function (res) {
+      if (!res.ok) { toastErr(TopikBoApi.parseError(res)); return []; }
+      return ((res.body && res.body.items) || []).map(function (u) {
+        return {
+          id: u.id,
+          nameKo: u.name_ko || "—",
+          nameEn: u.name_en || "",
+          email: u.email || "",
+          dob: u.birth_date || "",
+          phone: u.phone || "",
+          hasPhoto: u.photo_file_id != null,
+        };
+      });
     });
   };
 
@@ -2027,49 +2198,163 @@
     });
   };
 
-  DS.reloadAudit = function () {
+  /** 처리 이력 한 페이지 조회. 필터·페이징 모두 서버가 처리한다. */
+  DS.loadAuditPage = function (opts) {
     if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getAuditLogs().then(function (res) {
+    var o = opts || {};
+    DS.state.auditLoading = true;
+    DS.notify();
+    return Api.getAuditLogs(auditQuery(o, o.page || 1, o.pageSize || 25)).then(function (res) {
+      DS.state.auditLoading = false;
       if (!res.ok) {
         DS.state.apiError = TopikBoApi.parseError(res);
         DS.state.audit = [];
+        DS.state.auditTotal = 0;
       } else {
-        DS.state.audit = ((res.body && res.body.items) || []).map(mapAudit);
+        var body = res.body || {};
+        DS.state.audit = (body.items || []).map(mapAudit);
+        DS.state.auditTotal = body.total_items != null ? body.total_items : DS.state.audit.length;
         DS.state.apiError = null;
       }
       DS.notify();
+      return res;
     });
   };
 
-  DS.reloadAdminAccessLogs = function (q) {
-    if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getAdminAccessLogs(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
-      if (res.ok && res.body && res.body.items) {
-        DS.state.adminAccessLogs = res.body.items.map(mapAdminAccessLog);
-      }
-      DS.notify();
+  /** CSV 내보내기용 — 같은 필터로 전량 조회(서버 상한 2000건). */
+  DS.fetchAuditAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    return Api.getAuditLogs(auditQuery(opts || {}, 1, 2000)).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapAudit), total: body.total_items || 0 };
     });
   };
 
-  DS.reloadMemberAccessLogs = function (q) {
+  DS.reloadAudit = function () {
+    return DS.loadAuditPage({ page: 1 });
+  };
+
+  /** 한글 액션 라벨 → 서버 action_type 목록. 라벨 하나가 여러 종류에 대응한다
+      (회원 '로그인' = login·register·google_login). */
+  function reverseActionTypes(map, label) {
+    if (!label || label === "all") return null;
+    var out = [];
+    Object.keys(map).forEach(function (k) { if (map[k] === label) out.push(k); });
+    return out.length ? out : null;
+  }
+
+  function accessQuery(o, page, pageSize, actionMap) {
+    var q = { page: page, page_size: pageSize };
+    var acts = reverseActionTypes(actionMap, o.action);
+    if (acts) q.action_types = acts.join(",");
+    if (o.result === "성공") q.success = true;
+    else if (o.result === "실패") q.success = false;
+    if (o.days) q.days = o.days;
+    return q;
+  }
+
+  /* 예전에는 최신 500건만 받아 화면에서 걸렀다. 회원 접근 로그는 6만 건이 넘어
+     0.8% 만 보였고, 필터도 그 안에서만 동작했다. 이제 서버가 처리한다. */
+  DS.loadAdminAccessPage = function (opts) {
     if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getMemberAccessLogs(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
-      if (res.ok && res.body && res.body.items) {
-        DS.state.memberAccessLogs = res.body.items.map(mapMemberAccessLog);
-      }
+    var o = opts || {};
+    var q = accessQuery(o, o.page || 1, o.pageSize || 25, ADMIN_ACCESS_ACTION_UI);
+    if (o.adminId && o.adminId !== "all") q.admin_user_id = o.adminId;
+    if (o.ip) q.ip = o.ip;
+    DS.state.adminAccessLoading = true;
+    DS.notify();
+    return Api.getAdminAccessLogs(q).then(function (res) {
+      DS.state.adminAccessLoading = false;
+      var body = (res.ok && res.body) || {};
+      DS.state.adminAccessLogs = (body.items || []).map(mapAdminAccessLog);
+      DS.state.adminAccessTotal = body.total_items != null ? body.total_items : DS.state.adminAccessLogs.length;
       DS.notify();
+      return res;
     });
   };
 
-  DS.reloadPermHistory = function (q) {
-    if (!DS.isApiMode()) return Promise.resolve();
-    return Api.getPermissionHistory(Object.assign({ page_size: 500 }, q || {})).then(function (res) {
-      if (res.ok && res.body && res.body.items) {
-        DS.state.permHistory = res.body.items.map(mapPermHistory);
-      }
-      DS.notify();
+  DS.fetchAdminAccessAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    var o = opts || {};
+    var q = accessQuery(o, 1, 2000, ADMIN_ACCESS_ACTION_UI);
+    if (o.adminId && o.adminId !== "all") q.admin_user_id = o.adminId;
+    if (o.ip) q.ip = o.ip;
+    return Api.getAdminAccessLogs(q).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapAdminAccessLog), total: body.total_items || 0 };
     });
   };
+
+  DS.loadMemberAccessPage = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve();
+    var o = opts || {};
+    var q = accessQuery(o, o.page || 1, o.pageSize || 25, MEMBER_ACCESS_ACTION_UI);
+    if (o.q) q.q = o.q;
+    DS.state.memberAccessLoading = true;
+    DS.notify();
+    return Api.getMemberAccessLogs(q).then(function (res) {
+      DS.state.memberAccessLoading = false;
+      var body = (res.ok && res.body) || {};
+      DS.state.memberAccessLogs = (body.items || []).map(mapMemberAccessLog);
+      DS.state.memberAccessTotal = body.total_items != null ? body.total_items : DS.state.memberAccessLogs.length;
+      DS.notify();
+      return res;
+    });
+  };
+
+  DS.fetchMemberAccessAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    var o = opts || {};
+    var q = accessQuery(o, 1, 2000, MEMBER_ACCESS_ACTION_UI);
+    if (o.q) q.q = o.q;
+    return Api.getMemberAccessLogs(q).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapMemberAccessLog), total: body.total_items || 0 };
+    });
+  };
+
+  DS.reloadAdminAccessLogs = function (q) { return DS.loadAdminAccessPage(q || {}); };
+  DS.reloadMemberAccessLogs = function (q) { return DS.loadMemberAccessPage(q || {}); };
+
+  function permHistoryQuery(o, page, pageSize) {
+    var q = { page: page, page_size: pageSize };
+    if (o.actor && o.actor !== "all") q.admin_user_id = o.actor;
+    if (o.changeType && o.changeType !== "all") q.change_type = o.changeType;
+    if (o.target && o.target !== "all") q.target = o.target;
+    if (o.days) q.days = o.days;
+    return q;
+  }
+
+  DS.loadPermHistoryPage = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve();
+    var o = opts || {};
+    DS.state.permHistoryLoading = true;
+    DS.notify();
+    return Api.getPermissionHistory(permHistoryQuery(o, o.page || 1, o.pageSize || 25)).then(function (res) {
+      DS.state.permHistoryLoading = false;
+      var body = (res.ok && res.body) || {};
+      DS.state.permHistory = (body.items || []).map(mapPermHistory);
+      DS.state.permHistoryTotal = body.total_items != null ? body.total_items : DS.state.permHistory.length;
+      // '대상' 은 파생값이라 화면에서 목록을 만들 수 없다 — 서버가 준 것을 쓴다.
+      if (body.targets) DS.state.permHistoryTargets = body.targets;
+      DS.notify();
+      return res;
+    });
+  };
+
+  DS.fetchPermHistoryAll = function (opts) {
+    if (!DS.isApiMode()) return Promise.resolve({ rows: [], total: 0 });
+    return Api.getPermissionHistory(permHistoryQuery(opts || {}, 1, 2000)).then(function (res) {
+      if (!res.ok) return { rows: [], total: 0 };
+      var body = res.body || {};
+      return { rows: (body.items || []).map(mapPermHistory), total: body.total_items || 0 };
+    });
+  };
+
+  DS.reloadPermHistory = function (q) { return DS.loadPermHistoryPage(q || {}); };
 
   /** 접수자 상세 LP — 해당 접수 건(target_type=applications) 처리 이력·메모 조회 */
   DS.fetchApplicantAudit = function (appId) {
@@ -2082,7 +2367,7 @@
           return res.body.audit_logs.map(mapAudit);
         }
       }
-      return Api.getAuditLogs({ target_type: "applications", target_id: id }).then(function (audRes) {
+      return Api.getAuditLogs({ target_type: "applications", target_id: id, page_size: 200 }).then(function (audRes) {
         if (!audRes.ok) return [];
         return ((audRes.body && audRes.body.items) || []).map(mapAudit);
       });
@@ -2130,6 +2415,7 @@
   var origSetSession = DS.setSession;
   DS.setSession = function (sessionId) {
     origSetSession(sessionId);
-    if (DS.isApiMode()) DS.reloadApplicants(sessionId);
+    // 접수자 패널의 useEffect 도 같은 조회를 건다 — dedupe 로 한 번만 나가게 한다.
+    if (DS.isApiMode()) DS.reloadApplicants(sessionId, { dedupe: true });
   };
 })(typeof window !== "undefined" ? window : globalThis);

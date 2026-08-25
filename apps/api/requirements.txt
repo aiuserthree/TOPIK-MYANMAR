@@ -1,5 +1,7 @@
 fastapi
 uvicorn[standard]
+# 무중단 재시작(SIGHUP graceful reload)용 프로세스 매니저 — systemd reload 가 이걸 쓴다
+gunicorn
 sqlalchemy
 greenlet
 asyncpg

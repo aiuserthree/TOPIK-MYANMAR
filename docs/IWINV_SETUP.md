@@ -372,7 +372,7 @@ CORS_ORIGINS=https://www.topik-myanmar.com,https://admin.topik-myanmar.com
 
 ```bash
 cd /opt/myanmar-v2
-# migration V001~V022 적용 후 (§2.8)
+# migration V001~V023 적용 후 (§2.8)
 CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py   # 제107회 + 지역코드 (demo 계정 없음)
 # 이후 회차는 BO 회차관리에서 등록합니다 — seed는 최초 1회 기준값입니다.
 ADMIN_EMAIL=admin@topik-myanmar.com ADMIN_PASSWORD='강한비밀번호' python3 scripts/create_admin.py
@@ -511,7 +511,7 @@ DATABASE_URL=postgresql+asyncpg://topik_app:PASSWORD@115.68.227.1:5432/topik_mya
 
 ### 2.8 기존 migration 적용
 
-migration 파일은 현재 저장소의 `db/migrations`(V001~V022)에 있습니다. Web 서버 또는 DB 서버 중 저장소가 있는 곳에서 적용합니다.
+migration 파일은 현재 저장소의 `db/migrations`(V001~V023)에 있습니다. Web 서버 또는 DB 서버 중 저장소가 있는 곳에서 적용합니다.
 
 **권장 — V007 선행 후 일괄 적용:**
 
@@ -523,7 +523,7 @@ cd /opt/myanmar-v2
 #    `-f 상대경로`는 OS user postgres가 경로를 직접 열기 때문에 /root 등에서 Permission denied.
 sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
 
-# 2) V001~V022 일괄 — topik_app
+# 2) V001~V023 일괄 — topik_app
 bash scripts/run-migrations.sh
 ```
 
@@ -531,14 +531,14 @@ bash scripts/run-migrations.sh
 
 V007의 `CREATE EXTENSION`은 **postgres superuser** 권한이 필요합니다. `topik_app`으로 V007을 실행하면 extension 생성에서 실패합니다.
 
-개별 파일을 직접 적용해야 한다면 파일명 순서(V001 → V022)를 지키고, V007만 위와 같이 superuser로 실행합니다:
+개별 파일을 직접 적용해야 한다면 파일명 순서(V001 → V023)를 지키고, V007만 위와 같이 superuser로 실행합니다:
 
 ```bash
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V001__initial_schema.sql
 # … V002 ~ V006 동일 …
 # V007은 superuser로 (위 1번)
 psql "postgresql://topik_app:CHANGE_ME_STRONG_PASSWORD@115.68.227.1:5432/topik_myanmar" -f db/migrations/V008__exam_venue_name_my.sql
-# … V009 ~ V022 동일 …
+# … V009 ~ V023 동일 …
 ```
 
 저장소가 DB VPS에 없으면 로컬에서 `scp db/migrations/V007__pgvector_semantic_search.sql root@115.68.227.1:/tmp/` 후:

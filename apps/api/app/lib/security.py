@@ -76,6 +76,29 @@ def decode_refresh_token(token: str) -> dict[str, Any] | None:
         return None
 
 
+def read_expired_refresh_sub(token: str) -> str | None:
+    """만료된 refresh 토큰에서 sub 를 읽는다 — 서명·typ 는 그대로 검증한다.
+
+    세션 만료를 접근 로그에 남기려면 '누구의 세션이었는지' 가 필요하다. 다만
+    서명 검증까지 건너뛰면 아무나 만든 토큰으로 로그를 오염시킬 수 있으므로,
+    만료(exp) 검사만 끈다. 이 함수가 값을 돌려주면 곧 '서명은 맞는데 만료된
+    토큰' 이라는 뜻이다 — 위조·손상과 구분된다.
+    """
+    try:
+        data = jwt.decode(
+            token,
+            settings.jwt_refresh_secret,
+            algorithms=["HS256"],
+            options={"verify_exp": False},
+        )
+    except JWTError:
+        return None
+    if data.get("typ") != "refresh":
+        return None
+    sub = data.get("sub")
+    return str(sub) if sub else None
+
+
 def create_email_verify_token(email: str) -> str:
     return jwt.encode(
         {"typ": "email_verify", "email": email, "exp": _exp(minutes=30)},

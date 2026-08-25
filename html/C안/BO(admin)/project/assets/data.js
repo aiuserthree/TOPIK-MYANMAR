@@ -538,6 +538,7 @@
   const PERM_ACTIONS = {
     view: '조회', create: '등록', edit: '수정', delete: '삭제',
     photo: '사진심사', pay: '수납', approve: '승인', reject: '반려', exam: '수험번호부여',
+    exception: '예외처리',
     answer: '답변', publish: '게시·폐지', suspend: '정지·탈퇴', reset: '비번초기화',
     deactivate: '비활성', export: '내보내기', viewAll: '전체이력', viewOwn: '본인이력',
   };
@@ -546,7 +547,7 @@
       { id: 'dashboard', label: '대시보드', actions: ['view'] },
     ]},
     { id: 'apply', title: '접수 관리', menus: [
-      { id: 'applicants', label: '접수자 목록', actions: ['view','photo','pay','approve','reject','exam','export','delete'] },
+      { id: 'applicants', label: '접수자 목록', actions: ['view','photo','pay','approve','reject','exam','export','delete','exception'] },
     ]},
     { id: 'exam', title: '시험 관리', menus: [
       { id: 'sessions', label: '회차 관리', actions: ['view','create','edit','delete'] },
@@ -581,7 +582,7 @@
         // 운영 액션
         const map = {
           dashboard: ['view'],
-          applicants: ['view','photo','pay','approve','reject','delete'],   // 수험번호 일괄부여·내보내기 제외(슈퍼 전용)
+          applicants: ['view','photo','pay','approve','reject','delete'],   // 수험번호 일괄부여·내보내기·예외처리 제외(슈퍼 전용)
           sessions: ['view'], venues: ['view'],
           notices: ['view','create','edit','delete'],
           faq: ['view','create','edit','delete'],

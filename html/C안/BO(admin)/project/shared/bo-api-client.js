@@ -331,6 +331,19 @@
     clearAuthStorage();
   }
 
+  /**
+   * 사용자가 직접 누른 로그아웃 — 서버에 알린 뒤 세션을 지운다.
+   * clearSession 만 하면 관리자 접근 로그에 로그아웃이 남지 않는다(실제로 0건이었다).
+   * 세션 정리용 호출(토큰 없음·파싱 실패 등)에는 쓰지 않는다 — 그건 로그아웃이 아니다.
+   */
+  function logoutRemote() {
+    var done = function () { clearSession(); };
+    if (!canUseApi() || !getAccessToken()) { done(); return Promise.resolve(); }
+    return apiFetch("/api/v1/auth/logout", { method: "POST" })
+      .catch(function () { /* 기록 실패가 로그아웃을 막아선 안 된다 */ })
+      .then(done);
+  }
+
   function doApiFetch(path, options, isRetry) {
     options = options || {};
     if (!canUseApi()) {
@@ -593,6 +606,7 @@
     canUseApi: canUseApi,
     login: login,
     logout: clearSession,
+    logoutRemote: logoutRemote,
     getAccessToken: getAccessToken,
     getSessionRaw: getSessionRaw,
     isAuthenticated: isAuthenticated,
@@ -726,6 +740,34 @@
         "POST",
         payload || {},
         opts
+      );
+    },
+    // --- 예외 접수 처리(제110회~) ---
+    changeApplicationLevel: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/change-level",
+        "POST",
+        payload || {},
+        opts
+      );
+    },
+    reinstateApplication: function (id, payload, opts) {
+      return withRevFetch(
+        "/api/v1/admin/applications/" + encodeURIComponent(id) + "/reinstate",
+        "POST",
+        payload || {},
+        opts
+      );
+    },
+    designateApplication: function (payload) {
+      return apiFetch("/api/v1/admin/applications/designate", {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      });
+    },
+    getExamRoundCapacity: function (roundId) {
+      return apiFetch(
+        "/api/v1/admin/exam-rounds/" + encodeURIComponent(roundId) + "/capacity"
       );
     },
     assignExamNumbers: function (roundId, payload) {

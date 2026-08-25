@@ -17,6 +17,7 @@ from app.lib.capacity import (
     level_capacity,
 )
 from app.lib.consents import persist_term_consents, required_terms_consent_error
+from app.lib.exception_intake import remember_cancel_status
 from app.lib.deps import AuthUser, get_client_ip, require_complete_user
 from app.lib.errors import api_error, fo_api_error
 from app.lib.fo_messages import level_label
@@ -124,6 +125,7 @@ def _reactivate_application(
     app.reject_reason = None
     app.cancelled_at = None
     app.cancel_reason = None
+    app.cancelled_from_status = None
     app.payment_status = "unpaid"
     app.payment_receipt_no = None
     app.paid_at = None
@@ -449,6 +451,7 @@ async def submit_application(
         existing.status = "submitted"
         existing.cancelled_at = None
         existing.cancel_reason = None
+        existing.cancelled_from_status = None
         existing.submitted_at = now
         submission = existing
         await db.execute(delete(Application).where(Application.submission_id == existing.id))
@@ -659,11 +662,14 @@ async def cancel_application(
         raise fo_api_error("CANNOT_CANCEL", "cannot_cancel_paid", lang, 400)
     reason = (body or {}).get("reason", "사용자 취소")
     now = datetime.now(timezone.utc)
+    # 취소 직전 단계를 남긴다 — 잘못 누른 '취소'를 BO에서 되돌릴 때의 복원 기준.
+    remember_cancel_status(app)
     app.cancelled_at = now
     app.cancel_reason = reason
     app.status = "cancelled"
     sub = app.submission
     if sub and all(a.status == "cancelled" for a in sub.applications):
+        remember_cancel_status(sub)
         sub.cancelled_at = now
         sub.cancel_reason = reason
         sub.status = "cancelled"
@@ -696,12 +702,14 @@ async def cancel_submission(
             raise fo_api_error("CANNOT_CANCEL", "cannot_cancel_paid", lang, 400)
     reason = (body or {}).get("reason", "사용자 취소")
     now = datetime.now(timezone.utc)
+    remember_cancel_status(sub)
     sub.cancelled_at = now
     sub.cancel_reason = reason
     sub.status = "cancelled"
     for app in sub.applications:
         if app.status == "cancelled":
             continue
+        remember_cancel_status(app)
         app.cancelled_at = now
         app.cancel_reason = reason
         app.status = "cancelled"

@@ -14,13 +14,37 @@
      TPKM_BO_2_1_11 학생 접수 확인증 열람(FO 접수 확인증 동일)
    ============================================================ */
 
-/** 필터 칩 — `photo`만 사진심사 상태(미심사) 기준, 나머지는 접수 처리 상태 */
+/** 필터 칩 — `photo`는 사진심사 상태(미심사), `exception`은 예외 처리 흔적 기준 */
 function matchesStatusChip(a, chipId) {
   if (!a || chipId === 'all') return true;
   if (chipId === 'photo') {
     return a.photoStatus === 'pending' && a.status !== 'cancel' && a.status !== 'cancelled';
   }
+  if (chipId === 'exception') return !!a.exceptionType || !!a.isDesignated;
+  if (chipId === 'designated') return !!a.isDesignated;
   return a.status === chipId;
+}
+
+/** 예외 접수 처리(제110회~) — 유형 라벨 */
+const EXCEPTION_LABELS = {
+  level_change: '급수 정정',
+  reinstate: '취소 복원',
+  designated: '지정 접수',
+};
+function exceptionLabel(a) {
+  if (!a || !a.exceptionType) return '';
+  return a.exceptionLabel || EXCEPTION_LABELS[a.exceptionType] || '예외 처리';
+}
+
+/** 접수 행의 실제 급수 코드('I'·'II'). 동시 접수 행은 level 이 '동시'이므로 levelBase 를 본다. */
+function applicantLevelCode(a) {
+  var lv = a && (a.levelBase || a.level);
+  return lv === 'Ⅱ' || lv === 'II' ? 'II' : 'I';
+}
+
+/** Ⅰ·Ⅱ 를 함께 접수한 행 — 옮겨 갈 급수가 이미 차 있어 급수 정정 대상이 아니다. */
+function isConcurrentApplicant(a) {
+  return !!a && (a.isConcurrent || a.level === '동시');
 }
 
 const STATUS_CHIPS = [
@@ -34,6 +58,8 @@ const STATUS_CHIPS = [
   { id: 'rejected',       label: '반려' },
   { id: 'cancel',         label: '취소' },
   { id: 'refund',         label: '환불자' },
+  { id: 'exception',      label: '예외 처리' },
+  { id: 'designated',     label: '지정 접수' },
 ];
 
 /** FO 다국어 저장값 → BO 상세보기 한글 표시 */
@@ -289,12 +315,13 @@ function ApplicantsPanel() {
 
   useEffect(() => {
     if (!apiSessionReady || !DataStore.reloadApplicants) return;
-    DataStore.reloadApplicants(sessionId);
+    // DS.setSession 도 같은 조회를 건다 — dedupe 로 한 번만 나가게 한다.
+    DataStore.reloadApplicants(sessionId, { dedupe: true });
   }, [sessionId, apiSessionReady]);
 
   useEffect(() => {
     if (viewTab === 'trash' && apiSessionReady && DataStore.reloadApplicants) {
-      DataStore.reloadApplicants(sessionId, { trash: true });
+      DataStore.reloadApplicants(sessionId, { trash: true, dedupe: true });
     }
   }, [viewTab, sessionId, apiSessionReady]);
 
@@ -386,6 +413,10 @@ function ApplicantsPanel() {
   const [zipModal, setZipModal] = useState(false);
   const [photoLP, setPhotoLP] = useState(null);   // 사진 심사 인라인 패널 id (TPKM_BO_2_1_3)
   const [confirmId, setConfirmId] = useState(null); // 접수 확인증 (TPKM_BO_2_1_11)
+  // 예외 접수 처리(제110회~)
+  const [levelChangeId, setLevelChangeId] = useState(null);
+  const [reinstateId, setReinstateId] = useState(null);
+  const [designateModal, setDesignateModal] = useState(false);
 
   // expose detail open to other panels (Dashboard 'Recent')
   useEffect(() => { window.openApplicantDetail = (id) => setDetailId(id); }, []);
@@ -702,8 +733,47 @@ function ApplicantsPanel() {
   const canApprove = DataStore.can('applicants', 'approve');
   const canReject = DataStore.can('applicants', 'reject');
   const canDelete = DataStore.can('applicants', 'delete');
+  // 예외 접수 처리(제110회~) — 기본은 최고관리자 전용, 권한 매트릭스로 일반관리자에게 부여 가능
+  const canException = DataStore.can('applicants', 'exception');
   const isReadonly = DataStore.isReadonly();
   const isTrashView = viewTab === 'trash';
+
+  /** 예외 처리 3종은 서버가 정원·중복을 다시 검사한다. 목업 모드에선 쓸 수 없다. */
+  const requireApiForException = () => {
+    if (isApi) return true;
+    toastErr('예외 접수 처리는 서버(API) 연결이 필요한 기능입니다.');
+    return false;
+  };
+
+  const doChangeLevel = async (id, level, reason) => {
+    if (!requireApiForException()) return;
+    const body = await DataStore.apiChangeApplicantLevel(id, level, reason);
+    if (!body) return;
+    setLevelChangeId(null);
+    const moved = level === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
+    toastOk(`급수가 ${moved}(으)로 정정되었습니다. 접수번호 ${body.application_no || ''}`, { title: '급수 정정' });
+    if (body.fee_changed && body.payment_status === 'paid') {
+      toastErr(`수납 완료 건입니다. 응시료가 $${body.fee_before} → $${body.fee_after}로 바뀌므로 차액을 별도 정산해 주세요.`);
+    }
+  };
+
+  const doReinstate = async (id, reason) => {
+    if (!requireApiForException()) return;
+    const body = await DataStore.apiReinstateApplicant(id, reason);
+    if (!body) return;
+    setReinstateId(null);
+    toastOk('취소된 접수가 다시 접수 상태로 복원되었습니다.', { title: '취소 복원' });
+  };
+
+  const doDesignate = async (payload) => {
+    if (!requireApiForException()) return null;
+    const body = await DataStore.apiDesignateApplicant(payload);
+    if (!body) return null;
+    setDesignateModal(false);
+    const n = (body.applications || []).length;
+    toastOk(`지정 접수 ${n}건이 등록되었습니다.${body.over_capacity ? ' (정원 초과 지정)' : ''}`, { title: '지정 접수' });
+    return body;
+  };
 
   const doDeleteApplicants = async (ids) => {
     if (!ids.length) return;
@@ -831,6 +901,11 @@ function ApplicantsPanel() {
           <button className="btn btn-secondary" onClick={() => window.print()}>
             <I.Printer style={{ width: 14, height: 14 }}/> 인쇄
           </button>
+          <button className="btn btn-secondary" disabled={!canException}
+            title={!canException ? '예외 처리 권한이 필요합니다. (관리자 권한 매트릭스 → 접수자 목록 → 예외처리)' : '마감 이후에도 지정 접수를 등록합니다 (한국 교민 자녀 등 특별 관리)'}
+            onClick={() => setDesignateModal(true)}>
+            <I.UserPlus style={{ width: 14, height: 14 }}/> 지정 접수
+          </button>
           <button className="btn btn-primary" disabled={!canAssignExam} title={!isSuperAdmin ? '수험번호 일괄 부여는 최고관리자(super)만 가능합니다.' : ''} onClick={() => setExamModal(true)}>
             <I.Hash style={{ width: 14, height: 14 }}/> 수험번호 일괄 부여
           </button>
@@ -952,7 +1027,21 @@ function ApplicantsPanel() {
                   <td><PhotoStatusPill status={a.infoStatus || 'approved'}/></td>
                   <td>{applicantPaymentPill(a)}</td>
                   <td className="code"><b style={{ color: a.exam ? 'var(--st-number)' : 'var(--text-4)' }}>{a.exam || '—'}</b></td>
-                  <td><Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill></td>
+                  <td>
+                    <Pill kind={a.status}>{DataStore.statusLabel(a.status)}</Pill>
+                    {a.isDesignated && (
+                      <span className="code-id" style={{ marginLeft: 4, fontSize: 11, color: 'var(--primary)', fontWeight: 700 }}
+                        title="마감 이후 지정 접수로 등록된 특별 관리 대상입니다.">
+                        지정
+                      </span>
+                    )}
+                    {a.exceptionType && a.exceptionType !== 'designated' && (
+                      <span className="code-id" style={{ marginLeft: 4, fontSize: 11 }}
+                        title={`${exceptionLabel(a)} — ${a.exceptionReason || ''}`}>
+                        예외
+                      </span>
+                    )}
+                  </td>
                   {isTrashView && <td className="code muted">{a.deletedAt || '—'}</td>}
                   <td className="no-print">
                     <div className="row-actions">
@@ -967,6 +1056,13 @@ function ApplicantsPanel() {
                         <I.FileText style={{ width: 14, height: 14 }}/> 접수증
                       </button>
                       <button className="ibtn" title="상세 보기" onClick={() => setDetailId(a.id)}><I.Eye style={{ width: 14, height: 14 }}/> 상세보기</button>
+                      {isFoCancelled(a) && (
+                        <button className="ibtn" disabled={!canException}
+                          title={!canException ? '예외 처리 권한이 필요합니다.' : "응시자가 잘못 누른 '취소'를 '접수'로 되돌립니다"}
+                          onClick={() => setReinstateId(a.id)}>
+                          <I.RotateCcw style={{ width: 14, height: 14 }}/> 접수 복원
+                        </button>
+                      )}
                       <button className="ibtn danger" disabled={!canDelete} title="휴지통으로 이동" onClick={() => setDelModal({ ids: [a.id] })}>
                         <I.Trash style={{ width: 14, height: 14 }}/> 삭제
                       </button>
@@ -1007,6 +1103,9 @@ function ApplicantsPanel() {
         onPhotoReject={(reason) => doPhotoReject(detailId, reason)}
         onInfoApprove={() => doInfoApprove(detailId)}
         onInfoReject={(reason) => doInfoReject(detailId, reason)}
+        canException={canException}
+        onChangeLevel={() => setLevelChangeId(detailId)}
+        onReinstate={() => setReinstateId(detailId)}
       />}
 
       {/* Modals */}
@@ -1052,6 +1151,12 @@ function ApplicantsPanel() {
         venueId={venueF !== 'all' ? venueF : null}
         level={levelF === 'Ⅰ' ? 'I' : levelF === 'Ⅱ' ? 'II' : null}/>}
       {confirmId && <ApplicationConfirmModal id={confirmId} onClose={() => setConfirmId(null)}/>}
+
+      {/* 예외 접수 처리(제110회~) — TPKM_BO_2_1_12 */}
+      {levelChangeId && <LevelChangeModal id={levelChangeId} onClose={() => setLevelChangeId(null)} onConfirm={doChangeLevel}/>}
+      {reinstateId && <ReinstateModal id={reinstateId} onClose={() => setReinstateId(null)} onConfirm={doReinstate}/>}
+      {designateModal && <DesignateModal sessionId={sessionId} isSuperAdmin={isSuperAdmin}
+        onClose={() => setDesignateModal(false)} onConfirm={doDesignate}/>}
 
       <style>{`
         @media print {
@@ -1269,7 +1374,7 @@ function filterApplicantAudit(audit, appId) {
 const INFO_REJECT_REASONS = ['영문 성명 오류', '한글 성명 오류', '띄어쓰기·표기 오류', '정보 불일치', '기타'];
 
 // ===== Detail LP =====
-function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject, onInfoApprove, onInfoReject }) {
+function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, onPay, onPhotoApprove, onPhotoReject, onInfoApprove, onInfoReject, canException, onChangeLevel, onReinstate }) {
   const state = useStore();
   const appId = String(id);
   const a = state.applicants.find(x => x.id === appId);
@@ -1442,6 +1547,53 @@ function ApplicantDetailLP({ id, onClose, onViewConfirm, onApprove, onReject, on
               {(a.infoStatus === 'rejected' || a.infoStatus === 'pending') && a.infoRejectReason ? (
                 <div style={{ marginTop: 8, fontSize: 12, color: 'var(--st-rejected)' }}>사유: {a.infoRejectReason}</div>
               ) : null}
+            </div>
+            {/* 예외 접수 처리(제110회~) — 급수 정정 · 취소 복원 */}
+            <div id="exception-box" style={{ marginTop: 10, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>예외 처리</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {a.isDesignated && (
+                    <span className="code-id" style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700 }}>지정 접수</span>
+                  )}
+                  {a.exceptionType && a.exceptionType !== 'designated' && (
+                    <span className="code-id" style={{ fontSize: 11 }}>{exceptionLabel(a)}</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>
+                접수 마감 이후에도 처리됩니다. 정원이 남아 있을 때만 반영되며 처리 이력에 사유가 남습니다.
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="ibtn" style={{ flex: 1 }}
+                  disabled={isReadonly || !canException || locked || !!a.exam || isConcurrentApplicant(a)}
+                  title={
+                    !canException ? '예외 처리 권한이 필요합니다.'
+                      : a.exam ? '수험번호가 부여된 접수는 급수를 정정할 수 없습니다.'
+                      : isConcurrentApplicant(a) ? 'Ⅰ·Ⅱ 동시 접수 건입니다. 정정 대신 한쪽을 취소해 주세요.'
+                      : 'TOPIK Ⅰ·Ⅱ 혼동 접수 정정'
+                  }
+                  onClick={onChangeLevel}>급수 정정</button>
+                <button className="ibtn" style={{ flex: 1 }}
+                  disabled={isReadonly || !canException || !locked}
+                  title={!canException ? '예외 처리 권한이 필요합니다.' : (!locked ? '취소된 접수만 복원할 수 있습니다.' : "잘못 누른 '취소'를 '접수'로 되돌립니다")}
+                  onClick={onReinstate}>접수 복원</button>
+              </div>
+              {a.isDesignated && (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--primary)' }}>
+                  마감 이후 지정 접수 건 — 특별 관리 대상으로 계속 표시됩니다.
+                </div>
+              )}
+              {a.exceptionType && (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-3)' }}>
+                  <div>최근 처리: {exceptionLabel(a)} · {a.exceptionAt || '—'}</div>
+                  {a.exceptionReason && <div style={{ marginTop: 2 }}>사유: {a.exceptionReason}</div>}
+                  <div style={{ marginTop: 2 }}>이전 처리 내역은 「처리 이력」 탭에서 확인합니다.</div>
+                </div>
+              )}
+              {locked && a.cancelReason && (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--st-rejected)' }}>취소 사유: {a.cancelReason}</div>
+              )}
             </div>
           </div>
           <div>
@@ -2130,8 +2282,352 @@ function ZipExportModal({ onClose, rows, venueId, level }) {
   );
 }
 
+/* ============================================================
+   예외 접수 처리(제110회~) — TPKM_BO_2_1_12
+     · 급수 정정  : 토픽 Ⅰ·Ⅱ 혼동 접수를 대상 급수 정원이 빌 때만 옮긴다
+     · 접수 복원  : 응시자가 잘못 누른 '취소'를 '접수'로 되돌린다
+     · 지정 접수  : 마감 이후 한국 교민 자녀 등 특별 관리 대상을 직접 접수한다
+   정원·중복 검사는 서버가 다시 하며, 여기 표시는 처리 전 확인용이다.
+   ============================================================ */
+
+/** 회차 잔여 정원 조회 훅 — 예외 처리 모달 3종이 공유한다. */
+function useRoundCapacity(sessionId, deps) {
+  const [cap, setCap] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const reload = useCallback(() => {
+    if (!DataStore.fetchRoundCapacity) { setCap(null); return Promise.resolve(); }
+    setLoading(true);
+    return DataStore.fetchRoundCapacity(sessionId).then(body => {
+      setCap(body || null);
+      setLoading(false);
+    });
+  }, [sessionId]);
+  useEffect(() => { reload(); }, [reload, deps]);
+  return { cap, loading, reload };
+}
+
+/** '남은 자리 3석' / '무제한' — 0 정원은 무제한(미정) 규약. */
+function seatText(occ) {
+  if (!occ) return '—';
+  if (!occ.capacity) return '무제한(미정)';
+  return `${occ.remaining}석 남음 (정원 ${occ.capacity} / 접수 ${occ.registered_count})`;
+}
+
+function levelOcc(node, level) {
+  const lo = node && node.level_occupancy;
+  return lo ? lo[level] : null;
+}
+
+// ---------------------------------------------------------------- 급수 정정
+function LevelChangeModal({ id, onClose, onConfirm }) {
+  const state = useStore();
+  const a = state.applicants.find(x => x.id === String(id));
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { cap } = useRoundCapacity(a ? a.sessionId : null, id);
+  if (!a) return null;
+
+  const current = applicantLevelCode(a);
+  const target = current === 'I' ? 'II' : 'I';
+  const targetText = target === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ';
+  const concurrent = isConcurrentApplicant(a);
+  const venue = (cap && cap.venues || []).find(v => String(v.id) === String(a.venueId));
+  const roundOcc = levelOcc(cap && cap.round, target);
+  const venueOcc = levelOcc(venue, target);
+  const roundFull = !!(roundOcc && roundOcc.is_full);
+  const venueFull = !!(venueOcc && venueOcc.is_full);
+  const fees = (cap && cap.round && cap.round.fees) || null;
+  const feeBefore = fees ? fees[current] : null;
+  const feeAfter = fees ? fees[target] : null;
+
+  const submit = async () => {
+    setBusy(true);
+    await onConfirm(a.id, target, reason.trim());
+    setBusy(false);
+  };
+
+  return (
+    <Modal open onClose={onClose} title="급수 정정 (예외 처리)"
+      footer={<>
+        <button className="btn btn-secondary" onClick={onClose}>취소</button>
+        <button className="btn btn-primary" disabled={busy || concurrent || !reason.trim() || roundFull || venueFull} onClick={submit}>
+          {targetText}(으)로 정정
+        </button>
+      </>}>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>
+        <b>{a.nameKo}</b> ({a.nameEn}) · 접수번호 <code className="code-id">{a.applicationNo || '—'}</code>
+      </div>
+      <FieldSet legend="정정 내용" cols={2}>
+        <KV k="현재 급수" v={current === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ'}/>
+        <KV k="정정 후" v={<b style={{ color: 'var(--primary)' }}>{targetText}</b>}/>
+        <KV k="회차 정원" v={<span style={{ color: roundFull ? 'var(--danger)' : undefined }}>{seatText(roundOcc)}</span>}/>
+        <KV k="시험장 정원" v={<span style={{ color: venueFull ? 'var(--danger)' : undefined }}>{venue ? seatText(venueOcc) : '—'}</span>}/>
+      </FieldSet>
+      {concurrent && (
+        <div style={{ marginTop: 10, padding: 10, background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)', borderRadius: 6, fontSize: 12.5 }}>
+          ⚠ TOPIK Ⅰ·Ⅱ 를 함께 접수한 응시자입니다. 옮겨 갈 급수를 이미 쓰고 있으므로 정정할 수 없습니다.
+          잘못 접수한 쪽을 취소해 주세요.
+        </div>
+      )}
+      {!concurrent && (roundFull || venueFull) && (
+        <div style={{ marginTop: 10, padding: 10, background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)', borderRadius: 6, fontSize: 12.5 }}>
+          ⚠ {targetText} 정원이 가득 찼습니다. 정원이 빈 뒤에 정정할 수 있습니다.
+        </div>
+      )}
+      {a.paid && feeBefore != null && feeAfter != null && feeBefore !== feeAfter && (
+        <div style={{ marginTop: 10, padding: 10, background: 'var(--st-photo-bg)', color: 'var(--st-photo)', borderRadius: 6, fontSize: 12.5 }}>
+          ⓘ 수납 완료 건입니다. 응시료가 ${feeBefore} → ${feeAfter} 로 바뀌므로 차액은 별도로 정산해 주세요.
+        </div>
+      )}
+      <div style={{ marginTop: 12 }}>
+        <FormRow label="정정 사유" required hint="처리 이력에 그대로 남습니다. 예) 응시자 요청 — 토픽 Ⅰ·Ⅱ 혼동 접수">
+          <textarea className="textarea" rows="3" value={reason} onChange={e => setReason(e.target.value)}
+            placeholder="예) 응시자 요청 — TOPIK Ⅰ·Ⅱ 혼동 접수 정정 (전화 확인 2026-08-19)"></textarea>
+        </FormRow>
+      </div>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- 취소 복원
+function ReinstateModal({ id, onClose, onConfirm }) {
+  const state = useStore();
+  const a = state.applicants.find(x => x.id === String(id));
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { cap } = useRoundCapacity(a ? a.sessionId : null, id);
+  if (!a) return null;
+
+  const level = applicantLevelCode(a);
+  const venue = (cap && cap.venues || []).find(v => String(v.id) === String(a.venueId));
+  const roundOcc = levelOcc(cap && cap.round, level);
+  const venueOcc = levelOcc(venue, level);
+  const full = !!(roundOcc && roundOcc.is_full) || !!(venueOcc && venueOcc.is_full);
+
+  const submit = async () => {
+    setBusy(true);
+    await onConfirm(a.id, reason.trim());
+    setBusy(false);
+  };
+
+  return (
+    <Modal open onClose={onClose} title="취소 → 접수 복원 (예외 처리)"
+      footer={<>
+        <button className="btn btn-secondary" onClick={onClose}>취소</button>
+        <button className="btn btn-primary" disabled={busy || !reason.trim() || full} onClick={submit}>접수로 복원</button>
+      </>}>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>
+        <b>{a.nameKo}</b> ({a.nameEn}) · {applicantLevelText(a)} · 접수번호 <code className="code-id">{a.applicationNo || '—'}</code>
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 10 }}>
+        취소 직전 단계(사진 심사·수납 대기 등)로 되돌립니다. 응시자가 마이페이지에서 이어서 진행할 수 있습니다.
+      </div>
+      <FieldSet legend="복원 대상" cols={2}>
+        <KV k="취소 일시" v={a.cancelledAt || '—'}/>
+        <KV k="취소 사유" v={a.cancelReason || '—'}/>
+        <KV k="회차 정원" v={seatText(roundOcc)}/>
+        <KV k="시험장 정원" v={venue ? seatText(venueOcc) : '—'}/>
+      </FieldSet>
+      {full && (
+        <div style={{ marginTop: 10, padding: 10, background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)', borderRadius: 6, fontSize: 12.5 }}>
+          ⚠ 해당 급수 정원이 가득 찼습니다. 취소와 함께 자리가 반납되었으므로, 정원이 빈 뒤에 복원할 수 있습니다.
+        </div>
+      )}
+      <div style={{ marginTop: 12 }}>
+        <FormRow label="복원 사유" required hint="처리 이력에 그대로 남습니다.">
+          <textarea className="textarea" rows="3" value={reason} onChange={e => setReason(e.target.value)}
+            placeholder="예) 응시자 정보 수정 중 '취소' 오조작 — 본인 확인 후 복원 (전화 2026-08-19)"></textarea>
+        </FormRow>
+      </div>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------- 지정 접수
+function DesignateModal({ sessionId, onClose, onConfirm, isSuperAdmin }) {
+  const state = useStore();
+  const session = state.sessions.find(s => s.id === sessionId);
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [picked, setPicked] = useState(null);
+  const [venueId, setVenueId] = useState('');
+  const [levels, setLevels] = useState({ I: true, II: false });
+  const [accommodation, setAccommodation] = useState(false);
+  const [overCapacity, setOverCapacity] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { cap } = useRoundCapacity(sessionId, sessionId);
+
+  const venues = (cap && cap.venues) || [];
+  useEffect(() => {
+    if (!venueId && venues.length) setVenueId(String(venues[0].id));
+  }, [venues, venueId]);
+
+  const search = async () => {
+    if (!q.trim()) { toastErr('회원 이름·이메일·연락처로 검색해 주세요.'); return; }
+    if (!DataStore.searchMembersForDesignate) return;
+    setSearching(true);
+    const rows = await DataStore.searchMembersForDesignate(q.trim());
+    setResults(rows);
+    setSearching(false);
+  };
+
+  const venue = venues.find(v => String(v.id) === String(venueId));
+  const chosen = ['I', 'II'].filter(lv => levels[lv]);
+  const blocked = !overCapacity && chosen.some(lv => {
+    const r = levelOcc(cap && cap.round, lv);
+    const v = levelOcc(venue, lv);
+    return !!(r && r.is_full) || !!(v && v.is_full);
+  });
+  const canSubmit = !!picked && !!venueId && chosen.length > 0 && !!reason.trim() && !blocked && !busy;
+
+  const submit = async () => {
+    setBusy(true);
+    await onConfirm({
+      user_id: picked.id,
+      exam_round_id: Number(sessionId),
+      exam_venue_id: Number(venueId),
+      exam_levels: chosen,
+      accommodation_requested: accommodation,
+      allow_over_capacity: overCapacity,
+      reason: reason.trim(),
+    });
+    setBusy(false);
+  };
+
+  return (
+    <Modal open wide onClose={onClose} title="지정 접수 (마감 이후 예외 처리)"
+      footer={<>
+        <button className="btn btn-secondary" onClick={onClose}>취소</button>
+        <button className="btn btn-primary" disabled={!canSubmit} onClick={submit}>지정 접수 등록</button>
+      </>}>
+      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 10 }}>
+        마감 이후에도 등록합니다. 대상은 <b>가입이 완료된 회원</b>만 가능하며(증명사진·기본정보가 연명부에 그대로 들어갑니다),
+        접수 건과 처리 이력에 「지정 접수」로 남습니다.
+      </div>
+
+      <FormRow label="대상 회원 검색" required hint="이름·이메일·연락처로 검색합니다. 가입이 완료된 활성 회원만 나옵니다.">
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input className="input" style={{ flex: 1 }} value={q} onChange={e => setQ(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); search(); } }}
+            placeholder="예) 홍길동 / hong@example.com"/>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={search} disabled={searching}>
+            {searching ? '검색 중…' : '검색'}
+          </button>
+        </div>
+      </FormRow>
+
+      {results && (
+        <div style={{ marginTop: 8, maxHeight: 168, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+          {results.map(u => (
+            <label key={u.id}
+              style={{
+                display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px',
+                borderBottom: '1px solid var(--border)', cursor: 'pointer',
+                background: picked && picked.id === u.id ? 'var(--bg-2)' : 'transparent',
+              }}>
+              <input type="radio" name="designate-user" style={{ marginTop: 3 }}
+                checked={!!picked && picked.id === u.id} onChange={() => setPicked(u)}/>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{u.nameKo}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}> {u.nameEn || ''}</span>
+                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)', overflowWrap: 'anywhere' }}>
+                  {u.dob || '생년월일 —'} · {u.email}
+                  {!u.hasPhoto && <b style={{ color: 'var(--danger)' }}> · 증명사진 미등록</b>}
+                </span>
+              </span>
+            </label>
+          ))}
+          {!results.length && (
+            <div className="empty" style={{ padding: 16 }}>
+              <div className="ttl">검색 결과가 없습니다</div>
+              <div className="sub">가입 3단계(증명사진·기본정보)가 끝난 활성 회원만 지정 접수할 수 있습니다.</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{
+        marginTop: 12, marginBottom: 12, padding: '8px 10px', borderRadius: 6,
+        background: 'var(--bg-2)', fontSize: 12.5, color: 'var(--text-2)',
+      }}>
+        대상 회차 <b>제{(session && session.no) || (cap && cap.round && cap.round.round_no) || '—'}회 {(session && session.name) || (cap && cap.round && cap.round.title) || ''}</b>
+        {' · '}
+        <b>{cap && cap.round
+          ? (cap.round.registration_status === 'open' ? '접수중'
+            : cap.round.registration_status === 'closed' ? '접수 마감'
+            : cap.round.registration_status)
+          : '—'}</b>
+      </div>
+
+      <FormRow label="시험장" required>
+        <select className="select" value={venueId} onChange={e => setVenueId(e.target.value)}>
+          {venues.map(v => (
+            <option key={v.id} value={v.id}>
+              {v.name_ko} — 전체 {seatText(v)}
+            </option>
+          ))}
+        </select>
+      </FormRow>
+
+      <FormRow label="응시 급수" required hint="Ⅰ·Ⅱ 동시 접수 시 두 급수 모두 같은 시험장에 배정됩니다.">
+        <div style={{ display: 'grid', gap: 6 }}>
+          {['I', 'II'].map(lv => {
+            const r = levelOcc(cap && cap.round, lv);
+            const v = levelOcc(venue, lv);
+            const full = !!(r && r.is_full) || !!(v && v.is_full);
+            return (
+              <label key={lv} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13 }}>
+                <input type="checkbox" style={{ marginTop: 3 }} checked={!!levels[lv]}
+                  onChange={e => setLevels({ ...levels, [lv]: e.target.checked })}/>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{lv === 'II' ? 'TOPIK Ⅱ' : 'TOPIK Ⅰ'}</span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: full ? 'var(--danger)' : 'var(--text-3)' }}>
+                    회차 {seatText(r)} · 시험장 {venue ? seatText(v) : '—'}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </FormRow>
+
+      <FormRow label="추가 옵션">
+        <div style={{ display: 'grid', gap: 6 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <input type="checkbox" checked={accommodation} onChange={e => setAccommodation(e.target.checked)}/>
+            <span>편의지원 신청으로 처리 <span style={{ color: 'var(--text-3)' }}>(수험번호 부여 시 별도 묶음)</span></span>
+          </label>
+          {isSuperAdmin && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <input type="checkbox" checked={overCapacity} onChange={e => setOverCapacity(e.target.checked)}/>
+              <span>정원이 가득 찼어도 등록 <span style={{ color: 'var(--text-3)' }}>(최고관리자 전용 · 이력에 「정원 초과 지정」)</span></span>
+            </label>
+          )}
+        </div>
+      </FormRow>
+
+      {blocked && (
+        <div style={{ marginTop: 4, marginBottom: 8, padding: 10, background: 'var(--st-rejected-bg)', color: 'var(--st-rejected)', borderRadius: 6, fontSize: 12.5 }}>
+          ⚠ 선택한 급수의 정원이 가득 찼습니다. 다른 시험장을 고르거나 회차 정원을 늘려 주세요.
+        </div>
+      )}
+
+      <FormRow label="지정 접수 사유" required hint="처리 이력과 접수 건에 그대로 남습니다.">
+        <textarea className="textarea" rows="2" value={reason} onChange={e => setReason(e.target.value)}
+          placeholder="예) 한국 교민 자녀 특별 관리 — 대사관 협조 공문 접수(2026-08-19)"></textarea>
+      </FormRow>
+    </Modal>
+  );
+}
+
 // quick icon
 I.Hash = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>;
+// 예외 접수 처리(제110회~) — 지정 접수 / 취소 복원
+I.UserPlus = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>;
+I.RotateCcw = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>;
+I.Swap = (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M7 4v13M4 14l3 3 3-3"/><path d="M17 20V7M14 10l3-3 3 3"/></svg>;
 
 window.ApplicantsPanel = ApplicantsPanel;
 // 접수자 목록 내부 상세/일괄 처리에서 공유

@@ -1,6 +1,6 @@
 # TOPIK Myanmar 개발 스펙
 
-> **기준일:** 2026-08-13 · **운영 중** (`www.topik-myanmar.com` — 최신 커밋 기준 제109회 접수 진행)  
+> **기준일:** 2026-08-25 · **운영 중** (`www.topik-myanmar.com` — 제109회 접수 마감·시험 11/15, 제110회 준비)  
 > 이 문서는 저장소 실제 파일을 기준으로 작성했습니다. 재개발·이전 요약은 [`MIGRATION.md`](../MIGRATION.md), IwinV 운영 절차는 [`IWINV_SETUP.md`](IWINV_SETUP.md)를 참고하세요.
 
 ---
@@ -18,7 +18,7 @@
 | **운영 API** | `apps/api/` | FastAPI FO/BO REST 전반 구현 (auth·me·접수·콘텐츠·게시판·admin·파일·메일·export) |
 | 신규 FO (중기) | `apps/web/` | Vite+React 스캐폴드(홈 placeholder) — **미운영** |
 | 레거시 API | `api/` | 참조용 (일부 소스만 존재) |
-| DB 스키마 | `db/migrations/` | V001~V022 SQL migration |
+| DB 스키마 | `db/migrations/` | V001~V023 SQL migration |
 | 이메일 | `시안/email/` + `apps/api/app/lib/email_*` | 트랜잭션 메일 15종 ko/my/en 렌더 + outbox 워커 |
 
 운영·배포 체크리스트는 [`DEPLOY.md`](DEPLOY.md), 상세 절차는 [`IWINV_SETUP.md`](IWINV_SETUP.md)를 따릅니다.
@@ -54,7 +54,7 @@ TOPIK-MYANMAR/
 │   │       └── project/     # admin-login.html, admin.html, panels/*.jsx, shared/bo-api-client.js 등
 │   └── shared/              # FO·BO 공통 JS (api-client.js, bo-api-client.js, form-validation.js, roster-codes.js)
 ├── db/
-│   ├── migrations/          # PostgreSQL SQL migration (V001~V022)
+│   ├── migrations/          # PostgreSQL SQL migration (V001~V023)
 │   └── seed/                # dev_seed.sql, prod_seed.sql
 ├── packages/
 │   └── shared/              # 공통 상수 placeholder (@topik-myanmar/shared)
@@ -148,6 +148,7 @@ apps/api/
 | Export | `roster.xlsx`, `photos.zip` | **구현** (`GET /admin/exam-rounds/{id}/roster.xlsx`, `photos.zip`) |
 | Find email | `POST /auth/find-email` | **구현** |
 | Marketing mail | `POST /admin/notices/{id}/send-marketing` | **구현** |
+| 예외 접수 처리 | `POST /admin/applications/{id}/change-level`, `/{id}/reinstate`, `POST /admin/applications/designate`, `GET /admin/exam-rounds/{id}/capacity` | **구현** (제110회~ · 권한 `applicants:exception`) |
 | Internal | `/internal/notifications/*` | **미구현** |
 
 **환경 변수** (`.env.example`):
@@ -296,7 +297,7 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 
 ### 6.1 Migration 파일
 
-**저장소에 포함된 파일 (V001~V022):**
+**저장소에 포함된 파일 (V001~V023):**
 
 | 파일 | 내용 |
 | --- | --- |
@@ -322,8 +323,9 @@ React 18 + Babel CDN 기반 SPA. **운영:** `admin-login.html`·`admin.html`에
 | `V020__application_info_review.sql` | 정보(성명 등) 심사 상태 — 사진 심사와 독립 반려/승인 트랙 |
 | `V021__level_capacity.sql` | TOPIK Ⅰ/Ⅱ 급수별 정원 — 회차·시험장 정원을 급수별로 별도 제한 |
 | `V022__exam_number_visible_default_hidden.sql` | 수험번호 노출 정책 반전 — 공개일 미설정 = 비공개 |
+| `V023__application_exception_intake.sql` | **예외 접수 처리(제110회~)** — `applications.exception_type/reason/at/admin_id`, `applications.is_designated`, `applications·application_submissions.cancelled_from_status` |
 
-운영·로컬 모두 **V001 → V022 순서**로 적용. 일괄: `bash scripts/run-migrations.sh` ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8).
+운영·로컬 모두 **V001 → V023 순서**로 적용. 일괄: `bash scripts/run-migrations.sh` ([`IWINV_SETUP.md`](IWINV_SETUP.md) §2.4.1·§2.8).
 
 V007의 `CREATE EXTENSION vector`는 **postgres superuser** + **stdin**(`< 절대경로`)으로 **먼저 1회** 실행합니다. `run-migrations.sh`는 `psql -v ON_ERROR_STOP=1`로 돌기 때문에, extension이 없는 상태로 일괄 실행하면 V007에서 중단되고 **V008 이후가 적용되지 않습니다**.
 
@@ -346,6 +348,7 @@ Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적
 - **V020:** 정보 심사 상태 — 사진 심사와 별개 트랙 (`info_rejected` 메일 트리거)
 - **V021:** 회차·시험장 급수별 정원. 기존 `capacity`(통합 정원)는 **인원 총상한**으로 유지되고, 급수별 정원이 그 안에서 Ⅰ/Ⅱ를 각각 제한합니다
 - **V022:** FO 노출 판정은 회차 `exam_number_visible_at` 기준. NULL이면 비공개이며, `applications.exam_number_visible`은 BO 표시용 플래그입니다 (기존에는 NULL이 즉시 노출을 뜻해 제108회에서 조기 노출이 발생)
+- **V023:** 예외 접수 처리 — `applications.exception_*`(유형·사유·시각·처리자)는 **마지막 예외 처리**를 담는다. 지정 접수 여부는 이후 급수 정정·복원으로 덮이면 특별 관리 명단이 깨지므로 `is_designated` 플래그로 따로 고정한다. `cancelled_from_status`는 FO 취소 직전 단계를 보관해 관리자 복원이 원래 단계로 되돌아가게 한다
 
 ### 6.2.1 pgvector (의미 검색·RAG)
 
@@ -370,7 +373,7 @@ Alembic `20260606_0001` revision은 신규 빈 DB bootstrap용이며, 운영 적
 
 ### 6.4 Alembic
 
-`apps/api/alembic/versions/20260606_0001_initial_schema.py` — ORM bootstrap revision **1개**. **운영·로컬 DB 적용 기준은 SQL migration(V001~V022)**이며, 이미 SQL이 적용된 DB에 Alembic revision을 섞지 않습니다.
+`apps/api/alembic/versions/20260606_0001_initial_schema.py` — ORM bootstrap revision **1개**. **운영·로컬 DB 적용 기준은 SQL migration(V001~V023)**이며, 이미 SQL이 적용된 DB에 Alembic revision을 섞지 않습니다.
 
 ---
 
@@ -487,7 +490,7 @@ createdb topik_myanmar
 # V007 (pgvector CREATE EXTENSION) — superuser로 먼저 1회.
 # run-migrations.sh는 ON_ERROR_STOP=1이라 여기서 막히면 V008 이후가 적용되지 않는다.
 sudo -u postgres psql -d topik_myanmar < db/migrations/V007__pgvector_semantic_search.sql
-bash scripts/run-migrations.sh   # V001~V022 전체 + db/seed/prod_seed.sql(있을 때)
+bash scripts/run-migrations.sh   # V001~V023 전체 + db/seed/prod_seed.sql(있을 때)
 # IwinV: IWINV_SETUP.md §2.8
 ```
 
@@ -533,18 +536,20 @@ FastAPI(`:8000`)를 띄운 뒤, 소스 디렉터리에서 정적 서버로 FO/BO
 **FO:**
 
 ```bash
-cd html/C안/FO
-python3 -m http.server 8080
-# http://localhost:8080/index.html
+python3 scripts/serve_static.py "html/C안/FO" 8080
+# http://localhost:8080/
 ```
 
 **BO:**
 
 ```bash
-cd html/C안/BO\(admin\)/project
-python3 -m http.server 8081
-# http://localhost:8081/admin-login.html
+python3 scripts/serve_static.py "html/C안/BO(admin)/project" 8081
+# http://localhost:8081/admin-login
 ```
+
+> `scripts/serve_static.py` 는 운영 nginx 의 `try_files $uri $uri.html $uri/` 를 흉내 냅니다.
+> 순정 `python3 -m http.server` 로 띄우면 확장자 없는 경로에서 404 가 나며, 특히 **BO 로그인
+> 직후 이동하는 `/admin` 이 열리지 않습니다**(로그인은 됐는데 404 화면).
 
 | 항목 | 값 |
 | --- | --- |
@@ -751,7 +756,7 @@ bash scripts/deploy-all-from-git.sh
 | BO 정적 | `python3 build-bo.py` → `public-bo/` (동일) |
 | API | `apps/api` venv + `systemctl restart myanmar-api` |
 | Vite FO (선택) | `apps/web` `npm run build` → `dist/` |
-| DB 스키마 | `bash scripts/run-migrations.sh` (V001~V022, V007은 postgres superuser stdin `<`로 **선행**) |
+| DB 스키마 | `bash scripts/run-migrations.sh` (V001~V023, V007은 postgres superuser stdin `<`로 **선행**) |
 | 운영 시드 | `CONFIRM_PROD_SEED=1 python3 scripts/seed_prod.py` (**`seed_dev.py` 금지**) |
 | 첫 BO 관리자 | `ADMIN_EMAIL=… ADMIN_PASSWORD=… python3 scripts/create_admin.py` |
 

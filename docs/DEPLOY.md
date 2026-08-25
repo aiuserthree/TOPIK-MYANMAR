@@ -23,7 +23,7 @@
 
 ## 2. DB (PostgreSQL)
 
-DB VPS에서 `V001` → `V022` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트로 **먼저** 실행합니다.
+DB VPS에서 `V001` → `V023` 순서로 migration 적용. V007(`CREATE EXTENSION vector`)는 **postgres superuser** + stdin 리다이렉트로 **먼저** 실행합니다.
 
 ```bash
 cd /opt/myanmar-v2
@@ -32,7 +32,7 @@ cd /opt/myanmar-v2
 #    V008 이후가 적용되지 않는다.
 sudo -u postgres psql -d topik_myanmar < /opt/myanmar-v2/db/migrations/V007__pgvector_semantic_search.sql
 
-# 2) V001~V022 일괄 — topik_app
+# 2) V001~V023 일괄 — topik_app
 bash scripts/run-migrations.sh
 ```
 
@@ -89,6 +89,61 @@ cd /opt/myanmar-v2
 # IwinV: TOPIK_API_BASE 생략 → nginx 동일 origin /api
 python3 build.py
 python3 build-bo.py
+```
+
+> **`build-bo.py` 는 node 를 씁니다.** BO 의 JSX 19개를 빌드 때 미리 컴파일해
+> (`scripts/precompile-jsx.js`) 브라우저에서 babel 로 매번 컴파일하던 것을 없앱니다.
+> BO 부팅 시 받는 양이 962KB → 약 360KB 로 줄어듭니다(gzip 전송 기준 실측).
+> babel standalone 하나가 668KB 를 차지하므로, 사전 컴파일하면 그게 통째로 빠집니다.
+>
+> node 가 없으면 빌드는 **깨지지 않고** 다음 경고를 남긴 뒤 기존 방식(브라우저 babel)
+> 으로 산출물을 만듭니다 — 동작은 같고 느릴 뿐입니다.
+>
+> ```
+> WARN: JSX 사전 컴파일을 건너뜁니다(...). 브라우저 babel 로 동작합니다.
+> ```
+>
+> 이 경고가 보이면 서버에 node 를 설치(`apt install -y nodejs`)한 뒤 `python3 build-bo.py`
+> 를 다시 실행하십시오. 빌드 결과에 `.jsx` 가 남아 있는지로도 확인할 수 있습니다
+> (`find public-bo -name '*.jsx' | wc -l` → 사전 컴파일되면 `0`).
+
+### nginx 압축 설정 (서버 재구축 시 필수)
+
+Ubuntu 기본 `nginx.conf` 는 `gzip on;` 만 켜져 있고 **`gzip_types` 가 주석 처리**되어 있다.
+그러면 nginx 기본값대로 `text/html` 만 압축하고 JS·CSS 는 원본 그대로 나간다.
+2026-08-20 미얀마 현장 지연 점검에서 발견해 적용했다 — BO 자산이 3~4배, FO 자산도
+같은 비율로 줄었다(예: `styles.css` 32.7KB → 8.1KB).
+
+`/etc/nginx/nginx.conf` 의 http 블록:
+
+```nginx
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_buffers 16 8k;
+gzip_http_version 1.1;
+# 이미 압축된 형식(woff2/png/jpg/zip)은 넣지 않는다 — 다시 압축해도 줄지 않고 CPU만 쓴다.
+# text/html 은 nginx 가 항상 압축하므로 나열하지 않는다.
+gzip_types text/plain text/css text/xml text/javascript
+           application/javascript application/json application/xml
+           application/xml+rss application/rss+xml image/svg+xml;
+```
+
+`/etc/nginx/mime.types` — `.jsx` 가 `application/octet-stream` 으로 나가면 압축 대상에서
+빠지므로 매핑을 더한다(JSX 사전 컴파일이 적용되면 무의미해지지만, 폴백 경로에서는 필요):
+
+```
+application/javascript                js jsx;
+```
+
+적용은 `nginx -t` 로 검증한 뒤 `systemctl reload nginx`(무중단).
+
+확인:
+
+```bash
+curl -sI -H 'Accept-Encoding: gzip' https://admin.topik-myanmar.com/vendor/react-dom-18.3.1.production.min.js | grep -i content-encoding
 ```
 
 | 서비스 | nginx root | URL |
@@ -187,3 +242,4 @@ PostgreSQL은 로컬 설치, 또는 IwinV DB VPS 원격 연결. 상세: [`apps/a
 | [`apps/api/README.md`](../apps/api/README.md) | FastAPI 로컬·migration |
 | [`scripts/deploy-all-from-git.sh`](../scripts/deploy-all-from-git.sh) | 운영 전체 배포 (API+DB+FO+BO) |
 | [`scripts/deploy-static-live.sh`](../scripts/deploy-static-live.sh) | FO/BO 정적만 재빌드 |
+| [`scripts/deploy-app-from-git.sh`](../scripts/deploy-app-from-git.sh) | 앱 코드만 반영 (FO·BO 정적 + API) — 표식 기반 롤백, API 무중단 리로드 |

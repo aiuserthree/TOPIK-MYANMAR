@@ -13,13 +13,24 @@ from fastapi import APIRouter, Depends, File, Header, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, case, cast, delete, func, literal, not_, or_, select, update
+from sqlalchemy import Text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db_session
-from app.lib.audit import write_audit
+from app.lib.audit import (
+    APPLICATION_REJECT_FIELDS,
+    BOARD_POST_FIELDS,
+    BOARD_REPLY_FIELDS,
+    INFO_REVIEW_FIELDS,
+    PAYMENT_CANCEL_FIELDS,
+    PAYMENT_FIELDS,
+    PHOTO_REVIEW_FIELDS,
+    snapshot,
+    write_audit,
+)
 from app.lib.board_helpers import build_comment_tree, official_replies_for_post, parse_parent_comment_id, resolve_comment_is_secret
 from app.lib.deps import (
     AuthUser,
@@ -35,6 +46,7 @@ from app.lib.formatting import (
     exam_number_visible as _exam_number_visible,
     fmt_date,
     fmt_datetime,
+    format_application_no,
     resolve_application_no,
 )
 from app.config import get_settings
@@ -51,7 +63,7 @@ from app.lib.email_notify import (
     notify_temp_password,
     count_active_applications,
 )
-from app.lib.profile import PROFILE_INCOMPLETE_BIRTH
+from app.lib.profile import PROFILE_INCOMPLETE_BIRTH, is_full_member
 from app.lib.validation import JOB_CODES, MOTIVE_CODES, PURPOSE_CODES
 from app.lib.rev import bump_rev, check_rev, expected_rev_from_request
 from app.lib.payment_roster import (
@@ -60,7 +72,29 @@ from app.lib.payment_roster import (
     parse_payment_xlsx,
     payment_export_filename,
 )
-from app.lib.capacity import count_active_round_submissions, round_level_counts
+from app.lib.capacity import (
+    count_active_round_submissions,
+    count_active_venue_submissions,
+    level_occupancy_snapshot,
+    normalize_level,
+    occupancy_snapshot,
+    round_level_counts,
+    venue_level_counts,
+)
+from app.lib.exception_intake import (
+    EXCEPTION_TYPE_LABELS,
+    LEVEL_CHANGE_FIELDS,
+    REINSTATE_FIELDS,
+    assert_level_seat_free,
+    assert_person_seat_free,
+    is_active_seat,
+    is_cancelled,
+    level_text as _level_text,
+    mark_exception,
+    require_reason,
+    reset_for_reintake,
+    status_after_reinstate,
+)
 from app.lib.roster_export import APPROVED_STATUSES, build_roster_zip, group_roster_rows
 from app.lib.security import hash_password, verify_password
 from app.lib.storage import delete_file, read_file_bytes, save_upload
@@ -167,6 +201,34 @@ class InfoReviewBody(BaseModel):
 
 class RevBody(BaseModel):
     rev: int | None = None
+
+
+# --- 예외 접수 처리(제110회~) ---------------------------------------------
+class LevelChangeBody(BaseModel):
+    """토픽 Ⅰ·Ⅱ 혼동 접수자의 급수 정정."""
+
+    exam_level: str
+    reason: str = ""
+    rev: int | None = None
+
+
+class ReinstateBody(BaseModel):
+    """잘못 누른 '취소'를 '접수'로 되돌린다."""
+
+    reason: str = ""
+    rev: int | None = None
+
+
+class DesignateBody(BaseModel):
+    """마감 이후 지정 접수(한국 교민 자녀 등 특별 관리 대상)."""
+
+    user_id: int
+    exam_round_id: int
+    exam_venue_id: int
+    exam_levels: list[str] = Field(default_factory=list)
+    accommodation_requested: bool = False
+    reason: str = ""
+    allow_over_capacity: bool = False
 
 
 class ApplicationMemoBody(BaseModel):
@@ -581,6 +643,14 @@ def _app_row_dict(
         "email": user.email if user else None,
         "phone": user.phone if user else None,
         "reject_reason": app.reject_reason,
+        "cancel_reason": app.cancel_reason,
+        "cancelled_at": app.cancelled_at.isoformat() if app.cancelled_at else None,
+        # 예외 접수 처리(제110회~) — BO 목록·상세에서 일반 접수와 구분해 표시한다.
+        "exception_type": app.exception_type,
+        "exception_type_label": EXCEPTION_TYPE_LABELS.get(app.exception_type or "", None),
+        "is_designated": bool(app.is_designated),
+        "exception_reason": app.exception_reason,
+        "exception_at": app.exception_at.isoformat() if app.exception_at else None,
         "payment_receipt_no": app.payment_receipt_no,
         "payment_memo": app.payment_memo,
         "paid_at": app.paid_at.isoformat() if app.paid_at else None,
@@ -659,6 +729,24 @@ async def _load_app_refs(
         rounds = {r.id: r for r in res.scalars().all()}
     return users, venues, rounds
 
+async def _app_row_after_mutation(db: AsyncSession, app: Application) -> dict:
+    """변경된 접수 1건을 목록(GET /applications)과 똑같은 형태로 돌려준다.
+
+    BO 는 수납·심사 처리 뒤 접수자 목록 전체를 다시 받아 왔다. 접수자가 늘수록
+    처리 1건당 왕복이 함께 늘어(500건씩 순차 페이징 + 휴지통까지 2세트) 현장에서
+    체감 지연이 커졌다. 응답에 바뀐 행을 실어 보내 그 행만 교체하도록 한다.
+
+    상태 전이 규칙(수납 시 status, paid_at 등)은 엔드포인트마다 다르므로
+    클라이언트에서 재현하지 않고 여기서 확정된 결과를 그대로 내려준다.
+    """
+    users, venues, rounds = await _load_app_refs(db, [app])
+    return _app_row_dict(
+        app,
+        users.get(app.user_id),
+        venues.get(app.exam_venue_id),
+        rounds.get(app.exam_round_id),
+    )
+
 
 @router.get("/applications")
 async def admin_list_applications(
@@ -666,6 +754,9 @@ async def admin_list_applications(
     exam_venue_id: int | None = Query(None),
     exam_level: str | None = Query(None),
     status: str | None = Query(None),
+    exception_type: str | None = Query(
+        None, description="예외 처리 건만 — level_change|reinstate|designated|any"
+    ),
     q: str | None = Query(None, description="이름·이메일·생년월일·접수번호·수험번호 검색"),
     trash: bool = Query(False),
     page: int = Query(1, ge=1),
@@ -684,6 +775,23 @@ async def admin_list_applications(
         stmt = stmt.where(Application.exam_level == exam_level)
     if status:
         stmt = stmt.where(Application.status == status)
+    if exception_type and exception_type.strip():
+        wanted = exception_type.strip()
+        if wanted == "any":
+            stmt = stmt.where(
+                or_(Application.exception_type.isnot(None), Application.is_designated.is_(True))
+            )
+        elif wanted == "designated":
+            # 급수 정정 등으로 exception_type 이 덮어써져도 특별 관리 명단에서 빠지면 안 된다.
+            stmt = stmt.where(Application.is_designated.is_(True))
+        elif wanted in EXCEPTION_TYPE_LABELS:
+            stmt = stmt.where(Application.exception_type == wanted)
+        else:
+            raise api_error(
+                "VALIDATION_ERROR",
+                "exception_type은 level_change|reinstate|designated|any 중 하나여야 합니다.",
+                400,
+            )
     if q and q.strip():
         term = f"%{q.strip()}%"
         app_no_expr = func.coalesce(
@@ -1007,6 +1115,7 @@ async def import_payment_roster_xlsx(
                     }
                 )
                 continue
+            before_row = snapshot(app, PAYMENT_FIELDS)
             app.payment_status = "paid"
             if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
                 app.status = "payment_pending"
@@ -1018,6 +1127,8 @@ async def import_payment_roster_xlsx(
                 action_type="payment_complete",
                 target_type="applications",
                 target_id=app.id,
+                before_data=before_row,
+                after_data=snapshot(app, PAYMENT_FIELDS),
                 memo="수납 명단 엑셀 일괄 업로드",
                 ip_address=ip,
             )
@@ -1100,6 +1211,7 @@ async def _serialize_audit_logs(db: AsyncSession, logs: list[AdminAuditLog]) -> 
             "id": l.id,
             "admin_user_id": l.admin_user_id,
             "admin_email": admins[l.admin_user_id].email if l.admin_user_id and l.admin_user_id in admins else None,
+            "admin_name": admins[l.admin_user_id].name if l.admin_user_id and l.admin_user_id in admins else None,
             "action_type": l.action_type,
             "target_type": l.target_type,
             "target_id": l.target_id,
@@ -1288,6 +1400,29 @@ async def restore_application(
     ).scalar_one_or_none()
     if not app:
         raise api_error("NOT_FOUND", "휴지통에 접수가 없습니다.", 404)
+    # 휴지통에 있는 동안 같은 급수로 다시 접수됐을 수 있다(FO 재신청·BO 지정 접수).
+    # 그대로 살리면 한 사람이 같은 회차·급수에 두 번 접수된 상태가 된다.
+    conflict = (
+        await db.execute(
+            select(Application.id)
+            .where(
+                Application.submission_id == app.submission_id,
+                Application.id != app.id,
+                Application.exam_level == app.exam_level,
+                Application.is_deleted.is_(False),
+                Application.status != "cancelled",
+                Application.cancelled_at.is_(None),
+            )
+            .limit(1)
+        )
+    ).first()
+    if conflict:
+        raise api_error(
+            "LEVEL_ALREADY_APPLIED",
+            f"이 응시자는 같은 회차 {_level_text(app.exam_level)}에 이미 접수되어 있습니다. "
+            "복구하면 같은 급수가 두 건이 되므로, 남길 한 건을 정한 뒤 다시 시도해 주세요.",
+            409,
+        )
     app.is_deleted = False
     app.deleted_at = None
     await write_audit(
@@ -1388,7 +1523,7 @@ async def approve_application(
         await notify_application_approved(db, app, user, rnd, venue)
     await write_audit(db, admin_user_id=admin.id, action_type="approve", target_type="applications", target_id=app_id, before_data={"status": before}, after_data={"status": app.status}, ip_address=ip)
     await db.commit()
-    return {"approved": True, "rev": app.rev}
+    return {"approved": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/reject")
@@ -1405,6 +1540,7 @@ async def reject_application(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    before = snapshot(app, APPLICATION_REJECT_FIELDS)
     app.status = "rejected"
     app.reject_reason = body.reject_reason
     bump_rev(app)
@@ -1412,9 +1548,14 @@ async def reject_application(
     rnd = (await db.execute(select(ExamRound).where(ExamRound.id == app.exam_round_id))).scalar_one_or_none()
     if user and rnd:
         await notify_application_rejected(db, app, user, rnd, reject_reason=body.reject_reason)
-    await write_audit(db, admin_user_id=admin.id, action_type="reject", target_type="applications", target_id=app_id, memo=body.reject_reason, ip_address=ip)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="reject",
+        target_type="applications", target_id=app_id,
+        before_data=before, after_data=snapshot(app, APPLICATION_REJECT_FIELDS),
+        memo=body.reject_reason, ip_address=ip,
+    )
     await db.commit()
-    return {"rejected": True, "rev": app.rev}
+    return {"rejected": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/payment")
@@ -1435,6 +1576,7 @@ async def payment_application(
         raise api_error("PHOTO_NOT_APPROVED", "사진 심사 승인 후 수납할 수 있습니다.", 400)
     if app.info_review_status != "approved":
         raise api_error("INFO_NOT_APPROVED", "정보 심사 승인 후 수납할 수 있습니다.", 400)
+    before = snapshot(app, PAYMENT_FIELDS)
     app.payment_status = "paid"
     # 수납 완료 ≠ 승인처리 완료 — 승인은 별도 /approve 엔드포인트에서만 반영
     if app.status not in ("approved", "exam_number_assigned", "rejected", "cancelled"):
@@ -1449,11 +1591,13 @@ async def payment_application(
         action_type="payment_complete",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, PAYMENT_FIELDS),
         memo=body.payment_memo,
         ip_address=ip,
     )
     await db.commit()
-    return {"paid": True, "rev": app.rev}
+    return {"paid": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/payment/cancel")
@@ -1471,6 +1615,7 @@ async def cancel_payment(
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
     reason = (body.payment_cancel_reason or "").strip()
+    before = snapshot(app, PAYMENT_CANCEL_FIELDS)
     if reason:
         app.payment_cancel_reason = reason
     app.payment_status = "refunded"
@@ -1481,11 +1626,13 @@ async def cancel_payment(
         action_type="payment_cancel",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, PAYMENT_CANCEL_FIELDS),
         memo=reason or None,
         ip_address=ip,
     )
     await db.commit()
-    return {"refunded": True, "rev": app.rev}
+    return {"refunded": True, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/photo-review")
@@ -1502,6 +1649,7 @@ async def photo_review(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    before = snapshot(app, PHOTO_REVIEW_FIELDS)
     if body.action == "approve":
         app.photo_review_status = "approved"
         app.status = "payment_pending"
@@ -1528,10 +1676,12 @@ async def photo_review(
         action_type=f"photo_review_{body.action}",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, PHOTO_REVIEW_FIELDS),
         ip_address=ip,
     )
     await db.commit()
-    return {"photo_review_status": app.photo_review_status, "rev": app.rev}
+    return {"photo_review_status": app.photo_review_status, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
 
 
 @router.post("/applications/{app_id}/info-review")
@@ -1549,6 +1699,7 @@ async def info_review(
     if not app:
         raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
     check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    before = snapshot(app, INFO_REVIEW_FIELDS)
     if body.action == "approve":
         app.info_review_status = "approved"
         app.info_reject_code = None
@@ -1582,11 +1733,465 @@ async def info_review(
         action_type=f"info_review_{body.action}",
         target_type="applications",
         target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, INFO_REVIEW_FIELDS),
         memo=body.info_reject_note or body.info_reject_code,
         ip_address=ip,
     )
     await db.commit()
-    return {"info_review_status": app.info_review_status, "rev": app.rev}
+    return {"info_review_status": app.info_review_status, "rev": app.rev, "item": await _app_row_after_mutation(db, app)}
+
+
+# ---------------------------------------------------------------------------
+# 예외 접수 처리(제110회~) — 급수 정정 · 취소 복원 · 지정 접수
+#
+# 셋 다 접수 마감 이후에도 동작해야 한다(그게 존재 이유다). 대신 정원은 일반
+# 접수와 똑같이 지키고, 처리 흔적은 접수 행(applications.exception_*)과 감사
+# 로그 양쪽에 남긴다. 권한은 applicants:exception — 기본값은 최고관리자 전용이며
+# 권한 매트릭스에서 일반관리자에게 부여할 수 있다.
+# ---------------------------------------------------------------------------
+async def _lock_round_and_venue(
+    db: AsyncSession,
+    *,
+    round_id: int,
+    venue_id: int,
+    require_active_venue: bool,
+) -> tuple[ExamRound, ExamVenue]:
+    """정원 계산과 반영을 한 트랜잭션에 묶기 위해 회차 → 시험장 순으로 잠근다.
+
+    FO 접수(applications.submit_application)와 잠금 순서를 맞춰야 데드락이 없다.
+    """
+    rnd = (
+        await db.execute(select(ExamRound).where(ExamRound.id == round_id).with_for_update())
+    ).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+    if rnd.registration_status == "revoked":
+        raise api_error("VALIDATION_ERROR", "폐지된 회차는 예외 처리할 수 없습니다.", 400)
+    stmt = select(ExamVenue).where(ExamVenue.id == venue_id)
+    if require_active_venue:
+        stmt = stmt.where(ExamVenue.is_active)
+    venue = (await db.execute(stmt.with_for_update())).scalar_one_or_none()
+    if not venue:
+        raise api_error(
+            "INVALID_VENUE", "시험장을 찾을 수 없거나 사용 중지된 시험장입니다.", 400
+        )
+    return rnd, venue
+
+
+def _exception_audit_payload(app: Application) -> dict:
+    return {
+        "application_id": app.id,
+        "submission_id": app.submission_id,
+        "user_id": app.user_id,
+        "exam_round_id": app.exam_round_id,
+        "exam_venue_id": app.exam_venue_id,
+        "exam_level": app.exam_level,
+        "application_no": resolve_application_no(
+            app.application_no, app.submission_id, app.exam_level
+        ),
+        "status": app.status,
+        "exception_type": app.exception_type,
+    }
+
+
+@router.post("/applications/{app_id}/change-level")
+async def change_application_level(
+    app_id: int,
+    body: LevelChangeBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
+    admin: AuthUser = Depends(matrix_perm("applicants", "exception")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """토픽 Ⅰ·Ⅱ 를 혼동해 접수한 응시자의 급수를 정정한다(접수 기간·마감 이후 모두).
+
+    옮겨 갈 급수의 정원이 비어 있을 때만 허용한다. 지금 쥔 급수 좌석은 이동과
+    동시에 비므로 대상 급수만 검사하면 된다.
+    """
+    app = (
+        await db.execute(select(Application).where(Application.id == app_id))
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    reason = require_reason(body.reason, label="급수 정정 사유")
+
+    target = normalize_level(body.exam_level)
+    if not target:
+        raise api_error("VALIDATION_ERROR", "급수는 TOPIK Ⅰ 또는 Ⅱ 여야 합니다.", 400)
+    if target == normalize_level(app.exam_level):
+        raise api_error("VALIDATION_ERROR", f"이미 {_level_text(target)} 접수입니다.", 400)
+    if app.is_deleted:
+        raise api_error("VALIDATION_ERROR", "휴지통에 있는 접수입니다. 복구 후 처리해 주세요.", 400)
+    if is_cancelled(app):
+        raise api_error(
+            "VALIDATION_ERROR",
+            "취소된 접수입니다. 「취소 → 접수 복원」 후 급수를 정정해 주세요.",
+            400,
+        )
+    if app.exam_number:
+        raise api_error(
+            "EXAM_NUMBER_ASSIGNED",
+            "수험번호가 부여된 접수는 급수를 정정할 수 없습니다. "
+            "수험번호에 급수 코드가 들어가므로 부여 전에 처리해야 합니다.",
+            409,
+        )
+
+    rnd, venue = await _lock_round_and_venue(
+        db, round_id=app.exam_round_id, venue_id=app.exam_venue_id, require_active_venue=False
+    )
+
+    duplicated = (
+        await db.execute(
+            select(Application.id)
+            .where(
+                Application.submission_id == app.submission_id,
+                Application.id != app.id,
+                Application.exam_level == target,
+                Application.is_deleted.is_(False),
+                Application.status != "cancelled",
+                Application.cancelled_at.is_(None),
+            )
+            .limit(1)
+        )
+    ).first()
+    if duplicated:
+        raise api_error(
+            "LEVEL_ALREADY_APPLIED",
+            f"이 응시자는 이미 {_level_text(target)}에 접수되어 있습니다. "
+            "동시 접수 건은 급수 정정 대신 한쪽을 취소해 주세요.",
+            409,
+        )
+
+    await assert_level_seat_free(db, exam_round=rnd, venue=venue, level=target)
+
+    before_level = normalize_level(app.exam_level)
+    fee_before = rnd.fee_level_i if before_level == "I" else rnd.fee_level_ii
+    fee_after = rnd.fee_level_i if target == "I" else rnd.fee_level_ii
+    before = snapshot(app, LEVEL_CHANGE_FIELDS)
+
+    app.exam_level = target
+    app.application_no = format_application_no(app.submission_id, target)
+    mark_exception(app, exception_type="level_change", reason=reason, admin_user_id=admin.id)
+    bump_rev(app)
+
+    fee_changed = int(fee_before or 0) != int(fee_after or 0)
+    memo = reason
+    if fee_changed and app.payment_status == "paid":
+        memo = (
+            f"{reason} / 수납 완료 건 — 응시료 ${fee_before} → ${fee_after} 차액 정산 필요"
+        )
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="application_level_change",
+        target_type="applications",
+        target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, LEVEL_CHANGE_FIELDS),
+        memo=memo,
+        ip_address=ip,
+    )
+    await db.commit()
+    return {
+        "changed": True,
+        "exam_level": app.exam_level,
+        "application_no": resolve_application_no(
+            app.application_no, app.submission_id, app.exam_level
+        ),
+        "fee_before": fee_before,
+        "fee_after": fee_after,
+        "fee_changed": fee_changed,
+        "payment_status": app.payment_status,
+        "rev": app.rev,
+    }
+
+
+@router.post("/applications/{app_id}/reinstate")
+async def reinstate_application(
+    app_id: int,
+    body: ReinstateBody,
+    request: Request,
+    if_match: str | None = Header(None, alias="If-Match"),
+    admin: AuthUser = Depends(matrix_perm("applicants", "exception")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """잘못 누른 '취소'를 '접수'로 되돌린다 — 마감 이후 재신청이 막힌 응시자 구제.
+
+    취소 직전 단계(``cancelled_from_status``)로 정확히 복원한다. 좌석은 취소와
+    함께 이미 반납됐으므로 복원할 자리가 남아 있는지 다시 확인한다.
+    """
+    app = (
+        await db.execute(
+            select(Application)
+            .where(Application.id == app_id)
+            .options(
+                selectinload(Application.submission).selectinload(
+                    ApplicationSubmission.applications
+                )
+            )
+        )
+    ).scalar_one_or_none()
+    if not app:
+        raise api_error("NOT_FOUND", "접수를 찾을 수 없습니다.", 404)
+    check_rev(app, expected_rev_from_request(request, body.rev, if_match), label="접수")
+    reason = require_reason(body.reason, label="복원 사유")
+
+    if app.is_deleted:
+        raise api_error(
+            "VALIDATION_ERROR", "휴지통에 있는 접수입니다. 「복구」 후 처리해 주세요.", 400
+        )
+    if not is_cancelled(app):
+        raise api_error("VALIDATION_ERROR", "취소된 접수만 복원할 수 있습니다.", 400)
+
+    rnd, venue = await _lock_round_and_venue(
+        db, round_id=app.exam_round_id, venue_id=app.exam_venue_id, require_active_venue=False
+    )
+
+    sub = app.submission
+    siblings = [a for a in (sub.applications if sub else []) if a.id != app.id]
+    # 같은 회차에 살아 있는 급수가 하나도 없으면 '사람 좌석'을 새로 차지한다.
+    if not any(is_active_seat(a) for a in siblings):
+        await assert_person_seat_free(db, exam_round=rnd, venue=venue)
+    await assert_level_seat_free(db, exam_round=rnd, venue=venue, level=app.exam_level)
+
+    before = snapshot(app, REINSTATE_FIELDS)
+    app.status = status_after_reinstate(app)
+    app.cancelled_at = None
+    app.cancel_reason = None
+    app.cancelled_from_status = None
+    mark_exception(app, exception_type="reinstate", reason=reason, admin_user_id=admin.id)
+    bump_rev(app)
+
+    if sub and (sub.cancelled_at or sub.status == "cancelled"):
+        sub.status = sub.cancelled_from_status or "submitted"
+        sub.cancelled_at = None
+        sub.cancel_reason = None
+        sub.cancelled_from_status = None
+
+    await write_audit(
+        db,
+        admin_user_id=admin.id,
+        action_type="application_reinstate",
+        target_type="applications",
+        target_id=app_id,
+        before_data=before,
+        after_data=snapshot(app, REINSTATE_FIELDS),
+        memo=reason,
+        ip_address=ip,
+    )
+    await db.commit()
+    return {"reinstated": True, "status": app.status, "rev": app.rev}
+
+
+@router.post("/applications/designate")
+async def designate_application(
+    body: DesignateBody,
+    admin: AuthUser = Depends(matrix_perm("applicants", "exception")),
+    ip: str | None = Depends(get_client_ip),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """마감 이후 지정 접수 — 한국 교민 자녀 등 특별 관리 대상을 관리자가 직접 접수.
+
+    접수 기간(``registration_status``)은 보지 않는다. 그게 이 기능의 목적이다.
+    대신 대상은 **가입이 완료된 회원**이어야 한다 — 연명부에 들어갈 사진·성명·
+    생년월일·직업 코드 등은 회원 정보에서 가져오므로 계정 없이는 접수를 만들 수 없다.
+    """
+    reason = require_reason(body.reason, label="지정 접수 사유")
+
+    levels: list[str] = []
+    for raw in body.exam_levels:
+        lv = normalize_level(raw)
+        if lv and lv not in levels:
+            levels.append(lv)
+    if not levels:
+        raise api_error("VALIDATION_ERROR", "응시 급수를 선택해 주세요.", 400)
+
+    if body.allow_over_capacity:
+        # 정원을 넘겨서까지 넣는 건 최고관리자 판단 사항(계약서 7절 RBAC와 같은 기준).
+        _require_super(admin)
+
+    user = (
+        await db.execute(select(User).where(User.id == body.user_id))
+    ).scalar_one_or_none()
+    if not user:
+        raise api_error("NOT_FOUND", "회원을 찾을 수 없습니다.", 404)
+    if user.status in ("suspended", "withdrawn"):
+        raise api_error(
+            "VALIDATION_ERROR", "정지·탈퇴 회원은 지정 접수할 수 없습니다.", 400
+        )
+    if user.status != "active" or not is_full_member(user):
+        raise api_error(
+            "PROFILE_INCOMPLETE",
+            "가입 절차(증명사진·기본정보)가 완료되지 않은 회원입니다. "
+            "회원이 마이페이지에서 정보를 완성한 뒤 다시 시도해 주세요.",
+            400,
+        )
+
+    rnd, venue = await _lock_round_and_venue(
+        db,
+        round_id=body.exam_round_id,
+        venue_id=body.exam_venue_id,
+        require_active_venue=True,
+    )
+    linked = set(
+        (
+            await db.execute(
+                select(ExamRoundVenue.exam_venue_id).where(
+                    ExamRoundVenue.exam_round_id == rnd.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if linked and venue.id not in linked:
+        raise api_error("INVALID_VENUE", "해당 회차에 배정된 시험장이 아닙니다.", 400)
+
+    existing = (
+        await db.execute(
+            select(ApplicationSubmission)
+            .where(
+                ApplicationSubmission.user_id == user.id,
+                ApplicationSubmission.exam_round_id == rnd.id,
+            )
+            .options(selectinload(ApplicationSubmission.applications))
+        )
+    ).scalar_one_or_none()
+
+    rows_by_level: dict[str, Application] = {}
+    active_rows: list[Application] = []
+    if existing:
+        for row in existing.applications:
+            if row.is_deleted:
+                continue
+            lv = normalize_level(row.exam_level)
+            if not lv:
+                continue
+            if is_active_seat(row):
+                active_rows.append(row)
+            prev = rows_by_level.get(lv)
+            if prev is None or (is_cancelled(prev) and not is_cancelled(row)):
+                rows_by_level[lv] = row
+
+    if active_rows and existing and existing.exam_venue_id != venue.id:
+        # 한 사람의 Ⅰ·Ⅱ 는 반드시 같은 시험장 — 오전·오후가 갈리면 응시자가 이동해야 한다.
+        raise api_error(
+            "VENUE_LOCKED",
+            "이 응시자는 이미 다른 시험장에 접수되어 있습니다. "
+            "TOPIK Ⅰ·Ⅱ 는 같은 시험장이어야 합니다.",
+            400,
+        )
+
+    for lv in levels:
+        row = rows_by_level.get(lv)
+        if row is not None and not is_cancelled(row):
+            raise api_error(
+                "LEVEL_ALREADY_APPLIED",
+                f"이 응시자는 이미 {_level_text(lv)}에 접수되어 있습니다. "
+                "이미 접수된 급수를 빼고 다시 시도해 주세요.",
+                409,
+            )
+
+    over_capacity = bool(body.allow_over_capacity)
+    if not over_capacity:
+        if not active_rows:
+            await assert_person_seat_free(db, exam_round=rnd, venue=venue)
+        for lv in levels:
+            await assert_level_seat_free(db, exam_round=rnd, venue=venue, level=lv)
+
+    now = datetime.now(timezone.utc)
+    if existing:
+        submission = existing
+        submission.exam_venue_id = venue.id
+        submission.photo_checklist_confirmed = True
+        submission.accommodation_requested = bool(
+            submission.accommodation_requested or body.accommodation_requested
+        )
+        submission.status = "submitted"
+        submission.cancelled_at = None
+        submission.cancel_reason = None
+        submission.cancelled_from_status = None
+        if not active_rows:
+            submission.submitted_at = now
+    else:
+        submission = ApplicationSubmission(
+            user_id=user.id,
+            exam_round_id=rnd.id,
+            exam_venue_id=venue.id,
+            photo_checklist_confirmed=True,
+            accommodation_requested=body.accommodation_requested,
+            status="submitted",
+            submitted_at=now,
+        )
+        db.add(submission)
+        await db.flush()
+
+    created: list[Application] = []
+    for lv in levels:
+        row = rows_by_level.get(lv)
+        if row is not None:
+            reset_for_reintake(row, venue_id=venue.id, photo_file_id=user.photo_file_id)
+            row.application_no = format_application_no(submission.id, lv)
+        else:
+            row = Application(
+                submission_id=submission.id,
+                user_id=user.id,
+                exam_round_id=rnd.id,
+                exam_venue_id=venue.id,
+                exam_level=lv,
+                application_no=format_application_no(submission.id, lv),
+                photo_file_id=user.photo_file_id,
+                status="submitted",
+            )
+            db.add(row)
+        row.exam_venue_id = venue.id
+        mark_exception(
+            row, exception_type="designated", reason=reason, admin_user_id=admin.id, now=now
+        )
+        # 특별 관리 표식 — 이후 급수 정정·복원으로 exception_type 이 바뀌어도 유지된다.
+        row.is_designated = True
+        bump_rev(row)
+        created.append(row)
+
+    # 접수 행 id 를 받아야 감사 로그를 접수 상세에 붙일 수 있다.
+    await db.flush()
+    memo = reason if not over_capacity else f"{reason} / 정원 초과 지정"
+    for row in created:
+        await write_audit(
+            db,
+            admin_user_id=admin.id,
+            action_type="application_designate",
+            target_type="applications",
+            target_id=row.id,
+            after_data={
+                **_exception_audit_payload(row),
+                "over_capacity": over_capacity,
+                "designated_by_round": rnd.round_no,
+            },
+            memo=memo,
+            ip_address=ip,
+        )
+    await db.commit()
+    return {
+        "designated": True,
+        "submission_id": submission.id,
+        "over_capacity": over_capacity,
+        "applications": [
+            {
+                "id": row.id,
+                "exam_level": row.exam_level,
+                "status": row.status,
+                "application_no": resolve_application_no(
+                    row.application_no, row.submission_id, row.exam_level
+                ),
+            }
+            for row in created
+        ],
+    }
 
 
 # 수험번호 일괄 부여 미리보기 응답에 실어 보낼 최대 행 수(부여 건수 제한이 아님).
@@ -1857,6 +2462,71 @@ async def admin_exam_rounds(_: AuthUser = Depends(require_any_admin), db: AsyncS
         data["registered_levels"] = await round_level_counts(db, r.id)
         items.append(data)
     return {"items": items}
+
+
+@router.get("/exam-rounds/{round_id}/capacity")
+async def exam_round_capacity(
+    round_id: int,
+    _: AuthUser = Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """회차·시험장 잔여 정원 — 예외 처리(급수 정정·지정 접수) 화면이 쓰는 실시간 현황.
+
+    "제한인원이 비었을 경우"를 관리자가 처리 **전에** 눈으로 확인할 수 있어야 한다.
+    실제 방어는 각 예외 엔드포인트가 회차·시험장 행을 잠그고 다시 검사한다.
+    """
+    rnd = (
+        await db.execute(
+            select(ExamRound)
+            .where(ExamRound.id == round_id)
+            .options(selectinload(ExamRound.venue_links))
+        )
+    ).scalar_one_or_none()
+    if not rnd:
+        raise api_error("NOT_FOUND", "회차를 찾을 수 없습니다.", 404)
+
+    round_levels = await round_level_counts(db, round_id)
+    per_venue_levels = await venue_level_counts(db, round_id)
+    linked_ids = [link.exam_venue_id for link in rnd.venue_links]
+
+    venue_stmt = select(ExamVenue)
+    if linked_ids:
+        venue_stmt = venue_stmt.where(ExamVenue.id.in_(linked_ids))
+    else:
+        venue_stmt = venue_stmt.where(ExamVenue.is_active)
+    venues = (await db.execute(venue_stmt.order_by(ExamVenue.name_ko))).scalars().all()
+
+    venue_items = []
+    for v in venues:
+        registered = await count_active_venue_submissions(
+            db, exam_round_id=round_id, exam_venue_id=v.id
+        )
+        item = {
+            "id": v.id,
+            "name_ko": v.name_ko,
+            "name_en": v.name_en,
+            "is_active": v.is_active,
+            "capacity": int(v.capacity or 0),
+            "level_occupancy": level_occupancy_snapshot(v, per_venue_levels.get(v.id)),
+        }
+        item.update(occupancy_snapshot(int(v.capacity or 0), registered))
+        venue_items.append(item)
+
+    round_registered = await count_active_round_submissions(db, round_id)
+    round_item = {
+        "id": rnd.id,
+        "round_no": rnd.round_no,
+        "title": rnd.title,
+        "registration_status": rnd.registration_status,
+        "registration_end_at": rnd.registration_end_at.isoformat()
+        if rnd.registration_end_at
+        else None,
+        "capacity": int(rnd.capacity or 0),
+        "fees": {"I": rnd.fee_level_i, "II": rnd.fee_level_ii},
+        "level_occupancy": level_occupancy_snapshot(rnd, round_levels),
+    }
+    round_item.update(occupancy_snapshot(int(rnd.capacity or 0), round_registered))
+    return {"round": round_item, "venues": venue_items}
 
 
 @router.post("/exam-rounds")
@@ -2614,7 +3284,11 @@ async def create_term(body: TermBody, admin: AuthUser = Depends(matrix_perm("ter
     row = Term(**body.model_dump(), status="draft")
     db.add(row)
     await db.flush()
-    await write_audit(db, admin_user_id=admin.id, action_type="term_create", target_type="terms", target_id=row.id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="term_create",
+        target_type="terms", target_id=row.id,
+        after_data={"term_type": row.term_type, "version": row.version, "title": row.title, "status": row.status},
+    )
     await db.commit()
     return {"id": row.id}
 
@@ -2856,8 +3530,12 @@ async def delete_board_post(
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
     await assert_perm(db, admin, board_menu_for_type(post.board_type), "delete")
+    before = snapshot(post, BOARD_POST_FIELDS)  # delete 후에는 읽을 수 없다
     await db.delete(post)
-    await write_audit(db, admin_user_id=admin.id, action_type="board_delete", target_type="board_posts", target_id=post_id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="board_delete",
+        target_type="board_posts", target_id=post_id, before_data=before,
+    )
     await db.commit()
     return {"deleted": True}
 
@@ -2909,6 +3587,7 @@ async def reply_post(
     if not post:
         raise api_error("NOT_FOUND", "게시글을 찾을 수 없습니다.", 404)
     await assert_perm(db, admin, board_menu_for_type(post.board_type), "answer")
+    before = snapshot(post, BOARD_REPLY_FIELDS)
     post.admin_reply = body.body.strip()
     post.admin_replied_at = datetime.now(timezone.utc)
     post.admin_replier_id = admin.id
@@ -2924,7 +3603,11 @@ async def reply_post(
     user = (await db.execute(select(User).where(User.id == post.user_id))).scalar_one_or_none()
     if user:
         await notify_board_reply(db, post, user, activity_type="공식 답변")
-    await write_audit(db, admin_user_id=admin.id, action_type="board_reply", target_type="board_posts", target_id=post_id)
+    await write_audit(
+        db, admin_user_id=admin.id, action_type="board_reply",
+        target_type="board_posts", target_id=post_id,
+        before_data=before, after_data=snapshot(post, BOARD_REPLY_FIELDS),
+    )
     await db.commit()
     return {"replied": True}
 
@@ -2974,8 +3657,10 @@ def _user_list_item(u: User) -> dict:
         "email": u.email,
         "name_ko": u.name_ko,
         "name_en": u.name_en,
+        "birth_date": u.birth_date,
         "phone": u.phone,
         "nationality": u.nationality,
+        "photo_file_id": u.photo_file_id,
         "status": u.status,
         "marketing_opt_in": u.marketing_opt_in,
         "signup_provider": u.signup_provider or "email",
@@ -3421,30 +4106,70 @@ async def put_permissions_matrix(
     }
 
 
+# 로그인·로그아웃은 관리자 접근 로그와 같은 사건을 중복 기록한 것이라 처리 이력에서
+# 감춘다(운영 302건 전부가 양쪽에 있었다). 행 자체는 append-only 로 그대로 둔다.
+_AUDIT_HIDDEN_ACTIONS = ("login", "logout")
+
+
 @router.get("/audit-logs")
 async def audit_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=2000),
     target_type: str | None = Query(None),
     target_id: str | None = Query(None),
+    action_types: str | None = Query(None),
+    admin_user_id: int | None = Query(None),
+    days: int | None = Query(None, ge=1, le=3650),
     admin: AuthUser = Depends(require_any_admin),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict:
+    """처리 이력 조회 — 페이지네이션·필터 모두 SQL에서 처리한다.
+
+    예전에는 최신 200건만 통째로 내려 주고 화면에서 걸렀다. 이력이 6천 건을 넘긴
+    지금은 기간·유형·액션 필터가 그 200건 안에서만 동작해, 있는 기록도 '없음'으로
+    보이고 CSV 내보내기도 200건에서 잘렸다.
+
+    action_types 는 콤마 구분. BO 액션 필터는 한글 라벨 하나가 여러 action_type 에
+    대응하므로(예: 승인 → approve) 화면에서 역매핑해 보낸다.
+    """
     matrix = await load_matrix(db)
-    if admin.role != "super":
-        can_all = role_has(matrix, admin.role, "audit", "viewAll")
-        can_own = role_has(matrix, admin.role, "audit", "viewOwn")
-        if not can_all and not can_own:
-            raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
-    stmt = select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc())
+    can_all = admin.role == "super" or role_has(matrix, admin.role, "audit", "viewAll")
+    if not can_all and not role_has(matrix, admin.role, "audit", "viewOwn"):
+        raise api_error("FORBIDDEN", "처리 이력 조회 권한이 없습니다.", 403)
+
+    stmt = select(AdminAuditLog).where(
+        AdminAuditLog.action_type.notin_(_AUDIT_HIDDEN_ACTIONS)
+    )
+    if not can_all:
+        # 본인 이력만 — 반드시 limit 앞에서 건다. 뒤에서 자르면 '최신 200건 중 내 것'이
+        # 되어, 다른 관리자가 활발하면 본인 기록이 통째로 사라진다.
+        stmt = stmt.where(AdminAuditLog.admin_user_id == admin.id)
+    elif admin_user_id is not None:
+        stmt = stmt.where(AdminAuditLog.admin_user_id == admin_user_id)
     if target_type:
         stmt = stmt.where(AdminAuditLog.target_type == target_type)
     if target_id is not None:
         stmt = stmt.where(AdminAuditLog.target_id == str(target_id))
-    limit = 100 if (target_type or target_id is not None) else 200
-    result = await db.execute(stmt.limit(limit))
-    logs = result.scalars().all()
-    if admin.role != "super" and not role_has(matrix, admin.role, "audit", "viewAll"):
-        logs = [l for l in logs if l.admin_user_id == admin.id]
-    return {"items": await _serialize_audit_logs(db, logs)}
+    if action_types:
+        wanted = [a.strip() for a in action_types.split(",") if a.strip()]
+        if wanted:
+            stmt = stmt.where(AdminAuditLog.action_type.in_(wanted))
+    cutoff = _access_days_filter(days)
+    if cutoff is not None:
+        stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
+
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    result = await db.execute(
+        stmt.order_by(AdminAuditLog.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return {
+        "items": await _serialize_audit_logs(db, result.scalars().all()),
+        "page": page,
+        "page_size": page_size,
+        "total_items": total,
+    }
 
 
 _PERM_HISTORY_ACTIONS = ("permission_matrix_update", "admin_update", "admin_create")
@@ -3507,6 +4232,57 @@ async def _serialize_member_access_logs(db: AsyncSession, logs: list[MemberAcces
     return out
 
 
+def _perm_role_changed_sql():
+    """등급 변경 조건을 SQL로. _perm_history_change_type 의 파이썬 판정과 같아야 한다.
+
+    before/after 가 '있는 dict' 일 때만 본다 — JSONB 는 SQL NULL 과 'null'::jsonb 가
+    다르고, 파이썬은 둘 다 falsy 로 보므로 jsonb_typeof 로 맞춘다. 빈 dict 도 falsy.
+    """
+    def is_obj(col):
+        # 빈 dict 도 파이썬에서 falsy — jsonb::text 로 비교하면 JSONB 리터럴이 필요 없다.
+        return and_(func.jsonb_typeof(col) == "object", cast(col, Text) != "{}")
+    return and_(
+        is_obj(AdminAuditLog.before_data),
+        is_obj(AdminAuditLog.after_data),
+        AdminAuditLog.before_data["role"].astext.is_distinct_from(
+            AdminAuditLog.after_data["role"].astext
+        ),
+    )
+
+
+def _perm_history_change_type_filter(change_type: str):
+    """UI 변경 유형 → SQL 조건. 파생값이라 예전엔 상한 조회 후 메모리에서 걸렀다."""
+    if change_type == "메뉴 권한 변경":
+        return AdminAuditLog.action_type == "permission_matrix_update"
+    if change_type == "계정 등록":
+        return AdminAuditLog.action_type == "admin_create"
+    if change_type == "등급 변경":
+        return and_(AdminAuditLog.action_type == "admin_update", _perm_role_changed_sql())
+    if change_type == "관리자 수정":
+        # before_data 가 SQL NULL 이면 조건식이 NULL 이 되어 NOT 도 NULL → 행이 빠진다.
+        # 파이썬은 이 경우를 '관리자 수정' 으로 보므로 coalesce 로 false 를 채운다.
+        return and_(
+            AdminAuditLog.action_type == "admin_update",
+            not_(func.coalesce(_perm_role_changed_sql(), literal(False))),
+        )
+    return AdminAuditLog.action_type == change_type
+
+
+def _perm_history_target_sql():
+    """목록의 '대상' 열과 같은 값을 만드는 SQL 식 (권한매트릭스 | 이메일 | target_id)."""
+    return case(
+        (AdminAuditLog.target_type == "admin_permission_matrix", literal("권한매트릭스")),
+        (
+            and_(
+                func.jsonb_typeof(AdminAuditLog.after_data) == "object",
+                AdminAuditLog.after_data["email"].astext.isnot(None),
+            ),
+            AdminAuditLog.after_data["email"].astext,
+        ),
+        else_=AdminAuditLog.target_id,
+    )
+
+
 def _perm_history_change_type(action_type: str, before: dict | None, after: dict | None) -> str:
     if action_type == "permission_matrix_update":
         return "메뉴 권한 변경"
@@ -3544,6 +4320,7 @@ async def _serialize_perm_history(db: AsyncSession, logs: list[AdminAuditLog]) -
             "id": raw.id,
             "admin_user_id": raw.admin_user_id,
             "actor": row.get("admin_email") or (str(raw.admin_user_id) if raw.admin_user_id else "—"),
+            "actor_name": row.get("admin_name"),
             "ip_address": raw.ip_address,
             "target": target,
             "change_type": change_type,
@@ -3568,9 +4345,10 @@ def _access_log_migration_error() -> None:
 @router.get("/access-logs/admins")
 async def admin_access_logs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=500),
+    page_size: int = Query(50, ge=1, le=2000),
     admin_user_id: int | None = Query(None),
     action_type: str | None = Query(None),
+    action_types: str | None = Query(None),
     success: bool | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     ip: str | None = Query(None),
@@ -3584,6 +4362,10 @@ async def admin_access_logs(
             stmt = stmt.where(AdminAccessLog.admin_user_id == admin_user_id)
         if action_type:
             stmt = stmt.where(AdminAccessLog.action_type == action_type)
+        if action_types:
+            wanted = [a.strip() for a in action_types.split(",") if a.strip()]
+            if wanted:
+                stmt = stmt.where(AdminAccessLog.action_type.in_(wanted))
         if success is not None:
             stmt = stmt.where(AdminAccessLog.success == success)
         cutoff = _access_days_filter(days)
@@ -3608,10 +4390,12 @@ async def admin_access_logs(
 @router.get("/access-logs/members")
 async def member_access_logs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=500),
+    page_size: int = Query(50, ge=1, le=2000),
     user_id: int | None = Query(None),
     email: str | None = Query(None),
+    q: str | None = Query(None),
     action_type: str | None = Query(None),
+    action_types: str | None = Query(None),
     success: bool | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     admin: AuthUser = Depends(require_admin),
@@ -3624,8 +4408,22 @@ async def member_access_logs(
             stmt = stmt.where(MemberAccessLog.user_id == user_id)
         if email:
             stmt = stmt.where(MemberAccessLog.email.ilike(f"%{email.strip()}%"))
+        if q and q.strip():
+            # 이름은 로그 테이블에 없다 — users 를 거쳐 찾는다.
+            like = f"%{q.strip()}%"
+            named = select(User.id).where(
+                or_(User.name_ko.ilike(like), User.name_en.ilike(like), User.email.ilike(like))
+            )
+            stmt = stmt.where(
+                or_(MemberAccessLog.email.ilike(like), MemberAccessLog.user_id.in_(named))
+            )
         if action_type:
             stmt = stmt.where(MemberAccessLog.action_type == action_type)
+        if action_types:
+            # UI 한 라벨이 여러 종류에 대응한다 — 로그인 = login·register·google_login
+            wanted = [a.strip() for a in action_types.split(",") if a.strip()]
+            if wanted:
+                stmt = stmt.where(MemberAccessLog.action_type.in_(wanted))
         if success is not None:
             stmt = stmt.where(MemberAccessLog.success == success)
         cutoff = _access_days_filter(days)
@@ -3648,9 +4446,10 @@ async def member_access_logs(
 @router.get("/permission-history")
 async def permission_history(
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=500),
+    page_size: int = Query(50, ge=1, le=2000),
     admin_user_id: int | None = Query(None),
     change_type: str | None = Query(None),
+    target: str | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     admin: AuthUser = Depends(require_admin),
     db: AsyncSession = Depends(get_db_session),
@@ -3667,24 +4466,36 @@ async def permission_history(
     if cutoff is not None:
         stmt = stmt.where(AdminAuditLog.created_at >= cutoff)
     if change_type:
-        # change_type는 파생 값이라 SQL 필터 대신 상한 조회 후 메모리 필터
-        cap = min(2000, page * page_size * 4)
-        result_all = await db.execute(stmt.limit(cap))
-        all_logs = [
-            l for l in result_all.scalars().all()
-            if _perm_history_change_type(l.action_type, l.before_data, l.after_data) == change_type
-        ]
-        total = len(all_logs)
-        page_logs = all_logs[(page - 1) * page_size : page * page_size]
-    else:
-        total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
-        result_page = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
-        page_logs = result_page.scalars().all()
+        stmt = stmt.where(_perm_history_change_type_filter(change_type))
+    # 대상 드롭다운은 '대상 필터를 뺀' 현재 조건에서 뽑는다 — 대상을 고른 뒤
+    # 목록이 그 하나로 줄어들면 다른 값으로 바꿀 수 없다.
+    stmt_for_targets = stmt
+    if target:
+        stmt = stmt.where(_perm_history_target_sql() == target)
+
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar() or 0
+    result_page = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
+    page_logs = result_page.scalars().all()
+
+    # '대상' 드롭다운 목록 — 파생값이라 화면에서 만들 수 없다(현재 페이지만 보이므로).
+    # 조건 없이 뽑으면 접수자 ID 등 권한 이력과 무관한 target_id 까지 딸려 온다.
+    # order_by(None) 필수 — created_at 정렬이 남으면 DISTINCT 와 충돌한다
+    # (Postgres: SELECT DISTINCT 의 ORDER BY 는 select 목록에 있어야 한다).
+    targets = (
+        await db.execute(
+            stmt_for_targets.with_only_columns(_perm_history_target_sql())
+            .order_by(None)
+            .distinct()
+            .limit(200)
+        )
+    ).scalars().all()
+
     return {
         "items": await _serialize_perm_history(db, page_logs),
         "page": page,
         "page_size": page_size,
         "total_items": total,
+        "targets": [t for t in targets if t],
     }
 
 

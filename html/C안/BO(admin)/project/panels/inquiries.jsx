@@ -133,7 +133,7 @@ function InquiryDetailLP({ id, onClose, canAnswer = true }) {
       return;
     }
     if (q.secret) {
-      DataStore.addAudit({ type: '문의', targetId: id, action: '수정', memo: '비밀글 본문 열람' });
+      DataStore.addAudit({ type: '문의', targetId: id, action: '비밀글열람', memo: '비밀글 본문 열람' });
       DataStore.notify();
     }
   }, [id]);
@@ -152,7 +152,7 @@ function InquiryDetailLP({ id, onClose, canAnswer = true }) {
     q.replies.push({ author: state.me?.id, body: reply, public: !q.secret, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
     q.assignee = state.me?.id;
     q.status = 'done';
-    DataStore.addAudit({ type: '문의', targetId: id, action: '수정', before, after: { status: q.status }, memo: '답변 등록·답변완료 처리' });
+    DataStore.addAudit({ type: '문의', targetId: id, action: '답변', before, after: { status: q.status }, memo: '답변 등록·답변완료 처리' });
     DataStore.notify();
     setReply('');
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');

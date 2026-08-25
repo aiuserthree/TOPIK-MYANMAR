@@ -3,7 +3,7 @@
 > **⚠️ 운영 API는 `apps/api/` (FastAPI)입니다.** 본 `api/` 디렉터리는 초기 Fastify 프로토타입 참조용이며, 저장소에 일부 소스만 존재합니다.  
 > **현행 문서:** [`apps/api/README.md`](../apps/api/README.md) · [`docs/DEV_SPEC.md`](../docs/DEV_SPEC.md)
 
-Node.js 20 + Fastify 4 + TypeScript. PostgreSQL schema: `../db/migrations/` — 이 문서가 작성된 시점의 기준은 **V001~V008**이며, 현재 저장소는 **V022**까지 있습니다. V009 이후 스키마(공지 다국어·접근 로그·급수별 정원·수험번호 공개 정책 등)는 아래 엔드포인트 표에 반영되어 있지 않습니다.
+Node.js 20 + Fastify 4 + TypeScript. PostgreSQL schema: `../db/migrations/` — 이 문서가 작성된 시점의 기준은 **V001~V008**이며, 현재 저장소는 **V023**까지 있습니다. V009 이후 스키마(공지 다국어·접근 로그·급수별 정원·수험번호 공개 정책 등)는 아래 엔드포인트 표에 반영되어 있지 않습니다.
 
 **macOS 로컬 실행 (PostgreSQL 설치부터):** [로컬실행_가이드.md](./로컬실행_가이드.md)
 
@@ -456,8 +456,8 @@ See `.env.example`. Key variables:
 
 ## Related
 
-- [`../docs/DEV_SPEC.md`](../docs/DEV_SPEC.md) — 현행 개발 스펙 (스키마 V001~V022, FO/BO 구조)
+- [`../docs/DEV_SPEC.md`](../docs/DEV_SPEC.md) — 현행 개발 스펙 (스키마 V001~V023, FO/BO 구조)
 - [`../apps/api/README.md`](../apps/api/README.md) — 운영 FastAPI 로컬 실행
-- `../db/migrations/` — SQL migration (V001~V022). `../db/README.md`는 없습니다
+- `../db/migrations/` — SQL migration (V001~V023). `../db/README.md`는 없습니다
 - [`../docs/기능정의서/백엔드_스택_결정.md`](../docs/기능정의서/백엔드_스택_결정.md) — stack & phases
 - [`../docs/기능정의서/REST_API_명세_초안.md`](../docs/기능정의서/REST_API_명세_초안.md) — full API spec

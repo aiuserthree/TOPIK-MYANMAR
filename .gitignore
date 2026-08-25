@@ -37,3 +37,6 @@ api/dist/
 
 # Local/runtime upload storage (not versioned)
 api/var/uploads/
+
+# 배포 스크립트가 남기는 표식 (마지막으로 배포에 성공한 커밋)
+.deployed-commit

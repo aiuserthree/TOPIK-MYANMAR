@@ -59,8 +59,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 python3 scripts/seed_dev.py   # 저장소 루트
-cd html/C안/FO && python3 -m http.server 8080
-cd html/C안/BO\(admin\)/project && python3 -m http.server 8081
+python3 scripts/serve_static.py "html/C안/FO" 8080
+python3 scripts/serve_static.py "html/C안/BO(admin)/project" 8081
+# 순정 http.server 는 확장자 없는 경로(/admin)에서 404 — nginx try_files 재현이 필요하다
 ```
 
 **Vite 스캐폴드 (선택):**

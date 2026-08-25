@@ -4,8 +4,9 @@
    ============================================================ */
 
 /* ---------- Fonts ---------- */
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+/* 웹폰트는 shared/vendor/fonts-v2.css 로 자체 호스팅한다. 여기서 외부 @import 를
+   쓰면 이 파일을 파싱한 뒤에야 외부 호스트에 연결을 새로 맺느라 렌더링이 밀린다.
+   HTML 에서 <link> 로 먼저 걸어 병렬로 받는다. */
 
 /* ---------- Reset ---------- */
 *, *::before, *::after { box-sizing: border-box; }

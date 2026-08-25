@@ -154,7 +154,7 @@ function RefundDetailLP({ id, onClose, canAnswer = true }) {
       if (DataStore.apiLoadBoardDetail) DataStore.apiLoadBoardDetail(id, 'refund');
       return;
     }
-    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', memo: '비밀글 열람' });
+    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '비밀글열람', memo: '비밀글 열람' });
     DataStore.notify();
   }, [id]);
 
@@ -174,7 +174,7 @@ function RefundDetailLP({ id, onClose, canAnswer = true }) {
     r.status = status;
     r.replies = r.replies || [];
     r.replies.push({ author: state.me?.id, body: reply, public: false, ts: new Date().toISOString().slice(0,16).replace('T',' '), kind: 'reply' });
-    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '수정', before, after: { hasAnswer: true, status }, memo: '답변 등록' });
+    DataStore.addAudit({ type: '환불·정정', targetId: id, action: '답변', before, after: { hasAnswer: true, status }, memo: '답변 등록' });
     DataStore.notify();
     setReply('');
     toastOk('답변이 등록되었습니다. (FO 게시판에 노출)');

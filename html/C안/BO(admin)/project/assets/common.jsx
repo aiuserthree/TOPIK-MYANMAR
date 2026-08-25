@@ -81,7 +81,7 @@ function LP({ open, title, sub, onClose, size, children, footer, tabs }) {
 }
 
 // ----- Modal (centered, smaller) -----
-function Modal({ open, title, onClose, children, footer, danger }) {
+function Modal({ open, title, onClose, children, footer, danger, wide }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -91,7 +91,7 @@ function Modal({ open, title, onClose, children, footer, danger }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop open" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 320 }}>
-      <div className="modal" role="dialog" aria-modal="true">
+      <div className={`modal ${wide ? 'modal-wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ color: danger ? 'var(--danger)' : undefined }}>{title}</h3>
           <button className="lp-close" onClick={onClose} aria-label="닫기" style={{ marginRight: -8 }}><I.X/></button>
@@ -354,7 +354,106 @@ function BoardAttachments({ attachments }) {
   );
 }
 
+// ----- 처리자/변경자 셀 (처리 이력·권한 변경 이력 공용) -----
+/** 이름과 이메일을 함께 보여 준다. 필터는 이름으로 고르는데 목록에는 이메일만
+    나와서, 걸러 낸 결과가 같은 사람인지 알아보기 어려웠다. */
+function ActorCell({ name, email }) {
+  if (!name) return <code className="code-id">{email || '—'}</code>;
+  return (
+    <div style={{ lineHeight: 1.35 }}>
+      <b style={{ fontSize: 12.5 }}>{name}</b>
+      <div className="muted" style={{ fontSize: 11.5, fontFamily: 'Inter' }}>{email}</div>
+    </div>
+  );
+}
+
+// ----- 처리 이력 변경 내용 — 사람이 읽는 표 + 원본 JSON 접기 -----
+function AuditChangeSection({ name, rows, showTitle, mode }) {
+  const R = window.BOAuditReadable;
+  if (!rows.length) return null;
+  const both = name === 'changed';
+  return (
+    <div className="chg-sec">
+      {showTitle && <div className="chg-sec-ttl">{R.sectionTitle(name)}</div>}
+      <div className="chg-hint">{R.sectionHint(name, mode)}</div>
+      <table className="chg-table">
+        <thead>
+          <tr>
+            <th style={{ width: '30%' }}>항목</th>
+            {both && <th style={{ width: '35%' }}>변경 전</th>}
+            <th>{both ? '변경 후' : '기록된 값'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.key}>
+              <th scope="row">{r.label}</th>
+              {both && <td className="v-before">{r.before || '없음'}</td>}
+              <td className={both ? 'v-after' : ''}>{(both ? r.after : (r.after || r.before)) || '없음'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AuditChangeView({ before, after, type, actionType, legend }) {
+  const R = window.BOAuditReadable;
+  const result = useMemo(
+    () => (R ? R.diffRows(before, after, type) : null),
+    [R, before, after, type],
+  );
+  const [showRaw, setShowRaw] = useState(false);
+  if (!result) return null;
+
+  const filled = ['changed', 'result', 'context'].filter(n => result[n].length);
+  const hasRaw = !!before || !!after;
+
+  return (
+    <FieldSet legend={legend || '변경 내용'} cols={1}>
+      <div className="chg">
+        {result.total > 0 && <div className="chg-summary">{R.summaryText(result)}</div>}
+
+        {filled.map(name => (
+          <AuditChangeSection key={name} name={name} rows={result[name]} showTitle={filled.length > 1} mode={result.mode}/>
+        ))}
+
+        {/* 표가 빌 때 — 값이 같아서인지, 애초에 전·후를 안 남기는 처리인지 구분해서 설명한다 */}
+        {!result.total && (
+          <div className="chg-summary">
+            {hasRaw
+              ? '기록된 값이 처리 전과 같습니다. 실제로 바뀐 항목은 없습니다.'
+              : R.actionNote(actionType)}
+          </div>
+        )}
+        {result.total > 0 && result.unchanged > 0 && (
+          <div className="chg-note">그 외 {result.unchanged}개 항목은 이전과 같습니다.</div>
+        )}
+
+        {hasRaw && (
+          <button type="button" className="chg-raw-toggle" onClick={() => setShowRaw(v => !v)}>
+            {showRaw ? '원본 데이터 숨기기' : '원본 데이터(JSON) 보기 — 개발·장애 확인용'}
+          </button>
+        )}
+        {hasRaw && showRaw && (
+          <div className="diff" style={{ marginTop: 8 }}>
+            <div>
+              <div className="h">Before</div>
+              <pre className="before">{before ? JSON.stringify(before, null, 2) : '— 이전 값 없음'}</pre>
+            </div>
+            <div>
+              <div className="h">After</div>
+              <pre className="after">{after ? JSON.stringify(after, null, 2) : '— 이후 값 없음'}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    </FieldSet>
+  );
+}
+
 // Export to window
 Object.assign(window, { useStore, useState, useEffect, useMemo, useCallback, useRef, Fragment, h,
   LP, Modal, ConfirmModal, ToastHost, toast, toastOk, toastErr,
-  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, I });
+  FormRow, FieldSet, Pager, Pill, BulkBar, BoardAttachments, AuditChangeView, ActorCell, I });
