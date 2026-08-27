@@ -180,10 +180,10 @@ function MembersPanel() {
 
       <div className="filterbar">
         <div className="chips">
-          <button className={`chip ${stF === 'all' ? 'active' : ''}`} onClick={() => setStF('all')}>전체<span className="cnt">{counts.all}</span></button>
-          <button className={`chip ${stF === 'active' ? 'active' : ''}`} onClick={() => setStF('active')}>활성<span className="cnt">{counts.active}</span></button>
-          <button className={`chip ${stF === 'inactive' ? 'active' : ''}`} onClick={() => setStF('inactive')}>정지<span className="cnt">{counts.inactive}</span></button>
-          <button className={`chip ${stF === 'withdrawn' ? 'active' : ''}`} onClick={() => setStF('withdrawn')}>탈퇴<span className="cnt">{counts.withdrawn}</span></button>
+          <button className={`chip ${stF === 'all' ? 'active' : ''}`} onClick={() => setStF('all')}>전체<span className="cnt">{DataStore.fmtNum(counts.all)}</span></button>
+          <button className={`chip ${stF === 'active' ? 'active' : ''}`} onClick={() => setStF('active')}>활성<span className="cnt">{DataStore.fmtNum(counts.active)}</span></button>
+          <button className={`chip ${stF === 'inactive' ? 'active' : ''}`} onClick={() => setStF('inactive')}>정지<span className="cnt">{DataStore.fmtNum(counts.inactive)}</span></button>
+          <button className={`chip ${stF === 'withdrawn' ? 'active' : ''}`} onClick={() => setStF('withdrawn')}>탈퇴<span className="cnt">{DataStore.fmtNum(counts.withdrawn)}</span></button>
         </div>
         <div className="controls">
           <select className="select" value={natF} onChange={e => setNatF(e.target.value)}>
