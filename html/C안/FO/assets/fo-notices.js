@@ -135,13 +135,28 @@
     return 'ko';
   }
 
+  // 같은 조건의 조회가 이미 떠 있으면 그 응답을 함께 쓴다. 부팅 한 번에
+  // tpkm:langchange 가 두 번 튀어(i18n boot + common.js 푸터 렌더 뒤 재적용)
+  // 같은 목록을 3번 받아오고 있었다 — 홈 미리보기·공지 목록 양쪽 모두.
+  var inflight = {};
+
+  function fetchNotices(params) {
+    var key = JSON.stringify(params);
+    if (inflight[key]) return inflight[key];
+    var req = TopikApi.getNotices(params);
+    inflight[key] = req;
+    var clear = function () { delete inflight[key]; };
+    req.then(clear, clear);
+    return req;
+  }
+
   function loadList(opts) {
     opts = opts || {};
     if (!window.TopikApi || !TopikApi.canUseApi()) {
       if (opts.onFallback) opts.onFallback();
       return Promise.resolve(null);
     }
-    return TopikApi.getNotices({
+    return fetchNotices({
       category: opts.category,
       q: opts.q,
       lang: opts.lang || currentLang(),
