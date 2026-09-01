@@ -4,8 +4,8 @@ import base64
 import hashlib
 import logging
 import re
+import threading
 import uuid
-from functools import lru_cache
 from pathlib import Path
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -97,18 +97,33 @@ def _s3_client_config():
     return base
 
 
-@lru_cache
-def _get_s3_client():
-    import boto3
+_s3_client = None
+_s3_client_lock = threading.Lock()
 
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.s3_endpoint,
-        region_name=settings.s3_region,
-        aws_access_key_id=settings.s3_access_key,
-        aws_secret_access_key=settings.s3_secret,
-        config=_s3_client_config(),
-    )
+
+def _get_s3_client():
+    """S3 클라이언트 싱글턴.
+
+    botocore 클라이언트는 만들어진 뒤에는 스레드에서 함께 써도 되지만 생성 자체는
+    안전하지 않다. photos.zip 이 스레드 풀에서 동시에 읽으므로 최초 1회 생성만 잠근다.
+    """
+    global _s3_client
+    client = _s3_client
+    if client is not None:
+        return client
+    with _s3_client_lock:
+        if _s3_client is None:
+            import boto3
+
+            _s3_client = boto3.client(
+                "s3",
+                endpoint_url=settings.s3_endpoint,
+                region_name=settings.s3_region,
+                aws_access_key_id=settings.s3_access_key,
+                aws_secret_access_key=settings.s3_secret,
+                config=_s3_client_config(),
+            )
+        return _s3_client
 
 
 def _write_local(*, data: bytes, file_id: str) -> str:

@@ -5,7 +5,12 @@ import io
 import re
 import secrets
 import string
+import threading
 import zipfile
+from collections import deque
+from collections.abc import Iterator
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 from urllib.parse import quote
 from datetime import date, datetime, timedelta, timezone
 
@@ -827,11 +832,127 @@ async def admin_list_applications(
 
 _LEVEL_FOLDER = {"I": "TOPIK Ⅰ", "II": "TOPIK Ⅱ"}
 
+# 사진은 오브젝트 스토리지에서 한 장씩 받아 오고, 왕복 지연이 대부분을 차지한다.
+# 순차로 읽으면 수천 장에서 몇 분이 걸리는데 그동안 이벤트 루프가 막혀 uvicorn 워커가
+# gunicorn 마스터에 heartbeat 를 못 보내고, --timeout 60 에 걸려 워커째 죽는다.
+# → 스레드 풀에서 앞쪽 몇 장을 미리 받아 두고 zip 을 만드는 즉시 흘려보낸다.
+_PHOTO_FETCH_WORKERS = 8
+_PHOTO_PREFETCH = 16
+
 
 def _safe_seg(value: str | None, fallback: str) -> str:
     """zip 경로 세그먼트 안전화(슬래시 등 제거)."""
     v = (value or "").strip() or fallback
     return re.sub(r'[\\/:*?"<>|]+', "_", v)
+
+
+@dataclass(slots=True)
+class _PhotoEntry:
+    """photos.zip 에 담을 사진 한 장 — DB 조회를 끝낸 뒤의 순수 값."""
+
+    arcname: str
+    storage_key: str
+    label: str
+
+
+class _ZipSink:
+    """zipfile 이 쓴 바이트를 모았다가 청크 단위로 꺼내 주는 쓰기 전용 싱크.
+
+    zip 전체를 메모리에 담지 않고 사진 한 장씩 내보내기 위한 것. seek 을 주지 않으므로
+    zipfile 은 data descriptor 방식으로 순차 기록한다. io.RawIOBase 를 상속하지 않는
+    이유는, 다운로드가 중단돼 GC 로 정리될 때 IOBase 쪽이 먼저 닫히면 ZipFile.__del__
+    의 flush 가 ValueError 를 내며 로그를 더럽히기 때문.
+    """
+
+    def __init__(self) -> None:
+        self._buf = bytearray()
+        self._pos = 0
+
+    def write(self, data) -> int:
+        self._buf.extend(data)
+        self._pos += len(data)
+        return len(data)
+
+    def tell(self) -> int:
+        return self._pos
+
+    def flush(self) -> None:
+        pass
+
+    def drain(self) -> bytes:
+        chunk = bytes(self._buf)
+        del self._buf[:]
+        return chunk
+
+
+_photo_pool: ThreadPoolExecutor | None = None
+_photo_pool_lock = threading.Lock()
+
+
+def _photo_fetch_pool() -> ThreadPoolExecutor:
+    """사진 읽기용 공용 스레드 풀.
+
+    요청마다 풀을 만들면 브라우저가 다운로드를 중간에 끊었을 때 제너레이터가 바로
+    닫히지 않아(GC 시점에 달림) 워커 스레드가 그대로 남는다. 프로세스당 하나만 두고
+    재사용한다.
+    """
+    global _photo_pool
+    pool = _photo_pool
+    if pool is not None:
+        return pool
+    with _photo_pool_lock:
+        if _photo_pool is None:
+            _photo_pool = ThreadPoolExecutor(
+                max_workers=_PHOTO_FETCH_WORKERS, thread_name_prefix="photos-zip"
+            )
+        return _photo_pool
+
+
+def _iter_photo_payloads(entries: list[_PhotoEntry]) -> Iterator[tuple[_PhotoEntry, bytes | None]]:
+    """(항목, 바이트)를 원래 순서대로 내보낸다. 앞쪽 _PHOTO_PREFETCH 장은 미리 받아 둔다."""
+    pool = _photo_fetch_pool()
+    pending: deque[tuple[_PhotoEntry, Future]] = deque()
+    try:
+        for entry in entries:
+            pending.append((entry, pool.submit(read_file_bytes, entry.storage_key)))
+            if len(pending) < _PHOTO_PREFETCH:
+                continue
+            ready, future = pending.popleft()
+            yield ready, future.result()
+        while pending:
+            ready, future = pending.popleft()
+            yield ready, future.result()
+    finally:
+        # 중단된 경우: 아직 시작 안 한 읽기는 취소하고, 받아 둔 사진 참조를 놓아 준다.
+        for _entry, future in pending:
+            future.cancel()
+        pending.clear()
+
+
+def _stream_photos_zip(
+    entries: list[_PhotoEntry], header_lines: list[str], missing: list[str]
+) -> Iterator[bytes]:
+    """사진을 담으면서 zip 바이트를 그때그때 내보낸다(동기 제너레이터 → 스레드풀에서 실행)."""
+    sink = _ZipSink()
+    included = 0
+    # 사진(JPEG)은 이미 압축돼 있어 deflate 해 봐야 크기는 그대로고 CPU 만 쓴다.
+    with zipfile.ZipFile(sink, "w", zipfile.ZIP_STORED, allowZip64=True) as zf:
+        for entry, data in _iter_photo_payloads(entries):
+            if not data:
+                missing.append(f"[사진 없음] {entry.label}")
+                continue
+            zf.writestr(entry.arcname, data)
+            included += 1
+            chunk = sink.drain()
+            if chunk:
+                yield chunk
+
+        report = list(header_lines)
+        report.append(f"포함 사진: {included}건 / 누락: {len(missing)}건")
+        report.append("")
+        report.extend(missing if missing else ["(누락 없음)"])
+        zf.writestr("_누락리포트.txt", "\n".join(report).encode("utf-8"))
+    yield sink.drain()
 
 
 @router.get("/applications/photos.zip")
@@ -872,63 +993,66 @@ async def export_photos_zip(
         fres = await db.execute(select(FileAttachment).where(FileAttachment.id.in_(file_ids)))
         files = {f.id: f for f in fres.scalars().all()}
 
-    buf = io.BytesIO()
-    included = 0
+    # 스트리밍은 스레드에서 돌아가므로 DB 세션·ORM 객체를 넘기지 않는다.
+    entries: list[_PhotoEntry] = []
     missing: list[str] = []
     seen_names: set[str] = set()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for app in apps:
-            user = users.get(app.user_id)
-            venue = venues.get(app.exam_venue_id)
-            who = (user.name_en if user else None) or (user.name_ko if user else None) or f"app#{app.id}"
-            if not app.exam_number:
-                missing.append(f"[수험번호 미부여] {who} (app_id={app.id}, level={app.exam_level})")
-                continue
-            f = files.get(app.photo_file_id) if app.photo_file_id else None
-            data = read_file_bytes(f.storage_key) if f else None
-            if not data:
-                missing.append(f"[사진 없음] {app.exam_number} {who} (app_id={app.id})")
-                continue
-            region = _safe_seg(
-                region_names.get((venue.country_code, venue.region_code)) if venue else None,
-                venue.region_code if venue else "지역",
+    for app in apps:
+        user = users.get(app.user_id)
+        venue = venues.get(app.exam_venue_id)
+        who = (user.name_en if user else None) or (user.name_ko if user else None) or f"app#{app.id}"
+        if not app.exam_number:
+            missing.append(f"[수험번호 미부여] {who} (app_id={app.id}, level={app.exam_level})")
+            continue
+        f = files.get(app.photo_file_id) if app.photo_file_id else None
+        if not f:
+            missing.append(f"[사진 없음] {app.exam_number} {who} (app_id={app.id})")
+            continue
+        region = _safe_seg(
+            region_names.get((venue.country_code, venue.region_code)) if venue else None,
+            venue.region_code if venue else "지역",
+        )
+        venue_seg = _safe_seg(venue.name_ko if venue else None, venue.venue_code if venue else "시험장")
+        level_seg = _safe_seg(_LEVEL_FOLDER.get(app.exam_level, app.exam_level), app.exam_level)
+        arcname = f"{region}/{venue_seg}/{level_seg}/{app.exam_number}.jpg"
+        if arcname in seen_names:
+            arcname = f"{region}/{venue_seg}/{level_seg}/{app.exam_number}_{app.id}.jpg"
+        seen_names.add(arcname)
+        entries.append(
+            _PhotoEntry(
+                arcname=arcname,
+                storage_key=f.storage_key,
+                label=f"{app.exam_number} {who} (app_id={app.id})",
             )
-            venue_seg = _safe_seg(venue.name_ko if venue else None, venue.venue_code if venue else "시험장")
-            level_seg = _safe_seg(_LEVEL_FOLDER.get(app.exam_level, app.exam_level), app.exam_level)
-            arcname = f"{region}/{venue_seg}/{level_seg}/{app.exam_number}.jpg"
-            if arcname in seen_names:
-                arcname = f"{region}/{venue_seg}/{level_seg}/{app.exam_number}_{app.id}.jpg"
-            seen_names.add(arcname)
-            zf.writestr(arcname, data)
-            included += 1
+        )
 
-        report = [
-            "TOPIK Myanmar 사진 제출 zip — 누락 리포트",
-            f"생성: {datetime.now(timezone.utc).isoformat()}",
-            f"필터: round_id={round_id}, venue_id={venue_id}, level={level}",
-            f"포함 사진: {included}건 / 누락: {len(missing)}건",
-            "",
-        ]
-        report.extend(missing if missing else ["(누락 없음)"])
-        zf.writestr("_누락리포트.txt", "\n".join(report).encode("utf-8"))
+    header_lines = [
+        "TOPIK Myanmar 사진 제출 zip — 누락 리포트",
+        f"생성: {datetime.now(timezone.utc).isoformat()}",
+        f"필터: round_id={round_id}, venue_id={venue_id}, level={level}",
+    ]
 
+    # 감사 로그는 스트리밍을 시작하기 전에 남긴다(스레드에서는 세션을 쓸 수 없음).
     await write_audit(
         db,
         admin_user_id=admin.id,
         action_type="photos_export",
         target_type="exam_rounds",
         target_id=round_id or 0,
-        after_data={"included": included, "missing": len(missing)},
+        after_data={"planned": len(entries), "missing": len(missing)},
         ip_address=ip,
     )
     await db.commit()
 
-    buf.seek(0)
     fname = f"topik_photos_round{round_id or 'all'}.zip"
     return StreamingResponse(
-        buf,
+        _stream_photos_zip(entries, header_lines, missing),
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        headers={
+            "Content-Disposition": _attachment_disposition(fname),
+            # nginx 가 응답을 통째로 버퍼링하면 스트리밍 효과가 사라진다.
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
