@@ -27,15 +27,20 @@
 
 ## 2. 확정 스택
 
-| 계층 | 기술 | 비고 |
-| --- | --- | --- |
-| 신규 Frontend | Vite 6 + React 19 + TypeScript + Tailwind CSS v4 | `apps/web` |
-| 신규 Backend | Python 3.11+ · FastAPI · SQLAlchemy(async) · asyncpg | `apps/api` |
-| 레거시 Frontend | HTML + CSS + JavaScript | FO: `html/C안/FO` (React 없음); BO: `html/C안/BO(admin)/project/` (React 18 CDN + `bo-api-bridge.js`로 FastAPI 연동) |
-| 레거시 Backend | Node.js 20 · Fastify 4 · TypeScript | `api/` |
-| Database | PostgreSQL 15+ **+ pgvector** | IwinV DB VPS — FAQ/공지 의미 검색·RAG·중복 탐지용 |
-| Object Storage | IwinV S3 호환 (`https://kr.object.iwinv.kr`) | 회원·접수 사진 |
-| 운영 원칙 | nginx + systemd (IwinV VPS) | Web·DB 각각 네이티브 설치 |
+> **"신규/레거시"는 도입 순서일 뿐 운영 여부가 아닙니다.** 실제 서비스되는 화면은 "레거시
+> Frontend"이고, "신규 Frontend"(`apps/web`)는 아직 운영에 올라가 있지 않습니다. 표만 보고
+> Vite + React 19 나 Fastify 가 돌고 있다고 읽지 마십시오. 외부에 기술 스택을 설명할 때는
+> **운영 중** 표시된 행만 쓰면 됩니다.
+
+| 계층 | 기술 | 운영 | 비고 |
+| --- | --- | --- | --- |
+| 신규 Frontend | Vite 6 + React 19 + TypeScript + Tailwind CSS v4 | ❌ **미운영** | `apps/web` — 홈 placeholder 만 존재. 중기 재개발용 스캐폴드 |
+| 신규 Backend | Python 3.11+ · FastAPI · SQLAlchemy(async) · asyncpg | ✅ **운영 중** | `apps/api` — FO·BO 공용 API 정본. gunicorn + UvicornWorker(`-w 2`), systemd 유닛 `myanmar-api` |
+| 레거시 Frontend | HTML + CSS + JavaScript | ✅ **운영 중** | 실제 서비스 화면. FO: `html/C안/FO` (React 없음, 25페이지) → `build.py` → `public/`; BO: `html/C안/BO(admin)/project/` (React 18 자체 호스팅 `vendor/`, 빌드 시 JSX 사전 컴파일로 브라우저 Babel 제거, `bo-api-bridge.js`로 FastAPI 연동) → `build-bo.py` → `public-bo/` |
+| 레거시 Backend | Node.js 20 · Fastify 4 · TypeScript | ❌ **미운영** | `api/` — 일부 파일만 잔존. 운영에서 구동되지 않음 |
+| Database | PostgreSQL 15+ **+ pgvector** | ✅ **운영 중** | IwinV DB VPS — FAQ/공지 의미 검색·RAG·중복 탐지용 |
+| Object Storage | IwinV S3 호환 (`https://kr.object.iwinv.kr`) | ✅ **운영 중** | 회원·접수 사진 |
+| 운영 원칙 | nginx + systemd (IwinV VPS) | ✅ **운영 중** | Web·DB 각각 네이티브 설치 |
 
 ---
 

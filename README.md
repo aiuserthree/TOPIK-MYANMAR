@@ -9,13 +9,17 @@
 | 구분 | 경로 | 상태 |
 | --- | --- | --- |
 | **운영 FO** | `html/C안/FO/` (25페이지, HTML/CSS/JS) | FastAPI 연동 완료 → `build.py` → `public/` |
-| **운영 BO** | `html/C안/BO(admin)/project/` (React 18 CDN SPA) | 패널 17개 FastAPI 연동 → `build-bo.py` → `public-bo/` |
+| **운영 BO** | `html/C안/BO(admin)/project/` (React 18 SPA, 자체 호스팅 `vendor/`) | 패널 17개 FastAPI 연동 → `build-bo.py` → `public-bo/` (빌드 시 JSX 사전 컴파일, 브라우저 Babel 없음) |
 | **운영 API** | `apps/api/` (FastAPI) | FO/BO REST API 구현 완료 (라우터 9개) |
 | **DB** | `db/migrations/V001`~`V023` | PostgreSQL 15 + pgvector |
-| **신규 FO (중기)** | `apps/web/` (Vite + React) | 홈 placeholder만 존재, 미운영 |
-| **레거시 API** | `api/` (Fastify) | 참조용 잔존 |
+| **신규 FO (중기)** | `apps/web/` (Vite + React 19) | 홈 placeholder만 존재(`src/` 5개 파일), **미운영** — nginx 가 서빙하지 않음 |
+| **레거시 API** | `api/` (Fastify) | 참조용 잔존, 구동 안 함 |
 
 FO/BO는 한국어·미얀마어·영어 3개 국어를 제공합니다 (FO 문구: `html/C안/FO/shared/topik-i18n-content.js`, 공지·FAQ 본문: DB `*_my` / `*_en` 컬럼).
+
+> **운영 프런트엔드에는 번들러가 없습니다.** `build.py` · `build-bo.py` 는 정적 파일 복사 +
+> HTML 치환(+BO 는 JSX 사전 컴파일)만 하며, Vite 는 미운영인 `apps/web` 에서만 씁니다.
+> nginx 가 서빙하는 root 는 `public/`(FO) 과 `public-bo/`(BO) 둘뿐입니다.
 
 ## 빠른 시작 (로컬)
 
