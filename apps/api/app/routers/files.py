@@ -15,9 +15,25 @@ from app.lib.locale import resolve_request_locale
 from app.lib.security import decode_access_token
 from app.lib.storage import get_file_row, read_file_bytes, resolve_local_path
 from app.models.application import Application
+from app.models.content import Notice
 from app.models.user import User
+from app.routers.content import _notice_display_window_clause, _notice_visible_now
 
 router = APIRouter(tags=["files"])
+
+
+async def _notice_is_public(db: AsyncSession, notice_id: int | None) -> bool:
+    if notice_id is None:
+        return False
+    now = _notice_visible_now()
+    res = await db.execute(
+        select(Notice.id).where(
+            Notice.id == notice_id,
+            Notice.is_published.is_(True),
+            *_notice_display_window_clause(now),
+        )
+    )
+    return res.scalar_one_or_none() is not None
 
 
 async def _authorize_file(
@@ -34,9 +50,12 @@ async def _authorize_file(
             sub = str(payload["sub"])
             kind, _, ident = sub.partition(":")
             auth = AuthUser(id=int(ident), email=payload.get("email", ""), role=payload.get("role"), is_admin=kind == "admin")
+    row = await get_file_row(db, file_id)
+    # 공지 첨부·본문 이미지는 공지가 FO에 노출 중이면 비로그인도 받을 수 있다.
+    if row and row.owner_type == "notice" and await _notice_is_public(db, row.owner_id):
+        return row, auth
     if not auth:
         raise fo_api_error("UNAUTHORIZED", "file_unauthorized", lang, 401)
-    row = await get_file_row(db, file_id)
     if not row:
         raise fo_api_error("FILE_UNAVAILABLE", "file_not_found", lang, 404)
     if auth.is_admin:
@@ -97,6 +116,6 @@ async def get_admin_file(
     db: AsyncSession = Depends(get_db_session),
 ):
     row, auth = await _authorize_file(file_id, admin, token, db)
-    if not auth.is_admin:
+    if not auth or not auth.is_admin:
         raise api_error("FORBIDDEN", "관리자 파일 접근 권한이 없습니다.", 403)
     return _file_response(row)

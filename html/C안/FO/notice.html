@@ -304,13 +304,21 @@
     var map = { important: 'badge-important', registration: 'badge-info', exam: 'badge-outline', result: 'badge-outline' };
     return map[cat] || 'badge-outline';
   }
+  // BO 에디터가 넣는 본문 이미지·첨부 링크는 /api/v1/files/{id} 상대 경로 — API가 다른 origin이면 앞에 붙인다.
+  function ntApiFileUrl(path) {
+    var base = (window.TopikApi && TopikApi.baseUrl) || '';
+    return /^\/api\/v1\/files\//.test(path || '') ? base.replace(/\/$/, '') + path : path;
+  }
   function ntRenderBody(el, rawHtml) {
     if (!el) return;
     if (window.DOMPurify) {
       el.innerHTML = window.DOMPurify.sanitize(rawHtml || '', {
-        ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#)/i,
+        ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#|\/api\/v1\/files\/\d+$)/i,
         FORBID_TAGS: ['style'],
         FORBID_ATTR: ['style'],
+      });
+      el.querySelectorAll('img[src]').forEach(function (img) {
+        img.setAttribute('src', ntApiFileUrl(img.getAttribute('src')));
       });
       // 외부 링크는 새 탭 + noopener
       el.querySelectorAll('a[href]').forEach(function (a) {
@@ -329,7 +337,7 @@
     if (!attachments || !attachments.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
     var html = '<div class="l">' + ntEsc(bt('nt.attachments', '첨부파일')) + ' (' + attachments.length + ')</div>';
     attachments.forEach(function (a) {
-      html += '<a href="' + ntEsc(a.download_url) + '" target="_blank" rel="noopener" download>' +
+      html += '<a href="' + ntEsc(ntApiFileUrl(a.download_url)) + '" target="_blank" rel="noopener" download>' +
         ntEsc(a.filename) +
         ' <span style="color:var(--text-3);font-size:12px;">(' + ntFmtSize(a.size) + ')</span></a> ';
     });
