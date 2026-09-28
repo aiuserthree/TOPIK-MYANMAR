@@ -52,7 +52,7 @@
 | 목록 로드 | `category`, `q`, `page`, `page_size` | `is_published=true`만. 정렬 `is_pinned DESC, published_at DESC, id DESC`. 카테고리 별칭 흡수(important↔imp, apply↔registration). 검색은 **제목 ilike**. | `GET /api/v1/notices` | `notices` | 페이지네이션 메타 반환 |
 | 상세 보기 | `notice_id` | 본문(`body_html`)·첨부·작성자·작성일. **조회수 증가**. | `GET /api/v1/notices/{id}` | `notices.view_count`(+`notice_view_logs` 정본) | 비공개/없음 → 404 |
 | 이전/다음/목록 | — | 클라이언트 네비게이션. | (목록 재사용) | — | — |
-| 첨부 다운로드 | `file_id` | 공지 첨부 다운로드. | `GET /api/v1/files/{id}` | `file_attachments`(owner_type=`notice`) | **권한 주의 §5** |
+| 첨부 다운로드 | `file_id` | 공지 첨부·본문 이미지. 게시·노출 기간 내 공지면 비로그인 허용. | `GET /api/v1/files/{id}` | `file_attachments`(owner_type=`notice`) | 비공개·휴지통·노출 종료 공지 → 401 |
 
 > 조회수: 정본/정의서는 "1회/세션" dedup이나 **구현은 매 호출 `view_count += 1`**(§5). 검색은 제목만(본문 전문검색 미지원).
 
@@ -210,5 +210,5 @@ stateDiagram-v2
 | 구현 차이 | 비밀글 잠금 카운터가 **게시글 단위**(정의서는 IP+계정 단위) | 구현 상이 |
 | 구현 차이 | 공지 조회수 매 호출 증가(1회/세션 dedup·`notice_view_logs` 미사용) | 구현 상이 |
 | 구현 차이 | 제목 ≤100·본문 길이 서버 검증 약함(정의서 제목 1~80·본문 1~5000) | 구현 점검 |
-| 점검 필요 | **첨부 다운로드 권한**: `GET /files/{id}`는 user_photo/application_photo 본인·관리자만 허용 → notice/board 첨부는 비관리자에게 403 가능 | 구현 점검 필요(공개 공지 첨부 접근 보장 필요) |
+| 점검 필요 | **첨부 다운로드 권한**: 공지 첨부·본문 이미지는 게시·노출 기간 내면 비로그인 허용(2026-09-28). board 첨부는 여전히 본인·관리자 외 403 가능 | 공지 해결 / 게시판 점검 필요 |
 | 정책 | 환불·정정 첨부 최대 5개 서버 강제(현재 클라이언트 제한) | (합의 필요) |

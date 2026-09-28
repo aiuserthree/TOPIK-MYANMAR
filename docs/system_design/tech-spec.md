@@ -174,7 +174,7 @@ Myanmar_v2.0/
 | GET/POST | `/board/posts` | 🔒user | 게시판 목록·작성(비밀글) |
 | GET | `/board/posts/{id}`, `/comments` | 🔒user | 상세·댓글(비밀글 잠금) |
 | POST | `/board/posts/{id}/unlock`, `/comments`, `/board/attachments` | 🔒user | 비밀번호 열람·댓글·첨부 |
-| GET | `/files/{id}` | 🔒(소유자) | 인증 프록시 스트림 |
+| GET | `/files/{id}` | 🔒(소유자) / 공개 공지 첨부는 공개 | 인증 프록시 스트림 |
 
 **BO (`/api/v1/admin`)** — 모두 admin JWT (조회=`require_any_admin`(readonly 포함), 변경=`require_admin`(readonly 차단), 민감=`super`)
 
@@ -223,7 +223,7 @@ Myanmar_v2.0/
 | storage_key | `local:{uuid}` 또는 `s3:{bucket}/{key}` (`S3_PREFIX/category/uuid`) |
 | 증명사진 | 가입 시 base64 등록 → `file_attachments` + `users.photo_file_id`. 접수 시 행에 복사(`applications.photo_file_id`) |
 | 업로드 제한 | 기본 5MB(`UPLOAD_MAX_BYTES`). 게시판 첨부 jpg/png/pdf, 공지 첨부 다양·10MB |
-| 접근 제어 | **공개 URL 금지** — `GET /files/{id}`(본인·user_photo/application_photo) / `GET /admin/files/{id}`(관리자). 인증은 Bearer 또는 `?token=` |
+| 접근 제어 | **공개 URL 금지** — `GET /files/{id}`(본인·user_photo/application_photo, 예외: 게시·노출 기간 내 공지 첨부는 비로그인 허용) / `GET /admin/files/{id}`(관리자). 인증은 Bearer 또는 `?token=` |
 | S3 안전장치 | `STORAGE_PROVIDER=s3`인데 키 누락 시 **기동 실패**(local 폴백 없음) |
 | 사진 zip | 부여된 `exam_number` 기준 `{지역}/{시험장}/{TOPIK Ⅰ\|Ⅱ}/{수험번호}.jpg` + `_누락리포트.txt` |
 | 연명부 | `roster.xlsx`(zip) — 지역·시험장·수준별 파일, 연락처·이메일 제외(11컬럼) |

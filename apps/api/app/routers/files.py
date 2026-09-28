@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -15,7 +16,9 @@ from app.lib.locale import resolve_request_locale
 from app.lib.security import decode_access_token
 from app.lib.storage import get_file_row, read_file_bytes, resolve_local_path
 from app.models.application import Application
+from app.models.content import Notice
 from app.models.user import User
+from app.routers.content import notice_display_window_clause
 
 router = APIRouter(tags=["files"])
 
@@ -56,6 +59,21 @@ async def _authorize_file(
     raise fo_api_error("FORBIDDEN", "file_forbidden", lang, 403)
 
 
+async def _public_notice_file(file_id: int, db: AsyncSession):
+    """FO 공개 공지(게시 + 노출 기간 내)의 본문 이미지·첨부는 비로그인 방문자에게도 제공."""
+    row = await get_file_row(db, file_id)
+    if not row or row.owner_type != "notice":
+        return None
+    visible = await db.execute(
+        select(Notice.id).where(
+            Notice.id == row.owner_id,
+            Notice.is_published.is_(True),
+            *notice_display_window_clause(datetime.now(timezone.utc)),
+        )
+    )
+    return row if visible.scalar_one_or_none() is not None else None
+
+
 def _content_disposition(filename: str, disposition: str = "inline") -> str:
     ascii_name = "".join(c if ord(c) < 128 else "_" for c in filename) or "file"
     return f'{disposition}; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(filename)}'
@@ -85,7 +103,9 @@ async def get_file(
     db: AsyncSession = Depends(get_db_session),
 ):
     lang = resolve_request_locale(request)
-    row, _ = await _authorize_file(file_id, user, token, db, lang=lang)
+    row = await _public_notice_file(file_id, db)
+    if row is None:
+        row, _ = await _authorize_file(file_id, user, token, db, lang=lang)
     return _file_response(row, lang=lang)
 
 

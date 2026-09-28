@@ -106,7 +106,7 @@
 | :---: | --- | --- | --- | :---: | --- |
 | `[ ]` | **수험번호 채번 원자성(`exam_number_sequences`)** | 초안 시퀀스 테이블+`FOR UPDATE` ↔ 실제 단일 트랜잭션 in-memory 배치(super 단독·재배정 가드만) | 동시 최초 부여 경합 방지(advisory lock 또는 시퀀스 도입) 여부 | P1 | [database](database.md) §1·5.2·7.2 · [bo-02](services/bo-02-applications.md) §2.7·§5 |
 | `[ ]` | **서버 세션/강제 로그아웃(`user_sessions`)** | 미구현 — 무상태 JWT(로그아웃은 클라 토큰 폐기) | 무상태 유지 vs 세션 테이블·블랙리스트 도입(즉시 강제 로그아웃) | P1 | [database](database.md) §1·7.2 · [fo-00](services/fo-00-common.md) §5 · [bo-00](services/bo-00-common.md) §2.2·§5 |
-| `[ ]` | **첨부 다운로드 권한 점검** | `GET /files/{id}`는 user_photo/application_photo 본인·관리자만 → **공개 공지/게시판 첨부가 비관리자에게 403 가능** | 공개 공지 첨부 접근 보장(권한 분기) 점검·보강 | P1 | [fo-05](services/fo-05-board.md) §5 · [database](database.md) §4.17 |
+| `[ ]` | **첨부 다운로드 권한 점검** | 공지: **해결(2026-09-28)** — 게시·노출 기간 내 공지(`owner_type=notice`)의 본문 이미지·첨부는 `GET /files/{id}` 비로그인 허용. 게시판(`board_post`) 첨부는 여전히 본인·관리자 외 403 가능 | 게시판 첨부 접근 보장(권한 분기) 점검·보강 | P1 | [fo-05](services/fo-05-board.md) §5 · [database](database.md) §4.17 |
 | `[x]` | **회원 이메일(로그인 ID) 변경** | **변경 불가 확정** — FO `PATCH /me`·BO `PATCH /admin/users/{id}` 모두 `email` 수정 차단. 인증된 이메일 = 로그인 ID(가입 시 확정) | — (합의 완료 2026-06-10) | P1 | [fo-06](services/fo-06-account.md) §2.3·§6 · [bo-05](services/bo-05-members-terms.md) §2.3 |
 | `[x]` | **회원 목록 필터·검색·페이지네이션** | `GET /admin/users` — `page`/`page_size`/`q`/`status`/`nationality`, 정지·탈퇴 포함, `status_counts` 반환 | — (구현 완료) | P1 | [bo-05](services/bo-05-members-terms.md) §2.1·§5 |
 | `[ ]` | **대시보드 요약·배지 집계 API** | `GET /admin/dashboard/summary`·badges 미구현(클라가 목록 API로 산출) | 전용 집계 API 신설 여부(SSOT·캐시) | P1 | [bo-01](services/bo-01-dashboard.md) §2.1·§5 · [bo-00](services/bo-00-common.md) §2.5 |

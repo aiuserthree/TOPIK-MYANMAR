@@ -21,7 +21,7 @@ def _notice_visible_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _notice_display_window_clause(now: datetime):
+def notice_display_window_clause(now: datetime):
     """노출 시작/종료 일시 — 미설정 시 즉시·무기한."""
     return (
         Notice.is_deleted.is_(False),
@@ -68,7 +68,7 @@ async def list_notices(
     now = _notice_visible_now()
     base = select(Notice).where(
         Notice.is_published.is_(True),
-        *_notice_display_window_clause(now),
+        *notice_display_window_clause(now),
     )
     # FO 필터 칩(imp/apply 등)과 저장 카테고리 별칭 흡수.
     if category and category not in ("all", ""):
@@ -138,7 +138,7 @@ async def _notice_neighbors(db: AsyncSession, notice: Notice, lang: str = "ko") 
     pub_col = func.coalesce(Notice.published_at, Notice.created_at)
     res = await db.execute(
         select(Notice)
-        .where(Notice.is_published.is_(True), *_notice_display_window_clause(now))
+        .where(Notice.is_published.is_(True), *notice_display_window_clause(now))
         .order_by(Notice.is_pinned.desc(), pub_col.desc().nullslast(), Notice.id.desc())
     )
     ordered_rows = res.scalars().all()
@@ -168,7 +168,7 @@ async def get_notice(
         select(Notice).where(
             Notice.id == notice_id,
             Notice.is_published.is_(True),
-            *_notice_display_window_clause(now),
+            *notice_display_window_clause(now),
         )
     )
     notice = result.scalar_one_or_none()

@@ -304,11 +304,18 @@
     var map = { important: 'badge-important', registration: 'badge-info', exam: 'badge-outline', result: 'badge-outline' };
     return map[cat] || 'badge-outline';
   }
+  // BO 본문 이미지는 /api/v1/files/{id} 상대 경로로 저장된다 — API 오리진 기준으로 맞춘다
+  function ntApiPath(path) {
+    if (!/^\/api\/v1\//.test(path || '')) return path;
+    var base = (window.TopikApi && TopikApi.baseUrl) || '';
+    return base.replace(/\/$/, '') + path;
+  }
   function ntRenderBody(el, rawHtml) {
     if (!el) return;
     if (window.DOMPurify) {
       el.innerHTML = window.DOMPurify.sanitize(rawHtml || '', {
-        ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#)/i,
+        // 루트 상대 경로(/api/v1/files/…)는 허용, 프로토콜 상대(//host)는 차단
+        ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#|\/(?!\/))/i,
         FORBID_TAGS: ['style'],
         FORBID_ATTR: ['style'],
       });
@@ -316,6 +323,20 @@
       el.querySelectorAll('a[href]').forEach(function (a) {
         a.setAttribute('target', '_blank');
         a.setAttribute('rel', 'noopener noreferrer');
+      });
+      // 본문 이미지 — API 오리진으로 보정, 클릭 시 원본(A4 출력용)을 새 탭으로
+      el.querySelectorAll('img[src]').forEach(function (img) {
+        var src = ntApiPath(img.getAttribute('src'));
+        img.setAttribute('src', src);
+        img.setAttribute('loading', 'lazy');
+        if (img.parentNode && img.parentNode.tagName !== 'A') {
+          var link = document.createElement('a');
+          link.href = src;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          img.parentNode.insertBefore(link, img);
+          link.appendChild(img);
+        }
       });
     } else {
       // DOMPurify 미로딩 시: 태그를 노출하지 않고 텍스트로 안전 표시
@@ -329,7 +350,7 @@
     if (!attachments || !attachments.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
     var html = '<div class="l">' + ntEsc(bt('nt.attachments', '첨부파일')) + ' (' + attachments.length + ')</div>';
     attachments.forEach(function (a) {
-      html += '<a href="' + ntEsc(a.download_url) + '" target="_blank" rel="noopener" download>' +
+      html += '<a href="' + ntEsc(ntApiPath(a.download_url)) + '" target="_blank" rel="noopener" download>' +
         ntEsc(a.filename) +
         ' <span style="color:var(--text-3);font-size:12px;">(' + ntFmtSize(a.size) + ')</span></a> ';
     });
